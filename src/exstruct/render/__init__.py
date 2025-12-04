@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import tempfile
+import shutil
 from pathlib import Path
 from typing import List
 
@@ -23,19 +24,27 @@ def _require_excel_app() -> xw.App:
 
 def export_pdf(excel_path: Path, output_pdf: Path) -> List[str]:
     """Export an Excel workbook to PDF via Excel COM and return sheet names in order."""
-    app = _require_excel_app()
-    try:
-        wb = app.books.open(str(excel_path))
-    except Exception:
-        app.quit()
-        raise
-    try:
-        sheet_names = [s.name for s in wb.sheets]
-        output_pdf.parent.mkdir(parents=True, exist_ok=True)
-        wb.api.ExportAsFixedFormat(0, str(output_pdf))
-    finally:
-        wb.close()
-        app.quit()
+    output_pdf.parent.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.TemporaryDirectory() as td:
+        temp_dir = Path(td)
+        temp_xlsx = temp_dir / "book.xlsx"
+        temp_pdf = temp_dir / "book.pdf"
+        shutil.copy(excel_path, temp_xlsx)
+
+        app = _require_excel_app()
+        try:
+            wb = app.books.open(str(temp_xlsx))
+        except Exception:
+            app.quit()
+            raise
+        try:
+            sheet_names = [s.name for s in wb.sheets]
+            wb.api.ExportAsFixedFormat(0, str(temp_pdf))
+            shutil.copy(temp_pdf, output_pdf)
+        finally:
+            wb.close()
+            app.quit()
     return sheet_names
 
 
@@ -59,16 +68,17 @@ def export_sheet_images(excel_path: Path, output_dir: Path, dpi: int = 144) -> L
         tmp_pdf = Path(td) / "book.pdf"
         sheet_names = export_pdf(excel_path, tmp_pdf)
 
-        pdf = pdfium.PdfDocument(str(tmp_pdf))
         scale = dpi / 72.0
         written: List[Path] = []
-        for i, sheet_name in enumerate(sheet_names):
-            page = pdf[i]
-            pil_image = page.render(scale=scale).to_pil() # type: ignore
-            safe_name = _sanitize_sheet_filename(sheet_name)
-            img_path = output_dir / f"{i+1:02d}_{safe_name}.png"
-            pil_image.save(img_path, format="PNG", dpi=(dpi, dpi))
-            written.append(img_path)
+        with pdfium.PdfDocument(str(tmp_pdf)) as pdf:  # type: ignore
+            for i, sheet_name in enumerate(sheet_names):
+                page = pdf[i]
+                bitmap = page.render(scale=scale)
+                pil_image = bitmap.to_pil()  # type: ignore
+                safe_name = _sanitize_sheet_filename(sheet_name)
+                img_path = output_dir / f"{i+1:02d}_{safe_name}.png"
+                pil_image.save(img_path, format="PNG", dpi=(dpi, dpi))
+                written.append(img_path)
         return written
 
 

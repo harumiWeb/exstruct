@@ -34,7 +34,6 @@ def test_CLIでjson出力が成功する(tmp_path: Path) -> None:
     assert f"{xlsx.name} -> {out_json}" in result.stdout
 
 
-@pytest.mark.xfail(reason="CLI currently accepts only json format option.")
 def test_CLIでyamlやtoon指定は未サポート(tmp_path: Path) -> None:
     xlsx = _copy_sample_excel(tmp_path)
     out_yaml = tmp_path / "out.yaml"
@@ -42,10 +41,14 @@ def test_CLIでyamlやtoon指定は未サポート(tmp_path: Path) -> None:
     result = subprocess.run(cmd, capture_output=True, text=True)
     assert result.returncode == 0
     assert out_yaml.exists()
+    out_toon = tmp_path / "out.toon"
+    cmd = [sys.executable, "-m", "exstruct.cli.main", str(xlsx), "-o", str(out_toon), "-f", "toon"]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    assert result.returncode == 0
+    assert out_toon.exists()
 
 
 @pytest.mark.skipif(not _excel_available(), reason="Excel COM unavailable; skipping PDF/PNG export tests.")
-@pytest.mark.xfail(reason="Excel ExportAsFixedFormat may fail with tmp paths on some environments.")
 def test_CLIでpdfと画像が出力される(tmp_path: Path) -> None:
     xlsx = _copy_sample_excel(tmp_path)
     out_json = tmp_path / "out.json"
@@ -68,7 +71,6 @@ def test_CLIでpdfと画像が出力される(tmp_path: Path) -> None:
     assert any(images_dir.glob("*.png"))
 
 
-@pytest.mark.xfail(reason="CLI does not currently handle invalid input path gracefully.")
 def test_CLIで無効ファイルは安全終了する(tmp_path: Path) -> None:
     bad_path = tmp_path / "nope.xlsx"
     out_json = tmp_path / "out.json"

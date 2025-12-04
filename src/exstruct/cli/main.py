@@ -21,8 +21,8 @@ def build_parser() -> argparse.ArgumentParser:
         "-f",
         "--format",
         default="json",
-        choices=["json"],
-        help="Export format (dev stub only supports json)",
+        choices=["json", "yaml", "yml", "toon"],
+        help="Export format",
     )
     parser.add_argument(
         "--image",
@@ -48,17 +48,31 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     input_path: Path = args.input
-    output_path: Path = args.output or input_path.with_suffix(".json")
+    if not input_path.exists():
+        print(f"File not found: {input_path}")
+        return 0
 
-    process_excel(
-        file_path=input_path,
-        output_path=output_path,
-        out_fmt=args.format,
-        image=args.image,
-        pdf=args.pdf,
-        dpi=args.dpi,
-    )
-    return 0
+    suffix = ".json"
+    if args.format in ("yaml", "yml"):
+        suffix = ".yaml"
+    elif args.format == "toon":
+        suffix = ".toon"
+
+    output_path: Path = args.output or input_path.with_suffix(suffix)
+
+    try:
+        process_excel(
+            file_path=input_path,
+            output_path=output_path,
+            out_fmt=args.format,
+            image=args.image,
+            pdf=args.pdf,
+            dpi=args.dpi,
+        )
+        return 0
+    except Exception as e:
+        print(f"Error: {e}")
+        return 1
 
 
 if __name__ == "__main__":
