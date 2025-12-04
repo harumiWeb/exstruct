@@ -44,7 +44,7 @@ class SheetData(BaseModel):
     rows: List[CellRow] = Field(default_factory=list)
     shapes: List[Shape] = Field(default_factory=list)
     charts: List[Chart] = Field(default_factory=list)
-    tables: List[str] = Field(default_factory=list)
+    table_candidates: List[str] = Field(default_factory=list)
 
 
 class WorkbookData(BaseModel):

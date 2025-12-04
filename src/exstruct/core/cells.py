@@ -289,6 +289,77 @@ def _get_values_block(ws, top, left, bottom, right):
     return vals
 
 
+def _table_density_metrics(matrix) -> tuple[float, float]:
+    """
+    Given a 2D matrix (list of rows), return (density, coverage).
+    density: nonempty / total cells.
+    coverage: area of tight bounding box of nonempty cells divided by total area.
+    """
+    if not matrix:
+        return 0.0, 0.0
+    rows = len(matrix)
+    cols = len(matrix[0]) if rows else 0
+    if rows == 0 or cols == 0:
+        return 0.0, 0.0
+
+    nonempty_coords = []
+    for i, row in enumerate(matrix):
+        if not isinstance(row, list):
+            row = [row]
+        for j, v in enumerate(row):
+            if not (v is None or str(v).strip() == ""):
+                nonempty_coords.append((i, j))
+
+    total = rows * cols
+    if not nonempty_coords:
+        return 0.0, 0.0
+
+    nonempty = len(nonempty_coords)
+    density = nonempty / total
+
+    ys = [p[0] for p in nonempty_coords]
+    xs = [p[1] for p in nonempty_coords]
+    bbox_h = (max(ys) - min(ys) + 1)
+    bbox_w = (max(xs) - min(xs) + 1)
+    coverage = (bbox_h * bbox_w) / total if total > 0 else 0.0
+    return density, coverage
+
+
+def _is_plausible_table(matrix) -> bool:
+    """
+    Heuristic: require at least 2 rows and 2 cols with meaningful data.
+    - At least 2 rows have 2 以上の非空セル
+    - At least 2 columns have 2 以上の非空セル
+    """
+    if not matrix:
+        return False
+    if not isinstance(matrix[0], list):
+        # normalize to 2D
+        matrix = [matrix]
+
+    rows = len(matrix)
+    cols = max((len(r) if isinstance(r, list) else 1) for r in matrix) if rows else 0
+    if rows < 2 or cols < 2:
+        return False
+
+    row_counts = []
+    col_counts = [0] * cols
+    for r in matrix:
+        if not isinstance(r, list):
+            r = [r]
+        cnt = 0
+        for j in range(cols):
+            v = r[j] if j < len(r) else None
+            if not (v is None or str(v).strip() == ""):
+                cnt += 1
+                col_counts[j] += 1
+        row_counts.append(cnt)
+
+    rows_with_two = sum(1 for c in row_counts if c >= 2)
+    cols_with_two = sum(1 for c in col_counts if c >= 2)
+    return rows_with_two >= 2 and cols_with_two >= 2
+
+
 def shrink_to_content_openpyxl(
     ws,
     top: int,
@@ -534,14 +605,21 @@ def detect_tables_xlwings(sheet: xw.Sheet) -> List[str]:
                 right_col = max(cols)
                 clusters.append((top_row, left_col, bottom_row, right_col))
 
-    def overlaps(a, b):
+    def overlaps_for_merge(a, b):
+        # Do not merge if one rect fully contains the other (separate clusters like big frame vs small table)
+        contains = (
+            (a[0] <= b[0] and a[1] <= b[1] and a[2] >= b[2] and a[3] >= b[3])
+            or (b[0] <= a[0] and b[1] <= a[1] and b[2] >= a[2] and b[3] >= a[3])
+        )
+        if contains:
+            return False
         return not (a[1] > b[3] or a[3] < b[1] or a[0] > b[2] or a[2] < b[0])
 
     merged_rects: List[Tuple[int, int, int, int]] = []
     for rect in sorted(clusters):
         merged = False
         for i, ex in enumerate(merged_rects):
-            if overlaps(rect, ex):
+            if overlaps_for_merge(rect, ex):
                 merged_rects[i] = (
                     min(rect[0], ex[0]),
                     min(rect[1], ex[1]),
@@ -570,6 +648,11 @@ def detect_tables_xlwings(sheet: xw.Sheet) -> List[str]:
         except Exception:
             nonempty = 0
         if nonempty < 3:
+            continue
+        density, coverage = _table_density_metrics(rng_vals)
+        if density < 0.05 and coverage < 0.2:
+            continue
+        if not _is_plausible_table(rng_vals):
             continue
         addr = f"{xw.utils.col_name(left_col)}{top_row}:{xw.utils.col_name(right_col)}{bottom_row}"
         tables.append(addr)
@@ -604,14 +687,20 @@ def detect_tables_openpyxl(xlsx_path: Path, sheet_name: str) -> List[str]:
     )
     rects = detect_border_clusters(has_border, min_size=4)
 
-    def overlaps(a, b):
+    def overlaps_for_merge(a, b):
+        contains = (
+            (a[0] <= b[0] and a[1] <= b[1] and a[2] >= b[2] and a[3] >= b[3])
+            or (b[0] <= a[0] and b[1] <= a[1] and b[2] >= a[2] and b[3] >= a[3])
+        )
+        if contains:
+            return False
         return not (a[1] > b[3] or a[3] < b[1] or a[0] > b[2] or a[2] < b[0])
 
     merged_rects: List[Tuple[int, int, int, int]] = []
     for rect in sorted(rects):
         merged = False
         for i, ex in enumerate(merged_rects):
-            if overlaps(rect, ex):
+            if overlaps_for_merge(rect, ex):
                 merged_rects[i] = (
                     min(rect[0], ex[0]),
                     min(rect[1], ex[1]),
@@ -642,6 +731,11 @@ def detect_tables_openpyxl(xlsx_path: Path, sheet_name: str) -> List[str]:
             1 for row in vals_block for v in row if not (v is None or str(v).strip() == "")
         )
         if nonempty < 3:
+            continue
+        density, coverage = _table_density_metrics(vals_block)
+        if density < 0.05 and coverage < 0.2:
+            continue
+        if not _is_plausible_table(vals_block):
             continue
         addr = f"{get_column_letter(left_col)}{top_row}:{get_column_letter(right_col)}{bottom_row}"
         tables.append(addr)

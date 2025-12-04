@@ -39,7 +39,7 @@ def test_モデルのデフォルトとオプション値() -> None:
     assert sheet.rows == []
     assert sheet.shapes == []
     assert sheet.charts == []
-    assert sheet.tables == []
+    assert sheet.table_candidates == []
 
     wb = WorkbookData(book_name="b.xlsx", sheets={"S": sheet})
     assert wb.sheets["S"].rows == []

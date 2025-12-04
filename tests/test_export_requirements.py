@@ -74,7 +74,7 @@ def test_JSON_roundtripが破壊的変更なし(tmp_path: Path) -> None:
                 t=0,
             )
         ],
-        tables=["A1:B2"],
+        table_candidates=["A1:B2"],
     )
     wb = WorkbookData(book_name="b.xlsx", sheets={"S": sheet})
     out = tmp_path / "round.json"

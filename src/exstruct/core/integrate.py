@@ -66,7 +66,7 @@ def integrate_sheet_content(
             rows=rows,
             shapes=sheet_shapes,
             charts=[] if mode == "light" else get_charts(sheet),
-            tables=detect_tables(sheet),
+            table_candidates=detect_tables(sheet),
         )
 
         result[sheet_name] = sheet_model
@@ -93,7 +93,7 @@ def extract_workbook(
                 rows=rows,
                 shapes=[],
                 charts=[],
-                tables=tables,
+                table_candidates=tables,
             )
         logger.warning(
             "%s Falling back to cells+tables only; shapes and charts will be empty.",

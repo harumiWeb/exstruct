@@ -118,13 +118,13 @@ SheetData {
   rows:   [CellRow]
   shapes: [Shape]
   charts: [Chart]
-  tables: [str]
+  table_candidates: [str]
 }
 ```
 
 ### Notes
 
-- `tables` は v0.3 以降の "Table Detection" 機能のプレースホルダー。
+- `table_candidates` は v0.3 以降の "Table Detection" 機能のプレースホルダー。
 - 空要素は出力時に除外される（dict_without_empty_values）。
 
 ---

@@ -66,4 +66,4 @@ def test_excelなし環境ではセルとテーブルのみ返す(monkeypatch, t
     sheet = wb_data.sheets["Sheet1"]
     assert sheet.shapes == []
     assert sheet.charts == []
-    assert "A1:B3" in sheet.tables
+    assert "A1:B3" in sheet.table_candidates
