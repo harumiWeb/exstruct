@@ -191,3 +191,13 @@ pydantic 構造が必ず仕様どおりであることを検証する。
 - [MEM-02] レンダリング（PNG）時にリークがない
 
 ---
+
+# 9. Mode Output Requirements
+
+- [MODE-01] CLI `--mode` と API `extract(..., mode=)` が `light`/`standard`/`verbose` のみ受け付け、デフォルトは `standard`
+- [MODE-02] `light` モードはセルとテーブルのみ返し、shapes/charts は空で COM アクセスもしない
+- [MODE-03] `standard` モードは既存挙動を維持し、テキスト付き図形または矢印系のみ出力し、COM 有効時はチャート取得
+- [MODE-04] `verbose` モードは chart/comment/picture/form control 以外の全図形を出力し、テキストの有無にかかわらず `w`/`h` を必ず含める
+- [MODE-05] `process_excel` でモード指定が伝搬し、PDF/画像オプション併用でも正常終了する
+- [MODE-06] `standard` モードで既存フィクスチャの出力に回帰がない（不要な図形が増えない）
+- [MODE-07] 無効なモード値は処理開始前にエラーとなる
