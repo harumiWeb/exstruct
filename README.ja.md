@@ -93,3 +93,7 @@ exstruct input.xlsx --pdf --image --dpi 144
 ## License
 
 BSD-3-Clause. See `LICENSE` for details.
+
+## ドキュメント
+
+- API リファレンス (GitHub Pages): https://harumiweb.github.io/exstruct/
