@@ -117,6 +117,7 @@ def extract_workbook(
             merged = integrate_sheet_content(cell_data, shape_data, wb, mode=mode)
             return WorkbookData(book_name=file_path.name, sheets=merged)
         except Exception as e:
+            logger.warning("Shape extraction failed; falling back to cells+tables. (%r)", e)
             return _cells_and_tables_only(
                 f"Shape extraction failed ({e!r})."
             )
