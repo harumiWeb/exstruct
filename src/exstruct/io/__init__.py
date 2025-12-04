@@ -123,14 +123,19 @@ def save_sheets(
         suffix = {"json": ".json", "yaml": ".yaml", "toon": ".toon"}[format_hint]
         file_name = f"{_sanitize_sheet_filename(sheet_name)}{suffix}"
         path = output_dir / file_name
-        if format_hint == "json":
-            text = json.dumps(payload, ensure_ascii=False, indent=2)
-        elif format_hint == "yaml":
-            yaml = _require_yaml()
-            text = yaml.safe_dump(payload, allow_unicode=True, sort_keys=False, indent=2)
-        else:
-            toon = _require_toon()
-            text = toon.encode(payload)
+        match format_hint:
+            case "json":
+                text = json.dumps(payload, ensure_ascii=False, indent=2)
+            case "yaml":
+                yaml = _require_yaml()
+                text = yaml.safe_dump(
+                    payload, allow_unicode=True, sort_keys=False, indent=2
+                )
+            case "toon":
+                toon = _require_toon()
+                text = toon.encode(payload)
+            case _:
+                raise ValueError(f"Unsupported sheet export format: {format_hint}")
         path.write_text(text, encoding="utf-8")
         written[sheet_name] = path
     return written

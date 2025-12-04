@@ -37,14 +37,15 @@ def export(
     """Export WorkbookData to supported file formats (currently JSON)."""
     dest = Path(path)
     format_hint = (fmt or dest.suffix.lstrip(".") or "json").lower()
-    if format_hint == "json":
-        save_as_json(data, dest)
-    elif format_hint in ("yaml", "yml"):
-        save_as_yaml(data, dest)
-    elif format_hint == "toon":
-        save_as_toon(data, dest)
-    else:
-        raise ValueError(f"Unsupported export format: {format_hint}")
+    match format_hint:
+        case "json":
+            save_as_json(data, dest)
+        case "yaml" | "yml":
+            save_as_yaml(data, dest)
+        case "toon":
+            save_as_toon(data, dest)
+        case _:
+            raise ValueError(f"Unsupported export format: {format_hint}")
 
 
 def export_sheets(data: WorkbookData, dir_path: str | Path) -> dict[str, Path]:
@@ -79,14 +80,15 @@ def process_excel(
 ) -> None:
     """Compatibility wrapper used by CLI prototypes."""
     workbook_model = extract(file_path)
-    if out_fmt == "json":
-        save_as_json(workbook_model, output_path)
-    elif out_fmt in ("yaml", "yml"):
-        save_as_yaml(workbook_model, output_path)
-    elif out_fmt == "toon":
-        save_as_toon(workbook_model, output_path)
-    else:
-        raise ValueError(f"Unsupported export format: {out_fmt}")
+    match out_fmt:
+        case "json":
+            save_as_json(workbook_model, output_path)
+        case "yaml" | "yml":
+            save_as_yaml(workbook_model, output_path)
+        case "toon":
+            save_as_toon(workbook_model, output_path)
+        case _:
+            raise ValueError(f"Unsupported export format: {out_fmt}")
 
     if pdf or image:
         pdf_path = output_path.with_suffix(".pdf")
