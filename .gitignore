@@ -13,3 +13,4 @@ sample/
 output/
 test.py
 .coverage
+site/

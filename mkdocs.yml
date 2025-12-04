@@ -4,6 +4,8 @@ theme:
 nav:
   - Home: index.md
   - API Reference: api.md
+  - Read Me (EN): README.en.md
+  - Read Me (JA): README.ja.md
 markdown_extensions:
   - admonition
   - toc:

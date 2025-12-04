@@ -1,74 +1,151 @@
 # API Reference
 
-本ページは Python API の概要を示します。すべて `exstruct` パッケージからインポート可能です。
+This page shows the primary APIs, minimal runnable examples, expected outputs, and the dependencies required for optional features.
 
-## extract(file_path, mode="standard")
+## Quick Examples
 
-Excel ワークブックを読み取り、`WorkbookData` を返します。
+```python
+from exstruct import extract, export
 
-- `file_path`: `str | Path` 対象 Excel。
-- `mode`: `"light" | "standard" | "verbose"`
-  - `light`: セル＋テーブル候補のみ（COM 不要）。
-  - `standard`: テキスト付き図形＋矢印、チャート（COM があれば取得）。
-  - `verbose`: 全図形（幅・高さ付き）、チャート、テーブル候補。
-- COM が無い場合は自動でセル＋テーブル候補にフォールバックします。
+wb = extract("sample.xlsx", mode="standard")
+export(wb, "out.json")  # compact JSON by default
+```
 
-## export(data, path, fmt=None, \*, pretty=False, indent=None)
+Expected JSON snippet:
 
-`WorkbookData` をファイルに書き出します。
+```json
+{
+  "book_name": "sample.xlsx",
+  "sheets": {
+    "Sheet1": {
+      "rows": [{"r": 1, "c": {"0": "Name", "1": "Age"}}],
+      "shapes": [{"text": "note", "l": 10, "t": 20, "w": 80, "h": 24, "type": "TextBox"}],
+      "charts": [],
+      "table_candidates": ["A1:B5"]
+    }
+  }
+}
+```
 
-- `fmt`: `"json" | "yaml" | "yml" | "toon"`（既定は拡張子または json）
-- `pretty`: `True` でインデント 2（または `indent` 指定値）で整形
-- `indent`: 整形時のインデント幅（既定は 2）
-- 依存: YAML は `pyyaml`, TOON は `python-toon` が必要
+CLI-equivalent flow via Python:
 
-## export_sheets_as(data, dir_path, fmt="json", \*, pretty=False, indent=None)
+```python
+from pathlib import Path
+from exstruct import process_excel
 
-各シートを個別ファイルに書き出します（`book_name` と `sheet` を含む）。
+process_excel(
+    file_path=Path("input.xlsx"),
+    output_path=Path("out.json"),
+    out_fmt="json",
+    image=True,
+    pdf=True,
+    mode="standard",
+    pretty=True,
+)
+# Same as: exstruct input.xlsx --format json --pdf --image --mode standard --pretty
+```
 
-- `fmt`: `"json" | "yaml" | "yml" | "toon"`
-- `pretty` / `indent`: JSON の整形オプション
-- 戻り値: シート名 → 出力パスの辞書
+## Dependencies
 
-## process_excel(file_path, output_path, out_fmt="json", image=False, pdf=False, dpi=72, mode="standard", \*, pretty=False, indent=None)
+- Core extraction: pandas, openpyxl (installed with the package).
+- YAML export: `pyyaml` (imported lazily; missing module raises `RuntimeError`).
+- TOON export: `python-toon` (lazy import; missing module raises `RuntimeError`).
+- Rendering (PDF/PNG): **Excel + COM + `pypdfium2`** are mandatory. Without Excel/COM, rendering APIs raise `RuntimeError`.
 
-CLI 相当のヘルパー。抽出＋書き出し＋任意で PDF/PNG を生成します。
+## Functions
 
-- `image`: PNG をシートごとに出力（Excel + `pypdfium2` が必要）
-- `pdf`: PDF を出力（Excel が必要）
-- `mode`: 出力モード（前述）
-- `pretty`/`indent`: JSON 整形オプション
+### extract(file_path, mode="standard")
 
-## set_table_detection_params(...)
+Extracts workbook structure. Modes: `light`, `standard` (default), `verbose`. Raises `ValueError` on invalid mode.
 
-テーブル検出ヒューリスティックを動的に調整します（省略した値は現行設定を維持）。
+```python
+from exstruct import extract
 
-- `table_score_threshold: float | None`
-- `density_min: float | None`
-- `coverage_min: float | None`
-- `min_nonempty_cells: int | None`
-  値を上げると厳しくなり誤検知が減少、下げると検出漏れが減ります。
+wb = extract("input.xlsx", mode="verbose")
+print(wb.sheets["Sheet1"].table_candidates)
+```
 
-## render（Excel が必要）
+### export(data, path, fmt=None, *, pretty=False, indent=None)
 
-`export_pdf(file_path, pdf_path)` / `export_sheet_images(file_path, out_dir, dpi=144)`  
-Excel COM と `pypdfium2` が必要です。COM が無い環境では例外となります。
+Exports `WorkbookData` to JSON/YAML/TOON. `fmt` defaults from path suffix or `json`. Raises `ValueError` on unsupported fmt. JSON is compact unless `pretty=True` or `indent` is set.
 
-## Data Models（主なフィールド）
+```python
+export(wb, "out.yaml", fmt="yaml")  # requires pyyaml
+export(wb, "out.json", pretty=True)  # pretty-printed JSON
+```
 
-- `WorkbookData`: `book_name`, `sheets: Dict[str, SheetData]`
-- `SheetData`: `rows`, `shapes`, `charts`, `table_candidates`
-- `Shape`: `text`, `l/t/w/h`, `type`, `angle_deg`, `direction` ほか
-- `Chart`: `chart_type`, `title`, `y_axis_title`, `y_axis_range`, `series`, `error`
-- `CellRow`: `r`（行番号 1-based）, `c`（列番号文字列 → 値）
+### export_sheets(data, dir_path)
 
-## Optional Dependencies
+Writes one JSON per sheet, including `book_name` and the `SheetData`. Returns `{sheet_name: Path}`.
 
-- YAML: `pip install pyyaml`
-- TOON: `pip install python-toon`
-- Rendering (PDF/PNG): Excel + `pip install pypdfium2`
+```python
+paths = export_sheets(wb, "out_dir")
+print(paths["Sheet1"])  # out_dir/Sheet1.json
+```
 
-## エラーハンドリング
+### export_sheets_as(data, dir_path, fmt="json", *, pretty=False, indent=None)
 
-- COM 不在・失敗時はセル＋テーブル候補にフォールバック（図形・チャートは空）。
-- エクスポートの失敗や不正なフォーマット指定は `ValueError` / `RuntimeError` を送出。
+Same as `export_sheets` but supports `json`/`yaml`/`yml`/`toon`. Raises `ValueError` on invalid fmt.
+
+```python
+export_sheets_as(wb, "yaml_dir", fmt="yaml")  # requires pyyaml
+```
+
+### process_excel(file_path, output_path, out_fmt="json", image=False, pdf=False, dpi=72, mode="standard", pretty=False, indent=None)
+
+Convenience wrapper used by the CLI. Writes the chosen format and optionally PDF/PNG (Excel required). Invalid `mode` or `out_fmt` raises `ValueError`.
+
+### export_pdf(file_path, pdf_path)
+
+Exports the workbook to PDF via Excel COM. Requires Excel and `pypdfium2` if images will be generated afterwards.
+
+### export_sheet_images(file_path, images_dir, dpi=72)
+
+Converts a PDF (rendered via Excel) into per-sheet PNGs using `pypdfium2`. Requires Excel + COM + `pypdfium2`.
+
+### set_table_detection_params(...)
+
+Tunes table detection heuristics at runtime. Higher thresholds reduce false positives; lower thresholds catch faint tables.
+
+```python
+from exstruct import set_table_detection_params
+
+# Before: a layout frame was misdetected as a table.
+set_table_detection_params(table_score_threshold=0.35, density_min=0.05)
+
+# After lowering thresholds to catch very sparse tables:
+set_table_detection_params(table_score_threshold=0.25, coverage_min=0.15)
+```
+
+## Models
+
+| Model         | Key fields                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------ |
+| `WorkbookData`| `book_name: str`, `sheets: dict[str, SheetData]`                                           |
+| `SheetData`   | `rows: list[CellRow]`, `shapes: list[Shape]`, `charts: list[Chart]`, `table_candidates: list[str]` |
+| `CellRow`     | `r: int`, `c: dict[str, int | float | str]`                                                |
+| `Shape`       | `text: str`, `l/t/w/h: int|None`, `type`, `rotation`, `angle_deg`, arrow styles, `direction`|
+| `Chart`       | `name`, `chart_type`, `title`, `series`, `y_axis_range`, `l/t`, `error: str|None`          |
+| `ChartSeries` | `name`, `name_range`, `x_range`, `y_range`                                                 |
+
+## Error Handling
+
+- Excel COM unavailable: extraction falls back to cells + `table_candidates`; `shapes`/`charts` are empty, warning is logged.
+- Invalid `fmt` or `mode`: `ValueError`.
+- Missing optional dependency (`pyyaml`, `python-toon`, `pypdfium2`): `RuntimeError` with install hint.
+- Rendering without Excel/COM: `RuntimeError`.
+- CLI mirrors these: exits non-zero on failures, prints messages in English.
+
+## Tuning Examples
+
+- Reduce false positives (layout frames):
+
+```python
+set_table_detection_params(table_score_threshold=0.4, coverage_min=0.25)
+```
+
+- Recover missed tiny tables:
+
+```python
+set_table_detection_params(density_min=0.03, min_nonempty_cells=2)
+```
