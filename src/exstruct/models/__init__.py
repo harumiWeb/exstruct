@@ -18,7 +18,7 @@ class Shape(BaseModel):
 
 class CellRow(BaseModel):
     r: int
-    c: Dict[str, str]
+    c: Dict[str, int | float | str]
 
 
 class ChartSeries(BaseModel):

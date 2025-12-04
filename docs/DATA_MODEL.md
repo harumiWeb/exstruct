@@ -51,7 +51,7 @@ Excel の行データを **“意味行単位”** として保存する。
 ```jsonc
 CellRow {
   r: int                // 行番号 (0-based index)
-  c: { [colIndex: str]: str }
+  c: { [colIndex: str]: str | int | float }
                        // 非空セルのみを保持する dict
 }
 ```

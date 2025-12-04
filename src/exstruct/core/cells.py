@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 from collections import deque
+from decimal import Decimal, InvalidOperation
+import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -31,7 +33,12 @@ def extract_sheet_cells(file_path: Path) -> Dict[str, List[CellRow]]:
         df = df.fillna("")
         rows: List[CellRow] = []
         for excel_row, row in enumerate(df.itertuples(index=False, name=None), start=1):
-            filtered = {str(j): v for j, v in enumerate(row) if str(v).strip() != ""}
+            filtered: Dict[str, int | float | str] = {}
+            for j, v in enumerate(row):
+                s = "" if v is None else str(v)
+                if s.strip() == "":
+                    continue
+                filtered[str(j)] = _coerce_numeric_preserve_format(s)
             if not filtered:
                 continue
             rows.append(CellRow(r=excel_row, c=filtered))
@@ -655,3 +662,28 @@ def detect_tables(sheet: xw.Sheet) -> List[str]:
         "Workbook path or extension is unavailable; falling back to COM-based detection (slower).",
     )
     return detect_tables_xlwings(sheet)
+
+
+_INT_RE = re.compile(r"^[+-]?\d+$")
+_FLOAT_RE = re.compile(r"^[+-]?\d*\.\d+$")
+
+
+def _coerce_numeric_preserve_format(val: str) -> int | float | str:
+    """
+    Convert numeric-looking strings to int/float while keeping precision.
+    Integers stay int; decimals keep scale via Decimal before casting to float.
+    """
+    if _INT_RE.match(val):
+        try:
+            return int(val)
+        except Exception:
+            return val
+    if _FLOAT_RE.match(val):
+        try:
+            dec = Decimal(val)
+            scale = max(1, -dec.as_tuple().exponent)
+            quantized = dec.quantize(Decimal("1." + "0" * scale))
+            return float(quantized)
+        except (InvalidOperation, Exception):
+            return val
+    return val
