@@ -61,7 +61,6 @@ ExStruct のテストは以下のカテゴリに分類される：
 ### 回転 / 矢印
 
 - [SHP-07] rotation が Excel の回転角度値に一致する
-- [SHP-08] angle_deg が線図形の向きとして正しく算出される
 - [SHP-09] begin_arrow_style / end_arrow_style が Excel の ENUM と一致する
 - [SHP-10] direction が 8 方位分類に従い正しく算出される
 

@@ -184,7 +184,6 @@ def get_shapes_with_position(workbook: Book, mode: str = "standard") -> Dict[str
 
                     if is_relationship_geom:
                         angle = compute_line_angle_deg(float(shp.width), float(shp.height))
-                        shape_obj.angle_deg = angle
                         shape_obj.direction = angle_to_compass(angle)  # type: ignore
                         try:
                             rot = float(shp.api.Rotation)

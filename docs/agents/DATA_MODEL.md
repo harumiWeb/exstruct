@@ -28,7 +28,6 @@ Shape {
   h: int | null                            // height(px)
   type: str | null                         // MSO Shape Type 名
   rotation: float | null                   // 回転角度 (0–360)
-  angle_deg: float | null                  // 方向線/矢印の角度
   begin_arrow_style: int | null            // 始点の矢印タイプ (Excel enum)
   end_arrow_style: int | null              // 終点の矢印タイプ (Excel enum)
   direction: "E"|"SE"|"S"|"SW"|"W"|"NW"|"N"|"NE" | null
@@ -39,7 +38,7 @@ Shape {
 ### Notes
 
 - `l`, `t`, `w`, `h` は座標・サイズで Excel レイアウト分析に使用する。
-- `direction` は `angle_deg` をもとに ExStruct が自動分類した 8 方位。
+- `direction` は ExStruct が線の向きを 8 方位に正規化した結果。
 - 矢印図形では begin/end_arrow_style に矢印種類が入る。
 
 ---

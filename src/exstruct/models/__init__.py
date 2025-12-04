@@ -10,7 +10,6 @@ class Shape(BaseModel):
     h: Optional[int]
     type: Optional[str] = None
     rotation: Optional[float] = None
-    angle_deg: Optional[float] = None
     begin_arrow_style: Optional[int] = None
     end_arrow_style: Optional[int] = None
     direction: Optional[Literal["E", "SE", "S", "SW", "W", "NW", "N", "NE"]] = None

@@ -124,7 +124,7 @@ set_table_detection_params(table_score_threshold=0.25, coverage_min=0.15)
 | `WorkbookData`| `book_name: str`, `sheets: dict[str, SheetData]`                                           |
 | `SheetData`   | `rows: list[CellRow]`, `shapes: list[Shape]`, `charts: list[Chart]`, `table_candidates: list[str]` |
 | `CellRow`     | `r: int`, `c: dict[str, int | float | str]`                                                |
-| `Shape`       | `text: str`, `l/t/w/h: int|None`, `type`, `rotation`, `angle_deg`, arrow styles, `direction`|
+| `Shape`       | `text: str`, `l/t/w/h: int|None`, `type`, `rotation`, arrow styles, `direction`|
 | `Chart`       | `name`, `chart_type`, `title`, `series`, `y_axis_range`, `l/t`, `error: str|None`          |
 | `ChartSeries` | `name`, `name_range`, `x_range`, `y_range`                                                 |
 

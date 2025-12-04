@@ -35,7 +35,7 @@ ExStruct の目的は、
 
 ```bash
 root: .
-├── docs/
+├── docs/agents/
 │   └── *.md # 仕様書
 ├── src/
 │   └── exstruct/

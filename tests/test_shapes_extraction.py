@@ -75,4 +75,3 @@ def test_線図形の方向と矢印情報が抽出される(tmp_path: Path) -> 
 
     line = next(s for s in shapes if s.begin_arrow_style is not None or s.end_arrow_style is not None)
     assert line.direction == "E"
-    assert line.angle_deg == pytest.approx(0.0, abs=1e-3)
