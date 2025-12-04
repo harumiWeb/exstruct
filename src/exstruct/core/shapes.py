@@ -96,6 +96,8 @@ def _should_include_shape(
         is_arrow = True
     if shape_type_str and shape_type_str == "Line":
         is_arrow = True
+    if shape_type_str and shape_type_str == "ConnectLine":
+        is_arrow = True
 
     if output_mode == "standard":
         return bool(text) or is_arrow
@@ -108,18 +110,8 @@ def get_shapes_with_position(workbook: Book, mode: str = "standard") -> Dict[str
     shape_data: Dict[str, List[Shape]] = {}
     for sheet in workbook.sheets:
         shapes: List[Shape] = []
-        seen_names: set[str] = set()
         for root in sheet.shapes:
             for shp in iter_shapes_recursive(root):
-                try:
-                    shp_name = getattr(shp, "name", None)
-                    if shp_name and shp_name in seen_names:
-                        continue
-                    if shp_name:
-                        seen_names.add(shp_name)
-                except Exception:
-                    pass
-
                 try:
                     type_num = shp.api.Type
                     shape_type_str = MSO_SHAPE_TYPE_MAP.get(
