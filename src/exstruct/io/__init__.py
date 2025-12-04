@@ -5,6 +5,9 @@ import re
 from pathlib import Path
 from typing import Any, Dict
 
+import toon
+import yaml
+
 from ..models import WorkbookData
 
 
@@ -31,6 +34,23 @@ def save_as_json(model: WorkbookData, path: Path) -> None:
         json.dumps(filtered_dict, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+
+
+def save_as_yaml(model: WorkbookData, path: Path) -> None:
+    filtered_dict = dict_without_empty_values(model)
+    text = yaml.safe_dump(
+        filtered_dict,
+        allow_unicode=True,
+        sort_keys=False,
+        indent=2,
+    )
+    path.write_text(text, encoding="utf-8")
+
+
+def save_as_toon(model: WorkbookData, path: Path) -> None:
+    filtered_dict = dict_without_empty_values(model)
+    text = toon.encode(filtered_dict)
+    path.write_text(text, encoding="utf-8")
 
 
 def _sanitize_sheet_filename(name: str) -> str:
@@ -62,4 +82,10 @@ def save_sheets_as_json(workbook: WorkbookData, output_dir: Path) -> Dict[str, P
     return written
 
 
-__all__ = ["dict_without_empty_values", "save_as_json", "save_sheets_as_json"]
+__all__ = [
+    "dict_without_empty_values",
+    "save_as_json",
+    "save_as_yaml",
+    "save_as_toon",
+    "save_sheets_as_json",
+]

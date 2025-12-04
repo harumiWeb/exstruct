@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 from .core.integrate import extract_workbook
-from .io import save_as_json, save_sheets_as_json
+from .io import save_as_json, save_as_toon, save_as_yaml, save_sheets_as_json
 from .models import CellRow, Chart, ChartSeries, Shape, SheetData, WorkbookData
 
 __all__ = [
@@ -32,6 +32,10 @@ def export(data: WorkbookData, path: str | Path, fmt: Optional[str] = None) -> N
     format_hint = (fmt or dest.suffix.lstrip(".") or "json").lower()
     if format_hint == "json":
         save_as_json(data, dest)
+    elif format_hint in ("yaml", "yml"):
+        save_as_yaml(data, dest)
+    elif format_hint == "toon":
+        save_as_toon(data, dest)
     else:
         raise ValueError(f"Unsupported export format: {format_hint}")
 
