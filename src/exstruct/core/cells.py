@@ -17,7 +17,14 @@ from ..models import CellRow
 
 logger = logging.getLogger(__name__)
 _warned_keys: set[str] = set()
-TABLE_SCORE_THRESHOLD = 0.35
+
+# Detection tuning parameters (can be overridden via set_table_detection_params)
+_DETECTION_CONFIG = {
+    "table_score_threshold": 0.35,
+    "density_min": 0.05,
+    "coverage_min": 0.2,
+    "min_nonempty_cells": 3,
+}
 
 
 def warn_once(key: str, message: str) -> None:
@@ -456,6 +463,27 @@ def _table_signal_score(matrix: List[List]) -> float:
     return score
 
 
+def set_table_detection_params(
+    *,
+    table_score_threshold: float | None = None,
+    density_min: float | None = None,
+    coverage_min: float | None = None,
+    min_nonempty_cells: int | None = None,
+) -> None:
+    """
+    Configure table detection heuristics at runtime.
+    Any parameter left as None keeps its current value.
+    """
+    if table_score_threshold is not None:
+        _DETECTION_CONFIG["table_score_threshold"] = table_score_threshold
+    if density_min is not None:
+        _DETECTION_CONFIG["density_min"] = density_min
+    if coverage_min is not None:
+        _DETECTION_CONFIG["coverage_min"] = coverage_min
+    if min_nonempty_cells is not None:
+        _DETECTION_CONFIG["min_nonempty_cells"] = min_nonempty_cells
+
+
 def shrink_to_content_openpyxl(
     ws,
     top: int,
@@ -743,18 +771,18 @@ def detect_tables_xlwings(sheet: xw.Sheet) -> List[str]:
             )
         except Exception:
             nonempty = 0
-        if nonempty < 3:
+        if nonempty < _DETECTION_CONFIG["min_nonempty_cells"]:
             continue
         clusters = _nonempty_clusters(rng_vals)
         for r0, c0, r1, c1 in clusters:
             sub = [row[c0 : c1 + 1] for row in rng_vals[r0 : r1 + 1]]
             density, coverage = _table_density_metrics(sub)
-            if density < 0.05 and coverage < 0.2:
+            if density < _DETECTION_CONFIG["density_min"] and coverage < _DETECTION_CONFIG["coverage_min"]:
                 continue
             if not _is_plausible_table(sub):
                 continue
             score = _table_signal_score(sub)
-            if score < TABLE_SCORE_THRESHOLD:
+            if score < _DETECTION_CONFIG["table_score_threshold"]:
                 continue
             addr = f"{xw.utils.col_name(left_col + c0)}{top_row + r0}:{xw.utils.col_name(left_col + c1)}{top_row + r1}"
             if addr not in dedup:
@@ -836,18 +864,18 @@ def detect_tables_openpyxl(xlsx_path: Path, sheet_name: str) -> List[str]:
         nonempty = sum(
             1 for row in vals_block for v in row if not (v is None or str(v).strip() == "")
         )
-        if nonempty < 3:
+        if nonempty < _DETECTION_CONFIG["min_nonempty_cells"]:
             continue
         clusters = _nonempty_clusters(vals_block)
         for r0, c0, r1, c1 in clusters:
             sub = [row[c0 : c1 + 1] for row in vals_block[r0 : r1 + 1]]
             density, coverage = _table_density_metrics(sub)
-            if density < 0.05 and coverage < 0.2:
+            if density < _DETECTION_CONFIG["density_min"] and coverage < _DETECTION_CONFIG["coverage_min"]:
                 continue
             if not _is_plausible_table(sub):
                 continue
             score = _table_signal_score(sub)
-            if score < TABLE_SCORE_THRESHOLD:
+            if score < _DETECTION_CONFIG["table_score_threshold"]:
                 continue
             addr = f"{get_column_letter(left_col + c0)}{top_row + r0}:{get_column_letter(left_col + c1)}{top_row + r1}"
             if addr not in dedup:

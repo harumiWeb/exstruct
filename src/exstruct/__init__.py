@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Literal, Optional
 
 from .core.integrate import extract_workbook
+from .core.cells import set_table_detection_params
 from .io import save_as_json, save_as_toon, save_as_yaml, save_sheets
 from .models import CellRow, Chart, ChartSeries, Shape, SheetData, WorkbookData
 from .render import export_pdf, export_sheet_images
@@ -22,6 +23,7 @@ __all__ = [
     "Chart",
     "SheetData",
     "WorkbookData",
+    "set_table_detection_params",
 ]
 
 
