@@ -25,7 +25,7 @@ __all__ = [
 
 
 def extract(file_path: str | Path) -> WorkbookData:
-    """High-level API entrypoint that extracts workbook semantic structure."""
+    """Extract workbook semantic structure and return WorkbookData."""
     return extract_workbook(Path(file_path))
 
 
@@ -34,7 +34,7 @@ def export(
     path: str | Path,
     fmt: Optional[Literal["json", "yaml", "yml", "toon"]] = None,
 ) -> None:
-    """Export WorkbookData to supported file formats (currently JSON)."""
+    """Export WorkbookData to supported file formats (json/yaml/toon)."""
     dest = Path(path)
     format_hint = (fmt or dest.suffix.lstrip(".") or "json").lower()
     match format_hint:
@@ -50,8 +50,7 @@ def export(
 
 def export_sheets(data: WorkbookData, dir_path: str | Path) -> dict[str, Path]:
     """
-    Export each sheet as a JSON file.
-    Payload includes book_name and the SheetData for that sheet.
+    Export each sheet as a JSON file (book_name + SheetData) into a directory.
     Returns a mapping of sheet name to written path.
     """
     return save_sheets(data, Path(dir_path), fmt="json")
@@ -63,9 +62,7 @@ def export_sheets_as(
     fmt: Literal["json", "yaml", "yml", "toon"] = "json",
 ) -> dict[str, Path]:
     """
-    Export each sheet in the given format (json/yaml/toon).
-    Payload includes book_name and the SheetData for that sheet.
-    Returns a mapping of sheet name to written path.
+    Export each sheet in the given format (json/yaml/toon), including book_name and SheetData; returns sheet name → path map.
     """
     return save_sheets(data, Path(dir_path), fmt=fmt)
 
@@ -78,7 +75,7 @@ def process_excel(
     pdf: bool = False,
     dpi: int = 72,
 ) -> None:
-    """Compatibility wrapper used by CLI prototypes."""
+    """Convenience wrapper for CLI: export workbook and optionally PDF/PNG images (Excel required for rendering)."""
     workbook_model = extract(file_path)
     match out_fmt:
         case "json":
@@ -97,4 +94,4 @@ def process_excel(
             images_dir = output_path.parent / f"{output_path.stem}_images"
             export_sheet_images(file_path, images_dir, dpi=dpi)
 
-    print(f"{file_path.name} -> {output_path} done.")
+    print(f"{file_path.name} -> {output_path} completed.")

@@ -450,6 +450,7 @@ def shrink_to_content_openpyxl(
 
 
 def detect_tables_xlwings(sheet: xw.Sheet) -> List[str]:
+    """Detect table-like ranges via COM: ListObjects first, then border clusters."""
     tables: List[str] = []
     try:
         for lo in sheet.api.ListObjects:

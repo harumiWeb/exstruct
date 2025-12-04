@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def _require_excel_app() -> xw.App:
+    """Ensure Excel COM is available and return an App; otherwise raise."""
     try:
         app = xw.App(add_book=False, visible=False)
         return app
@@ -21,10 +22,7 @@ def _require_excel_app() -> xw.App:
 
 
 def export_pdf(excel_path: Path, output_pdf: Path) -> List[str]:
-    """
-    Export an Excel workbook to PDF using Excel COM.
-    Returns sheet names in order.
-    """
+    """Export an Excel workbook to PDF via Excel COM and return sheet names in order."""
     app = _require_excel_app()
     try:
         wb = app.books.open(str(excel_path))
@@ -42,6 +40,7 @@ def export_pdf(excel_path: Path, output_pdf: Path) -> List[str]:
 
 
 def _require_pdfium():
+    """Ensure pypdfium2 is installed; otherwise raise with guidance."""
     try:
         import pypdfium2 as pdfium  # type: ignore
     except ImportError as e:
@@ -52,10 +51,7 @@ def _require_pdfium():
 
 
 def export_sheet_images(excel_path: Path, output_dir: Path, dpi: int = 144) -> List[Path]:
-    """
-    Export each sheet as an image by first exporting to PDF, then rasterizing via pypdfium2.
-    Returns list of written image paths (ordered by sheet order).
-    """
+    """Export each sheet as PNG (via PDF then pypdfium2 rasterization) and return paths in sheet order."""
     pdfium = _require_pdfium()
     output_dir.mkdir(parents=True, exist_ok=True)
 

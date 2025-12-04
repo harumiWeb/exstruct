@@ -2,13 +2,17 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional
 
+import logging
 import xlwings as xw
 
 from ..models import Chart, ChartSeries
 from ..models.maps import XL_CHART_TYPE_MAP
 
+logger = logging.getLogger(__name__)
+
 
 def _extract_series_args_text(formula: str) -> Optional[str]:
+    """Extract the outer argument text from '=SERIES(...)'; return None if unmatched."""
     if not formula:
         return None
     s = formula.strip()
@@ -58,6 +62,7 @@ def _extract_series_args_text(formula: str) -> Optional[str]:
 
 
 def _split_top_level_args(args_text: str) -> List[str]:
+    """Split SERIES arguments at top-level separators (',' or ';')."""
     if args_text is None:
         return []
     use_semicolon = (";" in args_text) and ("," not in args_text.split('"')[0])
@@ -124,6 +129,7 @@ def _split_top_level_args(args_text: str) -> List[str]:
 
 
 def _unquote_excel_string(s: Optional[str]) -> Optional[str]:
+    """Decode Excel-style quoted string; return None if not quoted."""
     if s is None:
         return None
     st = s.strip()
@@ -134,6 +140,7 @@ def _unquote_excel_string(s: Optional[str]) -> Optional[str]:
 
 
 def parse_series_formula(formula: str) -> Optional[Dict[str, Optional[str]]]:
+    """Parse =SERIES into a dict of references; return None on failure."""
     args_text = _extract_series_args_text(formula)
     if args_text is None:
         return None
@@ -160,6 +167,7 @@ def parse_series_formula(formula: str) -> Optional[Dict[str, Optional[str]]]:
 
 
 def get_charts(sheet: xw.Sheet) -> List[Chart]:
+    """Parse charts in a sheet into Chart models; failed charts carry an error field."""
     charts: List[Chart] = []
     for ch in sheet.charts:
         series_list: List[ChartSeries] = []
@@ -203,7 +211,7 @@ def get_charts(sheet: xw.Sheet) -> List[Chart]:
         except Exception:
             print("グラフデータの解析に失敗しました。構造化未対応のグラフです。")
             title = None
-            error = "json構造化に失敗しました"
+            error = "Failed to build chart JSON structure"
 
         charts.append(
             Chart(

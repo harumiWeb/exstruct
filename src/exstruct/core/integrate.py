@@ -24,6 +24,7 @@ def integrate_sheet_content(
     shape_data: Dict[str, List[Shape]],
     workbook: xw.Book,
 ) -> Dict[str, SheetData]:
+    """Integrate cells, shapes, charts, and tables into SheetData per sheet."""
     result: Dict[str, SheetData] = {}
     for sheet_name, rows in cell_data.items():
         sheet_shapes = shape_data.get(sheet_name, [])
@@ -41,6 +42,7 @@ def integrate_sheet_content(
 
 
 def extract_workbook(file_path: Path) -> WorkbookData:
+    """Extract workbook and return WorkbookData; fallback to cells+tables if Excel COM is unavailable."""
     cell_data = extract_sheet_cells(file_path)
     try:
         wb = xw.Book(file_path)
