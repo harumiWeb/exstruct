@@ -1,14 +1,14 @@
 [project]
 name = "exstruct"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.1.11"
+description = "Excel to structured JSON (tables, shapes, charts) for LLM/RAG pipelines"
 readme = "README.md"
 license = { file = "LICENSE" }
 keywords = ["excel", "structure", "data", "exstruct"]
 authors = [
     { name = "harumiWeb", email = "ganaharumi@outlook.jp" }
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
     "numpy>=2.3.5",
     "openpyxl>=3.1.5",
