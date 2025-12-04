@@ -5,9 +5,6 @@ import re
 from pathlib import Path
 from typing import Any, Dict, Literal
 
-import toon
-import yaml
-
 from ..models import WorkbookData
 
 
@@ -37,6 +34,14 @@ def save_as_json(model: WorkbookData, path: Path) -> None:
 
 
 def save_as_yaml(model: WorkbookData, path: Path) -> None:
+    try:
+        import yaml
+    except ImportError as e:
+        raise RuntimeError(
+            "YAML export requires pyyaml. Install it via `pip install pyyaml` "
+            "or add the 'yaml' extra."
+        ) from e
+
     filtered_dict = dict_without_empty_values(model)
     text = yaml.safe_dump(
         filtered_dict,
@@ -48,6 +53,14 @@ def save_as_yaml(model: WorkbookData, path: Path) -> None:
 
 
 def save_as_toon(model: WorkbookData, path: Path) -> None:
+    try:
+        import toon
+    except ImportError as e:
+        raise RuntimeError(
+            "TOON export requires python-toon. Install it via `pip install python-toon` "
+            "or add the 'toon' extra."
+        ) from e
+
     filtered_dict = dict_without_empty_values(model)
     text = toon.encode(filtered_dict)
     path.write_text(text, encoding="utf-8")
@@ -113,12 +126,36 @@ def save_sheets(
         if format_hint == "json":
             text = json.dumps(payload, ensure_ascii=False, indent=2)
         elif format_hint == "yaml":
+            yaml = _require_yaml()
             text = yaml.safe_dump(payload, allow_unicode=True, sort_keys=False, indent=2)
         else:
+            toon = _require_toon()
             text = toon.encode(payload)
         path.write_text(text, encoding="utf-8")
         written[sheet_name] = path
     return written
+
+
+def _require_yaml():
+    try:
+        import yaml
+    except ImportError as e:
+        raise RuntimeError(
+            "YAML export requires pyyaml. Install it via `pip install pyyaml` "
+            "or add the 'yaml' extra."
+        ) from e
+    return yaml
+
+
+def _require_toon():
+    try:
+        import toon
+    except ImportError as e:
+        raise RuntimeError(
+            "TOON export requires python-toon. Install it via `pip install python-toon` "
+            "or add the 'toon' extra."
+        ) from e
+    return toon
 
 
 __all__ = [
