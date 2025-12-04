@@ -15,6 +15,7 @@ __all__ = [
     "export_pdf",
     "export_sheet_images",
     "process_excel",
+    "ExtractionMode",
     "CellRow",
     "Shape",
     "ChartSeries",
@@ -24,9 +25,12 @@ __all__ = [
 ]
 
 
-def extract(file_path: str | Path) -> WorkbookData:
+ExtractionMode = Literal["light", "standard", "verbose"]
+
+
+def extract(file_path: str | Path, mode: ExtractionMode = "standard") -> WorkbookData:
     """Extract workbook semantic structure and return WorkbookData."""
-    return extract_workbook(Path(file_path))
+    return extract_workbook(Path(file_path), mode=mode)
 
 
 def export(
@@ -74,9 +78,10 @@ def process_excel(
     image: bool = False,
     pdf: bool = False,
     dpi: int = 72,
+    mode: ExtractionMode = "standard",
 ) -> None:
     """Convenience wrapper for CLI: export workbook and optionally PDF/PNG images (Excel required for rendering)."""
-    workbook_model = extract(file_path)
+    workbook_model = extract(file_path, mode=mode)
     match out_fmt:
         case "json":
             save_as_json(workbook_model, output_path)

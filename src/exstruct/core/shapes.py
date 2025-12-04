@@ -81,8 +81,12 @@ def _should_include_shape(
     """
     Decide whether to emit a shape given output mode.
     - standard: emit if text exists OR the shape is an arrow/line/connector.
+    - light: suppress shapes entirely (handled upstream, but guard defensively).
+    - verbose: include all (except already-filtered chart/comment/picture/form controls).
     """
-    # Future modes can branch here (light/verbose).
+    if output_mode == "light":
+        return False
+
     is_arrow = False
     if shape_type_num in (3, 9):  # line/connector
         is_arrow = True
@@ -95,10 +99,11 @@ def _should_include_shape(
 
     if output_mode == "standard":
         return bool(text) or is_arrow
+    # verbose
     return True
 
 
-def get_shapes_with_position(workbook: Book) -> Dict[str, List[Shape]]:
+def get_shapes_with_position(workbook: Book, mode: str = "standard") -> Dict[str, List[Shape]]:
     """Scan shapes in a workbook and return per-sheet Shape lists with position info."""
     shape_data: Dict[str, List[Shape]] = {}
     for sheet in workbook.sheets:
@@ -137,14 +142,12 @@ def get_shapes_with_position(workbook: Book) -> Dict[str, List[Shape]]:
                 except Exception:
                     text = ""
 
-                if shape_type_str == "Group" and text == "":
-                    continue
-
                 if not _should_include_shape(
                     text=text,
                     shape_type_num=type_num,
                     shape_type_str=shape_type_str,
                     autoshape_type_str=autoshape_type_str,
+                    output_mode=mode,
                 ):
                     continue
 
@@ -152,8 +155,8 @@ def get_shapes_with_position(workbook: Book) -> Dict[str, List[Shape]]:
                     text=text,
                     l=int(shp.left),
                     t=int(shp.top),
-                    w=int(shp.width) if shape_type_str == "Group" else None,
-                    h=int(shp.height) if shape_type_str == "Group" else None,
+                    w=int(shp.width) if mode == "verbose" or shape_type_str == "Group" else None,
+                    h=int(shp.height) if mode == "verbose" or shape_type_str == "Group" else None,
                     type=f"{shape_type_str}{f'-{autoshape_type_str}' if autoshape_type_str else ''}",
                 )
                 try:

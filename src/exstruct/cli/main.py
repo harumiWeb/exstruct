@@ -40,6 +40,13 @@ def build_parser() -> argparse.ArgumentParser:
         default=144,
         help="DPI for image rendering (placeholder)",
     )
+    parser.add_argument(
+        "-m",
+        "--mode",
+        default="standard",
+        choices=["light", "standard", "verbose"],
+        help="Extraction detail level",
+    )
     return parser
 
 
@@ -68,6 +75,7 @@ def main(argv: list[str] | None = None) -> int:
             image=args.image,
             pdf=args.pdf,
             dpi=args.dpi,
+            mode=args.mode,
         )
         return 0
     except Exception as e:

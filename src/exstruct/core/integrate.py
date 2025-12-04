@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Literal
 
 import logging
 
@@ -23,6 +23,7 @@ def integrate_sheet_content(
     cell_data: Dict[str, List[CellRow]],
     shape_data: Dict[str, List[Shape]],
     workbook: xw.Book,
+    mode: Literal["light", "standard", "verbose"] = "standard",
 ) -> Dict[str, SheetData]:
     """Integrate cells, shapes, charts, and tables into SheetData per sheet."""
     result: Dict[str, SheetData] = {}
@@ -33,7 +34,7 @@ def integrate_sheet_content(
         sheet_model = SheetData(
             rows=rows,
             shapes=sheet_shapes,
-            charts=get_charts(sheet),
+            charts=[] if mode == "light" else get_charts(sheet),
             tables=detect_tables(sheet),
         )
 
@@ -41,7 +42,9 @@ def integrate_sheet_content(
     return result
 
 
-def extract_workbook(file_path: Path) -> WorkbookData:
+def extract_workbook(
+    file_path: Path, mode: Literal["light", "standard", "verbose"] = "standard"
+) -> WorkbookData:
     """Extract workbook and return WorkbookData; fallback to cells+tables if Excel COM is unavailable."""
     cell_data = extract_sheet_cells(file_path)
 
@@ -64,6 +67,9 @@ def extract_workbook(file_path: Path) -> WorkbookData:
         )
         return WorkbookData(book_name=file_path.name, sheets=sheets)
 
+    if mode == "light":
+        return _cells_and_tables_only("Light mode selected.")
+
     try:
         wb = xw.Book(file_path)
     except Exception as e:
@@ -73,8 +79,8 @@ def extract_workbook(file_path: Path) -> WorkbookData:
 
     try:
         try:
-            shape_data = get_shapes_with_position(wb)
-            merged = integrate_sheet_content(cell_data, shape_data, wb)
+            shape_data = get_shapes_with_position(wb, mode=mode)
+            merged = integrate_sheet_content(cell_data, shape_data, wb, mode=mode)
             return WorkbookData(book_name=file_path.name, sheets=merged)
         except Exception as e:
             return _cells_and_tables_only(
