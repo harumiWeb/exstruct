@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from .core.integrate import extract_workbook
-from .io import save_as_json, save_as_toon, save_as_yaml, save_sheets_as_json
+from .io import save_as_json, save_as_toon, save_as_yaml, save_sheets
 from .models import CellRow, Chart, ChartSeries, Shape, SheetData, WorkbookData
 
 __all__ = [
@@ -26,7 +26,11 @@ def extract(file_path: str | Path) -> WorkbookData:
     return extract_workbook(Path(file_path))
 
 
-def export(data: WorkbookData, path: str | Path, fmt: Optional[str] = None) -> None:
+def export(
+    data: WorkbookData,
+    path: str | Path,
+    fmt: Optional[Literal["json", "yaml", "yml", "toon"]] = None,
+) -> None:
     """Export WorkbookData to supported file formats (currently JSON)."""
     dest = Path(path)
     format_hint = (fmt or dest.suffix.lstrip(".") or "json").lower()
@@ -46,7 +50,20 @@ def export_sheets(data: WorkbookData, dir_path: str | Path) -> dict[str, Path]:
     Payload includes book_name and the SheetData for that sheet.
     Returns a mapping of sheet name to written path.
     """
-    return save_sheets_as_json(data, Path(dir_path))
+    return save_sheets(data, Path(dir_path), fmt="json")
+
+
+def export_sheets_as(
+    data: WorkbookData,
+    dir_path: str | Path,
+    fmt: Literal["json", "yaml", "yml", "toon"] = "json",
+) -> dict[str, Path]:
+    """
+    Export each sheet in the given format (json/yaml/toon).
+    Payload includes book_name and the SheetData for that sheet.
+    Returns a mapping of sheet name to written path.
+    """
+    return save_sheets(data, Path(dir_path), fmt=fmt)
 
 
 def process_excel(

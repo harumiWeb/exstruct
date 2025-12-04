@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Literal
 
 import toon
 import yaml
@@ -82,10 +82,50 @@ def save_sheets_as_json(workbook: WorkbookData, output_dir: Path) -> Dict[str, P
     return written
 
 
+def save_sheets(
+    workbook: WorkbookData,
+    output_dir: Path,
+    fmt: Literal["json", "yaml", "yml", "toon"] = "json",
+) -> Dict[str, Path]:
+    """
+    Save each sheet as an individual file in the specified format (json/yaml/toon).
+    Payload includes book_name and the sheet's SheetData.
+    """
+    format_hint = fmt.lower()
+    if format_hint == "yml":
+        format_hint = "yaml"
+    if format_hint not in ("json", "yaml", "toon"):
+        raise ValueError(f"Unsupported sheet export format: {fmt}")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    written: Dict[str, Path] = {}
+    for sheet_name, sheet_data in workbook.sheets.items():
+        payload = dict_without_empty_values(
+            {
+                "book_name": workbook.book_name,
+                "sheet_name": sheet_name,
+                "sheet": sheet_data,
+            }
+        )
+        suffix = {"json": ".json", "yaml": ".yaml", "toon": ".toon"}[format_hint]
+        file_name = f"{_sanitize_sheet_filename(sheet_name)}{suffix}"
+        path = output_dir / file_name
+        if format_hint == "json":
+            text = json.dumps(payload, ensure_ascii=False, indent=2)
+        elif format_hint == "yaml":
+            text = yaml.safe_dump(payload, allow_unicode=True, sort_keys=False, indent=2)
+        else:
+            text = toon.encode(payload)
+        path.write_text(text, encoding="utf-8")
+        written[sheet_name] = path
+    return written
+
+
 __all__ = [
     "dict_without_empty_values",
     "save_as_json",
     "save_as_yaml",
     "save_as_toon",
+    "save_sheets",
     "save_sheets_as_json",
 ]
