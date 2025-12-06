@@ -54,12 +54,14 @@ def _require_pdfium():
         import pypdfium2 as pdfium  # type: ignore
     except ImportError as e:
         raise RuntimeError(
-            "Image rendering requires pypdfium2. Install it via `pip install pypdfium2` or add the 'render' extra."
+            "Image rendering requires pypdfium2. Install it via `pip install pypdfium2 pillow` or add the 'render' extra."
         ) from e
     return pdfium
 
 
-def export_sheet_images(excel_path: Path, output_dir: Path, dpi: int = 144) -> List[Path]:
+def export_sheet_images(
+    excel_path: Path, output_dir: Path, dpi: int = 144
+) -> List[Path]:
     """Export each sheet as PNG (via PDF then pypdfium2 rasterization) and return paths in sheet order."""
     pdfium = _require_pdfium()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -73,7 +75,7 @@ def export_sheet_images(excel_path: Path, output_dir: Path, dpi: int = 144) -> L
         with pdfium.PdfDocument(str(tmp_pdf)) as pdf:  # type: ignore
             for i, sheet_name in enumerate(sheet_names):
                 page = pdf[i]
-                bitmap = page.render(scale=scale) # type: ignore
+                bitmap = page.render(scale=scale)  # type: ignore
                 pil_image = bitmap.to_pil()  # type: ignore
                 safe_name = _sanitize_sheet_filename(sheet_name)
                 img_path = output_dir / f"{i+1:02d}_{safe_name}.png"

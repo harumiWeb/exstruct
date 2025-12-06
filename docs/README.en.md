@@ -25,7 +25,7 @@ Optional extras:
 
 - YAML: `pip install pyyaml`
 - TOON: `pip install python-toon`
-- Rendering (PDF/PNG): Excel + `pip install pypdfium2`
+- Rendering (PDF/PNG): Excel + `pip install pypdfium2 pillow`
 
 ## Quick Start (CLI)
 

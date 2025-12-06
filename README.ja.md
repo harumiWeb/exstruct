@@ -25,7 +25,7 @@ pip install exstruct
 
 - YAML: `pip install pyyaml`
 - TOON: `pip install python-toon`
-- レンダリング（PDF/PNG）: Excel + `pip install pypdfium2`
+- レンダリング（PDF/PNG）: Excel + `pip install pypdfium2 pillow`
 
 ## クイックスタート CLI
 
