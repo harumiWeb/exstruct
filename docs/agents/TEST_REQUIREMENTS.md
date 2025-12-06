@@ -43,6 +43,7 @@ ExStruct のテストは以下のカテゴリに分類される：
 - [CEL-07] セル範囲が大きいファイルでも 1 万セル程度で性能問題がない
 - [CEL-08] `_coerce_numeric_preserve_format` が整数・小数・非数値を正しく判定する
 - [CEL-09] `detect_tables_openpyxl` が openpyxl の Table オブジェクトを検出できる
+- [CEL-10] CellRow.links が列インデックス→URL で格納され、mode=verbose または include_cell_links=True のときのみ出力される
 
 ---
 

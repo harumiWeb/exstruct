@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, List, Literal
 
 import logging
+import os
 
 import xlwings as xw
 
@@ -107,6 +108,9 @@ def extract_workbook(
 
     if mode == "light":
         return _cells_and_tables_only("Light mode selected.")
+
+    if os.getenv("SKIP_COM_TESTS"):
+        return _cells_and_tables_only("SKIP_COM_TESTS is set; skipping COM/xlwings access.")
 
     try:
         wb, close_app = _open_workbook(file_path)
