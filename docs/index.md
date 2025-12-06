@@ -5,6 +5,8 @@ Welcome to the ExStruct docs. This site covers usage, CLI, and API reference for
 - [**README (EN)**](README.en.md)
 - [**README (JA)**](README.ja.md)
 - [**API Reference**](api.md): See the navigation for callable functions and parameters.
+- [**Concept / Why ExStruct?**](concept.md)
+- [**Corporate Usage License Guide**](license-guide.md)
 
 ## At a Glance
 

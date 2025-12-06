@@ -2,6 +2,31 @@
 
 This page shows the primary APIs, minimal runnable examples, expected outputs, and the dependencies required for optional features. Hyperlinks are included when `include_cell_links=True` (or when using `mode="verbose"`).
 
+## TOC
+
+<!-- TOC -->
+
+- [API Reference](#api-reference)
+  - [TOC](#toc)
+  - [Quick Examples](#quick-examples)
+  - [Dependencies](#dependencies)
+  - [Functions](#functions)
+    - [extractfile_path, mode="standard"](#extractfile_path-modestandard)
+    - [exportdata, path, fmt=None, \*, pretty=False, indent=None](#exportdata-path-fmtnone--prettyfalse-indentnone)
+    - [export_sheetsdata, dir_path](#export_sheetsdata-dir_path)
+    - [export_sheets_asdata, dir_path, fmt="json", \*, pretty=False, indent=None](#export_sheets_asdata-dir_path-fmtjson--prettyfalse-indentnone)
+    - [process_excelfile_path, output_path=None, out_fmt="json", image=False, pdf=False, dpi=72, mode="standard", pretty=False, indent=None, sheets_dir=None, stream=None](#process_excelfile_path-output_pathnone-out_fmtjson-imagefalse-pdffalse-dpi72-modestandard-prettyfalse-indentnone-sheets_dirnone-streamnone)
+    - [export_pdffile_path, pdf_path](#export_pdffile_path-pdf_path)
+    - [export_sheet_imagesfile_path, images_dir, dpi=72](#export_sheet_imagesfile_path-images_dir-dpi72)
+    - [set_table_detection_params...](#set_table_detection_params)
+    - [ExStructEngineoptions=StructOptions, output=OutputOptions](#exstructengineoptionsstructoptions-outputoutputoptions)
+  - [Models](#models)
+    - [Model helpers SheetData / WorkbookData](#model-helpers-sheetdata--workbookdata)
+  - [Error Handling](#error-handling)
+  - [Tuning Examples](#tuning-examples)
+
+<!-- /TOC -->
+
 ## Quick Examples
 
 ```python
@@ -18,8 +43,17 @@ Expected JSON snippet (links appear when enabled):
   "book_name": "sample.xlsx",
   "sheets": {
     "Sheet1": {
-      "rows": [{"r": 1, "c": {"0": "Name", "1": "Age"}, "links": null}],
-      "shapes": [{"text": "note", "l": 10, "t": 20, "w": 80, "h": 24, "type": "TextBox"}],
+      "rows": [{ "r": 1, "c": { "0": "Name", "1": "Age" }, "links": null }],
+      "shapes": [
+        {
+          "text": "note",
+          "l": 10,
+          "t": 20,
+          "w": 80,
+          "h": 24,
+          "type": "TextBox"
+        }
+      ],
       "charts": [],
       "table_candidates": ["A1:B5"]
     }
@@ -66,7 +100,7 @@ wb = extract("input.xlsx", mode="verbose")  # includes cell hyperlinks in rows[*
 print(wb.sheets["Sheet1"].table_candidates)
 ```
 
-### export(data, path, fmt=None, *, pretty=False, indent=None)
+### export(data, path, fmt=None, \*, pretty=False, indent=None)
 
 Exports `WorkbookData` to JSON/YAML/TOON. `fmt` defaults from path suffix or `json`. Raises `ValueError` on unsupported fmt. JSON is compact unless `pretty=True` or `indent` is set.
 
@@ -84,7 +118,7 @@ paths = export_sheets(wb, "out_dir")
 print(paths["Sheet1"])  # out_dir/Sheet1.json
 ```
 
-### export_sheets_as(data, dir_path, fmt="json", *, pretty=False, indent=None)
+### export_sheets_as(data, dir_path, fmt="json", \*, pretty=False, indent=None)
 
 Same as `export_sheets` but supports `json`/`yaml`/`yml`/`toon`. Raises `ValueError` on invalid fmt.
 
@@ -146,14 +180,14 @@ engine.process("input.xlsx", pdf=False)    # end-to-end extract + export
 
 ## Models
 
-| Model         | Key fields                                                                                 |
-| ------------- | ------------------------------------------------------------------------------------------ |
-| `WorkbookData`| `book_name: str`, `sheets: dict[str, SheetData]`                                           |
-| `SheetData`   | `rows: list[CellRow]`, `shapes: list[Shape]`, `charts: list[Chart]`, `table_candidates: list[str]` |
-| `CellRow`     | `r: int`, `c: dict[str, int | float | str]`, `links: dict[str, str] \| None`               |
-| `Shape`       | `text: str`, `l/t/w/h: int|None`, `type`, `rotation`, arrow styles, `direction`|
-| `Chart`       | `name`, `chart_type`, `title`, `series`, `y_axis_range`, `l/t`, `error: str|None`          |
-| `ChartSeries` | `name`, `name_range`, `x_range`, `y_range`                                                 |
+| Model          | Key fields                                                                                         |
+| -------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | -------------------------------------- |
+| `WorkbookData` | `book_name: str`, `sheets: dict[str, SheetData]`                                                   |
+| `SheetData`    | `rows: list[CellRow]`, `shapes: list[Shape]`, `charts: list[Chart]`, `table_candidates: list[str]` |
+| `CellRow`      | `r: int`, `c: dict[str, int                                                                        | float                                                | str]`, `links: dict[str, str] \| None` |
+| `Shape`        | `text: str`, `l/t/w/h: int                                                                         | None`, `type`, `rotation`, arrow styles, `direction` |
+| `Chart`        | `name`, `chart_type`, `title`, `series`, `y_axis_range`, `l/t`, `error: str                        | None`                                                |
+| `ChartSeries`  | `name`, `name_range`, `x_range`, `y_range`                                                         |
 
 ### Model helpers (SheetData / WorkbookData)
 

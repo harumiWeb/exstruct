@@ -8,6 +8,7 @@ nav:
   - Concept / Why ExStruct?: concept.md
   - Read Me (EN): README.en.md
   - Read Me (JA): README.ja.md
+  - License Guide: license-guide.md
 markdown_extensions:
   - admonition
   - toc:
