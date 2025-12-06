@@ -41,6 +41,7 @@ def test_JSON出力はUTF8で保存される(tmp_path: Path) -> None:
 
 
 def test_YAML出力はsort_keys_false(tmp_path: Path) -> None:
+    pytest.importorskip("yaml")
     wb = WorkbookData(book_name="b.xlsx", sheets={})
     out = tmp_path / "out.yaml"
     export(wb, out, fmt="yaml")
