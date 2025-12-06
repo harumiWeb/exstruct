@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-
+import json
 from exstruct.engine import ExStructEngine, OutputOptions, StructOptions
 from exstruct.models import Chart, ChartSeries, SheetData, Shape, WorkbookData, CellRow
 
@@ -60,7 +60,9 @@ def test_engine_include_cell_links_toggle() -> None:
     # By default links remain (already present)
     engine = ExStructEngine()
     text = engine.serialize(wb, fmt="json")
-    assert "http://example.com" in text
+    data = json.loads(text)
+    # Navigate workbook -> sheets -> sheet1 -> rows -> row[0] -> links -> cell '0'
+    assert data["sheets"]["Sheet1"]["rows"][0]["links"]["0"] == "http://example.com"
 
     engine_no_links = ExStructEngine(output=OutputOptions(include_rows=True, include_shapes=True, include_charts=True, include_tables=True))
     # overwrite output options to drop links by excluding rows manually would drop links, but links live inside rows; not filtered here.
