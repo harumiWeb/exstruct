@@ -1,0 +1,1087 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://harumiweb.github.io/exstruct/api/">
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../concept/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>API Reference - ExStruct</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.618322db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#api-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ExStruct" class="md-header__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ExStruct
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              API Reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ExStruct" class="md-nav__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ExStruct
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#toc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TOC
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#extractfile_path-modestandard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        extract(file_path, mode="standard")
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exportdata-path-fmtnone-prettyfalse-indentnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        export(data, path, fmt=None, *, pretty=False, indent=None)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#export_sheetsdata-dir_path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        export_sheets(data, dir_path)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#export_sheets_asdata-dir_path-fmtjson-prettyfalse-indentnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        export_sheets_as(data, dir_path, fmt="json", *, pretty=False, indent=None)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#process_excelfile_path-output_pathnone-out_fmtjson-imagefalse-pdffalse-dpi72-modestandard-prettyfalse-indentnone-sheets_dirnone-streamnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        process_excel(file_path, output_path=None, out_fmt="json", image=False, pdf=False, dpi=72, mode="standard", pretty=False, indent=None, sheets_dir=None, stream=None)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#export_pdffile_path-pdf_path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        export_pdf(file_path, pdf_path)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#export_sheet_imagesfile_path-images_dir-dpi72" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        export_sheet_images(file_path, images_dir, dpi=72)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#set_table_detection_params" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        set_table_detection_params(...)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exstructengineoptionsstructoptions-outputoutputoptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ExStructEngine(options=StructOptions(), output=OutputOptions())
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#model-helpers-sheetdata-workbookdata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model helpers (SheetData / WorkbookData)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Handling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tuning-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tuning Examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concept/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept / Why ExStruct?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../README.en/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (EN)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../README.ja/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (JA)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../license-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    License Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#toc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TOC
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#extractfile_path-modestandard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        extract(file_path, mode="standard")
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exportdata-path-fmtnone-prettyfalse-indentnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        export(data, path, fmt=None, *, pretty=False, indent=None)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#export_sheetsdata-dir_path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        export_sheets(data, dir_path)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#export_sheets_asdata-dir_path-fmtjson-prettyfalse-indentnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        export_sheets_as(data, dir_path, fmt="json", *, pretty=False, indent=None)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#process_excelfile_path-output_pathnone-out_fmtjson-imagefalse-pdffalse-dpi72-modestandard-prettyfalse-indentnone-sheets_dirnone-streamnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        process_excel(file_path, output_path=None, out_fmt="json", image=False, pdf=False, dpi=72, mode="standard", pretty=False, indent=None, sheets_dir=None, stream=None)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#export_pdffile_path-pdf_path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        export_pdf(file_path, pdf_path)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#export_sheet_imagesfile_path-images_dir-dpi72" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        export_sheet_images(file_path, images_dir, dpi=72)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#set_table_detection_params" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        set_table_detection_params(...)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exstructengineoptionsstructoptions-outputoutputoptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ExStructEngine(options=StructOptions(), output=OutputOptions())
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#model-helpers-sheetdata-workbookdata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model helpers (SheetData / WorkbookData)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Handling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tuning-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tuning Examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="api-reference">API Reference<a class="headerlink" href="#api-reference" title="Permanent link">&para;</a></h1>
+<p>This page shows the primary APIs, minimal runnable examples, expected outputs, and the dependencies required for optional features. Hyperlinks are included when <code>include_cell_links=True</code> (or when using <code>mode="verbose"</code>).</p>
+<h2 id="toc">TOC<a class="headerlink" href="#toc" title="Permanent link">&para;</a></h2>
+<!-- TOC -->
+
+<ul>
+<li><a href="#api-reference">API Reference</a></li>
+<li><a href="#toc">TOC</a></li>
+<li><a href="#quick-examples">Quick Examples</a></li>
+<li><a href="#dependencies">Dependencies</a></li>
+<li><a href="#functions">Functions</a><ul>
+<li><a href="#extractfile_path-modestandard">extractfile_path, mode="standard"</a></li>
+<li><a href="#exportdata-path-fmtnone--prettyfalse-indentnone">exportdata, path, fmt=None, *, pretty=False, indent=None</a></li>
+<li><a href="#export_sheetsdata-dir_path">export_sheetsdata, dir_path</a></li>
+<li><a href="#export_sheets_asdata-dir_path-fmtjson--prettyfalse-indentnone">export_sheets_asdata, dir_path, fmt="json", *, pretty=False, indent=None</a></li>
+<li><a href="#process_excelfile_path-output_pathnone-out_fmtjson-imagefalse-pdffalse-dpi72-modestandard-prettyfalse-indentnone-sheets_dirnone-streamnone">process_excelfile_path, output_path=None, out_fmt="json", image=False, pdf=False, dpi=72, mode="standard", pretty=False, indent=None, sheets_dir=None, stream=None</a></li>
+<li><a href="#export_pdffile_path-pdf_path">export_pdffile_path, pdf_path</a></li>
+<li><a href="#export_sheet_imagesfile_path-images_dir-dpi72">export_sheet_imagesfile_path, images_dir, dpi=72</a></li>
+<li><a href="#set_table_detection_params">set_table_detection_params...</a></li>
+<li><a href="#exstructengineoptionsstructoptions-outputoutputoptions">ExStructEngineoptions=StructOptions, output=OutputOptions</a></li>
+</ul>
+</li>
+<li><a href="#models">Models</a><ul>
+<li><a href="#model-helpers-sheetdata--workbookdata">Model helpers SheetData / WorkbookData</a></li>
+</ul>
+</li>
+<li><a href="#error-handling">Error Handling</a></li>
+<li><a href="#tuning-examples">Tuning Examples</a></li>
+</ul>
+<!-- /TOC -->
+
+<h2 id="quick-examples">Quick Examples<a class="headerlink" href="#quick-examples" title="Permanent link">&para;</a></h2>
+<pre><code class="language-python">from exstruct import extract, export
+
+wb = extract(&quot;sample.xlsx&quot;, mode=&quot;standard&quot;)
+export(wb, &quot;out.json&quot;)  # compact JSON by default
+</code></pre>
+<p>Expected JSON snippet (links appear when enabled):</p>
+<pre><code class="language-json">{
+  &quot;book_name&quot;: &quot;sample.xlsx&quot;,
+  &quot;sheets&quot;: {
+    &quot;Sheet1&quot;: {
+      &quot;rows&quot;: [{ &quot;r&quot;: 1, &quot;c&quot;: { &quot;0&quot;: &quot;Name&quot;, &quot;1&quot;: &quot;Age&quot; }, &quot;links&quot;: null }],
+      &quot;shapes&quot;: [
+        {
+          &quot;text&quot;: &quot;note&quot;,
+          &quot;l&quot;: 10,
+          &quot;t&quot;: 20,
+          &quot;w&quot;: 80,
+          &quot;h&quot;: 24,
+          &quot;type&quot;: &quot;TextBox&quot;
+        }
+      ],
+      &quot;charts&quot;: [],
+      &quot;table_candidates&quot;: [&quot;A1:B5&quot;]
+    }
+  }
+}
+</code></pre>
+<p>CLI-equivalent flow via Python:</p>
+<pre><code class="language-python">from pathlib import Path
+from exstruct import process_excel
+
+process_excel(
+    file_path=Path(&quot;input.xlsx&quot;),
+    output_path=None,  # default: stdout (redirect if you want a file)
+    sheets_dir=Path(&quot;out_sheets&quot;),  # optional per-sheet outputs
+    out_fmt=&quot;json&quot;,
+    image=True,
+    pdf=True,
+    mode=&quot;standard&quot;,
+    pretty=True,
+)
+# Same as: exstruct input.xlsx --format json --pdf --image --mode standard --pretty --sheets-dir out_sheets &gt; out.json
+</code></pre>
+<h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Core extraction: pandas, openpyxl (installed with the package).</li>
+<li>YAML export: <code>pyyaml</code> (imported lazily; missing module raises <code>RuntimeError</code>).</li>
+<li>TOON export: <code>python-toon</code> (lazy import; missing module raises <code>RuntimeError</code>).</li>
+<li>Rendering (PDF/PNG): <strong>Excel + COM + <code>pypdfium2</code></strong> are mandatory. Without Excel/COM, rendering APIs raise <code>RuntimeError</code>.</li>
+</ul>
+<h2 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h2>
+<h3 id="extractfile_path-modestandard">extract(file_path, mode="standard")<a class="headerlink" href="#extractfile_path-modestandard" title="Permanent link">&para;</a></h3>
+<p>Extracts workbook structure. Modes: <code>light</code>, <code>standard</code> (default), <code>verbose</code>. Raises <code>ValueError</code> on invalid mode. Hyperlinks are included when <code>mode="verbose"</code>; for other modes pass <code>include_cell_links=True</code> via <code>StructOptions</code> (see engine below).</p>
+<pre><code class="language-python">from exstruct import extract
+
+wb = extract(&quot;input.xlsx&quot;, mode=&quot;verbose&quot;)  # includes cell hyperlinks in rows[*].links
+print(wb.sheets[&quot;Sheet1&quot;].table_candidates)
+</code></pre>
+<h3 id="exportdata-path-fmtnone-prettyfalse-indentnone">export(data, path, fmt=None, *, pretty=False, indent=None)<a class="headerlink" href="#exportdata-path-fmtnone-prettyfalse-indentnone" title="Permanent link">&para;</a></h3>
+<p>Exports <code>WorkbookData</code> to JSON/YAML/TOON. <code>fmt</code> defaults from path suffix or <code>json</code>. Raises <code>ValueError</code> on unsupported fmt. JSON is compact unless <code>pretty=True</code> or <code>indent</code> is set.</p>
+<pre><code class="language-python">export(wb, &quot;out.yaml&quot;, fmt=&quot;yaml&quot;)  # requires pyyaml
+export(wb, &quot;out.json&quot;, pretty=True)  # pretty-printed JSON
+</code></pre>
+<h3 id="export_sheetsdata-dir_path">export_sheets(data, dir_path)<a class="headerlink" href="#export_sheetsdata-dir_path" title="Permanent link">&para;</a></h3>
+<p>Writes one JSON per sheet, including <code>book_name</code> and the <code>SheetData</code>. Returns <code>{sheet_name: Path}</code>.</p>
+<pre><code class="language-python">paths = export_sheets(wb, &quot;out_dir&quot;)
+print(paths[&quot;Sheet1&quot;])  # out_dir/Sheet1.json
+</code></pre>
+<h3 id="export_sheets_asdata-dir_path-fmtjson-prettyfalse-indentnone">export_sheets_as(data, dir_path, fmt="json", *, pretty=False, indent=None)<a class="headerlink" href="#export_sheets_asdata-dir_path-fmtjson-prettyfalse-indentnone" title="Permanent link">&para;</a></h3>
+<p>Same as <code>export_sheets</code> but supports <code>json</code>/<code>yaml</code>/<code>yml</code>/<code>toon</code>. Raises <code>ValueError</code> on invalid fmt.</p>
+<pre><code class="language-python">export_sheets_as(wb, &quot;yaml_dir&quot;, fmt=&quot;yaml&quot;)  # requires pyyaml
+</code></pre>
+<h3 id="process_excelfile_path-output_pathnone-out_fmtjson-imagefalse-pdffalse-dpi72-modestandard-prettyfalse-indentnone-sheets_dirnone-streamnone">process_excel(file_path, output_path=None, out_fmt="json", image=False, pdf=False, dpi=72, mode="standard", pretty=False, indent=None, sheets_dir=None, stream=None)<a class="headerlink" href="#process_excelfile_path-output_pathnone-out_fmtjson-imagefalse-pdffalse-dpi72-modestandard-prettyfalse-indentnone-sheets_dirnone-streamnone" title="Permanent link">&para;</a></h3>
+<p>Convenience wrapper used by the CLI. Writes to stdout when <code>output_path</code> is omitted, can optionally split per sheet (<code>sheets_dir</code>), and can render PDF/PNG (Excel required). Invalid <code>mode</code> or <code>out_fmt</code> raises <code>ValueError</code>.</p>
+<h3 id="export_pdffile_path-pdf_path">export_pdf(file_path, pdf_path)<a class="headerlink" href="#export_pdffile_path-pdf_path" title="Permanent link">&para;</a></h3>
+<p>Exports the workbook to PDF via Excel COM. Requires Excel and <code>pypdfium2</code> if images will be generated afterwards.</p>
+<h3 id="export_sheet_imagesfile_path-images_dir-dpi72">export_sheet_images(file_path, images_dir, dpi=72)<a class="headerlink" href="#export_sheet_imagesfile_path-images_dir-dpi72" title="Permanent link">&para;</a></h3>
+<p>Converts a PDF (rendered via Excel) into per-sheet PNGs using <code>pypdfium2</code>. Requires Excel + COM + <code>pypdfium2</code>.</p>
+<h3 id="set_table_detection_params">set_table_detection_params(...)<a class="headerlink" href="#set_table_detection_params" title="Permanent link">&para;</a></h3>
+<p>Tunes table detection heuristics at runtime. Higher thresholds reduce false positives; lower thresholds catch faint tables.</p>
+<pre><code class="language-python">from exstruct import set_table_detection_params
+
+# Before: a layout frame was misdetected as a table.
+set_table_detection_params(table_score_threshold=0.35, density_min=0.05)
+
+# After lowering thresholds to catch very sparse tables:
+set_table_detection_params(table_score_threshold=0.25, coverage_min=0.15)
+</code></pre>
+<h3 id="exstructengineoptionsstructoptions-outputoutputoptions">ExStructEngine(options=StructOptions(), output=OutputOptions())<a class="headerlink" href="#exstructengineoptionsstructoptions-outputoutputoptions" title="Permanent link">&para;</a></h3>
+<p>Configurable engine for per-instance extraction/output settings.</p>
+<ul>
+<li><code>StructOptions</code>: <code>mode</code>, optional <code>table_params</code> (forwarded to <code>set_table_detection_params</code>), <code>include_cell_links</code> (None -&gt; auto: verbose=True, others=False).</li>
+<li><code>OutputOptions</code>: defaults for <code>fmt</code>, <code>pretty</code>, <code>indent</code>, include/exclude flags for rows/shapes/charts/tables, <code>sheets_dir</code>, <code>stream</code>.</li>
+<li>Methods:</li>
+<li><code>extract(path, mode=None)</code> → WorkbookData</li>
+<li><code>serialize(workbook, fmt=None, pretty=None, indent=None)</code> → str (filters applied)</li>
+<li><code>export(workbook, output_path=None, fmt=None, pretty=None, indent=None, sheets_dir=None, stream=None)</code></li>
+<li><code>process(file_path, output_path=None, out_fmt=None, image=False, pdf=False, dpi=72, mode=None, pretty=None, indent=None, sheets_dir=None, stream=None)</code></li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-python">from exstruct import ExStructEngine, StructOptions, OutputOptions
+
+engine = ExStructEngine(
+    options=StructOptions(mode=&quot;standard&quot;, include_cell_links=True),  # enable hyperlinks in standard mode
+    output=OutputOptions(include_shapes=False, pretty=True),
+)
+wb = engine.extract(&quot;input.xlsx&quot;)
+engine.export(wb, &quot;out.json&quot;)              # writes filtered JSON (no shapes)
+engine.process(&quot;input.xlsx&quot;, pdf=False)    # end-to-end extract + export
+</code></pre>
+<h2 id="models">Models<a class="headerlink" href="#models" title="Permanent link">&para;</a></h2>
+<p>| Model          | Key fields                                                                                         |
+| -------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | -------------------------------------- |
+| <code>WorkbookData</code> | <code>book_name: str</code>, <code>sheets: dict[str, SheetData]</code>                                                   |
+| <code>SheetData</code>    | <code>rows: list[CellRow]</code>, <code>shapes: list[Shape]</code>, <code>charts: list[Chart]</code>, <code>table_candidates: list[str]</code> |
+| <code>CellRow</code>      | <code>r: int</code>, <code>c: dict[str, int                                                                        | float                                                | str]</code>, <code>links: dict[str, str] \| None</code> |
+| <code>Shape</code>        | <code>text: str</code>, <code>l/t/w/h: int                                                                         | None</code>, <code>type</code>, <code>rotation</code>, arrow styles, <code>direction</code> |
+| <code>Chart</code>        | <code>name</code>, <code>chart_type</code>, <code>title</code>, <code>series</code>, <code>y_axis_range</code>, <code>l/t</code>, <code>error: str                        | None</code>                                                |
+| <code>ChartSeries</code>  | <code>name</code>, <code>name_range</code>, <code>x_range</code>, <code>y_range</code>                                                         |</p>
+<h3 id="model-helpers-sheetdata-workbookdata">Model helpers (SheetData / WorkbookData)<a class="headerlink" href="#model-helpers-sheetdata-workbookdata" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>to_json(pretty=False, indent=None)</code> → JSON string (pretty when requested)</li>
+<li><code>to_yaml()</code> → YAML string (requires <code>pyyaml</code>)</li>
+<li><code>to_toon()</code> → TOON string (requires <code>python-toon</code>)</li>
+<li><code>save(path, pretty=False, indent=None)</code> → infers format from suffix (<code>.json/.yaml/.yml/.toon</code>)</li>
+<li><code>WorkbookData.__getitem__(name)</code> → get a SheetData by name</li>
+<li><code>WorkbookData.__iter__()</code> → yields <code>(sheet_name, SheetData)</code> in order</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-python">wb = extract(&quot;input.xlsx&quot;)
+first = wb[&quot;Sheet1&quot;]
+for name, sheet in wb:
+    print(name, len(sheet.rows))
+wb.save(&quot;out.json&quot;, pretty=True)
+first.save(&quot;sheet.yaml&quot;)  # requires pyyaml
+</code></pre>
+<h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Excel COM unavailable: extraction falls back to cells + <code>table_candidates</code>; <code>shapes</code>/<code>charts</code> are empty, warning is logged.</li>
+<li>Invalid <code>fmt</code> or <code>mode</code>: <code>ValueError</code>.</li>
+<li>Missing optional dependency (<code>pyyaml</code>, <code>python-toon</code>, <code>pypdfium2</code>): <code>RuntimeError</code> with install hint.</li>
+<li>Rendering without Excel/COM: <code>RuntimeError</code>.</li>
+<li>CLI mirrors these: exits non-zero on failures, prints messages in English.</li>
+</ul>
+<h2 id="tuning-examples">Tuning Examples<a class="headerlink" href="#tuning-examples" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Reduce false positives (layout frames):</li>
+</ul>
+<pre><code class="language-python">set_table_detection_params(table_score_threshold=0.4, coverage_min=0.25)
+</code></pre>
+<ul>
+<li>Recover missed tiny tables:</li>
+</ul>
+<pre><code class="language-python">set_table_detection_params(density_min=0.03, min_nonempty_cells=2)
+</code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+    
+  </body>
+</html>

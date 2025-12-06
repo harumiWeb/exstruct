@@ -1,0 +1,630 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://harumiweb.github.io/exstruct/agents/TEST_REQUIREMENTS/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>ExStruct Test Requirements Specification - ExStruct</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.618322db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#exstruct-test-requirements-specification" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ExStruct" class="md-header__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ExStruct
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ExStruct Test Requirements Specification
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ExStruct" class="md-nav__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ExStruct
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concept/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept / Why ExStruct?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../README.en/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (EN)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../README.ja/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (JA)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../license-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    License Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="exstruct-test-requirements-specification">ExStruct Test Requirements Specification<a class="headerlink" href="#exstruct-test-requirements-specification" title="Permanent link">&para;</a></h1>
+<p>Version: 0.2<br />
+Status: Required for Release</p>
+<p>この文書は、ExStruct のすべての機能に対する <strong>正式なテスト要件一覧</strong> であり、<br />
+AI エージェント・人間開発者双方が参照して自動/手動テストを生成できるように設計されています。</p>
+<hr />
+<h1 id="1-test-coverage-categories">1. Test Coverage Categories<a class="headerlink" href="#1-test-coverage-categories" title="Permanent link">&para;</a></h1>
+<p>ExStruct のテストは以下のカテゴリに分類される：</p>
+<ol>
+<li><strong>セル抽出（Cells Extraction）</strong></li>
+<li><strong>図形抽出（Shapes Extraction）</strong></li>
+<li><strong>矢印・方向推定（Arrow + Direction Detection）</strong></li>
+<li><strong>チャート抽出（Chart Extraction）</strong></li>
+<li><strong>意味付与（Layout Integration）</strong></li>
+<li><strong>データモデル準拠テスト（Pydantic Validation）</strong></li>
+<li><strong>出力フォーマット（JSON/YAML/TOML Writer）</strong></li>
+<li><strong>CLI テスト</strong></li>
+<li><strong>エラー処理・フェイルセーフ</strong></li>
+<li><strong>回帰テスト（Regression）</strong></li>
+<li><strong>パフォーマンス/メモリ要件</strong></li>
+</ol>
+<hr />
+<h1 id="2-functional-test-requirements">2. Functional Test Requirements (詳細要件)<a class="headerlink" href="#2-functional-test-requirements" title="Permanent link">&para;</a></h1>
+<hr />
+<h2 id="21-cells-extraction-requirements"><strong>2.1 Cells Extraction Requirements</strong><a class="headerlink" href="#21-cells-extraction-requirements" title="Permanent link">&para;</a></h2>
+<h3 id="_1">必須テスト<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[CEL-01] 空セルを除外し、非空セルのみ <code>c</code> に出力される</li>
+<li>[CEL-02] 行番号 <code>r</code> が 0-based index で正しく出力される</li>
+<li>[CEL-03] 列番号が <code>"0"</code>, <code>"1"</code> の <strong>文字列キー</strong> で出力される</li>
+<li>[CEL-04] セルに改行・タブが含まれても正しく読み込める</li>
+<li>[CEL-05] Unicode（絵文字、日本語、異体字）セルの読み取り</li>
+<li>[CEL-06] Pandas 読み込みによる dtype=string 強制が守られている</li>
+<li>[CEL-07] セル範囲が大きいファイルでも 1 万セル程度で性能問題がない</li>
+<li>[CEL-08] <code>_coerce_numeric_preserve_format</code> が整数・小数・非数値を正しく判定する</li>
+<li>[CEL-09] <code>detect_tables_openpyxl</code> が openpyxl の Table オブジェクトを検出できる</li>
+<li>[CEL-10] CellRow.links が列インデックス→URL で格納され、mode=verbose または include_cell_links=True のときのみ出力される</li>
+</ul>
+<hr />
+<h2 id="22-shapes-extraction-requirements"><strong>2.2 Shapes Extraction Requirements</strong><a class="headerlink" href="#22-shapes-extraction-requirements" title="Permanent link">&para;</a></h2>
+<h3 id="_2">基本形状<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[SHP-01] AutoShape の type が正しく文字列化される</li>
+<li>[SHP-02] TextFrame の文字列が正しく読み取れる</li>
+<li>[SHP-03] サイズ（w, h）が null にならない（取得不可時は null）</li>
+<li>[SHP-04] Group（グループ図形）内の子図形がすべて展開される or 無視方針が維持される</li>
+</ul>
+<h3 id="_3">座標<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[SHP-05] l, t（left, top）が整数で取得される</li>
+<li>[SHP-06] 表示倍率やウィンドウズームが変わっても座標が変動しない</li>
+</ul>
+<h3 id="_4">回転 / 矢印<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[SHP-07] rotation が Excel の回転角度値に一致する</li>
+<li>[SHP-09] begin_arrow_style / end_arrow_style が Excel の ENUM と一致する</li>
+<li>[SHP-10] direction が 8 方位分類に従い正しく算出される</li>
+</ul>
+<h3 id="_5">テキスト<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[SHP-11] テキストなし図形は text="" になる</li>
+<li>[SHP-12] 複数段落のテキストを抽出可能</li>
+</ul>
+<hr />
+<h2 id="23-arrow-direction-deduction-requirements"><strong>2.3 Arrow &amp; Direction Deduction Requirements</strong><a class="headerlink" href="#23-arrow-direction-deduction-requirements" title="Permanent link">&para;</a></h2>
+<p>矢印図形の方向推定の精度要件。</p>
+<ul>
+<li>[DIR-01] 0° ±22.5° → "E"</li>
+<li>[DIR-02] 45° ±22.5° → "NE"</li>
+<li>[DIR-03] 90° ±22.5° → "N"</li>
+<li>[DIR-04] 135° ±22.5° → "NW"</li>
+<li>[DIR-05] 180° ±22.5° → "W"</li>
+<li>[DIR-06] 225° ±22.5° → "SW"</li>
+<li>[DIR-07] 270° ±22.5° → "S"</li>
+<li>[DIR-08] 315° ±22.5° → "SE"</li>
+<li>[DIR-09] 境界角度の場合、片側に丸める（仕様どおり）</li>
+</ul>
+<hr />
+<h2 id="24-chart-extraction-requirements"><strong>2.4 Chart Extraction Requirements</strong><a class="headerlink" href="#24-chart-extraction-requirements" title="Permanent link">&para;</a></h2>
+<h3 id="chart-meta">Chart meta<a class="headerlink" href="#chart-meta" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[CH-01] ChartType が XL_CHART_TYPE_MAP に基づき文字列化される</li>
+<li>[CH-02] Chart Title が取得される（ない場合は null）</li>
+<li>[CH-03] y_axis_title が正しく取得される（ない場合は空文字）</li>
+</ul>
+<h3 id="axis-range">Axis range<a class="headerlink" href="#axis-range" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[CH-04] 最小/最大値が float で取得される</li>
+<li>[CH-05] 未設定時は空 list を返す</li>
+</ul>
+<h3 id="series-meta">Series meta<a class="headerlink" href="#series-meta" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[CH-06] name_range が Excel 参照式で出力される（例: =Sheet1!$B$1）</li>
+<li>[CH-07] x_range が参照式で出力される</li>
+<li>[CH-08] y_range が参照式で出力される</li>
+<li>[CH-09] 散布図, 円グラフ, 棒グラフなど全タイプが解析成功する</li>
+</ul>
+<h3 id="_6">エラー処理<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[CH-10] 解析失敗時 error にメッセージが入りクラッシュしない</li>
+</ul>
+<hr />
+<h2 id="25-layout-integration-requirements"><strong>2.5 Layout Integration Requirements</strong><a class="headerlink" href="#25-layout-integration-requirements" title="Permanent link">&para;</a></h2>
+<p>図形とセルの意味的紐づけに関する要件。</p>
+<ul>
+<li>[LAY-01] Shape の中心点が属する行 r を正しく推定できる</li>
+<li>[LAY-02] 列方向の紐づけは仕様に従い簡易に行う（未実装なら test skip）</li>
+<li>[LAY-03] 1 行に複数の shapes が付く場合 shape 順序を保持する</li>
+<li>[LAY-04] シートに shapes がない場合は空 list</li>
+</ul>
+<hr />
+<h1 id="3-model-validation-requirements">3. Model Validation Requirements<a class="headerlink" href="#3-model-validation-requirements" title="Permanent link">&para;</a></h1>
+<p>pydantic 構造が必ず仕様どおりであることを検証する。</p>
+<ul>
+<li>[MOD-01] すべてのモデルが <code>BaseModel</code> を継承している</li>
+<li>[MOD-02] 型が DATA_MODEL.md に完全一致する</li>
+<li>[MOD-03] Optional の項目は未指定で None になる</li>
+<li>[MOD-04] 数値項目は int/float として正規化される</li>
+<li>[MOD-05] direction の Literal が仕様外の場合 ValidationError を投げる</li>
+<li>[MOD-06] rows/shapes/charts/tables がデフォルトで空 list になる</li>
+<li>[MOD-07] WorkbookData は <code>__getitem__</code> でシート名指定の取得ができ、<code>__iter__</code> で (sheet_name, SheetData) を順序維持で走査できる</li>
+</ul>
+<hr />
+<h1 id="4-export-requirementsjsonyamltoml">4. Export Requirements（JSON/YAML/TOML）<a class="headerlink" href="#4-export-requirementsjsonyamltoml" title="Permanent link">&para;</a></h1>
+<ul>
+<li>[EXP-01] 空値（None, "", [], {}）は dict_without_empty_values により除外される</li>
+<li>[EXP-02] JSON 出力が UTF-8 で行われる</li>
+<li>[EXP-03] YAML 出力が sort_keys=False で行われる</li>
+<li>[EXP-04] TOON 出力がバイナリ書き込みで正しく生成される</li>
+<li>[EXP-05] WorkbookData → JSON → WorkbookData の round-trip が破壊的変更なし</li>
+<li>[EXP-06] export_sheets でシートごとにファイルが出力される</li>
+<li>[EXP-07] WorkbookData/SheetData の <code>to_json</code> が pretty オプションでインデントされる</li>
+<li>[EXP-08] WorkbookData/SheetData の <code>save(path)</code> が拡張子でフォーマットを自動判別し、未対応拡張子は ValueError となる</li>
+<li>[EXP-09] WorkbookData/SheetData の <code>to_yaml</code> / <code>to_toon</code> は依存未導入時に明示的な RuntimeError を返し、導入済みなら正常に文字列を返す</li>
+<li>[EXP-10] ExStructEngine の OutputOptions で include_shapes/charts/tables/rows を False にすると対応フィールドが出力から除外される（空リストも消える）</li>
+</ul>
+<hr />
+<h1 id="5-cli-requirements">5. CLI Requirements<a class="headerlink" href="#5-cli-requirements" title="Permanent link">&para;</a></h1>
+<ul>
+<li>[CLI-01] <code>exstruct extract file.xlsx</code> が成功する</li>
+<li>[CLI-02] <code>--format json/yaml/toml</code> が機能する</li>
+<li>[CLI-03] <code>--image</code> で PNG が出力される</li>
+<li>[CLI-04] <code>--pdf</code> で PDF が出力される</li>
+<li>[CLI-05] 無効ファイル選択時は安全に終了する</li>
+<li>[CLI-06] エラーメッセージが stdout に出力される</li>
+</ul>
+<hr />
+<h1 id="6-error-handling-requirements">6. Error Handling Requirements<a class="headerlink" href="#6-error-handling-requirements" title="Permanent link">&para;</a></h1>
+<ul>
+<li>[ERR-01] xlwings COM エラーでもプロセスが落ちない</li>
+<li>[ERR-02] 図形抽出失敗時でも他要素が取得される</li>
+<li>[ERR-03] Chart extraction failure → Chart.error に必ず文字列</li>
+<li>[ERR-04] 異常な参照（broken range）は例外化せず null か error に記録</li>
+<li>[ERR-05] Excel ファイルが開けない場合はメッセージを出して終了</li>
+</ul>
+<hr />
+<h1 id="7-regression-requirements">7. Regression Requirements<a class="headerlink" href="#7-regression-requirements" title="Permanent link">&para;</a></h1>
+<ul>
+<li>[REG-01] 過去バージョンと同じ Excel を入力したとき、出力 JSON の構造が変わらない</li>
+<li>[REG-02] Models のキー削除 or 名前変更はすべて破壊的変更として検知する</li>
+<li>[REG-03] 方向推定アルゴリズムの変更検知</li>
+<li>[REG-04] ChartSeries の参照範囲解析が過去結果と一致する</li>
+</ul>
+<hr />
+<h1 id="8-non-functional-requirements">8. Non-Functional Requirements<a class="headerlink" href="#8-non-functional-requirements" title="Permanent link">&para;</a></h1>
+<h3 id="performance">Performance<a class="headerlink" href="#performance" title="Permanent link">&para;</a></h3>
+<!-- - [PERF-01] 未定 -->
+
+<h3 id="memory">Memory<a class="headerlink" href="#memory" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[MEM-01] 100MB の Excel を扱う際に Python プロセスが 1GB を超えない</li>
+<li>[MEM-02] レンダリング（PNG）時にリークがない</li>
+</ul>
+<hr />
+<h1 id="9-mode-output-requirements">9. Mode Output Requirements<a class="headerlink" href="#9-mode-output-requirements" title="Permanent link">&para;</a></h1>
+<ul>
+<li>[MODE-01] CLI <code>--mode</code> と API <code>extract(..., mode=)</code> が <code>light</code>/<code>standard</code>/<code>verbose</code> のみ受け付け、デフォルトは <code>standard</code></li>
+<li>[MODE-02] <code>light</code> モードはセルとテーブルのみ返し、shapes/charts は空で COM アクセスもしない</li>
+<li>[MODE-03] <code>standard</code> モードは既存挙動を維持し、テキスト付き図形または矢印系のみ出力し、COM 有効時はチャート取得</li>
+<li>[MODE-04] <code>verbose</code> モードは chart/comment/picture/form control 以外の全図形を出力し、テキストの有無にかかわらず <code>w</code>/<code>h</code> を必ず含める</li>
+<li>[MODE-05] <code>process_excel</code> でモード指定が伝搬し、PDF/画像オプション併用でも正常終了する</li>
+<li>[MODE-06] <code>standard</code> モードで既存フィクスチャの出力に回帰がない（不要な図形が増えない）</li>
+<li>[MODE-07] 無効なモード値は処理開始前にエラーとなる</li>
+<li>[INT-01] COM オープン失敗時に <code>extract_workbook</code> がセル＋テーブル候補のみを返すフォールバックを行う</li>
+<li>[IO-05] <code>dict_without_empty_values</code> が None/空リスト/空辞書/空文字列を除去しネスト構造を保持する</li>
+<li>[RENDER-01] Excel+COM+pypdfium2 環境で PDF/PNG を出力できるスモークテスト（環境変数でオンオフ可能）</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+    
+  </body>
+</html>

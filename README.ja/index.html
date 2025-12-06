@@ -1,0 +1,1245 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://harumiweb.github.io/exstruct/README.ja/">
+      
+      
+        <link rel="prev" href="../README.en/">
+      
+      
+        <link rel="next" href="../license-guide/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>Read Me (JA) - ExStruct</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.618322db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#exstruct-excel" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ExStruct" class="md-header__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ExStruct
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Read Me (JA)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ExStruct" class="md-nav__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ExStruct
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concept/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept / Why ExStruct?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../README.en/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (EN)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (JA)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (JA)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        主な特徴
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        インストール
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        クイックスタート CLI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        クイックスタート Python
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        テーブル検出パラメータ
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        出力モード
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        エラーハンドリング / フォールバック
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        任意レンダリング
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#excel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ベンチマーク: Excel 構造化デモ
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ベンチマーク: Excel 構造化デモ">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-input-excel-sheet-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Input: Excel Sheet Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ① 表 (売上データ)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ② グラフ (折れ線グラフ)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ③ 図形によるフローチャート
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-output-exstruct-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Output: exstruct が生成する構造化 JSON（抜粋）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-ai-copilot-llm-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. AI (Copilot / LLM) に JSON を渡した際の理解結果
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        備考
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#license" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        License
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ドキュメント
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../license-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    License Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        主な特徴
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        インストール
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        クイックスタート CLI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        クイックスタート Python
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        テーブル検出パラメータ
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        出力モード
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        エラーハンドリング / フォールバック
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        任意レンダリング
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#excel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ベンチマーク: Excel 構造化デモ
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ベンチマーク: Excel 構造化デモ">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-input-excel-sheet-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Input: Excel Sheet Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ① 表 (売上データ)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ② グラフ (折れ線グラフ)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ③ 図形によるフローチャート
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-output-exstruct-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Output: exstruct が生成する構造化 JSON（抜粋）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-ai-copilot-llm-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. AI (Copilot / LLM) に JSON を渡した際の理解結果
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        備考
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#license" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        License
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ドキュメント
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="exstruct-excel">ExStruct — Excel 構造化抽出エンジン<a class="headerlink" href="#exstruct-excel" title="Permanent link">&para;</a></h1>
+<p><a href="https://pypi.org/project/exstruct/"><img alt="PyPI version" src="https://badge.fury.io/py/exstruct.svg" /></a> <a href="https://pepy.tech/projects/exstruct"><img alt="PyPI Downloads" src="https://static.pepy.tech/personalized-badge/exstruct?period=total&amp;units=INTERNATIONAL_SYSTEM&amp;left_color=BLACK&amp;right_color=GREEN&amp;left_text=downloads" /></a> <img alt="Licence: BSD-3-Clause" src="https://img.shields.io/badge/license-BSD--3--Clause-blue?style=flat-square" /> <a href="https://github.com/harumiWeb/exstruct/actions/workflows/pytest.yml"><img alt="pytest" src="https://github.com/harumiWeb/exstruct/actions/workflows/pytest.yml/badge.svg" /></a></p>
+<p><img alt="ExStruct Image" src="/docs/assets/icon.webp" /></p>
+<p>ExStruct は Excel ワークブックを読み取り、構造化データ（テーブル候補・図形・チャート）をデフォルトで JSON に出力します。必要に応じて YAML/TOON も選択でき、COM/Excel 環境ではリッチ抽出、非 COM 環境ではセル＋テーブル候補へのフォールバックで安全に動作します。LLM/RAG 向けに検出ヒューリスティックや出力モードを調整可能です。</p>
+<h2 id="_1">主な特徴<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Excel → 構造化 JSON</strong>: セル、図形、チャート、テーブル候補をシート単位で出力。</li>
+<li><strong>出力モード</strong>: <code>light</code>（セル＋テーブル候補のみ）、<code>standard</code>（テキスト付き図形＋矢印、チャート）、<code>verbose</code>（全図形を幅高さ付きで出力、セルのハイパーリンクも出力）。</li>
+<li><strong>フォーマット</strong>: JSON（デフォルトはコンパクト、<code>--pretty</code> で整形）、YAML、TOON（任意依存）。</li>
+<li><strong>テーブル検出のチューニング</strong>: API でヒューリスティックを動的に変更可能。</li>
+<li><strong>ハイパーリンク抽出</strong>: <code>verbose</code> モード（または <code>include_cell_links=True</code> 指定）でセルのリンクを <code>links</code> に出力。</li>
+<li><strong>CLI レンダリング</strong>（Excel 必須）: PDF とシート画像を生成可能。</li>
+<li><strong>安全なフォールバック</strong>: Excel COM 不在でもプロセスは落ちず、セル＋テーブル候補に切り替え。</li>
+</ul>
+<h2 id="_2">インストール<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<pre><code class="language-bash">pip install exstruct
+</code></pre>
+<p>オプション依存:</p>
+<ul>
+<li>YAML: <code>pip install pyyaml</code></li>
+<li>TOON: <code>pip install python-toon</code></li>
+<li>レンダリング（PDF/PNG）: Excel + <code>pip install pypdfium2 pillow</code></li>
+<li>まとめて導入: <code>pip install exstruct[yaml,toon,render]</code></li>
+</ul>
+<p>プラットフォーム注意:</p>
+<ul>
+<li>図形・チャートを含むフル抽出は Windows + Excel (xlwings/COM) 前提。その他プラットフォームでは <code>mode=light</code> でセル＋<code>table_candidates</code> のみ安全に取得できます。</li>
+</ul>
+<h2 id="cli">クイックスタート CLI<a class="headerlink" href="#cli" title="Permanent link">&para;</a></h2>
+<pre><code class="language-bash">exstruct input.xlsx &gt; output.json          # デフォルトは標準出力のコンパクト JSON
+exstruct input.xlsx -o out.json --pretty   # 整形 JSON をファイルへ
+exstruct input.xlsx --format yaml          # YAML（pyyaml が必要）
+exstruct input.xlsx --format toon          # TOON（python-toon が必要）
+exstruct input.xlsx --sheets-dir sheets/   # シートごとに分割出力
+exstruct input.xlsx --mode light           # セル＋テーブル候補のみ
+exstruct input.xlsx --pdf --image          # PDF と PNG（Excel 必須）
+</code></pre>
+<h2 id="python">クイックスタート Python<a class="headerlink" href="#python" title="Permanent link">&para;</a></h2>
+<pre><code class="language-python">from pathlib import Path
+from exstruct import extract, export, set_table_detection_params
+
+# テーブル検出を調整（任意）
+set_table_detection_params(table_score_threshold=0.3, density_min=0.04)
+
+# モード: &quot;light&quot; / &quot;standard&quot; / &quot;verbose&quot;
+wb = extract(&quot;input.xlsx&quot;, mode=&quot;standard&quot;)  # standard ではリンクはデフォルト非出力
+export(wb, Path(&quot;out.json&quot;), pretty=False)  # コンパクト JSON
+
+# モデルの便利メソッド: 反復・インデックス・直列化
+first_sheet = wb[&quot;Sheet1&quot;]           # __getitem__ でシート取得
+for name, sheet in wb:               # __iter__ で (name, SheetData) を列挙
+    print(name, len(sheet.rows))
+wb.save(&quot;out.json&quot;, pretty=True)     # WorkbookData を拡張子に応じて保存
+first_sheet.save(&quot;sheet.json&quot;)       # SheetData も同様に保存
+print(first_sheet.to_yaml())         # YAML 文字列（pyyaml 必須）
+</code></pre>
+<p><strong>備考 (COM 非対応環境):</strong> Excel COM が使えない場合でもセル＋<code>table_candidates</code> は返りますが、<code>shapes</code> / <code>charts</code> は空になります。</p>
+<h2 id="_3">テーブル検出パラメータ<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<pre><code class="language-python">from exstruct import set_table_detection_params
+
+set_table_detection_params(
+    table_score_threshold=0.35,  # 厳しくするなら上げる
+    density_min=0.05,
+    coverage_min=0.2,
+    min_nonempty_cells=3,
+)
+</code></pre>
+<p>値を上げると誤検知が減り、下げると検出漏れが減ります。</p>
+<h2 id="_4">出力モード<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>light</strong>: セル＋テーブル候補のみ（COM 不要）。</li>
+<li><strong>standard</strong>: テキスト付き図形＋矢印、チャート（COM ありで取得）、テーブル候補。セルのハイパーリンクは <code>include_cell_links=True</code> を指定したときのみ出力。</li>
+<li><strong>verbose</strong>: 全図形（幅・高さ付き）、チャート、テーブル候補、セルのハイパーリンク。</li>
+</ul>
+<h2 id="_5">エラーハンドリング / フォールバック<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Excel COM 不在時はセル＋テーブル候補に自動フォールバック（図形・チャートは空）。</li>
+<li>図形抽出失敗時も警告を出しつつセル＋テーブル候補を返却。</li>
+<li>CLI はエラーを stdout/stderr に出し、失敗時は非ゼロ終了コード。</li>
+</ul>
+<h2 id="_6">任意レンダリング<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<p>Excel と <code>pypdfium2</code> が必要です:</p>
+<pre><code class="language-bash">exstruct input.xlsx --pdf --image --dpi 144
+</code></pre>
+<p><code>&lt;output&gt;.pdf</code> と <code>&lt;output&gt;_images/</code> 配下に PNG を生成します。</p>
+<h2 id="excel">ベンチマーク: Excel 構造化デモ<a class="headerlink" href="#excel" title="Permanent link">&para;</a></h2>
+<p>本ライブラリ exstruct がどの程度 Excel を構造化できるのかを示すため、
+以下の 3 要素を 1 シートにまとめた Excel を解析し、
+その JSON 出力を用いた AI 推論精度ベンチマーク を掲載します。</p>
+<ul>
+<li>表（売上データ）</li>
+<li>折れ線グラフ</li>
+<li>図形のみで作成したフローチャート</li>
+</ul>
+<p>（下画像が実際のサンプル Excel シート）
+<img alt="Sample Excel" src="/docs/assets/demo_sheet.png" />
+サンプル Excel: <code>sample/sample.xlsx</code></p>
+<h3 id="1-input-excel-sheet-overview">1. Input: Excel Sheet Overview<a class="headerlink" href="#1-input-excel-sheet-overview" title="Permanent link">&para;</a></h3>
+<p>このサンプル Excel には以下のデータが含まれています：</p>
+<h3 id="1">① 表 (売上データ)<a class="headerlink" href="#1" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>月</th>
+<th>製品 A</th>
+<th>製品 B</th>
+<th>製品 C</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Jan-25</td>
+<td>120</td>
+<td>80</td>
+<td>60</td>
+</tr>
+<tr>
+<td>Feb-25</td>
+<td>135</td>
+<td>90</td>
+<td>64</td>
+</tr>
+<tr>
+<td>Mar-25</td>
+<td>150</td>
+<td>100</td>
+<td>70</td>
+</tr>
+<tr>
+<td>Apr-25</td>
+<td>170</td>
+<td>110</td>
+<td>72</td>
+</tr>
+<tr>
+<td>May-25</td>
+<td>160</td>
+<td>120</td>
+<td>75</td>
+</tr>
+<tr>
+<td>Jun-25</td>
+<td>180</td>
+<td>130</td>
+<td>80</td>
+</tr>
+</tbody>
+</table>
+<h3 id="2">② グラフ (折れ線グラフ)<a class="headerlink" href="#2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>タイトル: 売上データ</li>
+<li>系列: 製品 A / 製品 B / 製品 C（半年分）</li>
+<li>Y 軸: 0–200</li>
+</ul>
+<h3 id="3">③ 図形によるフローチャート<a class="headerlink" href="#3" title="Permanent link">&para;</a></h3>
+<p>シート内に以下を含むフローがあります：</p>
+<ul>
+<li>開始 / 終了</li>
+<li>形式チェック</li>
+<li>ループ（残件あり？）</li>
+<li>エラーハンドリング</li>
+<li>メール送信の Yes/No 判定</li>
+</ul>
+<h3 id="2-output-exstruct-json">2. Output: exstruct が生成する構造化 JSON（抜粋）<a class="headerlink" href="#2-output-exstruct-json" title="Permanent link">&para;</a></h3>
+<p>以下は、実際にこの Excel ブックを解析した際の<strong>短縮版 JSON 出力例</strong> です。</p>
+<pre><code class="language-json">{
+  &quot;book_name&quot;: &quot;sample.xlsx&quot;,
+  &quot;sheets&quot;: {
+    &quot;Sheet1&quot;: {
+      &quot;rows&quot;: [
+        {
+          &quot;r&quot;: 3,
+          &quot;c&quot;: {
+            &quot;1&quot;: &quot;月&quot;,
+            &quot;2&quot;: &quot;製品A&quot;,
+            &quot;3&quot;: &quot;製品B&quot;,
+            &quot;4&quot;: &quot;製品C&quot;
+          }
+        },
+        ...
+      ],
+      &quot;shapes&quot;: [
+        {
+          &quot;text&quot;: &quot;開始&quot;,
+          &quot;l&quot;: 148,
+          &quot;t&quot;: 220,
+          &quot;type&quot;: &quot;AutoShape-FlowchartProcess&quot;
+        },
+        {
+          &quot;text&quot;: &quot;入力データ読み込み&quot;,
+          &quot;l&quot;: 132,
+          &quot;t&quot;: 282,
+          &quot;type&quot;: &quot;AutoShape-FlowchartProcess&quot;
+        },
+        {
+          &quot;l&quot;: 193,
+          &quot;t&quot;: 246,
+          &quot;type&quot;: &quot;AutoShape-Mixed&quot;,
+          &quot;begin_arrow_style&quot;: 1,
+          &quot;end_arrow_style&quot;: 2,
+          &quot;direction&quot;: &quot;N&quot;
+        },
+        ...
+      ],
+      &quot;charts&quot;: [
+        {
+          &quot;name&quot;: &quot;Chart 1&quot;,
+          &quot;chart_type&quot;: &quot;Line&quot;,
+          &quot;title&quot;: &quot;売上データ&quot;,
+          &quot;y_axis_range&quot;: [
+            0.0,
+            200.0
+          ],
+          &quot;series&quot;: [
+            {
+              &quot;name&quot;: &quot;製品A&quot;,
+              &quot;name_range&quot;: &quot;Sheet1!$C$3&quot;,
+              &quot;x_range&quot;: &quot;Sheet1!$B$4:$B$9&quot;,
+              &quot;y_range&quot;: &quot;Sheet1!$C$4:$C$9&quot;
+            },
+            ...
+          ],
+          &quot;l&quot;: 377,
+          &quot;t&quot;: 25
+        }
+      ],
+      &quot;table_candidates&quot;: [
+        &quot;B3:E9&quot;
+      ]
+    }
+  }
+}
+</code></pre>
+<h3 id="3-ai-copilot-llm-json">3. AI (Copilot / LLM) に JSON を渡した際の理解結果<a class="headerlink" href="#3-ai-copilot-llm-json" title="Permanent link">&para;</a></h3>
+<pre><code class="language-md">以下は、提供された Excel ブックの内容を Markdown 形式で再構成したものです。表、グラフ、フローチャートの 3 要素をそれぞれ適切に表現しています。
+
+---
+
+## 📊 売上データ表
+
+| 月         | 製品 A | 製品 B | 製品 C |
+| ---------- | ------ | ------ | ------ |
+| 2025-01-01 | 120    | 80     | 60     |
+| 2025-02-01 | 135    | 90     | 64     |
+| 2025-03-01 | 150    | 100    | 70     |
+| 2025-04-01 | 170    | 110    | 72     |
+| 2025-05-01 | 160    | 120    | 75     |
+| 2025-06-01 | 180    | 130    | 80     |
+
+---
+
+## 📈 売上データ（折れ線グラフ）
+
+- グラフタイトル: **売上データ**
+- グラフ種類: 折れ線グラフ（Line）
+- Y 軸範囲: 0 ～ 200
+- データ系列:
+  - 製品 A: 120 → 135 → 150 → 170 → 160 → 180
+  - 製品 B: 80 → 90 → 100 → 110 → 120 → 130
+  - 製品 C: 60 → 64 → 70 → 72 → 75 → 80
+
+---
+
+## 🔄 処理フロー（Mermaid フローチャート）
+
+```mermaid
+flowchart TD
+    A[開始]
+    B[入力データ読み込み]
+    C{形式は正しい？}
+    D[エラー表示]
+    E[1件処理]
+    F{残件あり？}
+    G[出力を生成]
+    H{メール送信？}
+    I[メール送信]
+    J[終了]
+
+    A --&gt; B
+    B --&gt; C
+    C -- いいえ --&gt; D
+    C -- はい --&gt; E
+    E --&gt; F
+    F -- はい --&gt; E
+    F -- いいえ --&gt; G
+    G --&gt; H
+    H -- はい --&gt; I
+    H -- いいえ --&gt; J
+    I --&gt; J
+```
+</code></pre>
+<p>このことから、</p>
+<p><strong>exstruct の JSON は AI にとって "そのまま意味として理解できる形式" である</strong></p>
+<p>ということが明確に示されています。</p>
+<h3 id="4-summary">4. Summary<a class="headerlink" href="#4-summary" title="Permanent link">&para;</a></h3>
+<p>このベンチマークにより、本ライブラリが次の能力を持つことが確認できます：</p>
+<ul>
+<li><strong>表・グラフ・図形（フローチャート）の同時解析</strong></li>
+<li>Excel の意味的構造を JSON に変換</li>
+<li>AI（LLM）がその JSON を直接読み取り、Excel 内容を再構築できる</li>
+</ul>
+<p>つまり <strong>exstruct = “Excel を AI が理解できるフォーマットに変換するエンジン”</strong> です。</p>
+<h2 id="_7">備考<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
+<ul>
+<li>デフォルト JSON はコンパクト（トークン削減目的）。可読性が必要なら <code>--pretty</code> / <code>pretty=True</code> を利用してください。</li>
+<li>フィールド名は <code>table_candidates</code> を使用します（以前の <code>tables</code> から変更）。下流のスキーマを調整してください。</li>
+</ul>
+<h2 id="license">License<a class="headerlink" href="#license" title="Permanent link">&para;</a></h2>
+<p>BSD-3-Clause. See <code>LICENSE</code> for details.</p>
+<h2 id="_8">ドキュメント<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
+<ul>
+<li>API リファレンス (GitHub Pages): https://harumiweb.github.io/exstruct/</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+    
+  </body>
+</html>
