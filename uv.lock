@@ -263,23 +263,20 @@ wheels = [
 
 [[package]]
 name = "exstruct"
-version = "0.2.1"
+version = "0.2.11"
 source = { editable = "." }
 dependencies = [
     { name = "numpy" },
     { name = "openpyxl" },
     { name = "pandas" },
     { name = "pydantic" },
-    { name = "pyyaml" },
     { name = "scipy" },
     { name = "xlwings" },
 ]
 
 [package.optional-dependencies]
-pillow = [
-    { name = "pillow" },
-]
 render = [
+    { name = "pillow" },
     { name = "pypdfium2" },
 ]
 toon = [
@@ -302,16 +299,15 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.3.5" },
     { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "pandas", specifier = ">=2.3.3" },
-    { name = "pillow", marker = "extra == 'pillow'", specifier = ">=12.0.0" },
+    { name = "pillow", marker = "extra == 'render'", specifier = ">=12.0.0" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "pypdfium2", marker = "extra == 'render'", specifier = ">=5.1.0" },
     { name = "python-toon", marker = "extra == 'toon'", specifier = ">=0.1.3" },
-    { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "pyyaml", marker = "extra == 'yaml'", specifier = ">=6.0.3" },
     { name = "scipy", specifier = ">=1.16.3" },
     { name = "xlwings", specifier = ">=0.33.16" },
 ]
-provides-extras = ["pillow", "yaml", "toon", "render"]
+provides-extras = ["yaml", "toon", "render"]
 
 [package.metadata.requires-dev]
 dev = [
