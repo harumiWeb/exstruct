@@ -1,6 +1,8 @@
 # ExStruct — Excel 構造化抽出エンジン
 
-<img width="3168" height="1344" alt="Gemini_Generated_Image_nlwx0bnlwx0bnlwx" src="https://github.com/user-attachments/assets/90231682-fb42-428e-bf01-4389e8116b65" />
+[![PyPI version](https://badge.fury.io/py/exstruct.svg)](https://pypi.org/project/exstruct/) [![PyPI Downloads](https://static.pepy.tech/personalized-badge/exstruct?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/exstruct) ![Licence: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue?style=flat-square)
+
+![ExStruct Image](/docs/assets/icon.webp)
 
 ExStruct は Excel ワークブックを読み取り、構造化データ（テーブル候補・図形・チャート）をデフォルトで JSON に出力します。必要に応じて YAML/TOON も選択でき、COM/Excel 環境ではリッチ抽出、非 COM 環境ではセル＋テーブル候補へのフォールバックで安全に動作します。LLM/RAG 向けに検出ヒューリスティックや出力モードを調整可能です。
 
