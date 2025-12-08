@@ -135,6 +135,8 @@ PrintArea {
 
 ```jsonc
 PrintAreaView {
+  book_name: str
+  sheet_name: str
   area: PrintArea                // 対応する印刷範囲
   rows: [CellRow]                // 範囲内にクリップした行（空列は落とす）
   table_candidates: [str]        // 範囲内に収まるテーブル候補のみ
@@ -233,7 +235,7 @@ WorkbookData {
 - 0.3: モデルに出力ヘルパー (`to_json`/`to_yaml`/`to_toon`/`save`) を追加し、フォーマット判定・依存チェック・pretty 仕様を明文化。`WorkbookData` の `__iter__` / `__getitem__` を定義。
 - 0.4: CellRow に `links` を追加（列インデックス→URL）。mode=verbose でデフォルト出力、その他は opt-in。
 - 0.5: PrintArea モデルを追加し、SheetData に `print_areas` を導入。印刷範囲は verbose モード時のみ出力。
-- 0.6: PrintArea をデフォルト取得し、standard/verbose で出力。印刷範囲ごとのスライス `print_area_views` を追加（rows + table_candidates、座標正規化はオプション）。
+- 0.6: PrintArea をデフォルト取得し、standard/verbose で出力。印刷範囲ごとのスライス `print_area_views` を追加（book_name + sheet_name + rows + table_candidates、座標正規化はオプション）。
 
 ---
 

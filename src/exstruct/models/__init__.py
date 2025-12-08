@@ -180,3 +180,71 @@ class WorkbookData(BaseModel):
     def __iter__(self):
         """Iterate over (sheet_name, SheetData) pairs in order."""
         return iter(self.sheets.items())
+
+
+class PrintAreaViews(BaseModel):
+    book_name: str
+    sheet_name: str
+    area: PrintArea
+    rows: List[CellRow] = Field(default_factory=list)
+    table_candidates: List[str] = Field(default_factory=list)
+
+    def _as_payload(self) -> Dict[str, object]:
+        from ..io import dict_without_empty_values
+
+        return dict_without_empty_values(self.model_dump(exclude_none=True))  # type: ignore
+
+    def to_json(self, *, pretty: bool = False, indent: int | None = None) -> str:
+        """
+        Serialize the print-area view into JSON text.
+        """
+        indent_val = 2 if pretty and indent is None else indent
+        return json.dumps(self._as_payload(), ensure_ascii=False, indent=indent_val)
+
+    def to_yaml(self) -> str:
+        """
+        Serialize the print-area view into YAML text (requires pyyaml).
+        """
+        from ..io import _require_yaml
+
+        yaml = _require_yaml()
+        return yaml.safe_dump(
+            self._as_payload(),
+            allow_unicode=True,
+            sort_keys=False,
+            indent=2,
+        )
+
+    def to_toon(self) -> str:
+        """
+        Serialize the print-area view into TOON text (requires python-toon).
+        """
+        from ..io import _require_toon
+
+        toon = _require_toon()
+        return toon.encode(self._as_payload())
+
+    def save(
+        self, path: str | Path, *, pretty: bool = False, indent: int | None = None
+    ) -> Path:
+        """
+        Save the print-area view to a file, inferring format from the extension.
+
+        - .json JSON
+        - .yaml/.yml YAML
+        - .toon TOON
+        """
+        dest = Path(path)
+        fmt = (dest.suffix.lstrip(".") or "json").lower()
+        match fmt:
+            case "json":
+                dest.write_text(
+                    self.to_json(pretty=pretty, indent=indent), encoding="utf-8"
+                )
+            case "yaml" | "yml":
+                dest.write_text(self.to_yaml(), encoding="utf-8")
+            case "toon":
+                dest.write_text(self.to_toon(), encoding="utf-8")
+            case _:
+                raise ValueError(f"Unsupported export format: {fmt}")
+        return dest

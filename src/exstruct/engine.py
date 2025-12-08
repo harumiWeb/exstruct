@@ -28,14 +28,11 @@ class StructOptions:
         table_params: Optional dict passed to `set_table_detection_params(**table_params)`
                       before extraction. Use this to tweak table detection heuristics
                       per engine instance without touching global state.
-        include_print_areas: Whether to extract print areas. If None, enabled for
-                             mode != "light" (i.e., standard/verbose).
     """
 
     mode: ExtractionMode = "standard"
     table_params: Optional[dict] = None  # forwarded to set_table_detection_params if provided
     include_cell_links: Optional[bool] = None  # None -> auto: verbose=True, others=False
-    include_print_areas: Optional[bool] = None  # None -> auto: verbose=True, others=False
 
 
 @dataclass(frozen=True)
@@ -145,15 +142,7 @@ class ExStructEngine:
             if self.options.include_cell_links is not None
             else chosen_mode == "verbose"
         )
-        include_print_areas = (
-            False
-            if chosen_mode == "light"
-            else (
-                self.options.include_print_areas
-                if self.options.include_print_areas is not None
-                else True
-            )
-        )
+        include_print_areas = chosen_mode != "light"
         with self._table_params_scope():
             return extract_workbook(
                 Path(file_path),
