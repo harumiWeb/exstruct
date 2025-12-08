@@ -28,11 +28,14 @@ class StructOptions:
         table_params: Optional dict passed to `set_table_detection_params(**table_params)`
                       before extraction. Use this to tweak table detection heuristics
                       per engine instance without touching global state.
+        include_print_areas: Whether to extract print areas. If None, enabled only
+                             when mode=="verbose".
     """
 
     mode: ExtractionMode = "standard"
     table_params: Optional[dict] = None  # forwarded to set_table_detection_params if provided
-    include_cell_links: Optional[bool] = None  # None → auto: verbose=True, others=False
+    include_cell_links: Optional[bool] = None  # None -> auto: verbose=True, others=False
+    include_print_areas: Optional[bool] = None  # None -> auto: verbose=True, others=False
 
 
 @dataclass(frozen=True)
@@ -48,6 +51,7 @@ class OutputOptions:
         include_shapes: Include SheetData.shapes in output.
         include_charts: Include SheetData.charts in output.
         include_tables: Include SheetData.table_candidates in output.
+        include_print_areas: Include SheetData.print_areas in output.
         sheets_dir: Optional directory to write per-sheet files (in the chosen fmt).
         stream: Optional default stream for stdout output when output_path is None.
     """
@@ -59,6 +63,7 @@ class OutputOptions:
     include_shapes: bool = True
     include_charts: bool = True
     include_tables: bool = True
+    include_print_areas: bool = True
     sheets_dir: Path | None = None
     stream: TextIO | None = None
 
@@ -120,6 +125,7 @@ class ExStructEngine:
             shapes=sheet.shapes if self.output.include_shapes else [],
             charts=sheet.charts if self.output.include_charts else [],
             table_candidates=sheet.table_candidates if self.output.include_tables else [],
+            print_areas=sheet.print_areas if self.output.include_print_areas else [],
         )
 
     def _filter_workbook(self, wb: WorkbookData) -> WorkbookData:
@@ -139,8 +145,18 @@ class ExStructEngine:
             if self.options.include_cell_links is not None
             else chosen_mode == "verbose"
         )
+        include_print_areas = (
+            self.options.include_print_areas
+            if self.options.include_print_areas is not None
+            else chosen_mode == "verbose"
+        )
         with self._table_params_scope():
-            return extract_workbook(Path(file_path), mode=chosen_mode, include_cell_links=include_links)
+            return extract_workbook(
+                Path(file_path),
+                mode=chosen_mode,
+                include_cell_links=include_links,
+                include_print_areas=include_print_areas,
+            )
 
     def serialize(
         self,

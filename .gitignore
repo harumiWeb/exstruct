@@ -13,3 +13,4 @@ output/
 test.py
 .coverage
 site/
+output.json
