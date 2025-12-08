@@ -45,11 +45,19 @@ class Chart(BaseModel):
     error: Optional[str] = None
 
 
+class PrintArea(BaseModel):
+    r1: int
+    c1: int
+    r2: int
+    c2: int
+
+
 class SheetData(BaseModel):
     rows: List[CellRow] = Field(default_factory=list)
     shapes: List[Shape] = Field(default_factory=list)
     charts: List[Chart] = Field(default_factory=list)
     table_candidates: List[str] = Field(default_factory=list)
+    print_areas: List[PrintArea] = Field(default_factory=list)
 
     def _as_payload(self) -> Dict[str, object]:
         from ..io import dict_without_empty_values

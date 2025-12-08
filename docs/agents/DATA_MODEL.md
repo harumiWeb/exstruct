@@ -1,6 +1,6 @@
 # ExStruct Data Model Specification
 
-**Version**: 0.3  
+**Version**: 0.5  
 **Status**: Authoritative — このファイルは ExStruct 内の全てのモデル定義の唯一の正準ソースです。  
 core・io・integrate モジュールは、必ずこの仕様に一致するように実装してください。
 
@@ -109,7 +109,27 @@ Chart {
 
 ---
 
-# 6. SheetData Model
+# 6. PrintArea Model
+
+Excel の印刷範囲（矩形）を表現するモデル。
+
+```jsonc
+PrintArea {
+  r1: int    // 開始行 (0-based, inclusive)
+  c1: int    // 開始列 (0-based, inclusive)
+  r2: int    // 終了行 (0-based, inclusive)
+  c2: int    // 終了列 (0-based, inclusive)
+}
+```
+
+### Notes
+
+- 複数印刷範囲がある場合、シートごとに複数要素を保持。
+- ExStruct の export では verbose モード時のみ標準出力・書き出しを行う。
+
+---
+
+# 7. SheetData Model
 
 Excel シート全体の意味構造。
 
@@ -119,17 +139,19 @@ SheetData {
   shapes: [Shape]
   charts: [Chart]
   table_candidates: [str]
+  print_areas: [PrintArea]
 }
 ```
 
 ### Notes
 
 - `table_candidates` は v0.3 以降の "Table Detection" 機能のプレースホルダー。
+- `print_areas` はデフォルト空リスト。mode=verbose でのみ出力対象。
 - 空要素は出力時に除外される（dict_without_empty_values）。
 
 ---
 
-# 7. WorkbookData Model（トップレベル）
+# 8. WorkbookData Model（トップレベル）
 
 すべてのシートをまとめた構造。
 
@@ -149,7 +171,7 @@ WorkbookData {
 
 ---
 
-# 8. Versioning Principles（AI エージェント向け）
+# 9. Versioning Principles（AI エージェント向け）
 
 - モデル構造を変更する場合は **必ずこのファイルを更新すること**。
 - ここにない属性を追加することは **許可しない**。
@@ -158,7 +180,7 @@ WorkbookData {
 
 ---
 
-# 9. Export Helpers (SheetData / WorkbookData)
+# 10. Export Helpers (SheetData / WorkbookData)
 
 ## 共通
 
@@ -185,10 +207,11 @@ WorkbookData {
 
 ---
 
-# 10. Changelog
+# 11. Changelog
 
 - 0.3: モデルに出力ヘルパー (`to_json`/`to_yaml`/`to_toon`/`save`) を追加し、フォーマット判定・依存チェック・pretty 仕様を明文化。`WorkbookData` の `__iter__` / `__getitem__` を定義。
 - 0.4: CellRow に `links` を追加（列インデックス→URL）。mode=verbose でデフォルト出力、その他は opt-in。
+- 0.5: PrintArea モデルを追加し、SheetData に `print_areas` を導入。印刷範囲は verbose モード時のみ出力。
 
 ---
 
