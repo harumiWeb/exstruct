@@ -28,8 +28,8 @@ class StructOptions:
         table_params: Optional dict passed to `set_table_detection_params(**table_params)`
                       before extraction. Use this to tweak table detection heuristics
                       per engine instance without touching global state.
-        include_print_areas: Whether to extract print areas. If None, enabled only
-                             when mode=="verbose".
+        include_print_areas: Whether to extract print areas. If None, enabled for
+                             mode != "light" (i.e., standard/verbose).
     """
 
     mode: ExtractionMode = "standard"
@@ -146,9 +146,13 @@ class ExStructEngine:
             else chosen_mode == "verbose"
         )
         include_print_areas = (
-            self.options.include_print_areas
-            if self.options.include_print_areas is not None
-            else chosen_mode == "verbose"
+            False
+            if chosen_mode == "light"
+            else (
+                self.options.include_print_areas
+                if self.options.include_print_areas is not None
+                else True
+            )
         )
         with self._table_params_scope():
             return extract_workbook(

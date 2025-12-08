@@ -1,6 +1,6 @@
 # ExStruct Data Model Specification
 
-**Version**: 0.5  
+**Version**: 0.6  
 **Status**: Authoritative — このファイルは ExStruct 内の全てのモデル定義の唯一の正準ソースです。  
 core・io・integrate モジュールは、必ずこの仕様に一致するように実装してください。
 
@@ -125,11 +125,30 @@ PrintArea {
 ### Notes
 
 - 複数印刷範囲がある場合、シートごとに複数要素を保持。
-- ExStruct の export では verbose モード時のみ標準出力・書き出しを行う。
+- ExStruct の export では standard / verbose モードで標準出力・書き出しを行う。
 
 ---
 
-# 7. SheetData Model
+# 7. PrintAreaView Model
+
+印刷範囲ごとのスライスを保持するモデル。
+
+```jsonc
+PrintAreaView {
+  area: PrintArea                // 対応する印刷範囲
+  rows: [CellRow]                // 範囲内にクリップした行（空列は落とす）
+  table_candidates: [str]        // 範囲内に収まるテーブル候補のみ
+}
+```
+
+### Notes
+
+- 座標はデフォルトでシートのグローバル座標を維持。normalize オプション指定時は範囲起点で再基準化する。
+- 形状・チャートは現状含めない（今後拡張予定）。
+
+---
+
+# 8. SheetData Model
 
 Excel シート全体の意味構造。
 
@@ -140,18 +159,20 @@ SheetData {
   charts: [Chart]
   table_candidates: [str]
   print_areas: [PrintArea]
+  print_area_views: [PrintAreaView]
 }
 ```
 
 ### Notes
 
 - `table_candidates` は v0.3 以降の "Table Detection" 機能のプレースホルダー。
-- `print_areas` はデフォルト空リスト。mode=verbose でのみ出力対象。
+- `print_areas` はデフォルト空リスト。mode=standard 以上で取得・出力（light では空）。
+- `print_area_views` は印刷範囲ごとのスライス。出力はオプションで切り替え（デフォルト off）。
 - 空要素は出力時に除外される（dict_without_empty_values）。
 
 ---
 
-# 8. WorkbookData Model（トップレベル）
+# 9. WorkbookData Model（トップレベル）
 
 すべてのシートをまとめた構造。
 
@@ -171,7 +192,7 @@ WorkbookData {
 
 ---
 
-# 9. Versioning Principles（AI エージェント向け）
+# 10. Versioning Principles（AI エージェント向け）
 
 - モデル構造を変更する場合は **必ずこのファイルを更新すること**。
 - ここにない属性を追加することは **許可しない**。
@@ -180,7 +201,7 @@ WorkbookData {
 
 ---
 
-# 10. Export Helpers (SheetData / WorkbookData)
+# 11. Export Helpers (SheetData / WorkbookData)
 
 ## 共通
 
@@ -207,11 +228,12 @@ WorkbookData {
 
 ---
 
-# 11. Changelog
+# 12. Changelog
 
 - 0.3: モデルに出力ヘルパー (`to_json`/`to_yaml`/`to_toon`/`save`) を追加し、フォーマット判定・依存チェック・pretty 仕様を明文化。`WorkbookData` の `__iter__` / `__getitem__` を定義。
 - 0.4: CellRow に `links` を追加（列インデックス→URL）。mode=verbose でデフォルト出力、その他は opt-in。
 - 0.5: PrintArea モデルを追加し、SheetData に `print_areas` を導入。印刷範囲は verbose モード時のみ出力。
+- 0.6: PrintArea をデフォルト取得し、standard/verbose で出力。印刷範囲ごとのスライス `print_area_views` を追加（rows + table_candidates、座標正規化はオプション）。
 
 ---
 

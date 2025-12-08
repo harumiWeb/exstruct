@@ -163,7 +163,7 @@ def extract_workbook(
     mode: Literal["light", "standard", "verbose"] = "standard",
     *,
     include_cell_links: bool = False,
-    include_print_areas: bool = False,
+    include_print_areas: bool = True,
 ) -> WorkbookData:
     """Extract workbook and return WorkbookData; fallback to cells+tables if Excel COM is unavailable."""
     if mode not in _ALLOWED_MODES:
