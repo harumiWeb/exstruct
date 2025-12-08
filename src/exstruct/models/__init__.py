@@ -172,9 +172,3 @@ class WorkbookData(BaseModel):
     def __iter__(self):
         """Iterate over (sheet_name, SheetData) pairs in order."""
         return iter(self.sheets.items())
-    
-    def __iter__(self):
-        return iter(self.sheets.items())
-    
-    def __getitem__(self, sheet_name: str) -> SheetData:
-        return self.sheets[sheet_name]
