@@ -4,12 +4,12 @@
 
 ![ExStruct Image](/docs/assets/icon.webp)
 
-ExStruct reads Excel workbooks and outputs structured data (tables, shapes, charts, hyperlinks) as JSON by default, with optional YAML/TOON formats. It targets both COM/Excel environments (rich extraction) and non-COM environments (cells + table candidates), with tunable detection heuristics and multiple output modes to fit LLM/RAG pipelines.
+ExStruct reads Excel workbooks and outputs structured data (cells, table candidates, shapes, charts, print areas/views, hyperlinks) as JSON by default, with optional YAML/TOON formats. It targets both COM/Excel environments (rich extraction) and non-COM environments (cells + table candidates + print areas), with tunable detection heuristics and multiple output modes to fit LLM/RAG pipelines.
 
 ## Features
 
-- **Excel → Structured JSON**: cells, shapes, charts, and table candidates per sheet.
-- **Output modes**: `light` (cells + table candidates only), `standard` (texted shapes + arrows, charts), `verbose` (all shapes with width/height). Verbose also emits cell hyperlinks.
+- **Excel → Structured JSON**: cells, shapes, charts, table candidates, and print areas/views per sheet.
+- **Output modes**: `light` (cells + table candidates + print areas; no COM, shapes/charts empty), `standard` (texted shapes + arrows, charts, print areas), `verbose` (all shapes with width/height, charts with size, print areas). Verbose also emits cell hyperlinks. Size output is flag-controlled.
 - **Formats**: JSON (compact by default, `--pretty` available), YAML, TOON (optional dependencies).
 - **Table detection tuning**: adjust heuristics at runtime via API.
 - **CLI rendering** (Excel required): optional PDF and per-sheet PNGs.
@@ -29,7 +29,8 @@ Optional extras:
 - All extras at once: `pip install exstruct[yaml,toon,render]`
 
 Platform note:
-- Full extraction (shapes/charts) targets Windows + Excel (COM via xlwings). On other platforms, use `mode=light` to get cells + `table_candidates` safely.
+
+- Full extraction (shapes/charts) targets Windows + Excel (COM via xlwings). On other platforms, use `mode=light` to get cells + `table_candidates`.
 
 ## Quick Start (CLI)
 
@@ -39,6 +40,7 @@ exstruct input.xlsx -o out.json --pretty   # pretty JSON to a file
 exstruct input.xlsx --format yaml          # YAML (needs pyyaml)
 exstruct input.xlsx --format toon          # TOON (needs python-toon)
 exstruct input.xlsx --sheets-dir sheets/   # split per sheet in chosen format
+exstruct input.xlsx --print-areas-dir areas/  # split per print area (if any)
 exstruct input.xlsx --mode light           # cells + table candidates only
 exstruct input.xlsx --pdf --image          # PDF and PNGs (Excel required)
 ```
@@ -56,7 +58,7 @@ set_table_detection_params(table_score_threshold=0.3, density_min=0.04)
 wb = extract("input.xlsx", mode="standard")
 export(wb, Path("out.json"), pretty=False)  # compact JSON
 
-# Model helpers: iterate, index, and serialize directly from the models
+# Model helpers: iterate, index, and serialize directly
 first_sheet = wb["Sheet1"]           # __getitem__ access
 for name, sheet in wb:               # __iter__ yields (name, SheetData)
     print(name, len(sheet.rows))
@@ -77,6 +79,10 @@ engine.export(wb2, Path("out_filtered.json"))  # drops shapes via OutputOptions
 # Enable hyperlinks in other modes
 engine_links = ExStructEngine(options=StructOptions(mode="standard", include_cell_links=True))
 with_links = engine_links.extract("input.xlsx")
+
+# Export per print area (if print areas exist)
+from exstruct import export_print_areas_as
+export_print_areas_as(wb, "areas", fmt="json", pretty=True)
 ```
 
 **Note (non-COM environments):** If Excel COM is unavailable, extraction still runs and returns cells + `table_candidates`; `shapes`/`charts` will be empty.
@@ -128,6 +134,7 @@ To show how well exstruct can structure Excel, we parse a workbook that combines
 
 (Screenshot below is the actual sample Excel sheet)
 ![Sample Excel](/docs/assets/demo_sheet.png)
+Sample workbook: `sample/sample.xlsx`
 Sample workbook: `sample/sample.xlsx`
 
 ### 1. Input: Excel Sheet Overview
@@ -315,6 +322,12 @@ In short, **exstruct = “an engine that converts Excel into a format AI can und
 - Default JSON is compact to reduce tokens; use `--pretty` or `pretty=True` when readability matters.
 - Field `table_candidates` replaces `tables`; adjust downstream consumers accordingly.
 
+## Print Areas (PrintArea / PrintAreaView)
+
+- `SheetData.print_areas` holds print areas (cell coordinates) in light/standard/verbose.
+- Use `export_print_areas_as(...)` or CLI `--print-areas-dir` to write one file per print area (nothing is written if none exist).
+- `PrintAreaView` includes rows and table candidates inside the area, plus shapes/charts that overlap the area (size-less shapes are treated as points). `normalize=True` rebases row/col indices to the area origin.
+
 ## License
 
 BSD-3-Clause. See `LICENSE` for details.
@@ -322,18 +335,3 @@ BSD-3-Clause. See `LICENSE` for details.
 ## Documentation
 
 - API Reference (GitHub Pages): https://harumiweb.github.io/exstruct/
-# Engine option cheat sheet
-
-| Option class   | Field               | Meaning |
-| -------------- | ------------------- | ------- |
-| StructOptions  | mode                | "light"/"standard"/"verbose" |
-|                | table_params        | Dict passed to `set_table_detection_params` (table_score_threshold, density_min, coverage_min, min_nonempty_cells) |
-|                | include_cell_links  | Include cell hyperlinks in `rows[*].links` (None -> auto: verbose=True, others=False) |
-| OutputOptions  | fmt                 | Default format ("json"/"yaml"/"yml"/"toon") |
-|                | pretty / indent     | Pretty-print JSON and control indent |
-|                | include_rows        | Include rows (False to drop) |
-|                | include_shapes      | Include shapes |
-|                | include_charts      | Include charts |
-|                | include_tables      | Include table_candidates |
-|                | sheets_dir          | Optional directory for per-sheet exports |
-|                | stream              | Default stream when output_path is None |
