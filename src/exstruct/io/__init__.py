@@ -7,7 +7,7 @@ from typing import Any, Dict, Literal
 
 from openpyxl.utils import range_boundaries
 
-from ..models import CellRow, PrintArea, PrintAreaView, WorkbookData
+from ..models import CellRow, Chart, PrintArea, PrintAreaView, Shape, WorkbookData
 
 
 def dict_without_empty_values(obj: Any):
@@ -114,7 +114,59 @@ def _filter_table_candidates_to_area(table_candidates: list[str], area: PrintAre
     return filtered
 
 
-def build_print_area_views(workbook: WorkbookData, *, normalize: bool = False) -> Dict[str, list[PrintAreaView]]:
+def _area_to_px_rect(area: PrintArea, *, col_px: int = 64, row_px: int = 20) -> tuple[int, int, int, int]:
+    """
+    Convert a cell-based print area to an approximate pixel rectangle (l, t, r, b).
+    Uses default Excel-like cell sizes; accuracy is highest when shapes/charts are COM-extracted.
+    """
+    left = area.c1 * col_px
+    top = area.r1 * row_px
+    right = (area.c2 + 1) * col_px
+    bottom = (area.r2 + 1) * row_px
+    return left, top, right, bottom
+
+
+def _rects_overlap(a: tuple[int, int, int, int], b: tuple[int, int, int, int]) -> bool:
+    """Return True if rectangles (l, t, r, b) overlap."""
+    return not (a[2] <= b[0] or a[0] >= b[2] or a[3] <= b[1] or a[1] >= b[3])
+
+
+def _filter_shapes_to_area(shapes: list[Shape], area: PrintArea) -> list[Shape]:
+    area_rect = _area_to_px_rect(area)
+    filtered: list[Shape] = []
+    for shp in shapes:
+        if shp.w is None or shp.h is None:
+            # Fallback: treat shape as a point if size is unknown (standard mode).
+            if area_rect[0] <= shp.l <= area_rect[2] and area_rect[1] <= shp.t <= area_rect[3]:
+                filtered.append(shp)
+            continue
+        shp_rect = (shp.l, shp.t, shp.l + shp.w, shp.t + shp.h)
+        if _rects_overlap(area_rect, shp_rect):
+            filtered.append(shp)
+    return filtered
+
+
+def _filter_charts_to_area(charts: list[Chart], area: PrintArea) -> list[Chart]:
+    area_rect = _area_to_px_rect(area)
+    filtered: list[Chart] = []
+    for ch in charts:
+        if ch.w is None or ch.h is None:
+            continue
+        ch_rect = (ch.l, ch.t, ch.l + ch.w, ch.t + ch.h)
+        if _rects_overlap(area_rect, ch_rect):
+            filtered.append(ch)
+    return filtered
+
+
+def build_print_area_views(
+    workbook: WorkbookData,
+    *,
+    normalize: bool = False,
+    include_shapes: bool = True,
+    include_charts: bool = True,
+    include_shape_size: bool = True,
+    include_chart_size: bool = True,
+) -> Dict[str, list[PrintAreaView]]:
     """
     Construct PrintAreaView instances for all print areas in the workbook.
     Returns a mapping of sheet name to ordered list of PrintAreaView.
@@ -131,11 +183,27 @@ def build_print_area_views(workbook: WorkbookData, *, normalize: bool = False) -
                 if filtered_row:
                     rows_in_area.append(filtered_row)
             area_tables = _filter_table_candidates_to_area(sheet.table_candidates, area)
+            area_shapes = (
+                _filter_shapes_to_area(sheet.shapes, area) if include_shapes else []
+            )
+            if not include_shape_size:
+                area_shapes = [
+                    s.model_copy(update={"w": None, "h": None}) for s in area_shapes
+                ]
+            area_charts = (
+                _filter_charts_to_area(sheet.charts, area) if include_charts else []
+            )
+            if not include_chart_size:
+                area_charts = [
+                    c.model_copy(update={"w": None, "h": None}) for c in area_charts
+                ]
             sheet_views.append(
                 PrintAreaView(
                     book_name=workbook.book_name,
                     sheet_name=sheet_name,
                     area=area,
+                    shapes=area_shapes,
+                    charts=area_charts,
                     rows=rows_in_area,
                     table_candidates=area_tables,
                 )
@@ -153,6 +221,10 @@ def save_print_area_views(
     pretty: bool = False,
     indent: int | None = None,
     normalize: bool = False,
+    include_shapes: bool = True,
+    include_charts: bool = True,
+    include_shape_size: bool = True,
+    include_chart_size: bool = True,
 ) -> Dict[str, Path]:
     """
     Save each print area as an individual file in the specified format.
@@ -164,7 +236,14 @@ def save_print_area_views(
     if format_hint not in ("json", "yaml", "toon"):
         raise ValueError(f"Unsupported print-area export format: {fmt}")
 
-    views = build_print_area_views(workbook, normalize=normalize)
+    views = build_print_area_views(
+        workbook,
+        normalize=normalize,
+        include_shapes=include_shapes,
+        include_charts=include_charts,
+        include_shape_size=include_shape_size,
+        include_chart_size=include_chart_size,
+    )
     if not views:
         return {}
 

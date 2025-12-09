@@ -39,6 +39,8 @@ class Chart(BaseModel):
     title: Optional[str]
     y_axis_title: str
     y_axis_range: List[float] = Field(default_factory=list)
+    w: Optional[int] = None
+    h: Optional[int] = None
     series: List[ChartSeries]
     l: int
     t: int
@@ -186,6 +188,8 @@ class PrintAreaView(BaseModel):
     book_name: str
     sheet_name: str
     area: PrintArea
+    shapes: List[Shape] = Field(default_factory=list)
+    charts: List[Chart] = Field(default_factory=list)
     rows: List[CellRow] = Field(default_factory=list)
     table_candidates: List[str] = Field(default_factory=list)
 

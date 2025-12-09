@@ -56,6 +56,8 @@ class OutputOptions:
         include_charts: Include SheetData.charts in output.
         include_tables: Include SheetData.table_candidates in output.
         include_print_areas: Include SheetData.print_areas in output.
+        include_shape_size: Include Shape.w/h in output (auto: verbose=True, others False).
+        include_chart_size: Include Chart.w/h in output (auto: verbose=True, others False).
         sheets_dir: Optional directory to write per-sheet files (in the chosen fmt).
         print_areas_dir: Optional directory to write one file per print area (in the chosen fmt).
         stream: Optional default stream for stdout output when output_path is None.
@@ -69,6 +71,8 @@ class OutputOptions:
     include_charts: bool = True
     include_tables: bool = True
     include_print_areas: bool = True
+    include_shape_size: bool | None = None
+    include_chart_size: bool | None = None
     sheets_dir: Path | None = None
     print_areas_dir: Path | None = None
     stream: TextIO | None = None
@@ -125,20 +129,45 @@ class ExStructEngine:
         finally:
             set_table_detection_params(**prev)
 
+    def _resolve_size_flags(self) -> tuple[bool, bool]:
+        """
+        Determine whether to include Shape/Chart size fields in output.
+        Auto: verbose -> include, others -> exclude.
+        """
+        include_shape_size = (
+            self.output.include_shape_size
+            if self.output.include_shape_size is not None
+            else self.options.mode == "verbose"
+        )
+        include_chart_size = (
+            self.output.include_chart_size
+            if self.output.include_chart_size is not None
+            else self.options.mode == "verbose"
+        )
+        return include_shape_size, include_chart_size
+
     def _filter_sheet(self, sheet: SheetData) -> SheetData:
+        include_shape_size, include_chart_size = self._resolve_size_flags()
         return SheetData(
             rows=sheet.rows if self.output.include_rows else [],
-            shapes=sheet.shapes if self.output.include_shapes else [],
-            charts=sheet.charts if self.output.include_charts else [],
+            shapes=[
+                s if include_shape_size else s.model_copy(update={"w": None, "h": None})
+                for s in sheet.shapes
+            ]
+            if self.output.include_shapes
+            else [],
+            charts=[
+                c if include_chart_size else c.model_copy(update={"w": None, "h": None})
+                for c in sheet.charts
+            ]
+            if self.output.include_charts
+            else [],
             table_candidates=sheet.table_candidates if self.output.include_tables else [],
             print_areas=sheet.print_areas if self.output.include_print_areas else [],
         )
 
     def _filter_workbook(self, wb: WorkbookData) -> WorkbookData:
-        filtered = {
-            name: self._filter_sheet(sheet)
-            for name, sheet in wb.sheets.items()
-        }
+        filtered = {name: self._filter_sheet(sheet) for name, sheet in wb.sheets.items()}
         return WorkbookData(book_name=wb.book_name, sheets=filtered)
 
     def extract(self, file_path: str | Path, *, mode: ExtractionMode | None = None) -> WorkbookData:
@@ -224,14 +253,20 @@ class ExStructEngine:
             )
 
         if chosen_print_areas_dir is not None:
-            filtered = self._filter_workbook(data)
-            save_print_area_views(
-                filtered,
-                chosen_print_areas_dir,
-                fmt=chosen_fmt,
-                pretty=self.output.pretty if pretty is None else pretty,
-                indent=self.output.indent if indent is None else indent,
-            )
+            include_shape_size, include_chart_size = self._resolve_size_flags()
+            if self.output.include_print_areas:
+                filtered = self._filter_workbook(data)
+                save_print_area_views(
+                    filtered,
+                    chosen_print_areas_dir,
+                    fmt=chosen_fmt,
+                    pretty=self.output.pretty if pretty is None else pretty,
+                    indent=self.output.indent if indent is None else indent,
+                    include_shapes=self.output.include_shapes,
+                    include_charts=self.output.include_charts,
+                    include_shape_size=include_shape_size,
+                    include_chart_size=include_chart_size,
+                )
 
         return None
 

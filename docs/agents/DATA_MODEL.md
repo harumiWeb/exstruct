@@ -95,6 +95,8 @@ Chart {
   title: str | null
   y_axis_title: str
   y_axis_range: [float]        // [min, max] 省略可
+  w: int | null                // width (px) verbose で取得
+  h: int | null                // height(px) verbose で取得
   series: [ChartSeries]
   l: int                       // left (px)
   t: int                       // top  (px)
@@ -138,6 +140,8 @@ PrintAreaView {
   book_name: str
   sheet_name: str
   area: PrintArea                // 対応する印刷範囲
+  shapes: [Shape]
+  charts: [Chart]
   rows: [CellRow]                // 範囲内にクリップした行（空列は落とす）
   table_candidates: [str]        // 範囲内に収まるテーブル候補のみ
 }
@@ -233,6 +237,7 @@ WorkbookData {
 - 0.4: CellRow に `links` を追加（列インデックス→URL）。mode=verbose でデフォルト出力、その他は opt-in。
 - 0.5: PrintArea モデルを追加し、SheetData に `print_areas` を導入。印刷範囲は verbose モード時のみ出力。
 - 0.6: PrintArea をデフォルト取得し、standard/verbose で出力。印刷範囲ごとのスライス。
+- 0.7: 印刷範囲内にchartが存在するか計算するためにChartにw/h属性をoptionalで追加。
 
 ---
 

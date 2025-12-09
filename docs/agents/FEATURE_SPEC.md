@@ -9,6 +9,7 @@
 - SheetData モデルに print_areas: List[PrintArea]のように印刷範囲のデータ型を追加
 - ブックを印刷範囲ごとにデータ出力できるように対応
 - print_areas はデフォルトでは無し、verbose オプションで出力するようにする
+- shapesやchartsも印刷範囲内にあるかを計算して出力
 
 ## 今後のオプション（検討メモ）
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Literal
 
 import xlwings as xw
 
@@ -166,7 +166,7 @@ def parse_series_formula(formula: str) -> Optional[Dict[str, Optional[str]]]:
     }
 
 
-def get_charts(sheet: xw.Sheet) -> List[Chart]:
+def get_charts(sheet: xw.Sheet, mode: Literal["light", "standard", "verbose"] = "standard") -> List[Chart]:
     """Parse charts in a sheet into Chart models; failed charts carry an error field."""
     charts: List[Chart] = []
     for ch in sheet.charts:
@@ -182,6 +182,14 @@ def get_charts(sheet: xw.Sheet) -> List[Chart]:
             chart_type_label = XL_CHART_TYPE_MAP.get(
                 chart_type_num, f"unknown_{chart_type_num}"
             )
+            chart_width: Optional[int] = None
+            chart_height: Optional[int] = None
+            try:
+                chart_width = int(ch.width)
+                chart_height = int(ch.height)
+            except Exception:
+                chart_width = None
+                chart_height = None
 
             for s in chart_com.SeriesCollection():
                 parsed = parse_series_formula(getattr(s, "Formula", ""))
@@ -220,6 +228,8 @@ def get_charts(sheet: xw.Sheet) -> List[Chart]:
                 title=title,
                 y_axis_title=y_axis_title,
                 y_axis_range=y_axis_range,  # type: ignore
+                w=chart_width,
+                h=chart_height,
                 series=series_list,
                 l=int(ch.left),
                 t=int(ch.top),

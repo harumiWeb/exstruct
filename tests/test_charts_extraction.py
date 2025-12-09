@@ -85,3 +85,14 @@ def test_系列情報が参照式として抽出される(tmp_path: Path) -> Non
     assert s.name_range is None or s.name_range.endswith("Sheet1!$B$1")
     assert s.x_range is None or s.x_range.endswith("Sheet1!$A$2:$A$5")
     assert s.y_range is None or s.y_range.endswith("Sheet1!$B$2:$B$5")
+
+
+def test_verboseでチャートのサイズが取得される(tmp_path: Path) -> None:
+    _ensure_excel()
+    path = tmp_path / "chart_verbose.xlsx"
+    _make_workbook_with_chart(path)
+
+    wb_data = extract_workbook(path, mode="verbose")
+    ch = wb_data.sheets["Sheet1"].charts[0]
+    assert ch.w is not None and ch.w > 0
+    assert ch.h is not None and ch.h > 0

@@ -2,18 +2,46 @@ import json
 from pathlib import Path
 
 from exstruct.io import save_print_area_views
-from exstruct.models import CellRow, PrintArea, SheetData, WorkbookData
+from exstruct.models import CellRow, Chart, PrintArea, SheetData, Shape, WorkbookData
 
 
 def _workbook_with_print_area() -> WorkbookData:
+    shape_inside = Shape(text="inside", l=10, t=5, w=20, h=10, type="Rect")
+    shape_outside = Shape(text="outside", l=200, t=200, w=30, h=30, type="Rect")
+    chart_inside = Chart(
+        name="c1",
+        chart_type="Line",
+        title=None,
+        y_axis_title="",
+        y_axis_range=[],
+        w=50,
+        h=30,
+        series=[],
+        l=0,
+        t=0,
+        error=None,
+    )
+    chart_outside = Chart(
+        name="c2",
+        chart_type="Line",
+        title=None,
+        y_axis_title="",
+        y_axis_range=[],
+        w=None,
+        h=None,
+        series=[],
+        l=300,
+        t=300,
+        error=None,
+    )
     sheet = SheetData(
         rows=[
             CellRow(r=0, c={"0": "A", "2": "skip"}, links={"2": "http://example.com"}),
             CellRow(r=1, c={"1": "B"}),
             CellRow(r=2, c={"1": "C"}),
         ],
-        shapes=[],
-        charts=[],
+        shapes=[shape_inside, shape_outside],
+        charts=[chart_inside, chart_outside],
         table_candidates=["A1:B2", "C1:C1"],
         print_areas=[PrintArea(r1=0, c1=0, r2=1, c2=1)],
     )
@@ -32,6 +60,9 @@ def test_save_print_area_views_filters_rows_and_tables(tmp_path: Path) -> None:
     assert data["rows"] == [{"r": 0, "c": {"0": "A"}}, {"r": 1, "c": {"1": "B"}}]
     # Only table candidates fully contained in the print area remain.
     assert data["table_candidates"] == ["A1:B2"]
+    # Shapes/Charts filtered by overlap; outside or size-less charts are dropped.
+    assert len(data["shapes"]) == 1 and data["shapes"][0]["text"] == "inside"
+    assert len(data["charts"]) == 1 and data["charts"][0]["name"] == "c1"
 
 
 def test_save_print_area_views_normalizes_when_requested(tmp_path: Path) -> None:
@@ -45,6 +76,8 @@ def test_save_print_area_views_normalizes_when_requested(tmp_path: Path) -> None
     data = json.loads(path.read_text(encoding="utf-8"))
     # Rows inside the area are re-based to start at 0, columns start at 0.
     assert data["rows"] == [{"r": 0, "c": {"0": "B"}}, {"r": 1, "c": {"0": "C"}}]
+    # Shapes/charts may be dropped when they don't overlap; ensure no unexpected entries.
+    assert "shapes" not in data or len(data["shapes"]) <= 1
 
 
 def test_save_print_area_views_no_print_areas_returns_empty(tmp_path: Path) -> None:

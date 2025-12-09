@@ -149,7 +149,7 @@ def integrate_sheet_content(
         sheet_model = SheetData(
             rows=rows,
             shapes=sheet_shapes,
-            charts=[] if mode == "light" else get_charts(sheet),
+            charts=[] if mode == "light" else get_charts(sheet, mode=mode),
             table_candidates=detect_tables(sheet),
             print_areas=print_area_data.get(sheet_name, []) if print_area_data else [],
         )
