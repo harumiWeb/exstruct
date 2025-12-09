@@ -85,16 +85,18 @@ class ExStructEngine:
     Instances are immutable; override options per call if needed.
 
     Key behaviors:
-        - Uses StructOptions for extraction defaults (mode, table_params).
-        - Uses OutputOptions for serialization defaults (fmt, pretty/indent, include* filters).
-        - Methods:
+        - StructOptions: extraction mode and optional table detection params.
+        - OutputOptions: serialization format/pretty-print, include/exclude filters, per-sheet/per-print-area output dirs, etc.
+        - Main methods:
             extract(path, mode=None) -> WorkbookData
-            serialize(workbook, fmt=None, pretty=None, indent=None) -> str
-            export(workbook, output_path=None, fmt=None, pretty=None, indent=None,
-                   sheets_dir=None, stream=None) -> None
-            process(file_path, output_path=None, out_fmt=None, image=False, pdf=False,
-                    dpi=72, mode=None, pretty=None, indent=None, sheets_dir=None,
-                    stream=None) -> None
+                - Modes: light/standard/verbose
+                - light: COM-free; cells + tables + print areas only (shapes/charts empty)
+            serialize(workbook, ...) -> str
+                - Applies include_* filters, then serializes
+            export(workbook, ...)
+                - Writes to file/stdout; optionally per-sheet and per-print-area files
+            process(file_path, ...)
+                - One-shot extract→export (CLI equivalent), with optional PDF/PNG
     """
 
     def __init__(
@@ -181,7 +183,16 @@ class ExStructEngine:
         return WorkbookData(book_name=wb.book_name, sheets=filtered)
 
     def extract(self, file_path: str | Path, *, mode: ExtractionMode | None = None) -> WorkbookData:
-        """Extract workbook semantic structure with the configured options."""
+        """
+        ワークブックを抽出して WorkbookData を返す。
+
+        Args:
+            file_path: .xlsx/.xlsm/.xls のパス
+            mode: light/standard/verbose（未指定ならエンジンの StructOptions.mode）
+                - light: COM なし。セル+テーブル+印刷範囲のみ。
+                - standard: テキスト付き図形+矢印+チャート。印刷範囲あり。サイズは保持するがデフォルト出力では非表示。
+                - verbose: 全図形（サイズ付き）+チャート（サイズ付き）。
+        """
         chosen_mode = mode or self.options.mode
         if chosen_mode not in ("light", "standard", "verbose"):
             raise ValueError(f"Unsupported mode: {chosen_mode}")
@@ -208,7 +219,11 @@ class ExStructEngine:
         indent: int | None = None,
     ) -> str:
         """
-        Serialize WorkbookData using configured output defaults, applying include/exclude filters.
+        WorkbookData を include/exclude フィルタ適用後に文字列化する。
+
+        Args:
+            fmt: json/yaml/yml/toon（未指定なら OutputOptions.fmt）
+            pretty/indent: JSON 整形オプション
         """
         filtered = self._filter_workbook(data)
         use_fmt = (fmt or self.output.fmt)
@@ -229,8 +244,18 @@ class ExStructEngine:
         stream: TextIO | None = None,
     ) -> None:
         """
-        Write WorkbookData to disk or stdout (when output_path is None).
-        Applies include/exclude filters before serialization.
+        WorkbookData をファイルまたは標準出力に書き出す。
+
+        - include_* フィルタ後のデータを使用
+        - sheets_dir を指定するとシートごとの個別ファイルも出力
+        - print_areas_dir を指定すると印刷範囲ごとの個別ファイルも出力（light モードではデフォルト無効）
+
+        Args:
+            output_path: None なら標準出力、それ以外はファイル書き込み
+            fmt/pretty/indent: シリアライズ設定（未指定は OutputOptions から）
+            sheets_dir: シートごとの出力先ディレクトリ
+            print_areas_dir: 印刷範囲ごとの出力先ディレクトリ
+            stream: output_path が None のときに上書きしたい IO
         """
         text = self.serialize(data, fmt=fmt, pretty=pretty, indent=indent)
         target_stream = stream or self.output.stream
@@ -297,7 +322,19 @@ class ExStructEngine:
         stream: TextIO | None = None,
     ) -> None:
         """
-        Convenience wrapper: extract, export (to file or stdout), and optionally render PDF/PNG.
+        抽出→出力の一括実行ラッパー（CLI 相当）。必要なら PDF/PNG も出力。
+
+        Args:
+            file_path: 入力 Excel
+            output_path: None なら標準出力、それ以外はファイル
+            out_fmt: json/yaml/yml/toon
+            image/pdf: True で PNG/PDF を追加出力（Excel + pypdfium2 が必要）
+            dpi: 画像出力時の DPI
+            mode: 抽出モード（未指定ならエンジンの StructOptions.mode）
+            pretty/indent: JSON 整形
+            sheets_dir: シートごとの出力先
+            print_areas_dir: 印刷範囲ごとの出力先
+            stream: 標準出力時の IO を上書きしたい場合
         """
         wb = self.extract(file_path, mode=mode)
         chosen_fmt = out_fmt or self.output.fmt

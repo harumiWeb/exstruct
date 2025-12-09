@@ -55,7 +55,16 @@ ExtractionMode = Literal["light", "standard", "verbose"]
 
 
 def extract(file_path: str | Path, mode: ExtractionMode = "standard") -> WorkbookData:
-    """Extract workbook semantic structure and return WorkbookData."""
+    """
+    Extract an Excel workbook into WorkbookData.
+
+    Args:
+        file_path: Path to .xlsx/.xlsm/.xls.
+        mode: "light" / "standard" / "verbose"
+            - light: cells + table detection only (no COM, shapes/charts empty). Print areas via openpyxl.
+            - standard: texted shapes + arrows + charts (COM if available), print areas included. Shape/chart size is kept but hidden by default in output.
+            - verbose: all shapes (including textless) with size, charts with size.
+    """
     include_links = True if mode == "verbose" else False
     engine = ExStructEngine(
         options=StructOptions(mode=mode, include_cell_links=include_links)
@@ -71,7 +80,16 @@ def export(
     pretty: bool = False,
     indent: int | None = None,
 ) -> None:
-    """Export WorkbookData to supported file formats (json/yaml/toon)."""
+    """
+    Save WorkbookData to a file (format inferred from extension).
+
+    Args:
+        data: WorkbookData from `extract` or similar
+        path: destination path; extension is used to infer format
+        fmt: explicitly set format if desired (json/yaml/yml/toon)
+        pretty: pretty-print JSON
+        indent: JSON indent width (defaults to 2 when pretty=True and indent is None)
+    """
     dest = Path(path)
     format_hint = (fmt or dest.suffix.lstrip(".") or "json").lower()
     match format_hint:
@@ -87,8 +105,10 @@ def export(
 
 def export_sheets(data: WorkbookData, dir_path: str | Path) -> dict[str, Path]:
     """
-    Export each sheet as a JSON file (book_name + SheetData) into a directory.
-    Returns a mapping of sheet name to written path.
+    Export each sheet as an individual JSON file.
+
+    - Payload: {book_name, sheet_name, sheet: SheetData}
+    - Returns: {sheet_name: Path}
     """
     return save_sheets(data, Path(dir_path), fmt="json")
 
@@ -114,7 +134,18 @@ def export_print_areas_as(
     indent: int | None = None,
     normalize: bool = False,
 ) -> dict[str, Path]:
-    """Export each print area as a PrintAreaView; returns area key to path map."""
+    """
+    Export each print area as a PrintAreaView.
+
+    Args:
+        data: WorkbookData that contains print areas
+        dir_path: output directory
+        fmt: json/yaml/yml/toon
+        pretty/indent: JSON formatting options
+        normalize: rebase row/col indices to the print-area origin when True
+    Returns:
+        dict mapping area key to path (e.g., "Sheet1#1": /.../Sheet1_area1_...json)
+    """
     return save_print_area_views(
         data,
         Path(dir_path),
@@ -140,10 +171,19 @@ def process_excel(
     stream: TextIO | None = None,
 ) -> None:
     """
-    Convenience wrapper for CLI: export workbook and optionally PDF/PNG images (Excel required for rendering).
-    - If output_path is None, writes the serialized workbook to stdout (or provided stream).
-    - If sheets_dir is given, also writes per-sheet files into that directory.
-    - If print_areas_dir is given, writes one file per print area using the configured format.
+    Convenience wrapper: extract → serialize (file or stdout) → optional PDF/PNG.
+
+    Args:
+        file_path: input Excel
+        output_path: None for stdout; otherwise, write to file
+        out_fmt: json/yaml/yml/toon
+        image/pdf: True to also output PNG/PDF (requires Excel + pypdfium2)
+        dpi: DPI for image output
+        mode: light/standard/verbose (same meaning as `extract`)
+        pretty/indent: JSON formatting
+        sheets_dir: directory to write per-sheet files
+        print_areas_dir: directory to write per-print-area files
+        stream: IO override when output_path is None
     """
     engine = ExStructEngine(
         options=StructOptions(mode=mode),

@@ -43,7 +43,7 @@ ExStruct のテストは以下のカテゴリに分類される：
 - [CEL-07] セル範囲が大きいファイルでも 1 万セル程度で性能問題がない
 - [CEL-08] `_coerce_numeric_preserve_format` が整数・小数・非数値を正しく判定する
 - [CEL-09] `detect_tables_openpyxl` が openpyxl の Table オブジェクトを検出できる
-- [CEL-10] CellRow.links が列インデックス→URL で格納され、mode=verbose または include_cell_links=True のときのみ出力される
+- [CEL-10] CellRow.links が列インデックス →URL で格納され、mode=verbose または include_cell_links=True のときのみ出力される
 
 ---
 
@@ -221,4 +221,4 @@ pydantic 構造が必ず仕様どおりであることを検証する。
 - [INT-01] COM オープン失敗時に `extract_workbook` がセル＋テーブル候補のみを返すフォールバックを行う
 - [IO-05] `dict_without_empty_values` が None/空リスト/空辞書/空文字列を除去しネスト構造を保持する
 - [RENDER-01] Excel+COM+pypdfium2 環境で PDF/PNG を出力できるスモークテスト（環境変数でオンオフ可能）
-- [MODE-08] `light` モードでも印刷範囲を openpyxl で抽出するが、デフォルト出力では print_areas を含めない（auto判定）
+- [MODE-08] `light` モードでも印刷範囲を openpyxl で抽出するが、デフォルト出力では print_areas を含めない（auto 判定）
