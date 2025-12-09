@@ -158,6 +158,9 @@ pydantic 構造が必ず仕様どおりであることを検証する。
 - [EXP-13] PrintAreaView の table_candidates は印刷範囲に完全に収まる候補のみを保持する
 - [EXP-14] normalize オプション指定時、PrintAreaView の行・列インデックスは印刷範囲起点に再基準化される
 - [EXP-15] OutputOptions.include_print_areas=False のときは print_areas_dir が指定されても印刷範囲ファイルを出力しない
+- [EXP-16] PrintAreaView に shapes/charts を含め、印刷範囲と交差するもののみ出力する（サイズ不明の図形は点として判定）
+- [EXP-17] Chart.w/h は verbose では出力され、standard ではデフォルト出力しない（include_chart_size フラグで制御）
+- [EXP-18] Shape.w/h の出力は include_shape_size フラグで制御され、デフォルトは verbose のみ True
 
 ---
 
@@ -180,6 +183,7 @@ pydantic 構造が必ず仕様どおりであることを検証する。
 - [ERR-03] Chart extraction failure → Chart.error に必ず文字列
 - [ERR-04] 異常な参照（broken range）は例外化せず null か error に記録
 - [ERR-05] Excel ファイルが開けない場合はメッセージを出して終了
+- [ERR-06] openpyxl の `_print_area` に設定された印刷範囲が存在する場合でも抽出漏れしない
 
 ---
 
@@ -200,8 +204,8 @@ pydantic 構造が必ず仕様どおりであることを検証する。
 
 ### Memory
 
-- [MEM-01] 100MB の Excel を扱う際に Python プロセスが 1GB を超えない
-- [MEM-02] レンダリング（PNG）時にリークがない
+<!-- - [MEM-01] 100MB の Excel を扱う際に Python プロセスが 1GB を超えない
+- [MEM-02] レンダリング（PNG）時にリークがない -->
 
 ---
 
@@ -217,3 +221,4 @@ pydantic 構造が必ず仕様どおりであることを検証する。
 - [INT-01] COM オープン失敗時に `extract_workbook` がセル＋テーブル候補のみを返すフォールバックを行う
 - [IO-05] `dict_without_empty_values` が None/空リスト/空辞書/空文字列を除去しネスト構造を保持する
 - [RENDER-01] Excel+COM+pypdfium2 環境で PDF/PNG を出力できるスモークテスト（環境変数でオンオフ可能）
+- [MODE-08] `light` モードでも印刷範囲を openpyxl で抽出するが、デフォルト出力では print_areas を含めない（auto判定）
