@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import importlib
 import json
 from pathlib import Path
 import re
 from types import ModuleType
-from typing import Literal
+from typing import Literal, cast
 
 from openpyxl.utils import range_boundaries
 
@@ -12,7 +13,7 @@ from ..models import CellRow, Chart, PrintArea, PrintAreaView, Shape, WorkbookDa
 from ..models.types import JsonStructure
 
 
-def dict_without_empty_values(obj: JsonStructure | WorkbookData | CellRow | Chart | PrintArea | PrintAreaView | Shape) -> JsonStructure:
+def dict_without_empty_values(obj: object) -> JsonStructure:
     """Recursively drop empty values from nested structures."""
     if isinstance(obj, dict):
         return {
@@ -24,9 +25,9 @@ def dict_without_empty_values(obj: JsonStructure | WorkbookData | CellRow | Char
         return [
             dict_without_empty_values(v) for v in obj if v not in [None, "", [], {}]
         ]
-    if hasattr(obj, "model_dump"):
+    if isinstance(obj, (WorkbookData, CellRow, Chart, PrintArea, PrintAreaView, Shape)):
         return dict_without_empty_values(obj.model_dump(exclude_none=True))
-    return obj
+    return cast(JsonStructure, obj)
 
 
 def save_as_json(
@@ -301,7 +302,7 @@ def serialize_workbook(
     format_hint = fmt.lower()
     if format_hint == "yml":
         format_hint = "yaml"
-    filtered_dict = dict_without_empty_values(model)
+    filtered_dict = dict_without_empty_values(model.model_dump(exclude_none=True))
 
     match format_hint:
         case "json":
@@ -309,15 +310,17 @@ def serialize_workbook(
             return json.dumps(filtered_dict, ensure_ascii=False, indent=indent_val)
         case "yaml":
             yaml = _require_yaml()
-            return yaml.safe_dump(
-                filtered_dict,
-                allow_unicode=True,
-                sort_keys=False,
-                indent=2,
+            return str(
+                yaml.safe_dump(
+                    filtered_dict,
+                    allow_unicode=True,
+                    sort_keys=False,
+                    indent=2,
+                )
             )
         case "toon":
             toon = _require_toon()
-            return toon.encode(filtered_dict)
+            return str(toon.encode(filtered_dict))
         case _:
             raise ValueError(f"Unsupported export format: {fmt}")
 
@@ -341,7 +344,7 @@ def save_sheets_as_json(
             {
                 "book_name": workbook.book_name,
                 "sheet_name": sheet_name,
-                "sheet": sheet_data,
+                "sheet": sheet_data.model_dump(exclude_none=True),
             }
         )
         file_name = f"{_sanitize_sheet_filename(sheet_name)}.json"
@@ -379,7 +382,7 @@ def save_sheets(
             {
                 "book_name": workbook.book_name,
                 "sheet_name": sheet_name,
-                "sheet": sheet_data,
+                "sheet": sheet_data.model_dump(exclude_none=True),
             }
         )
         suffix = {"json": ".json", "yaml": ".yaml", "toon": ".toon"}[format_hint]
@@ -391,12 +394,14 @@ def save_sheets(
                 text = json.dumps(payload, ensure_ascii=False, indent=indent_val)
             case "yaml":
                 yaml = _require_yaml()
-                text = yaml.safe_dump(
-                    payload, allow_unicode=True, sort_keys=False, indent=2
+                text = str(
+                    yaml.safe_dump(
+                        payload, allow_unicode=True, sort_keys=False, indent=2
+                    )
                 )
             case "toon":
                 toon = _require_toon()
-                text = toon.encode(payload)
+                text = str(toon.encode(payload))
             case _:
                 raise ValueError(f"Unsupported sheet export format: {format_hint}")
         path.write_text(text, encoding="utf-8")
@@ -406,24 +411,24 @@ def save_sheets(
 
 def _require_yaml() -> ModuleType:
     try:
-        import yaml
+        module = importlib.import_module("yaml")
     except ImportError as e:
         raise RuntimeError(
             "YAML export requires pyyaml. Install it via `pip install pyyaml` "
             "or add the 'yaml' extra."
         ) from e
-    return yaml
+    return module
 
 
 def _require_toon() -> ModuleType:
     try:
-        import toon
+        module = importlib.import_module("toon")
     except ImportError as e:
         raise RuntimeError(
             "TOON export requires python-toon. Install it via `pip install python-toon` "
             "or add the 'toon' extra."
         ) from e
-    return toon
+    return module
 
 
 __all__ = [

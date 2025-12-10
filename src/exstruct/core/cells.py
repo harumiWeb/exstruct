@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
+from collections.abc import Sequence
 from decimal import Decimal, InvalidOperation
 import logging
 from pathlib import Path
@@ -24,6 +25,7 @@ XL_EDGE_LEFT = 7
 XL_EDGE_TOP = 8
 XL_EDGE_BOTTOM = 9
 XL_EDGE_RIGHT = 10
+MatrixInput = Sequence[Sequence[object]] | Sequence[object]
 
 # Detection tuning parameters (can be overridden via set_table_detection_params)
 _DETECTION_CONFIG = {
@@ -286,54 +288,66 @@ def load_border_maps_xlsx(  # noqa: C901
     return has_border, top_edge, bottom_edge, left_edge, right_edge, max_row, max_col
 
 
+def _detect_border_clusters_numpy(
+    has_border: np.ndarray, min_size: int
+) -> list[tuple[int, int, int, int]]:
+    from scipy.ndimage import label
+
+    structure = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.uint8)
+    lbl, num = label(has_border.astype(np.uint8), structure=structure)
+    rects: list[tuple[int, int, int, int]] = []
+    for k in range(1, int(num) + 1):
+        ys, xs = np.where(lbl == k)
+        if int(len(ys)) < min_size:
+            continue
+        rects.append((int(ys.min()), int(xs.min()), int(ys.max()), int(xs.max())))
+    return rects
+
+
+def _detect_border_clusters_python(
+    has_border: np.ndarray, min_size: int
+) -> list[tuple[int, int, int, int]]:
+    h, w = has_border.shape
+    visited = np.zeros_like(has_border, dtype=bool)
+    rects: list[tuple[int, int, int, int]] = []
+    for r in range(h):
+        for c in range(w):
+            if not has_border[r, c] or visited[r, c]:
+                continue
+            q = deque([(r, c)])
+            visited[r, c] = True
+            ys = [r]
+            xs = [c]
+            while q:
+                yy, xx = q.popleft()
+                for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    ny, nx = yy + dy, xx + dx
+                    if (
+                        0 <= ny < h
+                        and 0 <= nx < w
+                        and has_border[ny, nx]
+                        and not visited[ny, nx]
+                    ):
+                        visited[ny, nx] = True
+                        q.append((ny, nx))
+                        ys.append(ny)
+                        xs.append(nx)
+            if len(ys) >= min_size:
+                rects.append((min(ys), min(xs), max(ys), max(xs)))
+    return rects
+
+
 def detect_border_clusters(
     has_border: np.ndarray, min_size: int = 4
 ) -> list[tuple[int, int, int, int]]:
     try:
-        from scipy.ndimage import label
-
-        structure = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.uint8)
-        lbl, num = label(has_border.astype(np.uint8), structure=structure)  # type: ignore
-        rects: list[tuple[int, int, int, int]] = []
-        for k in range(1, num + 1):
-            ys, xs = np.where(lbl == k)
-            if len(ys) < min_size:
-                continue
-            rects.append((int(ys.min()), int(xs.min()), int(ys.max()), int(xs.max())))
-        return rects
+        return _detect_border_clusters_numpy(has_border, min_size)
     except Exception:
         warn_once(
             "scipy-missing",
             "scipy is not available. Falling back to pure-Python BFS for connected components, which may be significantly slower.",
         )
-        h, w = has_border.shape
-        visited = np.zeros_like(has_border, dtype=bool)
-        rects: list[tuple[int, int, int, int]] = []
-        for r in range(h):
-            for c in range(w):
-                if not has_border[r, c] or visited[r, c]:
-                    continue
-                q = deque([(r, c)])
-                visited[r, c] = True
-                ys = [r]
-                xs = [c]
-                while q:
-                    yy, xx = q.popleft()
-                    for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                        ny, nx = yy + dy, xx + dx
-                        if (
-                            0 <= ny < h
-                            and 0 <= nx < w
-                            and has_border[ny, nx]
-                            and not visited[ny, nx]
-                        ):
-                            visited[ny, nx] = True
-                            q.append((ny, nx))
-                            ys.append(ny)
-                            xs.append(nx)
-                if len(ys) >= min_size:
-                    rects.append((min(ys), min(xs), max(ys), max(xs)))
-        return rects
+        return _detect_border_clusters_python(has_border, min_size)
 
 
 def _get_values_block(
@@ -347,23 +361,40 @@ def _get_values_block(
     return vals
 
 
-def _table_density_metrics(matrix: list[list[object]] | list[object]) -> tuple[float, float]:
+def _ensure_matrix(matrix: MatrixInput) -> list[list[object]]:
+    rows_seq = list(matrix)
+    if not rows_seq:
+        return []
+    first = rows_seq[0]
+    if isinstance(first, Sequence) and not isinstance(first, (str, bytes, bytearray)):
+        normalized: list[list[object]] = []
+        for row in rows_seq:
+            if isinstance(row, Sequence) and not isinstance(
+                row, (str, bytes, bytearray)
+            ):
+                normalized.append(list(row))
+            else:
+                normalized.append([row])
+        return normalized
+    return [list(rows_seq)]
+
+
+def _table_density_metrics(matrix: MatrixInput) -> tuple[float, float]:
     """
     Given a 2D matrix (list of rows), return (density, coverage).
     density: nonempty / total cells.
     coverage: area of tight bounding box of nonempty cells divided by total area.
     """
-    if not matrix:
+    normalized = _ensure_matrix(matrix)
+    if not normalized:
         return 0.0, 0.0
-    rows = len(matrix)
-    cols = len(matrix[0]) if rows else 0
+    rows = len(normalized)
+    cols = len(normalized[0]) if rows else 0
     if rows == 0 or cols == 0:
         return 0.0, 0.0
 
     nonempty_coords = []
-    for i, row in enumerate(matrix):
-        if not isinstance(row, list):
-            row = [row]
+    for i, row in enumerate(normalized):
         for j, v in enumerate(row):
             if not (v is None or str(v).strip() == ""):
                 nonempty_coords.append((i, j))
@@ -383,28 +414,24 @@ def _table_density_metrics(matrix: list[list[object]] | list[object]) -> tuple[f
     return density, coverage
 
 
-def _is_plausible_table(matrix: list[list[object]] | list[object]) -> bool:
+def _is_plausible_table(matrix: MatrixInput) -> bool:
     """
     Heuristic: require at least 2 rows and 2 cols with meaningful data.
     - At least 2 rows have 2 以上の非空セル
     - At least 2 columns have 2 以上の非空セル
     """
-    if not matrix:
+    normalized = _ensure_matrix(matrix)
+    if not normalized:
         return False
-    if not isinstance(matrix[0], list):
-        # normalize to 2D
-        matrix = [matrix]
 
-    rows = len(matrix)
-    cols = max((len(r) if isinstance(r, list) else 1) for r in matrix) if rows else 0
+    rows = len(normalized)
+    cols = max((len(r) if isinstance(r, list) else 1) for r in normalized) if rows else 0
     if rows < 2 or cols < 2:
         return False
 
-    row_counts = []
+    row_counts: list[int] = []
     col_counts = [0] * cols
-    for r in matrix:
-        if not isinstance(r, list):
-            r = [r]
+    for r in normalized:
         cnt = 0
         for j in range(cols):
             v = r[j] if j < len(r) else None
@@ -418,7 +445,7 @@ def _is_plausible_table(matrix: list[list[object]] | list[object]) -> bool:
     return rows_with_two >= 2 and cols_with_two >= 2
 
 
-def _nonempty_clusters(matrix: list[list]) -> list[tuple[int, int, int, int]]:
+def _nonempty_clusters(matrix: Sequence[Sequence[object]]) -> list[tuple[int, int, int, int]]:
     """Return bounding boxes of connected components of nonempty cells (4-neighbor)."""
     if not matrix:
         return []
@@ -464,14 +491,14 @@ def _nonempty_clusters(matrix: list[list]) -> list[tuple[int, int, int, int]]:
 def _normalize_matrix(matrix: object) -> list[list[object]]:
     if matrix is None:
         return []
-    if not isinstance(matrix, list):
-        return [[matrix]]
-    if matrix and not isinstance(matrix[0], list):
-        return [matrix]
-    return matrix
+    if isinstance(matrix, list):
+        return _ensure_matrix(matrix)
+    if isinstance(matrix, Sequence) and not isinstance(matrix, (str, bytes, bytearray)):
+        return _ensure_matrix(matrix)
+    return [[matrix]]
 
 
-def _header_like_row(row: list) -> bool:
+def _header_like_row(row: list[object]) -> bool:
     nonempty = [v for v in row if not (v is None or str(v).strip() == "")]
     if len(nonempty) < 2:
         return False
@@ -486,17 +513,16 @@ def _header_like_row(row: list) -> bool:
     return str_like >= num_like and str_like >= 1
 
 
-def _table_signal_score(matrix: list[list]) -> float:
-    density, coverage = _table_density_metrics(matrix)
-    header = any(_header_like_row(r) for r in matrix[:2])  # check first 2 rows
+def _table_signal_score(matrix: Sequence[Sequence[object]]) -> float:
+    normalized = _ensure_matrix(matrix)
+    density, coverage = _table_density_metrics(normalized)
+    header = any(_header_like_row(r) for r in normalized[:2])  # check first 2 rows
 
-    rows = len(matrix)
-    cols = max((len(r) if isinstance(r, list) else 1) for r in matrix) if rows else 0
-    row_counts = []
+    rows = len(normalized)
+    cols = max((len(r) if isinstance(r, list) else 1) for r in normalized) if rows else 0
+    row_counts: list[int] = []
     col_counts = [0] * cols if cols else []
-    for r in matrix:
-        if not isinstance(r, list):
-            r = [r]
+    for r in normalized:
         cnt = 0
         for j in range(cols):
             v = r[j] if j < len(r) else None
@@ -854,17 +880,18 @@ def detect_tables_openpyxl(  # noqa: C901
     ws = wb[sheet_name]
     tables: list[str] = []
     try:
-        openpyxl_tables = []
+        openpyxl_tables: list[object] = []
         if hasattr(ws, "tables") and ws.tables:
             if isinstance(ws.tables, dict):
                 openpyxl_tables = list(ws.tables.values())
             else:
                 openpyxl_tables = list(ws.tables)
-        elif hasattr(ws, "_tables") and ws._tables:  # type: ignore
-            openpyxl_tables = list(ws._tables)  # type: ignore
+        elif hasattr(ws, "_tables") and ws._tables:
+            openpyxl_tables = list(ws._tables)
         for t in openpyxl_tables:
-            addr = t.ref
-            tables.append(addr)
+            addr = getattr(t, "ref", None)
+            if addr:
+                tables.append(str(addr))
     except Exception:
         pass
 
@@ -1003,7 +1030,8 @@ def _coerce_numeric_preserve_format(val: str) -> int | float | str:
     if _FLOAT_RE.match(val):
         try:
             dec = Decimal(val)
-            scale = max(1, -dec.as_tuple().exponent)
+            exponent = int(dec.as_tuple().exponent)
+            scale = max(1, -exponent)
             quantized = dec.quantize(Decimal("1." + "0" * scale))
             return float(quantized)
         except (InvalidOperation, Exception):

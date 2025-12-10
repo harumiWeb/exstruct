@@ -48,7 +48,7 @@ def test_モデルのデフォルトとオプション値() -> None:
 
 def test_directionのリテラル検証() -> None:
     with pytest.raises(ValidationError):
-        Shape(text="bad", l=0, t=0, w=None, h=None, direction="X")  # type: ignore
+        Shape(text="bad", l=0, t=0, w=None, h=None, direction="X")
 
 
 def test_cellrowの数値正規化() -> None:

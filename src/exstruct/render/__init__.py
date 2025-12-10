@@ -5,6 +5,7 @@ from pathlib import Path
 import shutil
 import tempfile
 from types import ModuleType
+from typing import Any, cast
 
 import xlwings as xw
 
@@ -51,19 +52,19 @@ def export_pdf(excel_path: Path, output_pdf: Path) -> list[str]:
 def _require_pdfium() -> ModuleType:
     """Ensure pypdfium2 is installed; otherwise raise with guidance."""
     try:
-        import pypdfium2 as pdfium  # type: ignore
+        import pypdfium2 as pdfium
     except ImportError as e:
         raise RuntimeError(
             "Image rendering requires pypdfium2. Install it via `pip install pypdfium2 pillow` or add the 'render' extra."
         ) from e
-    return pdfium
+    return cast(ModuleType, pdfium)
 
 
 def export_sheet_images(
     excel_path: Path, output_dir: Path, dpi: int = 144
 ) -> list[Path]:
     """Export each sheet as PNG (via PDF then pypdfium2 rasterization) and return paths in sheet order."""
-    pdfium = _require_pdfium()
+    pdfium = cast(Any, _require_pdfium())
     output_dir.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory() as td:
@@ -72,11 +73,11 @@ def export_sheet_images(
 
         scale = dpi / 72.0
         written: list[Path] = []
-        with pdfium.PdfDocument(str(tmp_pdf)) as pdf:  # type: ignore
+        with pdfium.PdfDocument(str(tmp_pdf)) as pdf:
             for i, sheet_name in enumerate(sheet_names):
                 page = pdf[i]
-                bitmap = page.render(scale=scale)  # type: ignore
-                pil_image = bitmap.to_pil()  # type: ignore
+                bitmap = page.render(scale=scale)
+                pil_image = bitmap.to_pil()
                 safe_name = _sanitize_sheet_filename(sheet_name)
                 img_path = output_dir / f"{i + 1:02d}_{safe_name}.png"
                 pil_image.save(img_path, format="PNG", dpi=(dpi, dpi))

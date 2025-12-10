@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Generator
 import json
 from pathlib import Path
 from typing import Literal
@@ -81,11 +81,13 @@ class SheetData(BaseModel):
         from ..io import _require_yaml
 
         yaml = _require_yaml()
-        return yaml.safe_dump(
-            self._as_payload(),
-            allow_unicode=True,
-            sort_keys=False,
-            indent=2,
+        return str(
+            yaml.safe_dump(
+                self._as_payload(),
+                allow_unicode=True,
+                sort_keys=False,
+                indent=2,
+            )
         )
 
     def to_toon(self) -> str:
@@ -95,7 +97,7 @@ class SheetData(BaseModel):
         from ..io import _require_toon
 
         toon = _require_toon()
-        return toon.encode(self._as_payload())
+        return str(toon.encode(self._as_payload()))
 
     def save(
         self, path: str | Path, *, pretty: bool = False, indent: int | None = None
@@ -180,9 +182,9 @@ class WorkbookData(BaseModel):
         """Return the SheetData for the given sheet name."""
         return self.sheets[sheet_name]
 
-    def __iter__(self) -> Iterator[tuple[str, SheetData]]:
+    def __iter__(self) -> Generator[tuple[str, SheetData], None, None]:
         """Iterate over (sheet_name, SheetData) pairs in order."""
-        return iter(self.sheets.items())
+        yield from self.sheets.items()
 
 
 class PrintAreaView(BaseModel):
@@ -213,11 +215,13 @@ class PrintAreaView(BaseModel):
         from ..io import _require_yaml
 
         yaml = _require_yaml()
-        return yaml.safe_dump(
-            self._as_payload(),
-            allow_unicode=True,
-            sort_keys=False,
-            indent=2,
+        return str(
+            yaml.safe_dump(
+                self._as_payload(),
+                allow_unicode=True,
+                sort_keys=False,
+                indent=2,
+            )
         )
 
     def to_toon(self) -> str:
@@ -227,7 +231,7 @@ class PrintAreaView(BaseModel):
         from ..io import _require_toon
 
         toon = _require_toon()
-        return toon.encode(self._as_payload())
+        return str(toon.encode(self._as_payload()))
 
     def save(
         self, path: str | Path, *, pretty: bool = False, indent: int | None = None

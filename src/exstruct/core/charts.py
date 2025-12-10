@@ -229,7 +229,7 @@ def get_charts(
                 chart_type=chart_type_label,
                 title=title,
                 y_axis_title=y_axis_title,
-                y_axis_range=y_axis_range,  # type: ignore
+                y_axis_range=[float(v) for v in y_axis_range],
                 w=chart_width,
                 h=chart_height,
                 series=series_list,

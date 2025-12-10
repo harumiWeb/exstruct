@@ -18,7 +18,7 @@ from exstruct.models import (
 def test_engine_extract_uses_mode(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
-    called = {}
+    called: dict[str, object] = {}
 
     def fake_extract(
         path: Path,

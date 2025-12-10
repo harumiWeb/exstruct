@@ -17,5 +17,6 @@ output.json
 
 .pytest_cache/
 .ruff-cache/
-.ruff-check.yml
+.mypy_cache/
 ruff_report.txt
+mypy_report.txt

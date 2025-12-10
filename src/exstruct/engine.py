@@ -4,7 +4,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, TextIO
+from typing import Literal, TextIO, TypedDict, cast
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -20,6 +20,13 @@ from .models import SheetData, WorkbookData
 from .render import export_pdf, export_sheet_images
 
 ExtractionMode = Literal["light", "standard", "verbose"]
+
+
+class TableParams(TypedDict, total=False):
+    table_score_threshold: float
+    density_min: float
+    coverage_min: float
+    min_nonempty_cells: int
 
 
 @dataclass(frozen=True)
@@ -38,7 +45,7 @@ class StructOptions:
     """
 
     mode: ExtractionMode = "standard"
-    table_params: dict | None = (
+    table_params: TableParams | None = (
         None  # forwarded to set_table_detection_params if provided
     )
     include_cell_links: bool | None = None  # None -> auto: verbose=True, others=False
@@ -93,7 +100,7 @@ class OutputOptions(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _coerce_legacy(cls, values: dict) -> dict:
+    def _coerce_legacy(cls, values: dict[str, object]) -> dict[str, object]:
         if not isinstance(values, dict):
             return values
         # Normalize legacy flat fields into nested configs
@@ -230,7 +237,7 @@ class ExStructEngine:
         if not self.options.table_params:
             yield
             return
-        prev = dict(_cells._DETECTION_CONFIG)  # type: ignore[attr-defined]
+        prev = cast(TableParams, dict(_cells._DETECTION_CONFIG))
         set_table_detection_params(**self.options.table_params)
         try:
             yield

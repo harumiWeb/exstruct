@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 import math
+from typing import SupportsInt, cast
 
 import xlwings as xw
 from xlwings import Book
@@ -43,7 +44,7 @@ def coord_to_cell_by_edges(
 def has_arrow(style_val: object) -> bool:
     """Return True if Excel arrow style value indicates an arrowhead."""
     try:
-        v = int(style_val)
+        v = int(cast(SupportsInt, style_val))
         return v != 0
     except Exception:
         return False
