@@ -15,9 +15,7 @@ from exstruct.models import (
 )
 
 
-def test_engine_extract_uses_mode(
-    monkeypatch: MonkeyPatch, tmp_path: Path
-) -> None:
+def test_engine_extract_uses_mode(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     called: dict[str, object] = {}
 
     def fake_extract(
@@ -25,6 +23,7 @@ def test_engine_extract_uses_mode(
         mode: str,
         include_cell_links: bool = False,
         include_print_areas: bool = True,
+        include_auto_page_breaks: bool = False,
     ) -> WorkbookData:
         called["mode"] = mode
         called["include_print_areas"] = include_print_areas

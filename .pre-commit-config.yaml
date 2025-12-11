@@ -9,3 +9,6 @@ repos:
     rev: v1.11.1
     hooks:
       - id: mypy
+        additional_dependencies:
+          - pydantic>=2.0.0
+          - types-PyYAML
