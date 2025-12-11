@@ -16,6 +16,7 @@ from .io import (
     save_as_json,
     save_as_toon,
     save_as_yaml,
+    save_auto_page_break_views,
     save_print_area_views,
     save_sheets,
     serialize_workbook,
@@ -38,6 +39,7 @@ __all__ = [
     "export_sheets",
     "export_sheets_as",
     "export_print_areas_as",
+    "export_auto_page_breaks",
     "export_pdf",
     "export_sheet_images",
     "process_excel",
@@ -58,6 +60,7 @@ __all__ = [
     "FilterOptions",
     "DestinationOptions",
     "serialize_workbook",
+    "export_auto_page_breaks",
 ]
 
 
@@ -166,6 +169,39 @@ def export_print_areas_as(
     )
 
 
+def export_auto_page_breaks(
+    data: WorkbookData,
+    dir_path: str | Path,
+    fmt: Literal["json", "yaml", "yml", "toon"] = "json",
+    *,
+    pretty: bool = False,
+    indent: int | None = None,
+    normalize: bool = False,
+) -> dict[str, Path]:
+    """
+    Export auto page-break areas (COM-computed) as PrintAreaView files.
+
+    Args:
+        data: WorkbookData containing auto_print_areas (COM extraction with auto breaks enabled)
+        dir_path: output directory
+        fmt: json/yaml/yml/toon
+        pretty/indent: JSON formatting options
+        normalize: rebase row/col indices to the area origin when True
+    """
+    if not any(sheet.auto_print_areas for sheet in data.sheets.values()):
+        raise ValueError(
+            "No auto page-break areas found. Enable COM-based auto page breaks before exporting."
+        )
+    return save_auto_page_break_views(
+        data,
+        Path(dir_path),
+        fmt=fmt,
+        pretty=pretty,
+        indent=indent,
+        normalize=normalize,
+    )
+
+
 def process_excel(
     file_path: Path,
     output_path: Path | None = None,
@@ -178,6 +214,7 @@ def process_excel(
     indent: int | None = None,
     sheets_dir: Path | None = None,
     print_areas_dir: Path | None = None,
+    auto_page_breaks_dir: Path | None = None,
     stream: TextIO | None = None,
 ) -> None:
     """
@@ -193,6 +230,7 @@ def process_excel(
         pretty/indent: JSON formatting
         sheets_dir: directory to write per-sheet files
         print_areas_dir: directory to write per-print-area files
+        auto_page_breaks_dir: directory to write per-auto-page-break files (COM only)
         stream: IO override when output_path is None
     """
     engine = ExStructEngine(
@@ -203,6 +241,7 @@ def process_excel(
             indent=indent,
             sheets_dir=sheets_dir,
             print_areas_dir=print_areas_dir,
+            auto_page_breaks_dir=auto_page_breaks_dir,
             include_print_areas=None if mode == "light" else True,
             include_shape_size=True if mode == "verbose" else False,
             include_chart_size=True if mode == "verbose" else False,
@@ -221,5 +260,6 @@ def process_excel(
         indent=indent,
         sheets_dir=sheets_dir,
         print_areas_dir=print_areas_dir,
+        auto_page_breaks_dir=auto_page_breaks_dir,
         stream=stream,
     )

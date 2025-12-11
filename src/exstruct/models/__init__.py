@@ -61,6 +61,7 @@ class SheetData(BaseModel):
     charts: list[Chart] = Field(default_factory=list)
     table_candidates: list[str] = Field(default_factory=list)
     print_areas: list[PrintArea] = Field(default_factory=list)
+    auto_print_areas: list[PrintArea] = Field(default_factory=list)
 
     def _as_payload(self) -> dict[str, object]:
         from ..io import dict_without_empty_values

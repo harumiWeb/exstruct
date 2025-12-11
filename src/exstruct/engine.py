@@ -12,6 +12,7 @@ from .core import cells as _cells
 from .core.cells import set_table_detection_params
 from .core.integrate import extract_workbook
 from .io import (
+    save_auto_page_break_views,
     save_print_area_views,
     save_sheets,
     serialize_workbook,
@@ -71,6 +72,7 @@ class FilterOptions(BaseModel):
     include_chart_size: bool | None = None  # None -> auto: verbose=True, others=False
     include_tables: bool = True
     include_print_areas: bool | None = None  # None -> auto: light=False, others=True
+    include_auto_print_areas: bool = False
 
 
 class DestinationOptions(BaseModel):
@@ -79,6 +81,7 @@ class DestinationOptions(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     sheets_dir: Path | None = None
     print_areas_dir: Path | None = None
+    auto_page_breaks_dir: Path | None = None
     stream: TextIO | None = None
 
 
@@ -121,6 +124,7 @@ class OutputOptions(BaseModel):
         dest_cfg = {
             "sheets_dir": values.pop("sheets_dir", None),
             "print_areas_dir": values.pop("print_areas_dir", None),
+            "auto_page_breaks_dir": values.pop("auto_page_breaks_dir", None),
             "stream": values.pop("stream", None),
         }
         # Drop None to let defaults apply
@@ -189,6 +193,10 @@ class OutputOptions(BaseModel):
     @property
     def stream(self) -> TextIO | None:
         return self.destinations.stream
+
+    @property
+    def auto_page_breaks_dir(self) -> Path | None:
+        return self.destinations.auto_page_breaks_dir
 
 
 class ExStructEngine:
@@ -270,9 +278,23 @@ class ExStructEngine:
             return self.options.mode != "light"
         return self.output.filters.include_print_areas
 
-    def _filter_sheet(self, sheet: SheetData) -> SheetData:
+    def _include_auto_print_areas(self) -> bool:
+        """
+        Decide whether to include auto page-break areas in output.
+        Defaults to False unless explicitly enabled.
+        """
+        return self.output.filters.include_auto_print_areas
+
+    def _filter_sheet(
+        self, sheet: SheetData, include_auto_override: bool | None = None
+    ) -> SheetData:
         include_shape_size, include_chart_size = self._resolve_size_flags()
         include_print_areas = self._include_print_areas()
+        include_auto_print_areas = (
+            include_auto_override
+            if include_auto_override is not None
+            else self._include_auto_print_areas()
+        )
         return SheetData(
             rows=sheet.rows if self.output.filters.include_rows else [],
             shapes=[
@@ -291,11 +313,17 @@ class ExStructEngine:
             if self.output.filters.include_tables
             else [],
             print_areas=sheet.print_areas if include_print_areas else [],
+            auto_print_areas=sheet.auto_print_areas if include_auto_print_areas else [],
         )
 
-    def _filter_workbook(self, wb: WorkbookData) -> WorkbookData:
+    def _filter_workbook(
+        self, wb: WorkbookData, *, include_auto_override: bool | None = None
+    ) -> WorkbookData:
         filtered = {
-            name: self._filter_sheet(sheet) for name, sheet in wb.sheets.items()
+            name: self._filter_sheet(
+                sheet, include_auto_override=include_auto_override
+            )
+            for name, sheet in wb.sheets.items()
         }
         return WorkbookData(book_name=wb.book_name, sheets=filtered)
 
@@ -321,12 +349,17 @@ class ExStructEngine:
             else chosen_mode == "verbose"
         )
         include_print_areas = True  # lightでも印刷範囲は抽出する
+        include_auto_page_breaks = (
+            self.output.filters.include_auto_print_areas
+            or self.output.destinations.auto_page_breaks_dir is not None
+        )
         with self._table_params_scope():
             return extract_workbook(
                 Path(file_path),
                 mode=chosen_mode,
                 include_cell_links=include_links,
                 include_print_areas=include_print_areas,
+                include_auto_page_breaks=include_auto_page_breaks,
             )
 
     def serialize(
@@ -362,6 +395,7 @@ class ExStructEngine:
         indent: int | None = None,
         sheets_dir: Path | None = None,
         print_areas_dir: Path | None = None,
+        auto_page_breaks_dir: Path | None = None,
         stream: TextIO | None = None,
     ) -> None:
         """
@@ -376,6 +410,7 @@ class ExStructEngine:
             fmt/pretty/indent: シリアライズ設定（未指定は OutputOptions から）
             sheets_dir: シートごとの出力先ディレクトリ
             print_areas_dir: 印刷範囲ごとの出力先ディレクトリ
+            auto_page_breaks_dir: 自動改ページ範囲の出力先ディレクトリ（COM 環境のみ）
             stream: output_path が None のときに上書きしたい IO
         """
         text = self.serialize(data, fmt=fmt, pretty=pretty, indent=indent)
@@ -390,6 +425,11 @@ class ExStructEngine:
             print_areas_dir
             if print_areas_dir is not None
             else self.output.destinations.print_areas_dir
+        )
+        chosen_auto_page_breaks_dir = (
+            auto_page_breaks_dir
+            if auto_page_breaks_dir is not None
+            else self.output.destinations.auto_page_breaks_dir
         )
 
         if output_path is not None:
@@ -428,6 +468,23 @@ class ExStructEngine:
                     include_chart_size=include_chart_size,
                 )
 
+        if chosen_auto_page_breaks_dir is not None:
+            include_shape_size, include_chart_size = self._resolve_size_flags()
+            filtered = self._filter_workbook(
+                data, include_auto_override=True
+            )
+            save_auto_page_break_views(
+                filtered,
+                chosen_auto_page_breaks_dir,
+                fmt=chosen_fmt,
+                pretty=self.output.format.pretty if pretty is None else pretty,
+                indent=self.output.format.indent if indent is None else indent,
+                include_shapes=self.output.filters.include_shapes,
+                include_charts=self.output.filters.include_charts,
+                include_shape_size=include_shape_size,
+                include_chart_size=include_chart_size,
+            )
+
         return None
 
     def process(
@@ -444,6 +501,7 @@ class ExStructEngine:
         indent: int | None = None,
         sheets_dir: Path | None = None,
         print_areas_dir: Path | None = None,
+        auto_page_breaks_dir: Path | None = None,
         stream: TextIO | None = None,
     ) -> None:
         """
@@ -459,6 +517,7 @@ class ExStructEngine:
             pretty/indent: JSON 整形
             sheets_dir: シートごとの出力先
             print_areas_dir: 印刷範囲ごとの出力先
+            auto_page_breaks_dir: 自動改ページ範囲の出力先
             stream: 標準出力時の IO を上書きしたい場合
         """
         wb = self.extract(file_path, mode=mode)
@@ -471,6 +530,7 @@ class ExStructEngine:
             indent=indent,
             sheets_dir=sheets_dir,
             print_areas_dir=print_areas_dir,
+            auto_page_breaks_dir=auto_page_breaks_dir,
             stream=stream,
         )
 

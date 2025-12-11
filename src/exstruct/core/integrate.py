@@ -150,12 +150,117 @@ def _extract_print_areas_com(workbook: xw.Book) -> dict[str, list[PrintArea]]:
     return areas
 
 
+def _normalize_area_for_sheet(part: str, ws_name: str) -> str | None:
+    """
+    Strip sheet name from a range part when it matches the target sheet; otherwise None.
+    """
+    s = part.strip()
+    if "!" not in s:
+        return s
+    sheet, rng = s.rsplit("!", 1)
+    sheet = sheet.strip()
+    if sheet.startswith("'") and sheet.endswith("'"):
+        sheet = sheet[1:-1].replace("''", "'")
+    return rng if sheet == ws_name else None
+
+
+def _split_csv_respecting_quotes(raw: str) -> list[str]:
+    """
+    Split a CSV-like string while keeping commas inside single quotes intact.
+    """
+    parts: list[str] = []
+    buf: list[str] = []
+    in_quote = False
+    i = 0
+    while i < len(raw):
+        ch = raw[i]
+        if ch == "'":
+            if in_quote and i + 1 < len(raw) and raw[i + 1] == "'":
+                buf.append("''")
+                i += 2
+                continue
+            in_quote = not in_quote
+            buf.append(ch)
+            i += 1
+            continue
+        if ch == "," and not in_quote:
+            parts.append("".join(buf).strip())
+            buf = []
+            i += 1
+            continue
+        buf.append(ch)
+        i += 1
+    if buf:
+        parts.append("".join(buf).strip())
+    return [p for p in parts if p]
+
+
+def _compute_auto_page_break_areas(workbook: xw.Book) -> dict[str, list[PrintArea]]:
+    """
+    Compute auto page-break rectangles per sheet using Excel COM.
+    Falls back to empty dict on failure.
+    """
+    results: dict[str, list[PrintArea]] = {}
+    for sheet in workbook.sheets:
+        try:
+            ws_api = sheet.api
+            original_display: bool | None = ws_api.DisplayPageBreaks
+            ws_api.DisplayPageBreaks = True
+            print_area = ws_api.PageSetup.PrintArea or ws_api.UsedRange.Address
+            parts_raw = _split_csv_respecting_quotes(str(print_area))
+            area_parts: list[str] = []
+            for part in parts_raw:
+                rng = _normalize_area_for_sheet(part, sheet.name)
+                if rng:
+                    area_parts.append(rng)
+            hpb = ws_api.HPageBreaks
+            vpb = ws_api.VPageBreaks
+            h_break_rows = [
+                hpb.Item(i).Location.Row for i in range(1, int(hpb.Count) + 1)
+            ]
+            v_break_cols = [
+                vpb.Item(i).Location.Column for i in range(1, int(vpb.Count) + 1)
+            ]
+            for addr in area_parts:
+                rng = ws_api.Range(addr)
+                min_row = int(rng.Row)
+                max_row = min_row + int(rng.Rows.Count) - 1
+                min_col = int(rng.Column)
+                max_col = min_col + int(rng.Columns.Count) - 1
+                rows = [min_row] + [
+                    r for r in h_break_rows if min_row < r <= max_row
+                ] + [max_row + 1]
+                cols = [min_col] + [
+                    c for c in v_break_cols if min_col < c <= max_col
+                ] + [max_col + 1]
+                for i in range(len(rows) - 1):
+                    r1, r2 = rows[i], rows[i + 1] - 1
+                    for j in range(len(cols) - 1):
+                        c1, c2 = cols[j], cols[j + 1] - 1
+                        c1_0 = c1 - 1
+                        c2_0 = c2 - 1
+                        results.setdefault(sheet.name, []).append(
+                            PrintArea(r1=r1, c1=c1_0, r2=r2, c2=c2_0)
+                        )
+            if original_display is not None:
+                ws_api.DisplayPageBreaks = original_display
+        except Exception:
+            try:
+                if original_display is not None:
+                    ws_api.DisplayPageBreaks = original_display
+            except Exception:
+                pass
+            continue
+    return results
+
+
 def integrate_sheet_content(
     cell_data: dict[str, list[CellRow]],
     shape_data: dict[str, list[Shape]],
     workbook: xw.Book,
     mode: Literal["light", "standard", "verbose"] = "standard",
     print_area_data: dict[str, list[PrintArea]] | None = None,
+    auto_page_break_data: dict[str, list[PrintArea]] | None = None,
 ) -> dict[str, SheetData]:
     """Integrate cells, shapes, charts, and tables into SheetData per sheet."""
     result: dict[str, SheetData] = {}
@@ -169,6 +274,9 @@ def integrate_sheet_content(
             charts=[] if mode == "light" else get_charts(sheet, mode=mode),
             table_candidates=detect_tables(sheet),
             print_areas=print_area_data.get(sheet_name, []) if print_area_data else [],
+            auto_print_areas=auto_page_break_data.get(sheet_name, [])
+            if auto_page_break_data
+            else [],
         )
 
         result[sheet_name] = sheet_model
@@ -181,6 +289,7 @@ def extract_workbook(  # noqa: C901
     *,
     include_cell_links: bool = False,
     include_print_areas: bool = True,
+    include_auto_page_breaks: bool = False,
 ) -> WorkbookData:
     """Extract workbook and return WorkbookData; fallback to cells+tables if Excel COM is unavailable."""
     if mode not in _ALLOWED_MODES:
@@ -194,6 +303,7 @@ def extract_workbook(  # noqa: C901
     print_area_data: dict[str, list[PrintArea]] = {}
     if include_print_areas:
         print_area_data = _extract_print_areas_openpyxl(file_path)
+    auto_page_break_data: dict[str, list[PrintArea]] = {}
 
     def _cells_and_tables_only(reason: str) -> WorkbookData:
         sheets: dict[str, SheetData] = {}
@@ -210,6 +320,7 @@ def extract_workbook(  # noqa: C901
                 print_areas=print_area_data.get(sheet_name, [])
                 if include_print_areas
                 else [],
+                auto_print_areas=[],
             )
         logger.warning(
             "%s Falling back to cells+tables only; shapes and charts will be empty.",
@@ -239,12 +350,18 @@ def extract_workbook(  # noqa: C901
                     print_area_data = _extract_print_areas_com(wb)
                 except Exception:
                     print_area_data = {}
+            if include_auto_page_breaks:
+                try:
+                    auto_page_break_data = _compute_auto_page_break_areas(wb)
+                except Exception:
+                    auto_page_break_data = {}
             merged = integrate_sheet_content(
                 cell_data,
                 shape_data,
                 wb,
                 mode=mode,
                 print_area_data=print_area_data if include_print_areas else None,
+                auto_page_break_data=auto_page_break_data if include_auto_page_breaks else None,
             )
             return WorkbookData(book_name=file_path.name, sheets=merged)
         except Exception as e:

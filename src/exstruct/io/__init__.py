@@ -172,25 +172,23 @@ def _filter_charts_to_area(charts: list[Chart], area: PrintArea) -> list[Chart]:
     return filtered
 
 
-def build_print_area_views(
+def _iter_area_views(
     workbook: WorkbookData,
     *,
-    normalize: bool = False,
-    include_shapes: bool = True,
-    include_charts: bool = True,
-    include_shape_size: bool = True,
-    include_chart_size: bool = True,
+    area_attr: Literal["print_areas", "auto_print_areas"],
+    normalize: bool,
+    include_shapes: bool,
+    include_charts: bool,
+    include_shape_size: bool,
+    include_chart_size: bool,
 ) -> dict[str, list[PrintAreaView]]:
-    """
-    Construct PrintAreaView instances for all print areas in the workbook.
-    Returns a mapping of sheet name to ordered list of PrintAreaView.
-    """
     views: dict[str, list[PrintAreaView]] = {}
     for sheet_name, sheet in workbook.sheets.items():
-        if not sheet.print_areas:
+        areas: list[PrintArea] = getattr(sheet, area_attr)
+        if not areas:
             continue
         sheet_views: list[PrintAreaView] = []
-        for area in sheet.print_areas:
+        for area in areas:
             rows_in_area: list[CellRow] = []
             for row in sheet.rows:
                 filtered_row = _filter_row_to_area(row, area, normalize=normalize)
@@ -225,6 +223,30 @@ def build_print_area_views(
         if sheet_views:
             views[sheet_name] = sheet_views
     return views
+
+
+def build_print_area_views(
+    workbook: WorkbookData,
+    *,
+    normalize: bool = False,
+    include_shapes: bool = True,
+    include_charts: bool = True,
+    include_shape_size: bool = True,
+    include_chart_size: bool = True,
+) -> dict[str, list[PrintAreaView]]:
+    """
+    Construct PrintAreaView instances for all print areas in the workbook.
+    Returns a mapping of sheet name to ordered list of PrintAreaView.
+    """
+    return _iter_area_views(
+        workbook,
+        area_attr="print_areas",
+        normalize=normalize,
+        include_shapes=include_shapes,
+        include_charts=include_charts,
+        include_shape_size=include_shape_size,
+        include_chart_size=include_chart_size,
+    )
 
 
 def save_print_area_views(
@@ -284,6 +306,69 @@ def save_print_area_views(
                     text = view.to_toon()
                 case _:
                     raise ValueError(f"Unsupported print-area export format: {fmt}")
+            path.write_text(text, encoding="utf-8")
+            written[key] = path
+    return written
+
+
+def save_auto_page_break_views(
+    workbook: WorkbookData,
+    output_dir: Path,
+    fmt: Literal["json", "yaml", "yml", "toon"] = "json",
+    *,
+    pretty: bool = False,
+    indent: int | None = None,
+    normalize: bool = False,
+    include_shapes: bool = True,
+    include_charts: bool = True,
+    include_shape_size: bool = True,
+    include_chart_size: bool = True,
+) -> dict[str, Path]:
+    """
+    Save auto page-break areas (computed via Excel COM) per sheet in the specified format.
+    Returns a map of area key (e.g., 'Sheet1#auto#1') to written path.
+    """
+    format_hint = fmt.lower()
+    if format_hint == "yml":
+        format_hint = "yaml"
+    if format_hint not in ("json", "yaml", "toon"):
+        raise ValueError(f"Unsupported auto page-break export format: {fmt}")
+
+    views = _iter_area_views(
+        workbook,
+        area_attr="auto_print_areas",
+        normalize=normalize,
+        include_shapes=include_shapes,
+        include_charts=include_charts,
+        include_shape_size=include_shape_size,
+        include_chart_size=include_chart_size,
+    )
+    if not views:
+        return {}
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    written: dict[str, Path] = {}
+    suffix = {"json": ".json", "yaml": ".yaml", "toon": ".toon"}[format_hint]
+
+    for sheet_name, sheet_views in views.items():
+        for idx, view in enumerate(sheet_views):
+            key = f"{sheet_name}#auto#{idx + 1}"
+            area = view.area
+            file_name = (
+                f"{_sanitize_sheet_filename(sheet_name)}"
+                f"_auto_page{idx + 1}_r{area.r1}-{area.r2}_c{area.c1}-{area.c2}{suffix}"
+            )
+            path = output_dir / file_name
+            match format_hint:
+                case "json":
+                    indent_val = 2 if pretty and indent is None else indent
+                    text = view.to_json(pretty=pretty, indent=indent_val)
+                case "yaml":
+                    text = view.to_yaml()
+                case "toon":
+                    text = view.to_toon()
+                case _:
+                    raise ValueError(f"Unsupported auto page-break export format: {fmt}")
             path.write_text(text, encoding="utf-8")
             written[key] = path
     return written
@@ -440,5 +525,6 @@ __all__ = [
     "save_sheets_as_json",
     "build_print_area_views",
     "save_print_area_views",
+    "save_auto_page_break_views",
     "serialize_workbook",
 ]
