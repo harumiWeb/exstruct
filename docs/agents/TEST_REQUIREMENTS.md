@@ -161,6 +161,9 @@ pydantic 構造が必ず仕様どおりであることを検証する。
 - [EXP-16] PrintAreaView に shapes/charts を含め、印刷範囲と交差するもののみ出力する（サイズ不明の図形は点として判定）
 - [EXP-17] Chart.w/h は verbose では出力され、standard ではデフォルト出力しない（include_chart_size フラグで制御）
 - [EXP-18] Shape.w/h の出力は include_shape_size フラグで制御され、デフォルトは verbose のみ True
+- [EXP-19] auto_page_breaks_dir を指定した ExStructEngine では extract_workbook に include_auto_page_breaks=True が渡り、auto_print_areas が取得される（COM 環境前提）
+- [EXP-20] export_auto_page_breaks は auto_print_areas が空の場合に明示的な例外を返し、存在する場合のみ書き出す
+- [EXP-21] save_auto_page_break_views で auto_print_areas が指定パスに書き出され、キー（例: Sheet1#auto#1）が一意に付与される
 
 ---
 
