@@ -8,7 +8,7 @@ ExStruct は Excel ワークブックを読み取り、構造化データ（セ�
 
 ## 主な特徴
 
-- **Excel → 構造化 JSON**: セル、図形、チャート、テーブル候補、印刷範囲（PrintArea/PrintAreaView）をシート単位・範囲単位で出力。
+- **Excel → 構造化 JSON**: セル、図形、チャート、テーブル候補、印刷範囲/自動改ページ範囲（PrintArea/PrintAreaView）をシート単位・範囲単位で出力。
 - **出力モード**: `light`（セル＋テーブル候補のみ）、`standard`（テキスト付き図形＋矢印、チャート）、`verbose`（全図形を幅高さ付きで出力、セルのハイパーリンクも出力）。
 - **フォーマット**: JSON（デフォルトはコンパクト、`--pretty` で整形）、YAML、TOON（任意依存）。
 - **テーブル検出のチューニング**: API でヒューリスティックを動的に変更可能。
@@ -45,6 +45,8 @@ exstruct input.xlsx --mode light           # セル＋テーブル候補のみ
 exstruct input.xlsx --pdf --image          # PDF と PNG（Excel 必須）
 ```
 
+自動改ページ範囲の書き出しは API 専用（Excel/COM が必要）です。`DestinationOptions.auto_page_breaks_dir` を設定するか、`export_auto_page_breaks(...)` を利用してください。
+
 ## クイックスタート Python
 
 ```python
@@ -68,12 +70,13 @@ print(first_sheet.to_yaml())         # YAML 文字列（pyyaml 必須）
 
 # ExStructEngine: インスタンスごとの設定（ネスト構造）
 from exstruct import (
-    ExStructEngine,
-    StructOptions,
-    OutputOptions,
-    FormatOptions,
-    FilterOptions,
     DestinationOptions,
+    ExStructEngine,
+    FilterOptions,
+    FormatOptions,
+    OutputOptions,
+    StructOptions,
+    export_auto_page_breaks,
 )
 
 engine = ExStructEngine(
@@ -94,6 +97,16 @@ with_links = engine_links.extract("input.xlsx")
 # 印刷範囲ごとに書き出す
 from exstruct import export_print_areas_as
 export_print_areas_as(wb, "areas", fmt="json", pretty=True)  # 印刷範囲がある場合のみファイル生成
+
+# 自動改ページ範囲の抽出/出力（COM 限定。自動改ページが無い場合は例外を送出）
+engine_auto = ExStructEngine(
+    output=OutputOptions(
+        destinations=DestinationOptions(auto_page_breaks_dir=Path("auto_areas"))
+    )
+)
+wb_auto = engine_auto.extract("input.xlsx")  # SheetData.auto_print_areas を含む
+engine_auto.export(wb_auto, Path("out_with_auto.json"))  # 自動改ページごとのファイルも auto_areas/* に保存
+export_auto_page_breaks(wb_auto, "auto_areas", fmt="json", pretty=True)
 ```
 
 **備考 (COM 非対応環境):** Excel COM が使えない場合でもセル＋`table_candidates` は返りますが、`shapes` / `charts` は空になります。
@@ -336,10 +349,12 @@ flowchart TD
 - デフォルト JSON はコンパクト（トークン削減目的）。可読性が必要なら `--pretty` / `pretty=True` を利用してください。
 - フィールド名は `table_candidates` を使用します（以前の `tables` から変更）。下流のスキーマを調整してください。
 
-## 印刷範囲（PrintArea / PrintAreaView）
+## 印刷範囲と自動改ページ範囲（PrintArea / PrintAreaView）
 
 - `SheetData.print_areas` に印刷範囲（セル座標）が含まれます（light/standard/verbose で取得）。
+- `SheetData.auto_print_areas` に Excel COM が計算した自動改ページ範囲が入ります（自動改ページ抽出を有効化した場合のみ、COM 限定）。
 - `export_print_areas_as(...)` や CLI `--print-areas-dir` で印刷範囲ごとにファイルを出力できます（印刷範囲が無い場合はファイルを作りません）。
+- `DestinationOptions.auto_page_breaks_dir`（推奨）または `export_auto_page_breaks(...)` で自動改ページ範囲ごとにファイルを出力できます。自動改ページが存在しない場合、`export_auto_page_breaks(...)` は `ValueError` を送出します。
 - `PrintAreaView` には範囲内の行・テーブル候補に加え、範囲と交差する図形/チャートを含みます（サイズ不明の図形は座標のみで判定）。`normalize=True` で行/列を範囲起点に再基準化できます。
 
 ## License

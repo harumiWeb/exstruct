@@ -1,6 +1,6 @@
 # API Reference
 
-This page shows the primary APIs, minimal runnable examples, expected outputs, and the dependencies required for optional features. Hyperlinks are included when `include_cell_links=True` (or when using `mode="verbose"`).
+This page shows the primary APIs, minimal runnable examples, expected outputs, and the dependencies required for optional features. Hyperlinks are included when `include_cell_links=True` (or when using `mode="verbose"`). Auto page-break areas are COM-only and appear when auto page-break extraction/output is enabled.
 
 ## TOC
 
@@ -16,7 +16,8 @@ This page shows the primary APIs, minimal runnable examples, expected outputs, a
     - [export_sheetsdata, dir_path](#export_sheetsdata-dir_path)
     - [export_sheets_asdata, dir_path, fmt="json", *, pretty=False, indent=None](#export_sheets_asdata-dir_path-fmtjson--prettyfalse-indentnone)
     - [export_print_areas_asdata, dir_path, fmt="json", *, pretty=False, indent=None, normalize=False](#export_print_areas_asdata-dir_path-fmtjson--prettyfalse-indentnone-normalizefalse)
-    - [process_excelfile_path, output_path=None, out_fmt="json", image=False, pdf=False, dpi=72, mode="standard", pretty=False, indent=None, sheets_dir=None, print_areas_dir=None, stream=None](#process_excelfile_path-output_pathnone-out_fmtjson-imagefalse-pdffalse-dpi72-modestandard-prettyfalse-indentnone-sheets_dirnone-print_areas_dirnone-streamnone)
+    - [export_auto_page_breaksdata, dir_path, fmt="json", *, pretty=False, indent=None, normalize=False](#export_auto_page_breaksdata-dir_path-fmtjson--prettyfalse-indentnone-normalizefalse)
+    - [process_excelfile_path, output_path=None, out_fmt="json", image=False, pdf=False, dpi=72, mode="standard", pretty=False, indent=None, sheets_dir=None, print_areas_dir=None, auto_page_breaks_dir=None, stream=None](#process_excelfile_path-output_pathnone-out_fmtjson-imagefalse-pdffalse-dpi72-modestandard-prettyfalse-indentnone-sheets_dirnone-print_areas_dirnone-auto_page_breaks_dirnone-streamnone)
     - [export_pdffile_path, pdf_path](#export_pdffile_path-pdf_path)
     - [export_sheet_imagesfile_path, images_dir, dpi=72](#export_sheet_imagesfile_path-images_dir-dpi72)
     - [set_table_detection_params...](#set_table_detection_params)
@@ -86,6 +87,7 @@ process_excel(
 - Core extraction: pandas, openpyxl (installed with the package).
 - YAML export: `pyyaml` (imported lazily; missing module raises `RuntimeError`).
 - TOON export: `python-toon` (lazy import; missing module raises `RuntimeError`).
+- Auto page-break extraction/export: **Excel + COM** required (feature is skipped when COM is unavailable).
 - Rendering (PDF/PNG): **Excel + COM + `pypdfium2`** are mandatory. Without Excel/COM, rendering APIs raise `RuntimeError`.
 
 ## Functions
@@ -145,9 +147,27 @@ Args:
 
 Returns: dict of area key -> Path (e.g., `"Sheet1#1": areas/Sheet1_area1_...json`)
 
-### process_excel(file_path, output_path=None, out_fmt="json", image=False, pdf=False, dpi=72, mode="standard", pretty=False, indent=None, sheets_dir=None, print_areas_dir=None, stream=None)
+### export_auto_page_breaks(data, dir_path, fmt="json", \*, pretty=False, indent=None, normalize=False)
 
-Convenience wrapper used by the CLI. Writes to stdout when `output_path` is omitted, can optionally split per sheet (`sheets_dir`), and can render PDF/PNG (Excel required). Invalid `mode` or `out_fmt` raises `ValueError`.
+Writes one file per auto page-break area (`SheetData.auto_print_areas`). Requires COM-based extraction with auto page-breaks enabled. Raises `ValueError` if no auto page breaks exist.
+
+```python
+from exstruct import export_auto_page_breaks
+paths = export_auto_page_breaks(wb, "auto_areas", fmt="json", pretty=True)  # COM + auto breaks enabled
+```
+
+Args:
+- data: WorkbookData containing auto page-break areas
+- dir_path: output directory
+- fmt: json/yaml/yml/toon
+- pretty/indent: JSON formatting options
+- normalize: rebase row/col indices to the area origin
+
+Returns: dict of area key -> Path (e.g., `"Sheet1#1": auto_areas/Sheet1_auto_page1_...json`)
+
+### process_excel(file_path, output_path=None, out_fmt="json", image=False, pdf=False, dpi=72, mode="standard", pretty=False, indent=None, sheets_dir=None, print_areas_dir=None, auto_page_breaks_dir=None, stream=None)
+
+Convenience wrapper used by the CLI. Writes to stdout when `output_path` is omitted, can optionally split per sheet (`sheets_dir`), split per print area (`print_areas_dir`), split per auto page-break area (`auto_page_breaks_dir`, COM only), and can render PDF/PNG (Excel required). Invalid `mode` or `out_fmt` raises `ValueError`.
 
 ### export_pdf(file_path, pdf_path)
 
@@ -181,31 +201,41 @@ Configurable engine with per-instance extraction/output settings and automatic i
   - `include_cell_links`: `None` -> auto (`verbose` only), otherwise respect the boolean.
 - `OutputOptions` (nested: `format`, `filters`, `destinations`)
   - Format: `fmt` (`json`/`yaml`/`yml`/`toon`), `pretty`, `indent`.
-  - Filters: `include_rows`, `include_shapes`, `include_shape_size` (None -> auto: verbose only), `include_charts`, `include_chart_size` (None -> auto: verbose only), `include_tables`, `include_print_areas` (None -> auto: light=False, others=True).
-  - Destinations: `sheets_dir`, `print_areas_dir`, `stream`.
+  - Filters: `include_rows`, `include_shapes`, `include_shape_size` (None -> auto: verbose only), `include_charts`, `include_chart_size` (None -> auto: verbose only), `include_tables`, `include_print_areas` (None -> auto: light=False, others=True), `include_auto_print_areas` (default False).
+  - Destinations: `sheets_dir`, `print_areas_dir`, `auto_page_breaks_dir`, `stream`.
 - Methods:
   - `extract(path, mode=None)` -> WorkbookData (hyperlinks toggled via `StructOptions.include_cell_links`)
   - `serialize(workbook, fmt=None, pretty=None, indent=None)` -> str (applies filters/size flags/print-area include rules)
-  - `export(workbook, output_path=None, fmt=None, pretty=None, indent=None, sheets_dir=None, print_areas_dir=None, stream=None)`
-  - `process(file_path, output_path=None, out_fmt=None, image=False, pdf=False, dpi=72, mode=None, pretty=None, indent=None, sheets_dir=None, print_areas_dir=None, stream=None)` (PDF/PNG require Excel + pypdfium2)
+  - `export(workbook, output_path=None, fmt=None, pretty=None, indent=None, sheets_dir=None, print_areas_dir=None, auto_page_breaks_dir=None, stream=None)`
+  - `process(file_path, output_path=None, out_fmt=None, image=False, pdf=False, dpi=72, mode=None, pretty=None, indent=None, sheets_dir=None, print_areas_dir=None, auto_page_breaks_dir=None, stream=None)` (PDF/PNG require Excel + pypdfium2)
 
 Example:
 
 ```python
-from exstruct import ExStructEngine, StructOptions, OutputOptions
+from pathlib import Path
+from exstruct import (
+    DestinationOptions,
+    ExStructEngine,
+    FilterOptions,
+    FormatOptions,
+    OutputOptions,
+    StructOptions,
+)
 
 engine = ExStructEngine(
     options=StructOptions(mode="standard", include_cell_links=True),  # enable hyperlinks in standard mode
     output=OutputOptions(
-        include_shapes=False,
-        include_print_areas=None,  # auto: light=False, others=True
-        include_shape_size=None,   # auto: verbose only
-        include_chart_size=None,   # auto: verbose only
-        pretty=True,
+        format=FormatOptions(pretty=True),
+        filters=FilterOptions(
+            include_shapes=False,
+            include_print_areas=None,  # auto: light=False, others=True
+            include_auto_print_areas=True,
+        ),
+        destinations=DestinationOptions(auto_page_breaks_dir=Path("auto_areas")),
     ),
 )
 wb = engine.extract("input.xlsx")
-engine.export(wb, "out.json")              # writes filtered JSON (no shapes)
+engine.export(wb, "out.json")              # writes filtered JSON and auto page-break files (COM only)
 engine.process("input.xlsx", pdf=False)    # end-to-end extract + export
 ```
 
@@ -214,7 +244,7 @@ engine.process("input.xlsx", pdf=False)    # end-to-end extract + export
 | Model           | Key fields                                                                                                                                                                                           |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `WorkbookData`  | `book_name: str`, `sheets: dict[str, SheetData]`                                                                                                                                                     |
-| `SheetData`     | `rows: list[CellRow]`, `shapes: list[Shape]`, `charts: list[Chart]`, `table_candidates: list[str]`, `print_areas: list[PrintArea]`                                                                   |
+| `SheetData`     | `rows: list[CellRow]`, `shapes: list[Shape]`, `charts: list[Chart]`, `table_candidates: list[str]`, `print_areas: list[PrintArea]`, `auto_print_areas: list[PrintArea]`                               |
 | `CellRow`       | `r: int`, `c: dict[str, int                                                                        or float                                                or str]`, `links: dict[str, str] \| None` |
 | `Shape`         | `text: str`, `l/t/w/h: int \| None`, `type`, `rotation`, arrow styles, `direction`                                                                                                                   |
 | `Chart`         | `name`, `chart_type`, `title`, `series`, `y_axis_range`, `w/h: int \| None`, `l/t`, `error: str \| None`                                                                                             |
@@ -250,6 +280,7 @@ first.save("sheet.yaml")  # requires pyyaml
 - Rendering without Excel/COM: `RuntimeError`.
 - CLI mirrors these: exits non-zero on failures, prints messages in English.
 - No print areas: `export_print_areas_as` writes nothing and returns `{}`; this is not an error.
+- Auto page-break export: `export_auto_page_breaks` raises `ValueError` if no auto page-break areas are present (enable them via `DestinationOptions.auto_page_breaks_dir`).
 
 ## Tuning Examples
 
