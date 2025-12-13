@@ -206,10 +206,9 @@ def export_auto_page_breaks(
         normalize: rebase row/col indices to the area origin when True
     """
     if not any(sheet.auto_print_areas for sheet in data.sheets.values()):
-        logger.warning(
-            "No auto page-break areas found; skipping export for %s", dir_path
-        )
-        return {}
+        message = "No auto page-break areas found. Enable COM-based auto page breaks before exporting."
+        logger.warning(message)
+        raise PrintAreaError(message)
     return save_auto_page_break_views(
         data,
         Path(dir_path),

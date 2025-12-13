@@ -31,5 +31,5 @@ class OutputError(ExstructError):
     """Raised when writing outputs to disk or streams fails."""
 
 
-class PrintAreaError(ExstructError):
-    """Raised when print-area specific processing fails."""
+class PrintAreaError(ExstructError, ValueError):
+    """Raised when print-area specific processing fails (also a ValueError for compatibility)."""
