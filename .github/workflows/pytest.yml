@@ -10,11 +10,10 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    env:
-      SKIP_COM_TESTS: "1"
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-latest, windows-latest]
         python-version: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
@@ -27,6 +26,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[yaml]
           pip install pytest pytest-cov pytest-mock
-      - name: Run tests (skip COM-dependent smoke)
+      - name: Run tests (non-COM suite)
+        if: runner.os != 'Windows'
         run: |
-          pytest -k "not render_smoke" --maxfail=1 --disable-warnings -q
+          pytest -m "not com and not render" --maxfail=1 --disable-warnings -q
+      - name: Run tests (full suite with skips)
+        if: runner.os == 'Windows'
+        env:
+          RUN_RENDER_SMOKE: "0"  # enable with 1 when Excel+pypdfium2 are available
+        run: |
+          pytest --maxfail=1 --disable-warnings -q
