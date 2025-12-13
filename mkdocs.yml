@@ -19,6 +19,7 @@ nav:
   - API Reference:
       - Overview: api.md
       - Data Models (generated): generated/models.md
+  - CLI Guide: cli.md
   - Concept / Why ExStruct?: concept.md
   - Release Notes:
       - v0.2.61: release-notes/v0.2.61.md
