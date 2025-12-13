@@ -1,12 +1,12 @@
 [project]
 name = "exstruct"
-version = "0.2.60"
+version = "0.2.61"
 description = "Excel to structured JSON (tables, shapes, charts) for LLM/RAG pipelines"
 readme = "README.md"
 license = { file = "LICENSE" }
 keywords = ["excel", "structure", "data", "exstruct"]
 authors = [
-    { name = "harumiWeb", email = "ganaharumi@outlook.jp" }
+    { name = "harumiWeb"}
 ]
 requires-python = ">=3.11"
 dependencies = [
