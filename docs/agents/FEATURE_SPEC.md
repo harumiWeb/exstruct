@@ -6,11 +6,6 @@
 
 ## リファクタリング案
 
-- PrintAreaView 判定と出力フラグの分散
-
-  - 事象: shapes/charts のフィルタとサイズ出力フラグが io と engine の両方に散在し、呼び出し側の引数も増えてきた。
-  - 対策案: PrintAreaView のビルドをサービスクラス/モジュールに切り出し、(include_shapes, include_charts, include_shape_size, include_chart_size) を一つの設定オブジェクトにまとめる。エンジンからは mode に基づくプリセットを渡すだけにする。
-
 - ドキュメントとコードの同期コスト
 
   - 事象: DATA_MODEL/README/api が手書きで分散している。モデル更新時の漏れリスクが高い。

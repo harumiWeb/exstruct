@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal, cast
 
 from openpyxl import load_workbook
 from openpyxl.utils import range_boundaries
@@ -203,7 +203,7 @@ def _compute_auto_page_break_areas(workbook: xw.Book) -> dict[str, list[PrintAre
     results: dict[str, list[PrintArea]] = {}
     for sheet in workbook.sheets:
         try:
-            ws_api = sheet.api
+            ws_api = cast(Any, sheet.api)  # xlwings COM API; treated as Any
             original_display: bool | None = ws_api.DisplayPageBreaks
             ws_api.DisplayPageBreaks = True
             print_area = ws_api.PageSetup.PrintArea or ws_api.UsedRange.Address
@@ -213,8 +213,8 @@ def _compute_auto_page_break_areas(workbook: xw.Book) -> dict[str, list[PrintAre
                 rng = _normalize_area_for_sheet(part, sheet.name)
                 if rng:
                     area_parts.append(rng)
-            hpb = ws_api.HPageBreaks
-            vpb = ws_api.VPageBreaks
+            hpb = cast(Any, ws_api.HPageBreaks)
+            vpb = cast(Any, ws_api.VPageBreaks)
             h_break_rows = [
                 hpb.Item(i).Location.Row for i in range(1, int(hpb.Count) + 1)
             ]
@@ -222,17 +222,21 @@ def _compute_auto_page_break_areas(workbook: xw.Book) -> dict[str, list[PrintAre
                 vpb.Item(i).Location.Column for i in range(1, int(vpb.Count) + 1)
             ]
             for addr in area_parts:
-                rng = ws_api.Range(addr)
-                min_row = int(rng.Row)
-                max_row = min_row + int(rng.Rows.Count) - 1
-                min_col = int(rng.Column)
-                max_col = min_col + int(rng.Columns.Count) - 1
-                rows = [min_row] + [
-                    r for r in h_break_rows if min_row < r <= max_row
-                ] + [max_row + 1]
-                cols = [min_col] + [
-                    c for c in v_break_cols if min_col < c <= max_col
-                ] + [max_col + 1]
+                range_obj = cast(Any, ws_api.Range(addr))
+                min_row = int(range_obj.Row)
+                max_row = min_row + int(range_obj.Rows.Count) - 1
+                min_col = int(range_obj.Column)
+                max_col = min_col + int(range_obj.Columns.Count) - 1
+                rows = (
+                    [min_row]
+                    + [r for r in h_break_rows if min_row < r <= max_row]
+                    + [max_row + 1]
+                )
+                cols = (
+                    [min_col]
+                    + [c for c in v_break_cols if min_col < c <= max_col]
+                    + [max_col + 1]
+                )
                 for i in range(len(rows) - 1):
                     r1, r2 = rows[i], rows[i + 1] - 1
                     for j in range(len(cols) - 1):
@@ -361,7 +365,9 @@ def extract_workbook(  # noqa: C901
                 wb,
                 mode=mode,
                 print_area_data=print_area_data if include_print_areas else None,
-                auto_page_break_data=auto_page_break_data if include_auto_page_breaks else None,
+                auto_page_break_data=auto_page_break_data
+                if include_auto_page_breaks
+                else None,
             )
             return WorkbookData(book_name=file_path.name, sheets=merged)
         except Exception as e:

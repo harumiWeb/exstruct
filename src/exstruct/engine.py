@@ -217,7 +217,7 @@ class ExStructEngine:
             export(workbook, ...)
                 - Writes to file/stdout; optionally per-sheet and per-print-area files
             process(file_path, ...)
-                - One-shot extract→export (CLI equivalent), with optional PDF/PNG
+                - One-shot extract->export (CLI equivalent), with optional PDF/PNG
     """
 
     def __init__(
@@ -320,9 +320,7 @@ class ExStructEngine:
         self, wb: WorkbookData, *, include_auto_override: bool | None = None
     ) -> WorkbookData:
         filtered = {
-            name: self._filter_sheet(
-                sheet, include_auto_override=include_auto_override
-            )
+            name: self._filter_sheet(sheet, include_auto_override=include_auto_override)
             for name, sheet in wb.sheets.items()
         }
         return WorkbookData(book_name=wb.book_name, sheets=filtered)
@@ -331,14 +329,15 @@ class ExStructEngine:
         self, file_path: str | Path, *, mode: ExtractionMode | None = None
     ) -> WorkbookData:
         """
-        ワークブックを抽出して WorkbookData を返す。
+        Extract a workbook and return normalized workbook data.
 
         Args:
-            file_path: .xlsx/.xlsm/.xls のパス
-            mode: light/standard/verbose（未指定ならエンジンの StructOptions.mode）
-                - light: COM なし。セル+テーブル+印刷範囲のみ。
-                - standard: テキスト付き図形+矢印+チャート。印刷範囲あり。サイズは保持するがデフォルト出力では非表示。
-                - verbose: 全図形（サイズ付き）+チャート（サイズ付き）。
+            file_path: Path to the .xlsx/.xlsm/.xls file to extract.
+            mode: Extraction mode; defaults to the engine's StructOptions.mode.
+                - light: COM-free; cells, table candidates, and print areas only.
+                - standard: Shapes with text/arrows plus charts; print areas included;
+                  size fields retained but hidden from default output.
+                - verbose: All shapes (with size) and charts (with size).
         """
         chosen_mode = mode or self.options.mode
         if chosen_mode not in ("light", "standard", "verbose"):
@@ -348,7 +347,7 @@ class ExStructEngine:
             if self.options.include_cell_links is not None
             else chosen_mode == "verbose"
         )
-        include_print_areas = True  # lightでも印刷範囲は抽出する
+        include_print_areas = True  # Extract print areas even in light mode
         include_auto_page_breaks = (
             self.output.filters.include_auto_print_areas
             or self.output.destinations.auto_page_breaks_dir is not None
@@ -371,11 +370,13 @@ class ExStructEngine:
         indent: int | None = None,
     ) -> str:
         """
-        WorkbookData を include/exclude フィルタ適用後に文字列化する。
+        Serialize a workbook after applying include/exclude filters.
 
         Args:
-            fmt: json/yaml/yml/toon（未指定なら OutputOptions.fmt）
-            pretty/indent: JSON 整形オプション
+            data: Workbook to serialize after filtering.
+            fmt: Serialization format; defaults to OutputOptions.fmt.
+            pretty: Whether to pretty-print JSON output.
+            indent: Indentation to use when pretty-printing JSON.
         """
         filtered = self._filter_workbook(data)
         use_fmt = fmt or self.output.format.fmt
@@ -399,19 +400,22 @@ class ExStructEngine:
         stream: TextIO | None = None,
     ) -> None:
         """
-        WorkbookData をファイルまたは標準出力に書き出す。
+        Write filtered workbook data to a file or stream.
 
-        - include_* フィルタ後のデータを使用
-        - sheets_dir を指定するとシートごとの個別ファイルも出力
-        - print_areas_dir を指定すると印刷範囲ごとの個別ファイルも出力（light モードではデフォルト無効）
+        Includes optional per-sheet and per-print-area outputs when destinations are
+        provided.
 
         Args:
-            output_path: None なら標準出力、それ以外はファイル書き込み
-            fmt/pretty/indent: シリアライズ設定（未指定は OutputOptions から）
-            sheets_dir: シートごとの出力先ディレクトリ
-            print_areas_dir: 印刷範囲ごとの出力先ディレクトリ
-            auto_page_breaks_dir: 自動改ページ範囲の出力先ディレクトリ（COM 環境のみ）
-            stream: output_path が None のときに上書きしたい IO
+            data: Workbook to serialize and write.
+            output_path: Target file path; writes to stdout when None.
+            fmt: Serialization format; defaults to OutputOptions.fmt.
+            pretty: Whether to pretty-print JSON output.
+            indent: Indentation to use when pretty-printing JSON.
+            sheets_dir: Directory for per-sheet outputs when provided.
+            print_areas_dir: Directory for per-print-area outputs when provided.
+            auto_page_breaks_dir: Directory for auto page-break outputs (COM
+                environments only).
+            stream: Stream override when output_path is None.
         """
         text = self.serialize(data, fmt=fmt, pretty=pretty, indent=indent)
         target_stream = stream or self.output.destinations.stream
@@ -470,9 +474,7 @@ class ExStructEngine:
 
         if chosen_auto_page_breaks_dir is not None:
             include_shape_size, include_chart_size = self._resolve_size_flags()
-            filtered = self._filter_workbook(
-                data, include_auto_override=True
-            )
+            filtered = self._filter_workbook(data, include_auto_override=True)
             save_auto_page_break_views(
                 filtered,
                 chosen_auto_page_breaks_dir,
@@ -505,20 +507,22 @@ class ExStructEngine:
         stream: TextIO | None = None,
     ) -> None:
         """
-        抽出→出力の一括実行ラッパー（CLI 相当）。必要なら PDF/PNG も出力。
+        One-shot extract->export wrapper (CLI equivalent) with optional PDF/PNG output.
 
         Args:
-            file_path: 入力 Excel
-            output_path: None なら標準出力、それ以外はファイル
-            out_fmt: json/yaml/yml/toon
-            image/pdf: True で PNG/PDF を追加出力（Excel + pypdfium2 が必要）
-            dpi: 画像出力時の DPI
-            mode: 抽出モード（未指定ならエンジンの StructOptions.mode）
-            pretty/indent: JSON 整形
-            sheets_dir: シートごとの出力先
-            print_areas_dir: 印刷範囲ごとの出力先
-            auto_page_breaks_dir: 自動改ページ範囲の出力先
-            stream: 標準出力時の IO を上書きしたい場合
+            file_path: Input Excel workbook path.
+            output_path: Target file path; writes to stdout when None.
+            out_fmt: Serialization format for structured output.
+            image: Whether to export PNGs alongside structured output.
+            pdf: Whether to export a PDF snapshot alongside structured output.
+            dpi: DPI to use when rendering images.
+            mode: Extraction mode; defaults to the engine's StructOptions.mode.
+            pretty: Whether to pretty-print JSON output.
+            indent: Indentation to use when pretty-printing JSON.
+            sheets_dir: Directory for per-sheet structured outputs.
+            print_areas_dir: Directory for per-print-area structured outputs.
+            auto_page_breaks_dir: Directory for auto page-break outputs.
+            stream: Stream override when writing to stdout.
         """
         wb = self.extract(file_path, mode=mode)
         chosen_fmt = out_fmt or self.output.format.fmt
