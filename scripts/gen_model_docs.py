@@ -11,8 +11,6 @@ from typing import Union, get_args, get_origin
 
 from pydantic import BaseModel
 
-SAFE_MODULES: set[str] = {"exstruct.models", "exstruct.engine"}
-
 
 @dataclass
 class FieldDoc:
@@ -113,10 +111,13 @@ def _collect_models(module_names: Sequence[str]) -> list[type[BaseModel]]:
     """
     models: list[type[BaseModel]] = []
     for module_name in module_names:
-        if module_name not in SAFE_MODULES:
+        if module_name == "exstruct.models":
+            module = importlib.import_module("exstruct.models")
+        elif module_name == "exstruct.engine":
+            module = importlib.import_module("exstruct.engine")
+        else:
             msg = f"Unsafe module import blocked: {module_name}"
             raise ValueError(msg)
-        module = importlib.import_module(module_name)
         for _, cls in inspect.getmembers(module, inspect.isclass):
             if not issubclass(cls, BaseModel):
                 continue
