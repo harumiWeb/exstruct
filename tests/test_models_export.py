@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from exstruct.errors import MissingDependencyError
 from exstruct.models import CellRow, SheetData, WorkbookData
 
 HAS_PYYAML = util.find_spec("yaml") is not None
@@ -58,7 +59,8 @@ def test_save_unsupported_format_raises(tmp_path: Path) -> None:
         wb.save(bad)
 
 
-@pytest.mark.skipif(not HAS_PYYAML, reason="pyyaml not installed")
+# pytest.skipif is typed; no ignore needed
+@pytest.mark.skipif(not HAS_PYYAML, reason="pyyaml not installed")  # type: ignore[misc]
 def test_sheet_to_yaml_roundtrip() -> None:
     sheet = _sheet()
     text = sheet.to_yaml()
@@ -66,7 +68,7 @@ def test_sheet_to_yaml_roundtrip() -> None:
     assert "SheetData" not in text  # not a repr
 
 
-@pytest.mark.skipif(not HAS_PYYAML, reason="pyyaml not installed")
+@pytest.mark.skipif(not HAS_PYYAML, reason="pyyaml not installed")  # type: ignore[misc]
 def test_workbook_to_yaml() -> None:
     wb = _workbook()
     text = wb.to_yaml()
@@ -79,7 +81,7 @@ def test_sheet_to_toon_dependency() -> None:
         text = sheet.to_toon()
         assert isinstance(text, str) and text
     else:
-        with pytest.raises(RuntimeError):
+        with pytest.raises((RuntimeError, MissingDependencyError)):
             sheet.to_toon()
 
 

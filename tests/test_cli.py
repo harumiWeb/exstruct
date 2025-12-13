@@ -1,10 +1,15 @@
+from collections.abc import Callable
 from importlib import util
 from pathlib import Path
 import subprocess
 import sys
+from typing import TypeVar, cast
 
 from openpyxl import Workbook
 import pytest
+
+F = TypeVar("F", bound=Callable[..., object])
+render = cast(Callable[[F], F], pytest.mark.render)
 
 
 def _toon_available() -> bool:
@@ -108,7 +113,7 @@ def test_CLIでyamlやtoon指定は未サポート(tmp_path: Path) -> None:
         assert "TOON export requires python-toon" in result.stdout
 
 
-@pytest.mark.render  # type: ignore[misc]
+@render
 def test_CLIでpdfと画像が出力される(tmp_path: Path) -> None:
     xlsx = _prepare_sample_excel(tmp_path)
     out_json = tmp_path / "out.json"
