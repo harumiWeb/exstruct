@@ -159,3 +159,85 @@ def test_engine_export_print_areas_light_mode_skips_shapes_and_charts(
     assert out.exists()
     # light mode should not emit per-area files (print areas are absent in light extraction)
     assert not areas_dir.exists() or not list(areas_dir.glob("*"))
+
+
+def test_engine_export_accepts_string_paths(tmp_path: Path) -> None:
+    wb = _sample_workbook()
+    sheets_dir = tmp_path / "sheets"
+    areas_dir = tmp_path / "areas"
+    out = tmp_path / "out.json"
+    engine = ExStructEngine(
+        output=OutputOptions(
+            sheets_dir=str(sheets_dir),
+            print_areas_dir=str(areas_dir),
+        )
+    )
+    engine.export(wb, output_path=str(out), fmt="json")
+
+    assert out.exists()
+    assert sheets_dir.exists()
+    assert list(sheets_dir.glob("*.json"))
+    assert areas_dir.exists()
+    assert list(areas_dir.glob("*.json"))
+
+
+def test_engine_process_normalizes_string_paths(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    calls: dict[str, object] = {}
+
+    def fake_extract(
+        self: ExStructEngine, file_path: Path, *, mode: str | None = None
+    ) -> WorkbookData:
+        calls["extract_path"] = file_path
+        return _sample_workbook()
+
+    def fake_export(
+        self: ExStructEngine,
+        wb: WorkbookData,
+        *,
+        output_path: Path | None = None,
+        **_: object,
+    ) -> None:
+        calls["export_output_path"] = output_path
+        return None
+
+    def fake_pdf(file_path: Path, pdf_path: Path) -> None:
+        calls["pdf_path"] = pdf_path
+        calls["pdf_input_path"] = file_path
+
+    def fake_images(file_path: Path, images_dir: Path, *, dpi: int) -> None:
+        calls["images_dir"] = images_dir
+        calls["images_input_path"] = file_path
+        calls["dpi"] = dpi
+
+    monkeypatch.setattr(ExStructEngine, "extract", fake_extract, raising=True)
+    monkeypatch.setattr(ExStructEngine, "export", fake_export, raising=True)
+    monkeypatch.setattr("exstruct.engine.export_pdf", fake_pdf, raising=True)
+    monkeypatch.setattr(
+        "exstruct.engine.export_sheet_images", fake_images, raising=True
+    )
+
+    engine = ExStructEngine()
+    input_path = tmp_path / "input.xlsx"
+    input_path.write_text("", encoding="utf-8")
+    output_path = tmp_path / "out.json"
+
+    engine.process(
+        str(input_path),
+        output_path=str(output_path),
+        pdf=True,
+        image=True,
+        dpi=144,
+        out_fmt="json",
+    )
+
+    assert isinstance(calls["extract_path"], Path)
+    assert isinstance(calls["pdf_input_path"], Path)
+    assert isinstance(calls["images_input_path"], Path)
+    assert isinstance(calls["export_output_path"], Path)
+    assert isinstance(calls["pdf_path"], Path)
+    assert calls["pdf_path"].suffix == ".pdf"
+    assert isinstance(calls["images_dir"], Path)
+    assert calls["images_dir"].name.endswith("_images")
+    assert calls["dpi"] == 144

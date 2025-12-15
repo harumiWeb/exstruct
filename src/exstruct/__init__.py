@@ -307,8 +307,8 @@ def export_auto_page_breaks(
 
 
 def process_excel(
-    file_path: Path,
-    output_path: Path | None = None,
+    file_path: str | Path,
+    output_path: str | Path | None = None,
     out_fmt: str = "json",
     image: bool = False,
     pdf: bool = False,
@@ -316,17 +316,17 @@ def process_excel(
     mode: ExtractionMode = "standard",
     pretty: bool = False,
     indent: int | None = None,
-    sheets_dir: Path | None = None,
-    print_areas_dir: Path | None = None,
-    auto_page_breaks_dir: Path | None = None,
+    sheets_dir: str | Path | None = None,
+    print_areas_dir: str | Path | None = None,
+    auto_page_breaks_dir: str | Path | None = None,
     stream: TextIO | None = None,
 ) -> None:
     """
     Convenience wrapper: extract -> serialize (file or stdout) -> optional PDF/PNG.
 
     Args:
-        file_path: Input Excel workbook.
-        output_path: None for stdout; otherwise, write to file.
+        file_path: Input Excel workbook (path string or Path).
+        output_path: None for stdout; otherwise, write to file (string or Path).
         out_fmt: json/yaml/yml/toon.
         image: True to also output PNGs (requires Excel + COM + pypdfium2).
         pdf: True to also output PDF (requires Excel + COM + pypdfium2).
@@ -334,8 +334,8 @@ def process_excel(
         mode: light/standard/verbose (same meaning as `extract`).
         pretty: Pretty-print JSON.
         indent: JSON indent width.
-        sheets_dir: Directory to write per-sheet files.
-        print_areas_dir: Directory to write per-print-area files.
+        sheets_dir: Directory to write per-sheet files (string or Path).
+        print_areas_dir: Directory to write per-print-area files (string or Path).
         auto_page_breaks_dir: Directory to write per-auto-page-break files (COM only).
         stream: IO override when output_path is None.
 

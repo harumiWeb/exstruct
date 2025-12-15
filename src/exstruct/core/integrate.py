@@ -288,7 +288,7 @@ def integrate_sheet_content(
 
 
 def extract_workbook(  # noqa: C901
-    file_path: Path,
+    file_path: str | Path,
     mode: Literal["light", "standard", "verbose"] = "standard",
     *,
     include_cell_links: bool = False,
@@ -299,21 +299,23 @@ def extract_workbook(  # noqa: C901
     if mode not in _ALLOWED_MODES:
         raise ValueError(f"Unsupported mode: {mode}")
 
+    normalized_file_path = file_path if isinstance(file_path, Path) else Path(file_path)
+
     cell_data = (
-        extract_sheet_cells_with_links(file_path)
+        extract_sheet_cells_with_links(normalized_file_path)
         if include_cell_links
-        else extract_sheet_cells(file_path)
+        else extract_sheet_cells(normalized_file_path)
     )
     print_area_data: dict[str, list[PrintArea]] = {}
     if include_print_areas:
-        print_area_data = _extract_print_areas_openpyxl(file_path)
+        print_area_data = _extract_print_areas_openpyxl(normalized_file_path)
     auto_page_break_data: dict[str, list[PrintArea]] = {}
 
     def _cells_and_tables_only(reason: str) -> WorkbookData:
         sheets: dict[str, SheetData] = {}
         for sheet_name, rows in cell_data.items():
             try:
-                tables = detect_tables_openpyxl(file_path, sheet_name)
+                tables = detect_tables_openpyxl(normalized_file_path, sheet_name)
             except Exception:
                 tables = []
             sheets[sheet_name] = SheetData(
@@ -330,7 +332,7 @@ def extract_workbook(  # noqa: C901
             "%s Falling back to cells+tables only; shapes and charts will be empty.",
             reason,
         )
-        return WorkbookData(book_name=file_path.name, sheets=sheets)
+        return WorkbookData(book_name=normalized_file_path.name, sheets=sheets)
 
     if mode == "light":
         return _cells_and_tables_only("Light mode selected.")
@@ -341,7 +343,7 @@ def extract_workbook(  # noqa: C901
         )
 
     try:
-        wb, close_app = _open_workbook(file_path)
+        wb, close_app = _open_workbook(normalized_file_path)
     except Exception as e:
         return _cells_and_tables_only(f"xlwings/Excel COM is unavailable. ({e!r})")
 
@@ -369,7 +371,7 @@ def extract_workbook(  # noqa: C901
                 if include_auto_page_breaks
                 else None,
             )
-            return WorkbookData(book_name=file_path.name, sheets=merged)
+            return WorkbookData(book_name=normalized_file_path.name, sheets=merged)
         except Exception as e:
             logger.warning(
                 "Shape extraction failed; falling back to cells+tables. (%r)", e
