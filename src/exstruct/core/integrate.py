@@ -299,7 +299,7 @@ def extract_workbook(  # noqa: C901
     if mode not in _ALLOWED_MODES:
         raise ValueError(f"Unsupported mode: {mode}")
 
-    normalized_file_path = Path(file_path)
+    normalized_file_path = file_path if isinstance(file_path, Path) else Path(file_path)
 
     cell_data = (
         extract_sheet_cells_with_links(normalized_file_path)
@@ -332,7 +332,7 @@ def extract_workbook(  # noqa: C901
             "%s Falling back to cells+tables only; shapes and charts will be empty.",
             reason,
         )
-        return WorkbookData(book_name=file_path.name, sheets=sheets)
+        return WorkbookData(book_name=normalized_file_path.name, sheets=sheets)
 
     if mode == "light":
         return _cells_and_tables_only("Light mode selected.")
@@ -343,7 +343,7 @@ def extract_workbook(  # noqa: C901
         )
 
     try:
-        wb, close_app = _open_workbook(file_path)
+        wb, close_app = _open_workbook(normalized_file_path)
     except Exception as e:
         return _cells_and_tables_only(f"xlwings/Excel COM is unavailable. ({e!r})")
 
@@ -371,7 +371,7 @@ def extract_workbook(  # noqa: C901
                 if include_auto_page_breaks
                 else None,
             )
-            return WorkbookData(book_name=file_path.name, sheets=merged)
+            return WorkbookData(book_name=normalized_file_path.name, sheets=merged)
         except Exception as e:
             logger.warning(
                 "Shape extraction failed; falling back to cells+tables. (%r)", e

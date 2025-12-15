@@ -2,6 +2,8 @@ site_name: ExStruct
 site_url: https://harumiweb.github.io/exstruct/
 theme:
   name: material
+exclude_docs:
+  agents/
 plugins:
   - search
   - mkdocstrings:

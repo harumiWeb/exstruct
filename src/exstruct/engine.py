@@ -97,13 +97,13 @@ class DestinationOptions(BaseModel):
     """Destinations for optional side outputs."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    sheets_dir: Path | None = Field(
+    sheets_dir: str | Path | None = Field(
         default=None, description="Directory to write per-sheet files."
     )
-    print_areas_dir: Path | None = Field(
+    print_areas_dir: str | Path | None = Field(
         default=None, description="Directory to write per-print-area files."
     )
-    auto_page_breaks_dir: Path | None = Field(
+    auto_page_breaks_dir: str | Path | None = Field(
         default=None, description="Directory to write auto page-break files."
     )
     stream: TextIO | None = Field(
@@ -216,11 +216,17 @@ class OutputOptions(BaseModel):
 
     @property
     def sheets_dir(self) -> Path | None:
-        return self.destinations.sheets_dir
+        resolved = self.destinations.sheets_dir
+        if resolved is None:
+            return None
+        return resolved if isinstance(resolved, Path) else Path(resolved)
 
     @property
     def print_areas_dir(self) -> Path | None:
-        return self.destinations.print_areas_dir
+        resolved = self.destinations.print_areas_dir
+        if resolved is None:
+            return None
+        return resolved if isinstance(resolved, Path) else Path(resolved)
 
     @property
     def stream(self) -> TextIO | None:
@@ -228,7 +234,10 @@ class OutputOptions(BaseModel):
 
     @property
     def auto_page_breaks_dir(self) -> Path | None:
-        return self.destinations.auto_page_breaks_dir
+        resolved = self.destinations.auto_page_breaks_dir
+        if resolved is None:
+            return None
+        return resolved if isinstance(resolved, Path) else Path(resolved)
 
 
 class ExStructEngine:
@@ -450,14 +459,14 @@ class ExStructEngine:
     def export(
         self,
         data: WorkbookData,
-        output_path: Path | None = None,
+        output_path: str | Path | None = None,
         *,
         fmt: Literal["json", "yaml", "yml", "toon"] | None = None,
         pretty: bool | None = None,
         indent: int | None = None,
-        sheets_dir: Path | None = None,
-        print_areas_dir: Path | None = None,
-        auto_page_breaks_dir: Path | None = None,
+        sheets_dir: str | Path | None = None,
+        print_areas_dir: str | Path | None = None,
+        auto_page_breaks_dir: str | Path | None = None,
         stream: TextIO | None = None,
     ) -> None:
         """
@@ -468,13 +477,13 @@ class ExStructEngine:
 
         Args:
             data: Workbook to serialize and write.
-            output_path: Target file path; writes to stdout when None.
+            output_path: Target file path (str or Path); writes to stdout when None.
             fmt: Serialization format; defaults to OutputOptions.fmt.
             pretty: Whether to pretty-print JSON output.
             indent: Indentation to use when pretty-printing JSON.
-            sheets_dir: Directory for per-sheet outputs when provided.
-            print_areas_dir: Directory for per-print-area outputs when provided.
-            auto_page_breaks_dir: Directory for auto page-break outputs (COM
+            sheets_dir: Directory for per-sheet outputs when provided (str or Path).
+            print_areas_dir: Directory for per-print-area outputs when provided (str or Path).
+            auto_page_breaks_dir: Directory for auto page-break outputs (str or Path; COM
                 environments only).
             stream: Stream override when output_path is None.
         """
@@ -497,8 +506,15 @@ class ExStructEngine:
             else self.output.destinations.auto_page_breaks_dir
         )
 
-        if output_path is not None:
-            output_path.write_text(text, encoding="utf-8")
+        normalized_output_path = self._ensure_optional_path(output_path)
+        normalized_sheets_dir = self._ensure_optional_path(chosen_sheets_dir)
+        normalized_print_areas_dir = self._ensure_optional_path(chosen_print_areas_dir)
+        normalized_auto_page_breaks_dir = self._ensure_optional_path(
+            chosen_auto_page_breaks_dir
+        )
+
+        if normalized_output_path is not None:
+            normalized_output_path.write_text(text, encoding="utf-8")
         else:
             import sys
 
@@ -507,23 +523,23 @@ class ExStructEngine:
             if not text.endswith("\n"):
                 stream_target.write("\n")
 
-        if chosen_sheets_dir is not None:
+        if normalized_sheets_dir is not None:
             filtered = self._filter_workbook(data)
             save_sheets(
                 filtered,
-                chosen_sheets_dir,
+                normalized_sheets_dir,
                 fmt=chosen_fmt,
                 pretty=self.output.format.pretty if pretty is None else pretty,
                 indent=self.output.format.indent if indent is None else indent,
             )
 
-        if chosen_print_areas_dir is not None:
+        if normalized_print_areas_dir is not None:
             include_shape_size, include_chart_size = self._resolve_size_flags()
             if self._include_print_areas():
                 filtered = self._filter_workbook(data)
                 save_print_area_views(
                     filtered,
-                    chosen_print_areas_dir,
+                    normalized_print_areas_dir,
                     fmt=chosen_fmt,
                     pretty=self.output.format.pretty if pretty is None else pretty,
                     indent=self.output.format.indent if indent is None else indent,
@@ -533,12 +549,12 @@ class ExStructEngine:
                     include_chart_size=include_chart_size,
                 )
 
-        if chosen_auto_page_breaks_dir is not None:
+        if normalized_auto_page_breaks_dir is not None:
             include_shape_size, include_chart_size = self._resolve_size_flags()
             filtered = self._filter_workbook(data, include_auto_override=True)
             save_auto_page_break_views(
                 filtered,
-                chosen_auto_page_breaks_dir,
+                normalized_auto_page_breaks_dir,
                 fmt=chosen_fmt,
                 pretty=self.output.format.pretty if pretty is None else pretty,
                 indent=self.output.format.indent if indent is None else indent,
@@ -571,8 +587,8 @@ class ExStructEngine:
         One-shot extract->export wrapper (CLI equivalent) with optional PDF/PNG output.
 
         Args:
-            file_path: Input Excel workbook path.
-            output_path: Target file path; writes to stdout when None.
+            file_path: Input Excel workbook path (str or Path).
+            output_path: Target file path (str or Path); writes to stdout when None.
             out_fmt: Serialization format for structured output.
             image: Whether to export PNGs alongside structured output.
             pdf: Whether to export a PDF snapshot alongside structured output.
@@ -580,9 +596,9 @@ class ExStructEngine:
             mode: Extraction mode; defaults to the engine's StructOptions.mode.
             pretty: Whether to pretty-print JSON output.
             indent: Indentation to use when pretty-printing JSON.
-            sheets_dir: Directory for per-sheet structured outputs.
-            print_areas_dir: Directory for per-print-area structured outputs.
-            auto_page_breaks_dir: Directory for auto page-break outputs.
+            sheets_dir: Directory for per-sheet structured outputs (str or Path).
+            print_areas_dir: Directory for per-print-area structured outputs (str or Path).
+            auto_page_breaks_dir: Directory for auto page-break outputs (str or Path).
             stream: Stream override when writing to stdout.
         """
         normalized_file_path = self._ensure_path(file_path)
@@ -616,7 +632,7 @@ class ExStructEngine:
                 else ".json"
             )
             pdf_path = base_target.with_suffix(".pdf")
-            export_pdf(file_path, pdf_path)
+            export_pdf(normalized_file_path, pdf_path)
             if image:
                 images_dir = pdf_path.parent / f"{pdf_path.stem}_images"
-                export_sheet_images(file_path, images_dir, dpi=dpi)
+                export_sheet_images(normalized_file_path, images_dir, dpi=dpi)

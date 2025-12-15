@@ -113,6 +113,7 @@ ExStruct の全機能について、正式なテスト要件をまとめたド�
 - [EXP-20] export_auto_page_breaks は auto_print_areas が空なら例外、存在時のみ書き出し  
 - [EXP-21] save_auto_page_break_views は auto_print_areas を Sheet1#auto#1 などユニークキーで保存  
 - [EXP-22] serialize_workbook は未対応フォーマットで SerializationError  
+- [EXP-23] export/process API は output_path/sheets_dir/print_areas_dir/auto_page_breaks_dir に str/Path を渡しても正しく出力できる  
 
 ---
 
