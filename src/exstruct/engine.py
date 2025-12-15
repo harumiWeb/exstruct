@@ -515,7 +515,12 @@ class ExStructEngine:
 
         if normalized_output_path is not None:
             normalized_output_path.write_text(text, encoding="utf-8")
-        else:
+        elif (
+            normalized_output_path is None
+            and chosen_sheets_dir is None
+            and chosen_print_areas_dir is None
+            and chosen_auto_page_breaks_dir is None
+        ):
             import sys
 
             stream_target = target_stream or sys.stdout
