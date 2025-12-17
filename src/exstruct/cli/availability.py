@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 import os
 import sys
 
 from pydantic import BaseModel, Field
 import xlwings as xw
+
+logger = logging.getLogger(__name__)
 
 
 class ComAvailability(BaseModel):
@@ -41,6 +44,6 @@ def get_com_availability() -> ComAvailability:
     try:
         app.quit()
     except Exception:
-        pass
+        logger.warning("Failed to quit Excel during COM availability check.")
 
     return ComAvailability(available=True, reason=None)
