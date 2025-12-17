@@ -8,6 +8,9 @@ from typing import TypeVar, cast
 from openpyxl import Workbook
 import pytest
 
+from exstruct.cli.availability import ComAvailability
+from exstruct.cli.main import build_parser
+
 F = TypeVar("F", bound=Callable[..., object])
 render = cast(Callable[[F], F], pytest.mark.render)
 
@@ -172,3 +175,19 @@ def test_CLI_print_areas_dir_outputs_files(tmp_path: Path) -> None:
     assert (
         files
     ), f"No print area files created. stdout={result.stdout} stderr={result.stderr}"
+
+
+def test_cli_parser_includes_auto_page_breaks_option() -> None:
+    """Ensure the auto page-breaks option is registered when COM is available."""
+    availability = ComAvailability(available=True, reason=None)
+    parser = build_parser(availability=availability)
+    help_text = parser.format_help()
+    assert "--auto-page-breaks-dir" in help_text
+
+
+def test_cli_parser_excludes_auto_page_breaks_option() -> None:
+    """Ensure the auto page-breaks option is hidden when COM is unavailable."""
+    availability = ComAvailability(available=False, reason="disabled")
+    parser = build_parser(availability=availability)
+    help_text = parser.format_help()
+    assert "--auto-page-breaks-dir" not in help_text

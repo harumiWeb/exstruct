@@ -12,7 +12,7 @@ ExStruct reads Excel workbooks and outputs structured data (cells, table candida
 
 - **Excel → Structured JSON**: cells, shapes, charts, table candidates, print areas/views, and auto page-break areas per sheet.
 - **Output modes**: `light` (cells + table candidates + print areas; no COM, shapes/charts empty), `standard` (texted shapes + arrows, charts, print areas), `verbose` (all shapes with width/height, charts with size, print areas). Verbose also emits cell hyperlinks. Size output is flag-controlled.
-- **Auto page-break export (COM only)**: capture Excel-computed auto page breaks and write per-area JSON/YAML/TOON when requested.
+- **Auto page-break export (COM only)**: capture Excel-computed auto page breaks and write per-area JSON/YAML/TOON when requested (CLI option appears only when COM is available).
 - **Formats**: JSON (compact by default, `--pretty` available), YAML, TOON (optional dependencies).
 - **Table detection tuning**: adjust heuristics at runtime via API.
 - **CLI rendering** (Excel required): optional PDF and per-sheet PNGs.
@@ -44,11 +44,12 @@ exstruct input.xlsx --format yaml          # YAML (needs pyyaml)
 exstruct input.xlsx --format toon          # TOON (needs python-toon)
 exstruct input.xlsx --sheets-dir sheets/   # split per sheet in chosen format
 exstruct input.xlsx --print-areas-dir areas/  # split per print area (if any)
+exstruct input.xlsx --auto-page-breaks-dir auto_areas/  # COM only; option appears when available
 exstruct input.xlsx --mode light           # cells + table candidates only
 exstruct input.xlsx --pdf --image          # PDF and PNGs (Excel required)
 ```
 
-Auto page-break exports are API-only (Excel/COM): set `DestinationOptions.auto_page_breaks_dir` or call `export_auto_page_breaks(...)`.
+Auto page-break exports are available via API and CLI when Excel/COM is available; the CLI exposes `--auto-page-breaks-dir` only in COM-capable environments.
 
 ## Quick Start (Python)
 
@@ -354,7 +355,7 @@ In short, **exstruct = “an engine that converts Excel into a format AI can und
 - `SheetData.print_areas` holds print areas (cell coordinates) in light/standard/verbose.
 - `SheetData.auto_print_areas` holds Excel COM-computed auto page-break areas when auto page-break extraction is enabled (COM only).
 - Use `export_print_areas_as(...)` or CLI `--print-areas-dir` to write one file per print area (nothing is written if none exist).
-- Use `DestinationOptions.auto_page_breaks_dir` (preferred) or `export_auto_page_breaks(...)` to write per-auto-page-break files; the API raises `ValueError` if no auto page breaks exist.
+- Use CLI `--auto-page-breaks-dir` (COM only), `DestinationOptions.auto_page_breaks_dir` (preferred), or `export_auto_page_breaks(...)` to write per-auto-page-break files; the API raises `ValueError` if no auto page breaks exist.
 - `PrintAreaView` includes rows and table candidates inside the area, plus shapes/charts that overlap the area (size-less shapes are treated as points). `normalize=True` rebases row/col indices to the area origin.
 
 ## License

@@ -1,6 +1,6 @@
 # API Reference
 
-This page shows the primary APIs, minimal runnable examples, expected outputs, and the dependencies required for optional features. Hyperlinks are included when `include_cell_links=True` (or when using `mode="verbose"`). Auto page-break areas are COM-only and appear when auto page-break extraction/output is enabled.
+This page shows the primary APIs, minimal runnable examples, expected outputs, and the dependencies required for optional features. Hyperlinks are included when `include_cell_links=True` (or when using `mode="verbose"`). Auto page-break areas are COM-only and appear when auto page-break extraction/output is enabled (CLI exposes the option only when COM is available).
 
 ## TOC
 
@@ -76,7 +76,7 @@ process_excel(
 - Core extraction: pandas, openpyxl (installed with the package).
 - YAML export: `pyyaml` (lazy import; missing module raises `MissingDependencyError`).
 - TOON export: `python-toon` (lazy import; missing module raises `MissingDependencyError`).
-- Auto page-break extraction/export: **Excel + COM** required (feature is skipped when COM is unavailable).
+- Auto page-break extraction/export: **Excel + COM** required (feature is skipped when COM is unavailable; CLI hides the flag in non-COM environments).
 - Rendering (PDF/PNG): **Excel + COM + `pypdfium2`** are mandatory. Missing Excel/COM or `pypdfium2` surfaces as `RenderError`/`MissingDependencyError`.
 
 ## Auto-generated API (mkdocstrings)

@@ -41,11 +41,12 @@ exstruct input.xlsx -o out.json --pretty   # 整形 JSON をファイルへ
 exstruct input.xlsx --format yaml          # YAML（pyyaml が必要）
 exstruct input.xlsx --format toon          # TOON（python-toon が必要）
 exstruct input.xlsx --sheets-dir sheets/   # シートごとに分割出力
+exstruct input.xlsx --auto-page-breaks-dir auto_areas/  # COM 限定（利用可能な環境のみ表示）
 exstruct input.xlsx --mode light           # セル＋テーブル候補のみ
 exstruct input.xlsx --pdf --image          # PDF と PNG（Excel 必須）
 ```
 
-自動改ページ範囲の書き出しは API 専用（Excel/COM が必要）です。`DestinationOptions.auto_page_breaks_dir` を設定するか、`export_auto_page_breaks(...)` を利用してください。
+自動改ページ範囲の書き出しは API/CLI 両方に対応（Excel/COM が必要）し、CLI は利用可能な環境でのみ `--auto-page-breaks-dir` を表示します。
 
 ## クイックスタート Python
 
@@ -354,7 +355,7 @@ flowchart TD
 - `SheetData.print_areas` に印刷範囲（セル座標）が含まれます（light/standard/verbose で取得）。
 - `SheetData.auto_print_areas` に Excel COM が計算した自動改ページ範囲が入ります（自動改ページ抽出を有効化した場合のみ、COM 限定）。
 - `export_print_areas_as(...)` や CLI `--print-areas-dir` で印刷範囲ごとにファイルを出力できます（印刷範囲が無い場合はファイルを作りません）。
-- `DestinationOptions.auto_page_breaks_dir`（推奨）または `export_auto_page_breaks(...)` で自動改ページ範囲ごとにファイルを出力できます。自動改ページが存在しない場合、`export_auto_page_breaks(...)` は `ValueError` を送出します。
+- CLI `--auto-page-breaks-dir`（COM 限定）、`DestinationOptions.auto_page_breaks_dir`（推奨）、または `export_auto_page_breaks(...)` で自動改ページ範囲ごとにファイルを出力できます。自動改ページが存在しない場合、`export_auto_page_breaks(...)` は `ValueError` を送出します。
 - `PrintAreaView` には範囲内の行・テーブル候補に加え、範囲と交差する図形/チャートを含みます（サイズ不明の図形は座標のみで判定）。`normalize=True` で行/列を範囲起点に再基準化できます。
 
 ## License

@@ -4,9 +4,33 @@ import argparse
 from pathlib import Path
 
 from exstruct import process_excel
+from exstruct.cli.availability import ComAvailability, get_com_availability
 
 
-def build_parser() -> argparse.ArgumentParser:
+def _add_auto_page_breaks_argument(
+    parser: argparse.ArgumentParser, availability: ComAvailability
+) -> None:
+    """Add auto page-break export option when COM is available."""
+    if not availability.available:
+        return
+    parser.add_argument(
+        "--auto-page-breaks-dir",
+        type=Path,
+        help="Optional directory to write one file per auto page-break area (COM only).",
+    )
+
+
+def build_parser(
+    availability: ComAvailability | None = None,
+) -> argparse.ArgumentParser:
+    """Build the CLI argument parser.
+
+    Args:
+        availability: Optional COM availability for tests or overrides.
+
+    Returns:
+        Configured argument parser.
+    """
     parser = argparse.ArgumentParser(
         description="Dev-only CLI stub for ExStruct extraction."
     )
@@ -62,10 +86,22 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Optional directory to write one file per print area (format follows --format).",
     )
+    resolved_availability = (
+        availability if availability is not None else get_com_availability()
+    )
+    _add_auto_page_breaks_argument(parser, resolved_availability)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the CLI entrypoint.
+
+    Args:
+        argv: Optional argument list for testing.
+
+    Returns:
+        Exit code (0 for success, 1 for failure).
+    """
     parser = build_parser()
     args = parser.parse_args(argv)
 
@@ -86,6 +122,7 @@ def main(argv: list[str] | None = None) -> int:
             pretty=args.pretty,
             sheets_dir=args.sheets_dir,
             print_areas_dir=args.print_areas_dir,
+            auto_page_breaks_dir=getattr(args, "auto_page_breaks_dir", None),
         )
         return 0
     except Exception as e:
