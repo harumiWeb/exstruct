@@ -365,3 +365,4 @@ BSD-3-Clause. See `LICENSE` for details.
 ## ドキュメント
 
 - API リファレンス (GitHub Pages): https://harumiweb.github.io/exstruct/
+- JSON Schema は `schemas/` にモデルごとに配置しています。モデル変更後は `python scripts/gen_json_schema.py` で再生成してください。

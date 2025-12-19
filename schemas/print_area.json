@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Cell coordinate bounds for a print area.",
+  "properties": {
+    "c1": {
+      "description": "Start column (1-based).",
+      "title": "C1",
+      "type": "integer"
+    },
+    "c2": {
+      "description": "End column (1-based, inclusive).",
+      "title": "C2",
+      "type": "integer"
+    },
+    "r1": {
+      "description": "Start row (1-based).",
+      "title": "R1",
+      "type": "integer"
+    },
+    "r2": {
+      "description": "End row (1-based, inclusive).",
+      "title": "R2",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "r1",
+    "c1",
+    "r2",
+    "c2"
+  ],
+  "title": "PrintArea",
+  "type": "object"
+}

@@ -365,3 +365,4 @@ BSD-3-Clause. See `LICENSE` for details.
 ## Documentation
 
 - API Reference (GitHub Pages): https://harumiweb.github.io/exstruct/
+- JSON Schemas: see `schemas/` (one file per model); regenerate via `python scripts/gen_json_schema.py`.

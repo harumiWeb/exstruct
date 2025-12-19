@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Shape metadata (position, size, text, and styling).",
+  "properties": {
+    "begin_arrow_style": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Arrow style enum for the start of a connector.",
+      "title": "Begin Arrow Style"
+    },
+    "direction": {
+      "anyOf": [
+        {
+          "enum": [
+            "E",
+            "SE",
+            "S",
+            "SW",
+            "W",
+            "NW",
+            "N",
+            "NE"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Connector direction (compass heading).",
+      "title": "Direction"
+    },
+    "end_arrow_style": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Arrow style enum for the end of a connector.",
+      "title": "End Arrow Style"
+    },
+    "h": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Shape height (None if unknown).",
+      "title": "H"
+    },
+    "l": {
+      "description": "Left offset (Excel units).",
+      "title": "L",
+      "type": "integer"
+    },
+    "rotation": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Rotation angle in degrees.",
+      "title": "Rotation"
+    },
+    "t": {
+      "description": "Top offset (Excel units).",
+      "title": "T",
+      "type": "integer"
+    },
+    "text": {
+      "description": "Visible text content of the shape.",
+      "title": "Text",
+      "type": "string"
+    },
+    "type": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Excel shape type name.",
+      "title": "Type"
+    },
+    "w": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Shape width (None if unknown).",
+      "title": "W"
+    }
+  },
+  "required": [
+    "text",
+    "l",
+    "t"
+  ],
+  "title": "Shape",
+  "type": "object"
+}

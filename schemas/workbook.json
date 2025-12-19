@@ -1,0 +1,455 @@
+{
+  "$defs": {
+    "CellRow": {
+      "description": "A single row of cells with optional hyperlinks.",
+      "properties": {
+        "c": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "description": "Column index (string) to cell value map.",
+          "title": "C",
+          "type": "object"
+        },
+        "links": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional hyperlinks per column index.",
+          "title": "Links"
+        },
+        "r": {
+          "description": "Row index (1-based).",
+          "title": "R",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "r",
+        "c"
+      ],
+      "title": "CellRow",
+      "type": "object"
+    },
+    "Chart": {
+      "description": "Chart metadata including series and layout.",
+      "properties": {
+        "chart_type": {
+          "description": "Chart type (e.g., Column, Line).",
+          "title": "Chart Type",
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Extraction error detail if any.",
+          "title": "Error"
+        },
+        "h": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Chart height (None if unknown).",
+          "title": "H"
+        },
+        "l": {
+          "description": "Left offset (Excel units).",
+          "title": "L",
+          "type": "integer"
+        },
+        "name": {
+          "description": "Chart name.",
+          "title": "Name",
+          "type": "string"
+        },
+        "series": {
+          "description": "Series included in the chart.",
+          "items": {
+            "$ref": "#/$defs/ChartSeries"
+          },
+          "title": "Series",
+          "type": "array"
+        },
+        "t": {
+          "description": "Top offset (Excel units).",
+          "title": "T",
+          "type": "integer"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Chart title.",
+          "title": "Title"
+        },
+        "w": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Chart width (None if unknown).",
+          "title": "W"
+        },
+        "y_axis_range": {
+          "description": "Y-axis range [min, max] when available.",
+          "items": {
+            "type": "number"
+          },
+          "title": "Y Axis Range",
+          "type": "array"
+        },
+        "y_axis_title": {
+          "description": "Y-axis title.",
+          "title": "Y Axis Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "chart_type",
+        "y_axis_title",
+        "series",
+        "l",
+        "t"
+      ],
+      "title": "Chart",
+      "type": "object"
+    },
+    "ChartSeries": {
+      "description": "Series metadata for a chart.",
+      "properties": {
+        "name": {
+          "description": "Series display name.",
+          "title": "Name",
+          "type": "string"
+        },
+        "name_range": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Range reference for the series name.",
+          "title": "Name Range"
+        },
+        "x_range": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Range reference for X axis values.",
+          "title": "X Range"
+        },
+        "y_range": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Range reference for Y axis values.",
+          "title": "Y Range"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "ChartSeries",
+      "type": "object"
+    },
+    "PrintArea": {
+      "description": "Cell coordinate bounds for a print area.",
+      "properties": {
+        "c1": {
+          "description": "Start column (1-based).",
+          "title": "C1",
+          "type": "integer"
+        },
+        "c2": {
+          "description": "End column (1-based, inclusive).",
+          "title": "C2",
+          "type": "integer"
+        },
+        "r1": {
+          "description": "Start row (1-based).",
+          "title": "R1",
+          "type": "integer"
+        },
+        "r2": {
+          "description": "End row (1-based, inclusive).",
+          "title": "R2",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "r1",
+        "c1",
+        "r2",
+        "c2"
+      ],
+      "title": "PrintArea",
+      "type": "object"
+    },
+    "Shape": {
+      "description": "Shape metadata (position, size, text, and styling).",
+      "properties": {
+        "begin_arrow_style": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Arrow style enum for the start of a connector.",
+          "title": "Begin Arrow Style"
+        },
+        "direction": {
+          "anyOf": [
+            {
+              "enum": [
+                "E",
+                "SE",
+                "S",
+                "SW",
+                "W",
+                "NW",
+                "N",
+                "NE"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Connector direction (compass heading).",
+          "title": "Direction"
+        },
+        "end_arrow_style": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Arrow style enum for the end of a connector.",
+          "title": "End Arrow Style"
+        },
+        "h": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Shape height (None if unknown).",
+          "title": "H"
+        },
+        "l": {
+          "description": "Left offset (Excel units).",
+          "title": "L",
+          "type": "integer"
+        },
+        "rotation": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Rotation angle in degrees.",
+          "title": "Rotation"
+        },
+        "t": {
+          "description": "Top offset (Excel units).",
+          "title": "T",
+          "type": "integer"
+        },
+        "text": {
+          "description": "Visible text content of the shape.",
+          "title": "Text",
+          "type": "string"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Excel shape type name.",
+          "title": "Type"
+        },
+        "w": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Shape width (None if unknown).",
+          "title": "W"
+        }
+      },
+      "required": [
+        "text",
+        "l",
+        "t"
+      ],
+      "title": "Shape",
+      "type": "object"
+    },
+    "SheetData": {
+      "description": "Structured data for a single sheet.",
+      "properties": {
+        "auto_print_areas": {
+          "description": "COM-computed auto page-break areas.",
+          "items": {
+            "$ref": "#/$defs/PrintArea"
+          },
+          "title": "Auto Print Areas",
+          "type": "array"
+        },
+        "charts": {
+          "description": "Charts detected on the sheet.",
+          "items": {
+            "$ref": "#/$defs/Chart"
+          },
+          "title": "Charts",
+          "type": "array"
+        },
+        "print_areas": {
+          "description": "User-defined print areas.",
+          "items": {
+            "$ref": "#/$defs/PrintArea"
+          },
+          "title": "Print Areas",
+          "type": "array"
+        },
+        "rows": {
+          "description": "Extracted rows with cell values and links.",
+          "items": {
+            "$ref": "#/$defs/CellRow"
+          },
+          "title": "Rows",
+          "type": "array"
+        },
+        "shapes": {
+          "description": "Shapes detected on the sheet.",
+          "items": {
+            "$ref": "#/$defs/Shape"
+          },
+          "title": "Shapes",
+          "type": "array"
+        },
+        "table_candidates": {
+          "description": "Cell ranges likely representing tables.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Table Candidates",
+          "type": "array"
+        }
+      },
+      "title": "SheetData",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Workbook-level container with per-sheet data.",
+  "properties": {
+    "book_name": {
+      "description": "Workbook file name (no path).",
+      "title": "Book Name",
+      "type": "string"
+    },
+    "sheets": {
+      "additionalProperties": {
+        "$ref": "#/$defs/SheetData"
+      },
+      "description": "Mapping of sheet name to SheetData.",
+      "title": "Sheets",
+      "type": "object"
+    }
+  },
+  "required": [
+    "book_name",
+    "sheets"
+  ],
+  "title": "WorkbookData",
+  "type": "object"
+}

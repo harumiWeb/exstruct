@@ -1,0 +1,165 @@
+{
+  "$defs": {
+    "ChartSeries": {
+      "description": "Series metadata for a chart.",
+      "properties": {
+        "name": {
+          "description": "Series display name.",
+          "title": "Name",
+          "type": "string"
+        },
+        "name_range": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Range reference for the series name.",
+          "title": "Name Range"
+        },
+        "x_range": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Range reference for X axis values.",
+          "title": "X Range"
+        },
+        "y_range": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Range reference for Y axis values.",
+          "title": "Y Range"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "ChartSeries",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Chart metadata including series and layout.",
+  "properties": {
+    "chart_type": {
+      "description": "Chart type (e.g., Column, Line).",
+      "title": "Chart Type",
+      "type": "string"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Extraction error detail if any.",
+      "title": "Error"
+    },
+    "h": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Chart height (None if unknown).",
+      "title": "H"
+    },
+    "l": {
+      "description": "Left offset (Excel units).",
+      "title": "L",
+      "type": "integer"
+    },
+    "name": {
+      "description": "Chart name.",
+      "title": "Name",
+      "type": "string"
+    },
+    "series": {
+      "description": "Series included in the chart.",
+      "items": {
+        "$ref": "#/$defs/ChartSeries"
+      },
+      "title": "Series",
+      "type": "array"
+    },
+    "t": {
+      "description": "Top offset (Excel units).",
+      "title": "T",
+      "type": "integer"
+    },
+    "title": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Chart title.",
+      "title": "Title"
+    },
+    "w": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Chart width (None if unknown).",
+      "title": "W"
+    },
+    "y_axis_range": {
+      "description": "Y-axis range [min, max] when available.",
+      "items": {
+        "type": "number"
+      },
+      "title": "Y Axis Range",
+      "type": "array"
+    },
+    "y_axis_title": {
+      "description": "Y-axis title.",
+      "title": "Y Axis Title",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "chart_type",
+    "y_axis_title",
+    "series",
+    "l",
+    "t"
+  ],
+  "title": "Chart",
+  "type": "object"
+}

@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Series metadata for a chart.",
+  "properties": {
+    "name": {
+      "description": "Series display name.",
+      "title": "Name",
+      "type": "string"
+    },
+    "name_range": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Range reference for the series name.",
+      "title": "Name Range"
+    },
+    "x_range": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Range reference for X axis values.",
+      "title": "X Range"
+    },
+    "y_range": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Range reference for Y axis values.",
+      "title": "Y Range"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "title": "ChartSeries",
+  "type": "object"
+}

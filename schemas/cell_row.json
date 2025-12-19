@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "A single row of cells with optional hyperlinks.",
+  "properties": {
+    "c": {
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "string"
+          }
+        ]
+      },
+      "description": "Column index (string) to cell value map.",
+      "title": "C",
+      "type": "object"
+    },
+    "links": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional hyperlinks per column index.",
+      "title": "Links"
+    },
+    "r": {
+      "description": "Row index (1-based).",
+      "title": "R",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "r",
+    "c"
+  ],
+  "title": "CellRow",
+  "type": "object"
+}
