@@ -281,7 +281,7 @@ wheels = [
 
 [[package]]
 name = "exstruct"
-version = "0.2.62"
+version = "0.2.71"
 source = { editable = "." }
 dependencies = [
     { name = "numpy" },
