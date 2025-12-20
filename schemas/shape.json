@@ -2,6 +2,32 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Shape metadata (position, size, text, and styling).",
   "properties": {
+        "begin_connected_shape": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Excel shape name at the start of a connector (ConnectorFormat.BeginConnectedShape).",
+          "title": "Begin Connected Shape"
+        },
+        "end_connected_shape": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Excel shape name at the end of a connector (ConnectorFormat.EndConnectedShape).",
+          "title": "End Connected Shape"
+        },
     "begin_arrow_style": {
       "anyOf": [
         {
@@ -91,6 +117,19 @@
       "description": "Visible text content of the shape.",
       "title": "Text",
       "type": "string"
+    },
+    "name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Excel shape Name property (if available).",
+      "title": "Name"
     },
     "type": {
       "anyOf": [

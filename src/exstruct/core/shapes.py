@@ -170,6 +170,7 @@ def get_shapes_with_position(  # noqa: C901
 
                 shape_obj = Shape(
                     text=text,
+                    name=shape_name if isinstance(shape_name, str) else None,
                     l=int(shp.left),
                     t=int(shp.top),
                     w=int(shp.width)
@@ -216,6 +217,28 @@ def get_shapes_with_position(  # noqa: C901
                             shape_obj.begin_arrow_style = begin_style
                             shape_obj.end_arrow_style = end_style
                         except Exception:
+                            pass
+                        # Connector begin/end connected shapes (if this shape is a connector).
+                        try:
+                            connector = shp.api.ConnectorFormat
+                            try:
+                                begin_shape = connector.BeginConnectedShape
+                                if begin_shape is not None:
+                                    name = getattr(begin_shape, "Name", None)
+                                    if isinstance(name, str):
+                                        shape_obj.begin_connected_shape = name
+                            except Exception:
+                                pass
+                            try:
+                                end_shape = connector.EndConnectedShape
+                                if end_shape is not None:
+                                    name = getattr(end_shape, "Name", None)
+                                    if isinstance(name, str):
+                                        shape_obj.end_connected_shape = name
+                            except Exception:
+                                pass
+                        except Exception:
+                            # Not a connector or ConnectorFormat is unavailable.
                             pass
                     elif type_num == 1 and (
                         autoshape_type_str and "Arrow" in autoshape_type_str

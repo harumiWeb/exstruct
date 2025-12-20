@@ -12,6 +12,9 @@ class Shape(BaseModel):
     """Shape metadata (position, size, text, and styling)."""
 
     text: str = Field(description="Visible text content of the shape.")
+    name: str | None = Field(
+        default=None, description="Excel shape Name property (if available)."
+    )
     l: int = Field(description="Left offset (Excel units).")  # noqa: E741
     t: int = Field(description="Top offset (Excel units).")
     w: int | None = Field(default=None, description="Shape width (None if unknown).")
@@ -25,6 +28,18 @@ class Shape(BaseModel):
     )
     end_arrow_style: int | None = Field(
         default=None, description="Arrow style enum for the end of a connector."
+    )
+    begin_connected_shape: str | None = Field(
+        default=None,
+        description=(
+            "Excel shape name at the start of a connector (ConnectorFormat.BeginConnectedShape)."
+        ),
+    )
+    end_connected_shape: str | None = Field(
+        default=None,
+        description=(
+            "Excel shape name at the end of a connector (ConnectorFormat.EndConnectedShape)."
+        ),
     )
     direction: Literal["E", "SE", "S", "SW", "W", "NW", "N", "NE"] | None = Field(
         default=None, description="Connector direction (compass heading)."

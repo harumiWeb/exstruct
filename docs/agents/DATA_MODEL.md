@@ -1,6 +1,6 @@
 # ExStruct データモデル仕様
 
-**Version**: 0.8  
+**Version**: 0.9  
 **Status**: Authoritative — 本ドキュメントは ExStruct が返す全モデルの唯一の正準ソースです。  
 core / io / integrate は必ずこの仕様に従うこと。モデルは **pydantic v2** で実装します。
 
@@ -18,6 +18,7 @@ ExStruct は Excel ワークブックを LLM が扱いやすい **意味構造�
 ```jsonc
 Shape {
   text: str
+  name: str | null // Excel shape Name プロパティ
   l: int           // left (px)
   t: int           // top  (px)
   w: int | null    // width (px)
@@ -26,6 +27,8 @@ Shape {
   rotation: float | null
   begin_arrow_style: int | null
   end_arrow_style: int | null
+  begin_connected_shape: str | null // コネクタ始点の接続先 Shape.Name
+  end_connected_shape: str | null   // コネクタ終点の接続先 Shape.Name
   direction: "E"|"SE"|"S"|"SW"|"W"|"NW"|"N"|"NE" | null
 }
 ```
@@ -33,6 +36,8 @@ Shape {
 補足:
 - `direction` は線や矢印の向きを 8 方位に正規化したもの。
 - 矢印スタイルは Excel の enum に対応。
+- `name` は Excel 図形の Name プロパティ。
+- `begin_connected_shape` / `end_connected_shape` は、コネクタが接続している図形の `name`（Excel の `ConnectorFormat.BeginConnectedShape` / `EndConnectedShape` に対応）。
 
 ---
 
@@ -186,3 +191,4 @@ WorkbookData {
 - 0.6: PrintArea をデフォルト抽出。テーブル検出は従来通り。
 - 0.7: Chart にサイズフィールド `w` / `h`（optional）を追加。
 - 0.8: `SheetData.auto_print_areas` を追加（COM の自動改ページ矩形、デフォルト無効）。ヘルパーとデフォルト挙動を明確化。
+- 0.9: Shape に `name` / `begin_connected_shape` / `end_connected_shape` を追加し、コネクタの接続元/接続先を表現。

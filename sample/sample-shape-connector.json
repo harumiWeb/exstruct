@@ -1,0 +1,313 @@
+{
+  "book_name": "sample-shape-connector.xlsx",
+  "sheets": {
+    "要件チェック": {
+      "shapes": [
+        {
+          "text": "S",
+          "name": "Oval 1",
+          "l": 80,
+          "t": 45,
+          "type": "AutoShape-Oval"
+        },
+        {
+          "text": "E",
+          "name": "Oval 2",
+          "l": 543,
+          "t": 696,
+          "type": "AutoShape-Oval"
+        },
+        {
+          "text": "要件抽出",
+          "name": "Rectangle 3",
+          "l": 80,
+          "t": 168,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "name": "Straight Arrow Connector 5",
+          "l": 101,
+          "t": 88,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_connected_shape": "Oval 1",
+          "end_connected_shape": "Rectangle 3",
+          "direction": "N"
+        },
+        {
+          "text": "ヒアリング",
+          "name": "Rectangle 10",
+          "l": 338,
+          "t": 97,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "text": "非機能要件",
+          "name": "Rectangle 11",
+          "l": 208,
+          "t": 226,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "text": "機能要件",
+          "name": "Rectangle 12",
+          "l": 401,
+          "t": 210,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "name": "Straight Arrow Connector 13",
+          "l": 189,
+          "t": 120,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_connected_shape": "Rectangle 3",
+          "end_connected_shape": "Rectangle 10",
+          "direction": "NE"
+        },
+        {
+          "name": "Straight Arrow Connector 16",
+          "l": 263,
+          "t": 143,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_connected_shape": "Rectangle 10",
+          "end_connected_shape": "Rectangle 11",
+          "direction": "NE"
+        },
+        {
+          "name": "Straight Arrow Connector 22",
+          "l": 393,
+          "t": 143,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_connected_shape": "Rectangle 10",
+          "end_connected_shape": "Rectangle 12",
+          "direction": "NE"
+        },
+        {
+          "text": "プロトタイプ",
+          "name": "Rectangle 25",
+          "l": 377,
+          "t": 292,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "text": "実験検証",
+          "name": "Rectangle 26",
+          "l": 384,
+          "t": 389,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "text": "思考実験",
+          "name": "Rectangle 27",
+          "l": 81,
+          "t": 325,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "text": "再検証",
+          "name": "Rectangle 28",
+          "l": 180,
+          "t": 426,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "text": "まとめ",
+          "name": "Rectangle 29",
+          "l": 250,
+          "t": 511,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "text": "文書作成",
+          "name": "Rectangle 30",
+          "l": 293,
+          "t": 589,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "text": "契約管理",
+          "name": "Rectangle 31",
+          "l": 484,
+          "t": 509,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "text": "締結",
+          "name": "Rectangle 32",
+          "l": 352,
+          "t": 676,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "name": "Straight Arrow Connector 33",
+          "l": 142,
+          "t": 271,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_connected_shape": "Rectangle 11",
+          "end_connected_shape": "Rectangle 27",
+          "direction": "NE"
+        },
+        {
+          "name": "Straight Arrow Connector 37",
+          "l": 142,
+          "t": 371,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_connected_shape": "Rectangle 27",
+          "end_connected_shape": "Rectangle 28",
+          "direction": "NE"
+        },
+        {
+          "name": "Straight Arrow Connector 46",
+          "l": 241,
+          "t": 471,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_connected_shape": "Rectangle 28",
+          "end_connected_shape": "Rectangle 29",
+          "direction": "NE"
+        },
+        {
+          "name": "Straight Arrow Connector 50",
+          "l": 311,
+          "t": 556,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_connected_shape": "Rectangle 29",
+          "end_connected_shape": "Rectangle 30",
+          "direction": "NE"
+        },
+        {
+          "name": "Straight Arrow Connector 53",
+          "l": 372,
+          "t": 531,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_connected_shape": "Rectangle 29",
+          "end_connected_shape": "Rectangle 31",
+          "direction": "E"
+        },
+        {
+          "name": "Straight Arrow Connector 57",
+          "l": 354,
+          "t": 635,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_connected_shape": "Rectangle 30",
+          "end_connected_shape": "Rectangle 32",
+          "direction": "NE"
+        },
+        {
+          "name": "Straight Arrow Connector 61",
+          "l": 413,
+          "t": 554,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_connected_shape": "Rectangle 31",
+          "end_connected_shape": "Rectangle 32",
+          "direction": "NE"
+        },
+        {
+          "name": "Straight Arrow Connector 64",
+          "l": 474,
+          "t": 698,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_connected_shape": "Rectangle 32",
+          "end_connected_shape": "Oval 2",
+          "direction": "E"
+        },
+        {
+          "name": "Straight Arrow Connector 69",
+          "l": 438,
+          "t": 256,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_connected_shape": "Rectangle 12",
+          "end_connected_shape": "Rectangle 25",
+          "direction": "NE"
+        },
+        {
+          "name": "Straight Arrow Connector 76",
+          "l": 438,
+          "t": 337,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_connected_shape": "Rectangle 25",
+          "end_connected_shape": "Rectangle 26",
+          "direction": "N"
+        },
+        {
+          "name": "Straight Arrow Connector 80",
+          "l": 311,
+          "t": 434,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_connected_shape": "Rectangle 26",
+          "end_connected_shape": "Rectangle 29",
+          "direction": "NE"
+        },
+        {
+          "name": "Curved Connector 87",
+          "l": 191,
+          "t": 299,
+          "type": "AutoShape-Mixed",
+          "rotation": 90.0,
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_connected_shape": "Rectangle 28",
+          "end_connected_shape": "Rectangle 11",
+          "direction": "NE"
+        },
+        {
+          "name": "Curved Connector 89",
+          "l": 506,
+          "t": 308,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_connected_shape": "Rectangle 26",
+          "end_connected_shape": "Rectangle 92",
+          "direction": "NE"
+        },
+        {
+          "text": "機能追加",
+          "name": "Rectangle 92",
+          "l": 575,
+          "t": 263,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "name": "Straight Arrow Connector 94",
+          "l": 499,
+          "t": 285,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_connected_shape": "Rectangle 92",
+          "end_connected_shape": "Rectangle 25",
+          "direction": "E"
+        }
+      ]
+    }
+  }
+}
