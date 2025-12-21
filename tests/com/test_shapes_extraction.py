@@ -73,12 +73,14 @@ def test_図形の種別とテキストが抽出される(tmp_path: Path) -> Non
     rect = next(s for s in shapes if s.text == "rect")
     assert "AutoShape" in (rect.type or "")
     assert rect.l >= 0 and rect.t >= 0
-    assert rect.name  # Excel shape Name should be captured
+    assert rect.id > 0
 
     inner = next(s for s in shapes if s.text == "inner")
     assert "Group" not in (inner.type or "")  # flattened child
     assert not any((s.type or "") == "Group" for s in shapes)
-    assert inner.name  # Excel shape Name should be captured
+    assert inner.id > 0
+    ids = [s.id for s in shapes if s.id is not None]
+    assert len(ids) == len(set(ids))
     # Standard mode should not emit non-relationship AutoShapes without text.
     assert not any(
         (s.text == "" or s.text is None)
@@ -87,8 +89,8 @@ def test_図形の種別とテキストが抽出される(tmp_path: Path) -> Non
             s.direction
             or s.begin_arrow_style is not None
             or s.end_arrow_style is not None
-            or s.begin_connected_shape is not None
-            or s.end_connected_shape is not None
+            or s.begin_id is not None
+            or s.end_id is not None
         )
         for s in shapes
     )
@@ -121,7 +123,7 @@ def test_コネクターの接続元と接続先が抽出される(tmp_path: Pat
     connectors = [
         s
         for s in shapes
-        if s.begin_connected_shape is not None or s.end_connected_shape is not None
+        if s.begin_id is not None or s.end_id is not None
     ]
 
     # If the environment could not wire connectors, simply skip the assertion.
@@ -129,10 +131,10 @@ def test_コネクターの接続元と接続先が抽出される(tmp_path: Pat
         pytest.skip("Excel failed to populate ConnectorFormat.ConnectedShape properties.")
 
     conn = connectors[0]
-    assert conn.begin_connected_shape is not None
-    assert conn.end_connected_shape is not None
-    assert conn.begin_connected_shape != conn.end_connected_shape
-    # Connected shape names should correspond to some emitted shapes' Name.
-    shape_names = {s.name for s in shapes if s.name is not None}
-    assert conn.begin_connected_shape in shape_names
-    assert conn.end_connected_shape in shape_names
+    assert conn.begin_id is not None
+    assert conn.end_id is not None
+    assert conn.begin_id != conn.end_id
+    # Connected shape ids should correspond to some emitted shapes' id.
+    shape_ids = {s.id for s in shapes}
+    assert conn.begin_id in shape_ids
+    assert conn.end_id in shape_ids

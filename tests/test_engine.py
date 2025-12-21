@@ -36,7 +36,7 @@ def test_engine_extract_uses_mode(monkeypatch: MonkeyPatch, tmp_path: Path) -> N
 
 
 def _sample_workbook() -> WorkbookData:
-    shape = Shape(text="x", l=0, t=0, w=10, h=10, type="Rect")
+    shape = Shape(id=1, text="x", l=0, t=0, w=10, h=10, type="Rect")
     chart = Chart(
         name="c1",
         chart_type="Line",

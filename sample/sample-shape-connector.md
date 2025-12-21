@@ -1,45 +1,70 @@
-# フローチャートの例
+# sample-shape-connector フローチャート概要
+
+このドキュメントは sample-shape-connector.json の内容をフローチャートとしてまとめたものです。ノード（図形）とコネクタ（矢線）の対応を一覧化し、Mermaid で可視化しています。
+
+## ノード一覧
+
+| ID | ラベル | 形状/役割の目安 |
+| --- | --- | --- |
+| 1 | S | 開始 (Oval) |
+| 2 | E | 終了 (Oval) |
+| 3 | 要件抽出 | プロセス |
+| 4 | ヒアリング | プロセス |
+| 5 | 非機能要件 | プロセス |
+| 6 | 機能要件 | プロセス |
+| 7 | プロトタイプ | プロセス |
+| 8 | 実験検証 | プロセス |
+| 9 | 思考実験 | プロセス |
+| 10 | 再検証 | プロセス |
+| 11 | まとめ | プロセス |
+| 12 | 文書作成 | プロセス |
+| 13 | 契約管理 | プロセス |
+| 14 | 締結 | プロセス / 終了直前 |
+| 15 | 機能追加 | プロセス |
+
+## 接続（begin_id → end_id）
+
+- 1 → 3
+- 3 → 4
+- 4 → 5
+- 4 → 6
+- 5 → 9
+- 9 → 10
+- 10 → 11
+- 11 → 12
+- 11 → 13
+- 12 → 14
+- 13 → 14
+- 14 → 2
+- 6 → 7
+- 7 → 8
+- 8 → 11
+- 10 → 5 (フィードバックループ)
+- 8 → 15
+- 15 → 7 (機能追加後に再度プロトタイプへ戻る)
+
+## Mermaid 可視化
+
+番号を図形ラベルに含めず、ID はノード識別のみに使っています。
 
 ```mermaid
 flowchart TD
-  %% ノード定義
-  Oval1(("S"))
-  Oval2(("E"))
-  Rectangle3["要件抽出"]
-  Rectangle10["ヒアリング"]
-  Rectangle11["非機能要件"]
-  Rectangle12["機能要件"]
-  Rectangle25["プロトタイプ"]
-  Rectangle26["実験検証"]
-  Rectangle27["思考実験"]
-  Rectangle28["再検証"]
-  Rectangle29["まとめ"]
-  Rectangle30["文書作成"]
-  Rectangle31["契約管理"]
-  Rectangle32["締結"]
-  Rectangle92["機能追加"]
-
-  %% フロー定義（コネクタ）
-  Oval1 --> Rectangle3
-  Rectangle3 --> Rectangle10
-  Rectangle10 --> Rectangle11
-  Rectangle10 --> Rectangle12
-  Rectangle11 --> Rectangle27
-  Rectangle27 --> Rectangle28
-  Rectangle28 --> Rectangle29
-  Rectangle29 --> Rectangle30
-  Rectangle29 --> Rectangle31
-  Rectangle30 --> Rectangle32
-  Rectangle31 --> Rectangle32
-  Rectangle32 --> Oval2
-
-  Rectangle12 --> Rectangle25
-  Rectangle25 --> Rectangle26
-  Rectangle26 --> Rectangle29
-
-  %% ループ系
-  Rectangle28 --> Rectangle11
-  Rectangle26 --> Rectangle92
-  Rectangle92 --> Rectangle25
-  ```
-  
+    n1["S"] --> n3["要件抽出"]
+    n3 --> n4["ヒアリング"]
+    n4 --> n5["非機能要件"]
+    n4 --> n6["機能要件"]
+    n5 --> n9["思考実験"]
+    n9 --> n10["再検証"]
+    n10 --> n11["まとめ"]
+    n11 --> n12["文書作成"]
+    n11 --> n13["契約管理"]
+    n12 --> n14["締結"]
+    n13 --> n14
+    n14 --> n2["E"]
+    n6 --> n7["プロトタイプ"]
+    n7 --> n8["実験検証"]
+    n8 --> n11
+    n10 --> n5
+    n8 --> n15["機能追加"]
+    n15 --> n7
+```

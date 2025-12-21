@@ -248,6 +248,19 @@
     "Shape": {
       "description": "Shape metadata (position, size, text, and styling).",
       "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Sequential shape id within the sheet (if applicable).",
+          "title": "Id"
+        },
         "begin_arrow_style": {
           "anyOf": [
             {
@@ -260,6 +273,19 @@
           "default": null,
           "description": "Arrow style enum for the start of a connector.",
           "title": "Begin Arrow Style"
+        },
+        "begin_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Shape id at the start of a connector (ConnectorFormat.BeginConnectedShape).",
+          "title": "Begin Id"
         },
         "direction": {
           "anyOf": [
@@ -283,6 +309,19 @@
           "default": null,
           "description": "Connector direction (compass heading).",
           "title": "Direction"
+        },
+        "end_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Shape id at the end of a connector (ConnectorFormat.EndConnectedShape).",
+          "title": "End Id"
         },
         "end_arrow_style": {
           "anyOf": [

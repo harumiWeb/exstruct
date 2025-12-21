@@ -2,31 +2,44 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Shape metadata (position, size, text, and styling).",
   "properties": {
-        "begin_connected_shape": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Excel shape name at the start of a connector (ConnectorFormat.BeginConnectedShape).",
-          "title": "Begin Connected Shape"
+    "id": {
+      "anyOf": [
+        {
+          "type": "integer"
         },
-        "end_connected_shape": {
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Sequential shape id within the sheet (if applicable).",
+      "title": "Id"
+    },
+        "begin_id": {
           "anyOf": [
             {
-              "type": "string"
+              "type": "integer"
             },
             {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "Excel shape name at the end of a connector (ConnectorFormat.EndConnectedShape).",
-          "title": "End Connected Shape"
+          "description": "Shape id at the start of a connector (ConnectorFormat.BeginConnectedShape).",
+          "title": "Begin Id"
+        },
+        "end_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Shape id at the end of a connector (ConnectorFormat.EndConnectedShape).",
+          "title": "End Id"
         },
     "begin_arrow_style": {
       "anyOf": [
@@ -117,19 +130,6 @@
       "description": "Visible text content of the shape.",
       "title": "Text",
       "type": "string"
-    },
-    "name": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Excel shape Name property (if available).",
-      "title": "Name"
     },
     "type": {
       "anyOf": [
