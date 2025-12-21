@@ -2,6 +2,45 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Shape metadata (position, size, text, and styling).",
   "properties": {
+    "id": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Sequential shape id within the sheet (if applicable).",
+      "title": "Id"
+    },
+        "begin_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Shape id at the start of a connector (ConnectorFormat.BeginConnectedShape).",
+          "title": "Begin Id"
+        },
+        "end_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Shape id at the end of a connector (ConnectorFormat.EndConnectedShape).",
+          "title": "End Id"
+        },
     "begin_arrow_style": {
       "anyOf": [
         {

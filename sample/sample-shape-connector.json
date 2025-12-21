@@ -1,0 +1,295 @@
+{
+  "book_name": "sample-shape-connector.xlsx",
+  "sheets": {
+    "要件チェック": {
+      "shapes": [
+        {
+          "id": 1,
+          "text": "S",
+          "l": 81,
+          "t": 45,
+          "type": "AutoShape-Oval"
+        },
+        {
+          "id": 2,
+          "text": "E",
+          "l": 549,
+          "t": 696,
+          "type": "AutoShape-Oval"
+        },
+        {
+          "id": 3,
+          "text": "要件抽出",
+          "l": 81,
+          "t": 168,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "l": 102,
+          "t": 87,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_id": 1,
+          "end_id": 3,
+          "direction": "NE"
+        },
+        {
+          "id": 4,
+          "text": "ヒアリング",
+          "l": 342,
+          "t": 97,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "id": 5,
+          "text": "非機能要件",
+          "l": 210,
+          "t": 225,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "id": 6,
+          "text": "機能要件",
+          "l": 405,
+          "t": 210,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "l": 191,
+          "t": 120,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_id": 3,
+          "end_id": 4,
+          "direction": "NE"
+        },
+        {
+          "l": 266,
+          "t": 143,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_id": 4,
+          "end_id": 5,
+          "direction": "NE"
+        },
+        {
+          "l": 398,
+          "t": 143,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_id": 4,
+          "end_id": 6,
+          "direction": "NE"
+        },
+        {
+          "id": 7,
+          "text": "プロトタイプ",
+          "l": 381,
+          "t": 291,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "id": 8,
+          "text": "実験検証",
+          "l": 388,
+          "t": 389,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "id": 9,
+          "text": "思考実験",
+          "l": 82,
+          "t": 325,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "id": 10,
+          "text": "再検証",
+          "l": 182,
+          "t": 426,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "id": 11,
+          "text": "まとめ",
+          "l": 252,
+          "t": 510,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "id": 12,
+          "text": "文書作成",
+          "l": 296,
+          "t": 589,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "id": 13,
+          "text": "契約管理",
+          "l": 489,
+          "t": 509,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "id": 14,
+          "text": "締結",
+          "l": 356,
+          "t": 675,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "l": 144,
+          "t": 271,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_id": 5,
+          "end_id": 9,
+          "direction": "NE"
+        },
+        {
+          "l": 144,
+          "t": 371,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_id": 9,
+          "end_id": 10,
+          "direction": "NE"
+        },
+        {
+          "l": 244,
+          "t": 471,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_id": 10,
+          "end_id": 11,
+          "direction": "NE"
+        },
+        {
+          "l": 314,
+          "t": 556,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_id": 11,
+          "end_id": 12,
+          "direction": "NE"
+        },
+        {
+          "l": 376,
+          "t": 531,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_id": 11,
+          "end_id": 13,
+          "direction": "E"
+        },
+        {
+          "l": 357,
+          "t": 635,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_id": 12,
+          "end_id": 14,
+          "direction": "NE"
+        },
+        {
+          "l": 417,
+          "t": 554,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_id": 13,
+          "end_id": 14,
+          "direction": "NE"
+        },
+        {
+          "l": 479,
+          "t": 698,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_id": 14,
+          "end_id": 2,
+          "direction": "E"
+        },
+        {
+          "l": 443,
+          "t": 255,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_id": 6,
+          "end_id": 7,
+          "direction": "NE"
+        },
+        {
+          "l": 443,
+          "t": 337,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_id": 7,
+          "end_id": 8,
+          "direction": "N"
+        },
+        {
+          "l": 314,
+          "t": 434,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_id": 8,
+          "end_id": 11,
+          "direction": "NE"
+        },
+        {
+          "l": 194,
+          "t": 298,
+          "type": "AutoShape-Mixed",
+          "rotation": 90.0,
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_id": 10,
+          "end_id": 5,
+          "direction": "NE"
+        },
+        {
+          "l": 511,
+          "t": 308,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_id": 8,
+          "end_id": 15,
+          "direction": "NE"
+        },
+        {
+          "id": 15,
+          "text": "機能追加",
+          "l": 581,
+          "t": 263,
+          "type": "AutoShape-Rectangle"
+        },
+        {
+          "l": 505,
+          "t": 285,
+          "type": "AutoShape-Mixed",
+          "begin_arrow_style": 1,
+          "end_arrow_style": 2,
+          "begin_id": 15,
+          "end_id": 7,
+          "direction": "E"
+        }
+      ]
+    }
+  }
+}

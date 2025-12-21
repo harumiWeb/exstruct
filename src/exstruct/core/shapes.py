@@ -115,6 +115,9 @@ def get_shapes_with_position(  # noqa: C901
     shape_data: dict[str, list[Shape]] = {}
     for sheet in workbook.sheets:
         shapes: list[Shape] = []
+        excel_names: list[tuple[str, int]] = []
+        node_index = 0
+        pending_connections: list[tuple[Shape, str | None, str | None]] = []
         for root in sheet.shapes:
             for shp in iter_shapes_recursive(root):
                 try:
@@ -168,7 +171,29 @@ def get_shapes_with_position(  # noqa: C901
                         else (shape_type_str or shape_name or "Unknown")
                     )
 
+                is_relationship_geom = False
+                if type_num in (3, 9):
+                    is_relationship_geom = True
+                if autoshape_type_str and (
+                    "Arrow" in autoshape_type_str or "Connector" in autoshape_type_str
+                ):
+                    is_relationship_geom = True
+                if shape_type_str and (
+                    "Connector" in shape_type_str or shape_type_str in ("Line", "ConnectLine")
+                ):
+                    is_relationship_geom = True
+                if shape_name and ("Connector" in shape_name or "Line" in shape_name):
+                    is_relationship_geom = True
+
+                shape_id = None
+                if not is_relationship_geom:
+                    node_index += 1
+                    shape_id = node_index
+
+                excel_name = shape_name if isinstance(shape_name, str) else None
+
                 shape_obj = Shape(
+                    id=shape_id,
                     text=text,
                     l=int(shp.left),
                     t=int(shp.top),
@@ -180,25 +205,12 @@ def get_shapes_with_position(  # noqa: C901
                     else None,
                     type=type_label,
                 )
+                if excel_name:
+                    if shape_id is not None:
+                        excel_names.append((excel_name, shape_id))
                 try:
-                    is_relationship_geom = False
-                    if type_num in (3, 9):
-                        is_relationship_geom = True
-                    if autoshape_type_str and (
-                        "Arrow" in autoshape_type_str
-                        or "Connector" in autoshape_type_str
-                    ):
-                        is_relationship_geom = True
-                    if shape_type_str and (
-                        "Connector" in shape_type_str
-                        or shape_type_str in ("Line", "ConnectLine")
-                    ):
-                        is_relationship_geom = True
-                    if shape_name and (
-                        "Connector" in shape_name or "Line" in shape_name
-                    ):
-                        is_relationship_geom = True
-
+                    begin_name: str | None = None
+                    end_name: str | None = None
                     if is_relationship_geom:
                         angle = compute_line_angle_deg(
                             float(shp.width), float(shp.height)
@@ -217,6 +229,28 @@ def get_shapes_with_position(  # noqa: C901
                             shape_obj.end_arrow_style = end_style
                         except Exception:
                             pass
+                        # Connector begin/end connected shapes (if this shape is a connector).
+                        try:
+                            connector = shp.api.ConnectorFormat
+                            try:
+                                begin_shape = connector.BeginConnectedShape
+                                if begin_shape is not None:
+                                    name = getattr(begin_shape, "Name", None)
+                                    if isinstance(name, str):
+                                        begin_name = name
+                            except Exception:
+                                pass
+                            try:
+                                end_shape = connector.EndConnectedShape
+                                if end_shape is not None:
+                                    name = getattr(end_shape, "Name", None)
+                                    if isinstance(name, str):
+                                        end_name = name
+                            except Exception:
+                                pass
+                        except Exception:
+                            # Not a connector or ConnectorFormat is unavailable.
+                            pass
                     elif type_num == 1 and (
                         autoshape_type_str and "Arrow" in autoshape_type_str
                     ):
@@ -228,6 +262,14 @@ def get_shapes_with_position(  # noqa: C901
                             pass
                 except Exception:
                     pass
+                pending_connections.append((shape_obj, begin_name, end_name))
                 shapes.append(shape_obj)
+        if pending_connections:
+            name_to_id = {name: sid for name, sid in excel_names}
+            for shape_obj, begin_name, end_name in pending_connections:
+                if begin_name:
+                    shape_obj.begin_id = name_to_id.get(begin_name)
+                if end_name:
+                    shape_obj.end_id = name_to_id.get(end_name)
         shape_data[sheet.name] = shapes
     return shape_data

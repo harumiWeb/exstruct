@@ -6,8 +6,8 @@ from exstruct.models import CellRow, Chart, PrintArea, Shape, SheetData, Workboo
 
 
 def _workbook_with_print_area() -> WorkbookData:
-    shape_inside = Shape(text="inside", l=10, t=5, w=20, h=10, type="Rect")
-    shape_outside = Shape(text="outside", l=200, t=200, w=30, h=30, type="Rect")
+    shape_inside = Shape(id=1, text="inside", l=10, t=5, w=20, h=10, type="Rect")
+    shape_outside = Shape(id=2, text="outside", l=200, t=200, w=30, h=30, type="Rect")
     chart_inside = Chart(
         name="c1",
         chart_type="Line",

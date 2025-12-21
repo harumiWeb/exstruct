@@ -62,7 +62,7 @@ def test_TOON出力が生成される(tmp_path: Path) -> None:
 def test_JSON_roundtripが破壊的変更なし(tmp_path: Path) -> None:
     sheet = SheetData(
         rows=[CellRow(r=1, c={"0": 123})],
-        shapes=[Shape(text="t", l=1, t=2, w=None, h=None)],
+        shapes=[Shape(id=1, text="t", l=1, t=2, w=None, h=None)],
         charts=[
             Chart(
                 name="c",

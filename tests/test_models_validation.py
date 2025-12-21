@@ -12,7 +12,7 @@ from exstruct.models import (
 
 
 def test_モデルのデフォルトとオプション値() -> None:
-    shape = Shape(text="t", l=1, t=2, w=None, h=None)
+    shape = Shape(id=1, text="t", l=1, t=2, w=None, h=None)
     assert shape.rotation is None
     assert shape.direction is None
 
@@ -48,7 +48,7 @@ def test_モデルのデフォルトとオプション値() -> None:
 
 def test_directionのリテラル検証() -> None:
     with pytest.raises(ValidationError):
-        Shape(text="bad", l=0, t=0, w=None, h=None, direction="X")
+        Shape(id=1, text="bad", l=0, t=0, w=None, h=None, direction="X")
 
 
 def test_cellrowの数値正規化() -> None:

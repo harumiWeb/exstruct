@@ -69,12 +69,14 @@
       ],
       "shapes": [
         {
+          "id": 1,
           "text": "開始",
           "l": 148,
           "t": 220,
           "type": "AutoShape-FlowchartProcess"
         },
         {
+          "id": 2,
           "text": "入力データ読み込み",
           "l": 132,
           "t": 282,
@@ -86,21 +88,26 @@
           "type": "AutoShape-Mixed",
           "begin_arrow_style": 1,
           "end_arrow_style": 2,
+          "begin_id": 1,
+          "end_id": 2,
           "direction": "N"
         },
         {
+          "id": 3,
           "text": "形式は正しい？",
           "l": 90,
           "t": 342,
           "type": "AutoShape-FlowchartDecision"
         },
         {
+          "id": 4,
           "text": "1件処理",
           "l": 424,
           "t": 361,
           "type": "AutoShape-FlowchartProcess"
         },
         {
+          "id": 5,
           "text": "残件あり？",
           "l": 365,
           "t": 414,
@@ -112,6 +119,8 @@
           "type": "AutoShape-Mixed",
           "begin_arrow_style": 1,
           "end_arrow_style": 2,
+          "begin_id": 2,
+          "end_id": 3,
           "direction": "N"
         },
         {
@@ -120,9 +129,12 @@
           "type": "AutoShape-Mixed",
           "begin_arrow_style": 1,
           "end_arrow_style": 2,
+          "begin_id": 3,
+          "end_id": 4,
           "direction": "E"
         },
         {
+          "id": 6,
           "text": "はい",
           "l": 340,
           "t": 362,
@@ -134,21 +146,26 @@
           "type": "AutoShape-Mixed",
           "begin_arrow_style": 1,
           "end_arrow_style": 2,
+          "begin_id": 4,
+          "end_id": 5,
           "direction": "N"
         },
         {
+          "id": 7,
           "text": "出力を生成",
           "l": 426,
           "t": 494,
           "type": "AutoShape-FlowchartProcess"
         },
         {
+          "id": 8,
           "text": "メール送信？",
           "l": 366,
           "t": 549,
           "type": "AutoShape-FlowchartDecision"
         },
         {
+          "id": 9,
           "text": "エラー表示",
           "l": 132,
           "t": 463,
@@ -160,9 +177,12 @@
           "type": "AutoShape-Mixed",
           "begin_arrow_style": 1,
           "end_arrow_style": 2,
+          "begin_id": 3,
+          "end_id": 9,
           "direction": "N"
         },
         {
+          "id": 10,
           "text": "メール送信",
           "l": 426,
           "t": 638,
@@ -174,6 +194,8 @@
           "type": "AutoShape-Mixed",
           "begin_arrow_style": 1,
           "end_arrow_style": 2,
+          "begin_id": 5,
+          "end_id": 7,
           "direction": "N"
         },
         {
@@ -182,9 +204,12 @@
           "type": "AutoShape-Mixed",
           "begin_arrow_style": 1,
           "end_arrow_style": 2,
+          "begin_id": 7,
+          "end_id": 8,
           "direction": "N"
         },
         {
+          "id": 11,
           "text": "終了",
           "l": 273,
           "t": 684,
@@ -196,6 +221,8 @@
           "type": "AutoShape-Mixed",
           "begin_arrow_style": 1,
           "end_arrow_style": 2,
+          "begin_id": 9,
+          "end_id": 11,
           "direction": "NE"
         },
         {
@@ -204,6 +231,8 @@
           "type": "AutoShape-Mixed",
           "begin_arrow_style": 1,
           "end_arrow_style": 2,
+          "begin_id": 10,
+          "end_id": 11,
           "direction": "E"
         },
         {
@@ -212,9 +241,12 @@
           "type": "AutoShape-Mixed",
           "begin_arrow_style": 1,
           "end_arrow_style": 2,
+          "begin_id": 8,
+          "end_id": 10,
           "direction": "N"
         },
         {
+          "id": 12,
           "text": "はい",
           "l": 448,
           "t": 604,
@@ -226,9 +258,11 @@
           "type": "AutoShape-Mixed",
           "begin_arrow_style": 1,
           "end_arrow_style": 2,
+          "begin_id": 8,
           "direction": "N"
         },
         {
+          "id": 13,
           "text": "いいえ",
           "l": 319,
           "t": 600,
