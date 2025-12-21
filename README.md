@@ -219,12 +219,14 @@ Below is a **shortened JSON output example** from parsing this Excel workbook.
       ],
       "shapes": [
         {
+          "id": 1,
           "text": "開始",
           "l": 148,
           "t": 220,
           "type": "AutoShape-FlowchartProcess"
         },
         {
+          "id": 2,
           "text": "入力データ読み込み",
           "l": 132,
           "t": 282,
@@ -236,6 +238,8 @@ Below is a **shortened JSON output example** from parsing this Excel workbook.
           "type": "AutoShape-Mixed",
           "begin_arrow_style": 1,
           "end_arrow_style": 2,
+          "begin_id": 1,
+          "end_id": 2,
           "direction": "N"
         },
         ...

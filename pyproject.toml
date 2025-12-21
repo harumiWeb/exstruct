@@ -1,6 +1,6 @@
 [project]
 name = "exstruct"
-version = "0.2.71"
+version = "0.2.80"
 description = "Excel to structured JSON (tables, shapes, charts) for LLM/RAG pipelines"
 readme = "README.md"
 license = { file = "LICENSE" }

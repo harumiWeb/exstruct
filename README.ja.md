@@ -217,12 +217,14 @@ exstruct input.xlsx --pdf --image --dpi 144
       ],
       "shapes": [
         {
+          "id": 1,
           "text": "開始",
           "l": 148,
           "t": 220,
           "type": "AutoShape-FlowchartProcess"
         },
         {
+          "id": 2,
           "text": "入力データ読み込み",
           "l": 132,
           "t": 282,
@@ -234,6 +236,8 @@ exstruct input.xlsx --pdf --image --dpi 144
           "type": "AutoShape-Mixed",
           "begin_arrow_style": 1,
           "end_arrow_style": 2,
+          "begin_id": 1,
+          "end_id": 2,
           "direction": "N"
         },
         ...
