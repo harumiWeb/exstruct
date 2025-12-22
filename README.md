@@ -323,14 +323,14 @@ flowchart TD
 
     A --> B
     B --> C
-    C -- no --> D
-    C -- yes --> E
+    C -->|yes| D
+    C --> H
+    D --> E
     E --> F
-    F -- yes --> E
-    F -- no --> G
-    G --> H
-    H -- yes --> I
-    H -- no --> J
+    F --> G
+    G -->|yes| I
+    G -->|no| J
+    H --> J
     I --> J
 ```
 ````
