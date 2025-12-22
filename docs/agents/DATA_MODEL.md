@@ -34,6 +34,7 @@ Shape {
 ```
 
 補足:
+
 - `direction` は線や矢印の向きを 8 方位に正規化したもの。
 - 矢印スタイルは Excel の enum に対応。
 - `begin_id` / `end_id` は、コネクタが接続している図形の `id`（Excel の `ConnectorFormat.BeginConnectedShape` / `EndConnectedShape` に対応）。
@@ -100,6 +101,7 @@ PrintArea {
 ```
 
 補足:
+
 - シートごとに複数保持可能。
 - `standard` / `verbose` で取得できる場合に含まれる。
 
@@ -120,6 +122,7 @@ PrintAreaView {
 ```
 
 補足:
+
 - 座標はデフォルトでシート基準。`normalize` 指定時は範囲左上を原点に再基準化。
 
 ---
@@ -134,10 +137,12 @@ SheetData {
   table_candidates: [str]
   print_areas: [PrintArea]
   auto_print_areas: [PrintArea] // 自動改ページ矩形（COM 前提、デフォルト無効）
+  colors_map: {[colorHex: str]: [[int, int]]} // カラーごとのセルを列挙
 }
 ```
 
 補足:
+
 - `table_candidates` はテーブル検出結果。
 - `print_areas` は定義済み印刷範囲。`auto_print_areas` は Excel COM の自動改ページから取得し、明示的に有効化した場合のみ含まれる。
 
@@ -153,6 +158,7 @@ WorkbookData {
 ```
 
 補足:
+
 - シート名は Excel の Unicode 名をそのまま保持。
 
 ---
@@ -160,6 +166,7 @@ WorkbookData {
 # 10. Export Helpers (SheetData / WorkbookData)
 
 共通:
+
 - `to_json(pretty=False, indent=None)`
 - `to_yaml()`（`pyyaml` 必須）
 - `to_toon()`（`python-toon` 必須）
@@ -167,9 +174,11 @@ WorkbookData {
 - `model_dump(exclude_none=True)` 後に `dict_without_empty_values` で空値を除去。
 
 `SheetData`:
+
 - シリアライズ時に `book_name` は含まない（シート単体）。
 
 `WorkbookData`:
+
 - ペイロードに `book_name` と `sheets` を含む。
 - `__getitem__(sheet_name)` で SheetData を取得、`__iter__()` で `(sheet_name, SheetData)` を順序付きで返す。
 
@@ -194,3 +203,4 @@ WorkbookData {
 - 0.9: Shape に `name` / `begin_connected_shape` / `end_connected_shape` を追加し、コネクタの接続元/接続先を表現（後に `begin_id` / `end_id` に名称変更）。
 - 0.10: Shape に `id` を追加し、コネクタの接続元/接続先を `id` 参照に変更し、`name` をペイロードから除去。
 - 0.11: コネクタのフィールド名を `begin_id` / `end_id` にリネーム。
+- 0.12: SheetData に背景色情報を格納する`colors_map`を追加。
