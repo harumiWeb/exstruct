@@ -1,17 +1,18 @@
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from importlib import util
+import io
 import json
 import os
 from pathlib import Path
-import subprocess
-import sys
 from typing import TypeVar, cast
 
 from openpyxl import Workbook
+from pydantic import BaseModel
 import pytest
 
 from exstruct.cli.availability import ComAvailability
-from exstruct.cli.main import build_parser
+from exstruct.cli.main import build_parser, main as cli_main
 
 F = TypeVar("F", bound=Callable[..., object])
 render = cast(Callable[[F], F], pytest.mark.render)
@@ -25,6 +26,14 @@ _ALLOWED_CLI_FLAGS: set[str] = {
     "--pdf",
     "--print-areas-dir",
 }
+
+
+class CliResult(BaseModel):
+    """Result of running the CLI inside the test process."""
+
+    returncode: int
+    stdout: bytes | str
+    stderr: bytes | str
 
 
 def _toon_available() -> bool:
@@ -109,7 +118,7 @@ def _prepare_unicode_excel(tmp_path: Path) -> Path:
 
 def _run_cli(
     args: list[str], *, text: bool = True, env: dict[str, str] | None = None
-) -> subprocess.CompletedProcess[bytes | str]:
+) -> CliResult:
     """Execute the ExStruct CLI with a fixed command prefix.
 
     Args:
@@ -118,25 +127,27 @@ def _run_cli(
         env: Optional environment variables overriding the current process.
 
     Returns:
-        The completed process result from ``subprocess.run``.
+        Result data captured from the in-process CLI execution.
     """
 
     safe_args = _sanitize_cli_args(args)
-    # NOTE:
-    # - The command prefix is fully static and controlled by the test suite.
-    # - ``safe_args`` is sanitized to reject control characters.
-    # - ``shell`` remains False to avoid shell interpretation.
-    base_cmd = [sys.executable, "-m", "exstruct.cli.main"]
+    stdout_buffer = io.StringIO()
+    stderr_buffer = io.StringIO()
+    with (
+        _temporary_env(env),
+        redirect_stdout(stdout_buffer),
+        redirect_stderr(stderr_buffer),
+    ):
+        returncode = cli_main(argv=safe_args)
 
-    # The command prefix is fully static and controlled by tests; arguments are
-    # sanitized and shell interpretation is disabled.
-    return subprocess.run(  # nosec B603  # nosemgrep: python.lang.security.subprocess.run-non-literal
-        [*base_cmd, *safe_args],
-        capture_output=True,
-        text=text,
-        env=env,
-        shell=False,
-        check=False,
+    stdout_text = stdout_buffer.getvalue()
+    stderr_text = stderr_buffer.getvalue()
+    if text:
+        return CliResult(returncode=returncode, stdout=stdout_text, stderr=stderr_text)
+    return CliResult(
+        returncode=returncode,
+        stdout=stdout_text.encode("utf-8"),
+        stderr=stderr_text.encode("utf-8"),
     )
 
 
@@ -161,37 +172,33 @@ def _sanitize_cli_args(args: list[str]) -> list[str]:
     return validated
 
 
-def _stdout_text(result: subprocess.CompletedProcess[bytes | str]) -> str:
+def _stdout_text(result: CliResult) -> str:
     """Return stdout as text for assertions.
 
     Args:
-        result: Completed subprocess result.
+        result: Completed CLI result.
 
     Returns:
         Decoded stdout string or empty string when stdout is absent.
     """
 
     stdout = result.stdout
-    if stdout is None:
-        return ""
     if isinstance(stdout, bytes):
         return stdout.decode("utf-8", errors="replace")
     return stdout
 
 
-def _stderr_text(result: subprocess.CompletedProcess[bytes | str]) -> str:
+def _stderr_text(result: CliResult) -> str:
     """Return stderr as text for assertions.
 
     Args:
-        result: Completed subprocess result.
+        result: Completed CLI result.
 
     Returns:
         Decoded stderr string or empty string when stderr is absent.
     """
 
     stderr = result.stderr
-    if stderr is None:
-        return ""
     if isinstance(stderr, bytes):
         return stderr.decode("utf-8", errors="replace")
     return stderr
@@ -225,6 +232,27 @@ def _ensure_allowed_cli_flag(arg: str) -> None:
     if arg.startswith("-") and arg not in _ALLOWED_CLI_FLAGS:
         msg = f"CLI flag is not allowed in tests: {arg}"
         raise ValueError(msg)
+
+
+@contextmanager
+def _temporary_env(env: dict[str, str] | None) -> Iterator[None]:
+    """Temporarily override environment variables for CLI execution.
+
+    Args:
+        env: Environment mapping to apply for the duration of the context.
+    """
+
+    if env is None:
+        yield
+        return
+    original = os.environ.copy()
+    os.environ.clear()
+    os.environ.update(env)
+    try:
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(original)
 
 
 def test_CLIでjson出力が成功する(tmp_path: Path) -> None:
