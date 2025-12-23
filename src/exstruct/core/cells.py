@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import deque
 from collections.abc import Sequence
+from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 import logging
 from pathlib import Path
@@ -9,6 +10,7 @@ import re
 
 import numpy as np
 from openpyxl import load_workbook
+from openpyxl.styles.colors import Color
 from openpyxl.utils import get_column_letter, range_boundaries
 from openpyxl.worksheet.worksheet import Worksheet
 import pandas as pd
@@ -34,6 +36,355 @@ _DETECTION_CONFIG = {
     "coverage_min": 0.2,
     "min_nonempty_cells": 3,
 }
+_DEFAULT_BACKGROUND_HEX = "FFFFFF"
+_XL_COLOR_NONE = -4142
+
+
+@dataclass(frozen=True)
+class SheetColorsMap:
+    """Background color map for a single worksheet."""
+
+    sheet_name: str
+    colors_map: dict[str, list[tuple[int, int]]]
+
+
+@dataclass(frozen=True)
+class WorkbookColorsMap:
+    """Background color maps for all worksheets in a workbook."""
+
+    sheets: dict[str, SheetColorsMap]
+
+    def get_sheet(self, sheet_name: str) -> SheetColorsMap | None:
+        """Return the colors map for a sheet if available.
+
+        Args:
+            sheet_name: Target worksheet name.
+
+        Returns:
+            SheetColorsMap for the sheet, or None if missing.
+        """
+        return self.sheets.get(sheet_name)
+
+
+def extract_sheet_colors_map(
+    file_path: Path, *, include_default_background: bool
+) -> WorkbookColorsMap:
+    """Extract background colors for each worksheet.
+
+    Args:
+        file_path: Excel workbook path.
+        include_default_background: Whether to include default (white) backgrounds
+            within the used range.
+
+    Returns:
+        WorkbookColorsMap containing per-sheet color maps.
+    """
+    wb = load_workbook(file_path, data_only=True, read_only=False)
+    sheets: dict[str, SheetColorsMap] = {}
+    try:
+        for ws in wb.worksheets:
+            sheet_map = _extract_sheet_colors(ws, include_default_background)
+            sheets[ws.title] = sheet_map
+    finally:
+        wb.close()
+    return WorkbookColorsMap(sheets=sheets)
+
+
+def extract_sheet_colors_map_com(
+    workbook: xw.Book, *, include_default_background: bool
+) -> WorkbookColorsMap:
+    """Extract background colors for each worksheet via COM display formats.
+
+    Args:
+        workbook: xlwings workbook instance.
+        include_default_background: Whether to include default (white) backgrounds
+            within the used range.
+
+    Returns:
+        WorkbookColorsMap containing per-sheet color maps.
+    """
+    _prepare_workbook_for_display_format(workbook)
+    sheets: dict[str, SheetColorsMap] = {}
+    for sheet in workbook.sheets:
+        _prepare_sheet_for_display_format(sheet)
+        sheet_map = _extract_sheet_colors_com(sheet, include_default_background)
+        sheets[sheet.name] = sheet_map
+    return WorkbookColorsMap(sheets=sheets)
+
+
+def _extract_sheet_colors(
+    ws: Worksheet, include_default_background: bool
+) -> SheetColorsMap:
+    """Extract background colors for a single worksheet.
+
+    Args:
+        ws: Target worksheet.
+        include_default_background: Whether to include default (white) backgrounds.
+
+    Returns:
+        SheetColorsMap for the worksheet.
+    """
+    min_row, min_col, max_row, max_col = _get_used_range_bounds(ws)
+    colors_map: dict[str, list[tuple[int, int]]] = {}
+    if min_row > max_row or min_col > max_col:
+        return SheetColorsMap(sheet_name=ws.title, colors_map=colors_map)
+
+    for row in ws.iter_rows(
+        min_row=min_row, max_row=max_row, min_col=min_col, max_col=max_col
+    ):
+        for cell in row:
+            color_key = _resolve_cell_background(cell, include_default_background)
+            if color_key is None:
+                continue
+            colors_map.setdefault(color_key, []).append((cell.row, cell.col_idx - 1))
+    return SheetColorsMap(sheet_name=ws.title, colors_map=colors_map)
+
+
+def _extract_sheet_colors_com(
+    sheet: xw.Sheet, include_default_background: bool
+) -> SheetColorsMap:
+    """Extract background colors for a single worksheet via COM.
+
+    Args:
+        sheet: Target worksheet.
+        include_default_background: Whether to include default (white) backgrounds.
+
+    Returns:
+        SheetColorsMap for the worksheet.
+    """
+    colors_map: dict[str, list[tuple[int, int]]] = {}
+    used = sheet.used_range
+    max_row = used.last_cell.row
+    max_col = used.last_cell.column
+    if max_row <= 0 or max_col <= 0:
+        return SheetColorsMap(sheet_name=sheet.name, colors_map=colors_map)
+
+    for row in range(1, max_row + 1):
+        for col in range(1, max_col + 1):
+            color_key = _resolve_cell_background_com(
+                sheet, row, col, include_default_background
+            )
+            if color_key is None:
+                continue
+            colors_map.setdefault(color_key, []).append((row, col - 1))
+    return SheetColorsMap(sheet_name=sheet.name, colors_map=colors_map)
+
+
+def _get_used_range_bounds(ws: Worksheet) -> tuple[int, int, int, int]:
+    """Return used range bounds for a worksheet.
+
+    Args:
+        ws: Target worksheet.
+
+    Returns:
+        Tuple of (min_row, min_col, max_row, max_col).
+    """
+    try:
+        if _is_effectively_empty_sheet(ws):
+            return 1, 1, 0, 0
+        dim = ws.calculate_dimension()
+        min_col, min_row, max_col, max_row = range_boundaries(dim)
+        return min_row, min_col, max_row, max_col
+    except Exception:
+        max_row = ws.max_row or 0
+        max_col = ws.max_column or 0
+        if max_row == 0 or max_col == 0:
+            return 1, 1, 0, 0
+        return 1, 1, max_row, max_col
+
+
+def _is_effectively_empty_sheet(ws: Worksheet) -> bool:
+    """Check whether a worksheet has no content or styling.
+
+    Args:
+        ws: Target worksheet.
+
+    Returns:
+        True if the sheet has no meaningful content or style, otherwise False.
+    """
+    if ws.max_row != 1 or ws.max_column != 1:
+        return False
+    cell = ws.cell(row=1, column=1)
+    return cell.value is None and not cell.has_style
+
+
+def _resolve_cell_background(
+    cell: object, include_default_background: bool
+) -> str | None:
+    """Resolve a cell's background color key.
+
+    Args:
+        cell: Worksheet cell object.
+        include_default_background: Whether to treat default fills as white.
+
+    Returns:
+        Normalized color key or None when excluded.
+    """
+    fill = getattr(cell, "fill", None)
+    if fill is None:
+        return _DEFAULT_BACKGROUND_HEX if include_default_background else None
+    pattern_type = getattr(fill, "patternType", None)
+    if pattern_type in (None, "none"):
+        return _DEFAULT_BACKGROUND_HEX if include_default_background else None
+    color_key = _resolve_fill_color_key(fill)
+    if color_key == _DEFAULT_BACKGROUND_HEX and not include_default_background:
+        return None
+    return color_key
+
+
+def _resolve_fill_color_key(fill: object) -> str | None:
+    """Normalize the foreground/background color of a fill.
+
+    Args:
+        fill: openpyxl fill object.
+
+    Returns:
+        Normalized color key or None when unavailable.
+    """
+    fg_color = getattr(fill, "fgColor", None)
+    if fg_color is not None:
+        fg_key = _color_to_key(fg_color)
+        if fg_key is not None:
+            return fg_key
+    bg_color = getattr(fill, "bgColor", None)
+    return _color_to_key(bg_color) if bg_color is not None else None
+
+
+def _resolve_cell_background_com(
+    sheet: xw.Sheet, row: int, col: int, include_default_background: bool
+) -> str | None:
+    """Resolve a cell's background color key via COM display format.
+
+    Args:
+        sheet: Target worksheet.
+        row: 1-based row index.
+        col: 1-based column index.
+        include_default_background: Whether to include default (white) backgrounds.
+
+    Returns:
+        Normalized color key or None when excluded.
+    """
+    color_value = _get_display_format_color(sheet, row, col)
+    if color_value is None:
+        return _DEFAULT_BACKGROUND_HEX if include_default_background else None
+    if color_value == _XL_COLOR_NONE:
+        return _DEFAULT_BACKGROUND_HEX if include_default_background else None
+    color_key = _excel_color_int_to_rgb_hex(color_value)
+    if color_key == _DEFAULT_BACKGROUND_HEX and not include_default_background:
+        return None
+    return color_key
+
+
+def _prepare_workbook_for_display_format(workbook: xw.Book) -> None:
+    """Prepare a workbook so DisplayFormat reflects conditional formatting.
+
+    Args:
+        workbook: xlwings workbook instance.
+    """
+    try:
+        workbook.app.calculate()
+    except Exception:
+        return None
+    return None
+
+
+def _prepare_sheet_for_display_format(sheet: xw.Sheet) -> None:
+    """Prepare a sheet so DisplayFormat reflects conditional formatting.
+
+    Args:
+        sheet: Target worksheet.
+    """
+    try:
+        sheet.api.Activate()
+    except Exception:
+        return None
+    try:
+        sheet.api.Calculate()
+    except Exception:
+        return None
+    return None
+
+
+def _get_display_format_color(sheet: xw.Sheet, row: int, col: int) -> int | None:
+    """Read DisplayFormat.Interior.Color from COM.
+
+    Args:
+        sheet: Target worksheet.
+        row: 1-based row index.
+        col: 1-based column index.
+
+    Returns:
+        BGR integer color or None if unavailable.
+    """
+    try:
+        cell = sheet.api.Cells(row, col)
+        display_format = cell.DisplayFormat
+        interior = display_format.Interior
+        return int(interior.Color)
+    except Exception:
+        return None
+
+
+def _excel_color_int_to_rgb_hex(color_value: int) -> str:
+    """Convert an Excel color integer into an RGB hex string.
+
+    Args:
+        color_value: Excel color integer from COM.
+
+    Returns:
+        RGB hex string (uppercase).
+    """
+    red = color_value & 0xFF
+    green = (color_value >> 8) & 0xFF
+    blue = (color_value >> 16) & 0xFF
+    return f"{red:02X}{green:02X}{blue:02X}"
+
+
+def _color_to_key(color: Color | object) -> str | None:
+    """Convert an openpyxl color object into a normalized key.
+
+    Args:
+        color: openpyxl color object.
+
+    Returns:
+        Normalized color key string or None when unavailable.
+    """
+    rgb = getattr(color, "rgb", None)
+    if rgb:
+        return _normalize_rgb(str(rgb))
+    color_type = getattr(color, "type", None)
+    if color_type == "theme":
+        theme = getattr(color, "theme", None)
+        tint = getattr(color, "tint", None)
+        theme_id = "unknown" if theme is None else str(theme)
+        if tint is None:
+            return f"theme:{theme_id}"
+        return f"theme:{theme_id}:{tint}"
+    if color_type == "indexed":
+        indexed = getattr(color, "indexed", None)
+        if indexed is not None:
+            return f"indexed:{indexed}"
+    if color_type == "auto":
+        auto = getattr(color, "auto", None)
+        return "auto" if auto is None else f"auto:{auto}"
+    return None
+
+
+def _normalize_rgb(rgb: str) -> str:
+    """Normalize an RGB/ARGB string into 6-hex format.
+
+    Args:
+        rgb: Raw RGB/ARGB string from openpyxl.
+
+    Returns:
+        Normalized RGB hex string (uppercase, 6 chars when possible).
+    """
+    cleaned = rgb.strip().upper()
+    if cleaned.startswith("0X"):
+        cleaned = cleaned[2:]
+    if len(cleaned) == 8:
+        cleaned = cleaned[2:]
+    return cleaned
 
 
 def warn_once(key: str, message: str) -> None:
@@ -366,11 +717,11 @@ def _ensure_matrix(matrix: MatrixInput) -> list[list[object]]:
     if not rows_seq:
         return []
     first = rows_seq[0]
-    if isinstance(first, Sequence) and not isinstance(first, (str, bytes, bytearray)):
+    if isinstance(first, Sequence) and not isinstance(first, str | bytes | bytearray):
         normalized: list[list[object]] = []
         for row in rows_seq:
             if isinstance(row, Sequence) and not isinstance(
-                row, (str, bytes, bytearray)
+                row, str | bytes | bytearray
             ):
                 normalized.append(list(row))
             else:
@@ -425,7 +776,9 @@ def _is_plausible_table(matrix: MatrixInput) -> bool:
         return False
 
     rows = len(normalized)
-    cols = max((len(r) if isinstance(r, list) else 1) for r in normalized) if rows else 0
+    cols = (
+        max((len(r) if isinstance(r, list) else 1) for r in normalized) if rows else 0
+    )
     if rows < 2 or cols < 2:
         return False
 
@@ -445,7 +798,9 @@ def _is_plausible_table(matrix: MatrixInput) -> bool:
     return rows_with_two >= 2 and cols_with_two >= 2
 
 
-def _nonempty_clusters(matrix: Sequence[Sequence[object]]) -> list[tuple[int, int, int, int]]:
+def _nonempty_clusters(
+    matrix: Sequence[Sequence[object]],
+) -> list[tuple[int, int, int, int]]:
     """Return bounding boxes of connected components of nonempty cells (4-neighbor)."""
     if not matrix:
         return []
@@ -493,7 +848,7 @@ def _normalize_matrix(matrix: object) -> list[list[object]]:
         return []
     if isinstance(matrix, list):
         return _ensure_matrix(matrix)
-    if isinstance(matrix, Sequence) and not isinstance(matrix, (str, bytes, bytearray)):
+    if isinstance(matrix, Sequence) and not isinstance(matrix, str | bytes | bytearray):
         return _ensure_matrix(matrix)
     return [[matrix]]
 
@@ -519,7 +874,9 @@ def _table_signal_score(matrix: Sequence[Sequence[object]]) -> float:
     header = any(_header_like_row(r) for r in normalized[:2])  # check first 2 rows
 
     rows = len(normalized)
-    cols = max((len(r) if isinstance(r, list) else 1) for r in normalized) if rows else 0
+    cols = (
+        max((len(r) if isinstance(r, list) else 1) for r in normalized) if rows else 0
+    )
     row_counts: list[int] = []
     col_counts = [0] * cols if cols else []
     for r in normalized:

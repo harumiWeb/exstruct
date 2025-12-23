@@ -43,6 +43,8 @@ class StructOptions:
         table_params: Optional dict passed to `set_table_detection_params(**table_params)`
                       before extraction. Use this to tweak table detection heuristics
                       per engine instance without touching global state.
+        include_colors_map: Whether to extract background color maps.
+        include_default_background: Whether to include default (white) backgrounds.
     """
 
     mode: ExtractionMode = "standard"
@@ -50,6 +52,8 @@ class StructOptions:
         None  # forwarded to set_table_detection_params if provided
     )
     include_cell_links: bool | None = None  # None -> auto: verbose=True, others=False
+    include_colors_map: bool | None = None  # None -> auto: verbose=True, others=False
+    include_default_background: bool = False
 
 
 class FormatOptions(BaseModel):
@@ -319,6 +323,15 @@ class ExStructEngine:
             return self.options.mode != "light"
         return self.output.filters.include_print_areas
 
+    def _include_colors_map(self) -> bool:
+        """
+        Decide whether to include background color maps in extraction.
+        Auto: verbose -> True, others -> False.
+        """
+        if self.options.include_colors_map is None:
+            return self.options.mode == "verbose"
+        return self.options.include_colors_map
+
     def _include_auto_print_areas(self) -> bool:
         """
         Decide whether to include auto page-break areas in output.
@@ -353,6 +366,7 @@ class ExStructEngine:
             table_candidates=sheet.table_candidates
             if self.output.filters.include_tables
             else [],
+            colors_map=sheet.colors_map,
             print_areas=sheet.print_areas if include_print_areas else [],
             auto_print_areas=sheet.auto_print_areas if include_auto_print_areas else [],
         )
@@ -421,6 +435,10 @@ class ExStructEngine:
             self.output.filters.include_auto_print_areas
             or self.output.destinations.auto_page_breaks_dir is not None
         )
+        include_colors_map = self._include_colors_map()
+        include_default_background = (
+            self.options.include_default_background if include_colors_map else False
+        )
         normalized_file_path = self._ensure_path(file_path)
         with self._table_params_scope():
             return extract_workbook(
@@ -429,6 +447,8 @@ class ExStructEngine:
                 include_cell_links=include_links,
                 include_print_areas=include_print_areas,
                 include_auto_page_breaks=include_auto_page_breaks,
+                include_colors_map=include_colors_map,
+                include_default_background=include_default_background,
             )
 
     def serialize(
