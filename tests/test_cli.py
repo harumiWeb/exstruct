@@ -1,4 +1,4 @@
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 import json
 from importlib import util
 import os
@@ -27,10 +27,14 @@ def _toon_available() -> bool:
 
 
 def _prepare_sample_excel(tmp_path: Path) -> Path:
-    """
-    Prepare a minimal Excel workbook for CLI tests.
-    - If repo sample exists, copy it.
-    - Otherwise, generate a tiny workbook with openpyxl.
+    """Prepare a minimal Excel workbook for CLI tests.
+
+    Args:
+        tmp_path: Temporary directory provided by pytest for test artifacts.
+
+    Returns:
+        Path to a workbook copied from the repository sample when available or
+        a generated fallback workbook created with openpyxl.
     """
     sample = Path("sample") / "sample.xlsx"
     dest = tmp_path / "sample.xlsx"
@@ -51,8 +55,13 @@ def _prepare_sample_excel(tmp_path: Path) -> Path:
 
 
 def _prepare_print_area_excel(tmp_path: Path) -> Path:
-    """
-    Prepare a workbook with a defined print area for CLI print-area tests.
+    """Prepare a workbook with a defined print area for CLI print-area tests.
+
+    Args:
+        tmp_path: Temporary directory provided by pytest for test artifacts.
+
+    Returns:
+        Path to the generated workbook that defines a print area on ``Sheet1``.
     """
     wb = Workbook()
     ws = wb.active
@@ -67,7 +76,15 @@ def _prepare_print_area_excel(tmp_path: Path) -> Path:
 
 
 def _prepare_unicode_excel(tmp_path: Path) -> Path:
-    """Create a workbook containing varied Unicode characters."""
+    """Create a workbook containing varied Unicode characters for CLI tests.
+
+    Args:
+        tmp_path: Temporary directory provided by pytest for test artifacts.
+
+    Returns:
+        Path to the generated Excel workbook that includes mixed Unicode
+        content such as Japanese text, check marks, and emoji.
+    """
 
     wb = Workbook()
     ws = wb.active
@@ -81,7 +98,7 @@ def _prepare_unicode_excel(tmp_path: Path) -> Path:
 
 
 def _run_cli(
-    args: list[str], *, text: bool = True, env: Mapping[str, str] | None = None
+    args: list[str], *, text: bool = True, env: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[bytes | str]:
     """Execute the ExStruct CLI with a fixed command prefix.
 
@@ -205,6 +222,12 @@ def test_cli_parser_excludes_auto_page_breaks_option() -> None:
 
 
 def test_CLI_stdout_is_utf8_with_cp932_env(tmp_path: Path) -> None:
+    """Ensure stdout remains UTF-8 even when PYTHONIOENCODING forces cp932.
+
+    Args:
+        tmp_path: Temporary directory provided by pytest for test artifacts.
+    """
+
     xlsx = _prepare_unicode_excel(tmp_path)
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "cp932"
