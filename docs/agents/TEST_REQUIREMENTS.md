@@ -122,9 +122,10 @@ ExStruct の全機能について、正式なテスト要件をまとめたド�
 - [CLI-02] `--format json/yaml/toml` が機能する  
 - [CLI-03] `--image` で PNG 出力  
 - [CLI-04] `--pdf` で PDF 出力  
-- [CLI-05] 無効パス入力時も安全終了（クラッシュしない）  
-- [CLI-06] エラーメッセージが stdout/stderr に出力される  
-- [CLI-07] `--print-areas-dir` で印刷範囲ファイルを出力し、include_print_areas=False ならスキップ  
+- [CLI-05] 無効パス入力時も安全終了（クラッシュしない）
+- [CLI-06] エラーメッセージが stdout/stderr に出力される
+- [CLI-07] `--print-areas-dir` で印刷範囲ファイルを出力し、include_print_areas=False ならスキップ
+- [CLI-08] Windows の cp932 環境（例: PYTHONIOENCODING=cp932）でも stdout 出力が UTF-8 を維持し、Unicode 文字を含む JSON を正しくパイプできる
 
 ---
 

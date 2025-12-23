@@ -2,9 +2,28 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import sys
 
 from exstruct import process_excel
 from exstruct.cli.availability import ComAvailability, get_com_availability
+
+
+def _ensure_utf8_stdout() -> None:
+    """Reconfigure stdout to UTF-8 when supported.
+
+    Windows consoles default to cp932 and can raise encoding errors when piping
+    non-ASCII characters. Reconfiguring prevents failures without affecting
+    environments that already default to UTF-8.
+    """
+
+    stdout = sys.stdout
+    if not hasattr(stdout, "reconfigure"):
+        return
+    reconfigure = stdout.reconfigure
+    try:
+        reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        return
 
 
 def _add_auto_page_breaks_argument(
@@ -102,6 +121,7 @@ def main(argv: list[str] | None = None) -> int:
     Returns:
         Exit code (0 for success, 1 for failure).
     """
+    _ensure_utf8_stdout()
     parser = build_parser()
     args = parser.parse_args(argv)
 
