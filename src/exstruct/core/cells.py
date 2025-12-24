@@ -171,14 +171,16 @@ def _extract_sheet_colors_com(
     """
     colors_map: dict[str, list[tuple[int, int]]] = {}
     used = sheet.used_range
+    start_row = int(getattr(used, "row", 1))
+    start_col = int(getattr(used, "column", 1))
     max_row = used.last_cell.row
     max_col = used.last_cell.column
     if max_row <= 0 or max_col <= 0:
         return SheetColorsMap(sheet_name=sheet.name, colors_map=colors_map)
 
     ignore_set = _normalize_ignore_colors(ignore_colors)
-    for row in range(1, max_row + 1):
-        for col in range(1, max_col + 1):
+    for row in range(start_row, max_row + 1):
+        for col in range(start_col, max_col + 1):
             color_key = _resolve_cell_background_com(
                 sheet, row, col, include_default_background
             )
@@ -305,8 +307,7 @@ def _prepare_workbook_for_display_format(workbook: xw.Book) -> None:
     try:
         workbook.app.calculate()
     except Exception:
-        return None
-    return None
+        return
 
 
 def _prepare_sheet_for_display_format(sheet: xw.Sheet) -> None:
@@ -318,12 +319,11 @@ def _prepare_sheet_for_display_format(sheet: xw.Sheet) -> None:
     try:
         sheet.api.Activate()
     except Exception:
-        return None
+        return
     try:
         sheet.api.Calculate()
     except Exception:
-        return None
-    return None
+        return
 
 
 def _get_display_format_color(sheet: xw.Sheet, row: int, col: int) -> int | None:

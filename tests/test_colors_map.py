@@ -7,6 +7,11 @@ from exstruct.core.cells import extract_sheet_colors_map
 
 
 def _write_color_workbook(path: Path) -> None:
+    """Create a workbook with predefined fill colors for testing.
+
+    Args:
+        path: Target path to save the workbook.
+    """
     wb = Workbook()
     ws = wb.active
     ws.title = "Sheet1"
@@ -18,6 +23,7 @@ def _write_color_workbook(path: Path) -> None:
 
 
 def test_colors_map_excludes_default_background(tmp_path: Path) -> None:
+    """Exclude default background when include_default_background is False."""
     path = tmp_path / "colors.xlsx"
     _write_color_workbook(path)
 
@@ -32,6 +38,7 @@ def test_colors_map_excludes_default_background(tmp_path: Path) -> None:
 
 
 def test_colors_map_ignores_configured_colors(tmp_path: Path) -> None:
+    """Ignore configured colors during colors_map extraction."""
     path = tmp_path / "colors.xlsx"
     _write_color_workbook(path)
 

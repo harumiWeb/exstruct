@@ -163,7 +163,6 @@ To show how well exstruct can structure Excel, we parse a workbook that combines
 (Screenshot below is the actual sample Excel sheet)
 ![Sample Excel](/docs/assets/demo_sheet.png)
 Sample workbook: `sample/sample.xlsx`
-Sample workbook: `sample/sample.xlsx`
 
 ### 1. Input: Excel Sheet Overview
 

@@ -95,7 +95,7 @@ def extract(file_path: str | Path, mode: ExtractionMode = "standard") -> Workboo
         mode: "light" / "standard" / "verbose"
             - light: cells + table detection only (no COM, shapes/charts empty). Print areas via openpyxl.
             - standard: texted shapes + arrows + charts (COM if available), print areas included. Shape/chart size is kept but hidden by default in output.
-            - verbose: all shapes (including textless) with size, charts with size.
+            - verbose: all shapes (including textless) with size, charts with size, and colors_map.
 
     Returns:
         WorkbookData containing sheets, rows, shapes, charts, and print areas.
