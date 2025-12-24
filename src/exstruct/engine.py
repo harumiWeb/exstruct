@@ -349,13 +349,13 @@ class ExStructEngine:
             return self.options.mode != "light"
         return self.output.filters.include_print_areas
 
-    def _include_colors_map(self) -> bool:
+    def _include_colors_map(self, *, mode: ExtractionMode) -> bool:
         """
         Decide whether to include background color maps in extraction.
         Auto: verbose -> True, others -> False.
         """
         if self.options.include_colors_map is None:
-            return self.options.mode == "verbose"
+            return mode == "verbose"
         return self.options.include_colors_map
 
     def _include_auto_print_areas(self) -> bool:
@@ -461,7 +461,7 @@ class ExStructEngine:
             self.output.filters.include_auto_print_areas
             or self.output.destinations.auto_page_breaks_dir is not None
         )
-        include_colors_map = self._include_colors_map()
+        include_colors_map = self._include_colors_map(mode=chosen_mode)
         include_default_background = (
             self.options.colors.include_default_background
             if include_colors_map
