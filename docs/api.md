@@ -10,7 +10,9 @@ This page shows the primary APIs, minimal runnable examples, expected outputs, a
   - [TOC](#toc)
   - [Quick Examples](#quick-examples)
   - [Dependencies](#dependencies)
-  - [Auto-generated API (mkdocstrings)](#auto-generated-api-mkdocstrings)
+  - [Auto-generated API mkdocstrings](#auto-generated-api-mkdocstrings)
+    - [Core functions](#core-functions)
+    - [Engine and options](#engine-and-options)
   - [Models](#models)
     - [Model helpers SheetData / WorkbookData](#model-helpers-sheetdata--workbookdata)
   - [Error Handling](#error-handling)
@@ -174,6 +176,12 @@ Python APIの最新情報は以下の自動生成セクションを参照して�
       show_root_heading: true
 
 ::: exstruct.engine.DestinationOptions
+    handler: python
+    options:
+      show_signature_annotations: true
+      show_root_heading: true
+
+::: exstruct.engine.ColorsOptions
     handler: python
     options:
       show_signature_annotations: true
