@@ -27,16 +27,16 @@
   - [x] `core/backends/com.py` を実装（shapes/charts/auto_page_breaks/colors/tables fallback）
   - [x] backend 選択規則（mode / SKIP_COM_TESTS / 拡張子）を整理
 
-- [ ] テーブル検出の共通化（矩形抽出・評価・範囲文字列化の再利用）
-  - [ ] 矩形抽出（border cluster 検出）を共通関数へ移動
-  - [ ] 矩形評価（density/coverage/header/score）を共通化
-  - [ ] 出力の範囲文字列化を共通化
-  - [ ] openpyxl/COM からの入力差分のみを残す
+- [x] テーブル検出の共通化（矩形抽出・評価・範囲文字列化の再利用）
+  - [x] 矩形抽出（border cluster 検出）を共通関数へ移動
+  - [x] 矩形評価（density/coverage/header/score）を共通化
+  - [x] 出力の範囲文字列化を共通化
+  - [x] openpyxl/COM からの入力差分のみを残す
 
-- [ ] 範囲解析ユーティリティの統合（print area 解析の重複排除）
-  - [ ] `core/ranges.py` に `_parse_range_zero_based` 系を集約
-  - [ ] `integrate.py` / `io/__init__.py` の重複実装を置換
-  - [ ] 既存の範囲文字列の仕様差分を整理（"Sheet!A1:B2" など）
+- [x] 範囲解析ユーティリティの統合（print area 解析の重複排除）
+  - [x] `core/ranges.py` に `_parse_range_zero_based` 系を集約
+  - [x] `integrate.py` / `io/__init__.py` の重複実装を置換
+  - [x] 既存の範囲文字列の仕様差分を整理（"Sheet!A1:B2" など）
 
 - [ ] 出力整形ロジックの共通化（json/yaml/toon 分岐とファイル書込みの整理）
   - [ ] `io/serialize.py` に format 判定・文字列生成を集約

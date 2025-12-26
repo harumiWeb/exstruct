@@ -4,6 +4,7 @@ from _pytest.monkeypatch import MonkeyPatch
 
 from exstruct.core.backends.com_backend import ComBackend
 from exstruct.core.backends.openpyxl_backend import OpenpyxlBackend
+from exstruct.core.ranges import parse_range_zero_based
 
 
 def test_openpyxl_backend_extract_cells_switches_link_mode(
@@ -69,3 +70,12 @@ def test_com_backend_extract_colors_map_returns_none_on_failure(
         backend.extract_colors_map(include_default_background=False, ignore_colors=None)
         is None
     )
+
+
+def test_parse_range_zero_based_parses_sheet_prefix() -> None:
+    bounds = parse_range_zero_based("Sheet1!A1:B2")
+    assert bounds is not None
+    assert bounds.r1 == 0
+    assert bounds.c1 == 0
+    assert bounds.r2 == 1
+    assert bounds.c2 == 1

@@ -198,3 +198,12 @@ ExStruct の全機能について、正式なテスト要件をまとめたド�
 - [BE-01] OpenpyxlBackend は include_links の有無で cells 抽出経路を切り替える
 - [BE-02] OpenpyxlBackend は table 検出失敗時に空リストで継続する
 - [BE-03] ComBackend は colors_map 抽出失敗時に None を返す
+
+## 2.8 Ranges
+
+- [RNG-01] parse_range_zero_based は "Sheet1!A1:B2" のようなシート付き範囲を正規化できる
+
+## 2.9 Table Detection
+
+- [TBL-01] 矩形マージは包含関係の矩形を統合しない
+- [TBL-02] 値行列からテーブル候補の範囲文字列を生成できる

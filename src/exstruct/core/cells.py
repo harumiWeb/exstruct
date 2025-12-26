@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 import logging
@@ -1156,21 +1156,37 @@ def shrink_to_content_openpyxl(  # noqa: C901
     return top, left, bottom, right
 
 
-def detect_tables_xlwings(sheet: xw.Sheet) -> list[str]:  # noqa: C901
-    """Detect table-like ranges via COM: ListObjects first, then border clusters."""
+def _extract_listobject_tables(sheet: xw.Sheet) -> list[str]:
+    """Extract table ranges from Excel ListObjects via COM.
+
+    Args:
+        sheet: xlwings worksheet.
+
+    Returns:
+        List of table ranges as Excel A1 strings.
+    """
     tables: list[str] = []
     try:
         for lo in sheet.api.ListObjects:
             rng = lo.Range
-            top_row = int(rng.Row)
-            left_col = int(rng.Column)
-            bottom_row = top_row + int(rng.Rows.Count) - 1
-            right_col = left_col + int(rng.Columns.Count) - 1
             addr = rng.Address(RowAbsolute=False, ColumnAbsolute=False)
             tables.append(addr)
     except Exception:
         pass
+    return tables
 
+
+def _detect_border_rectangles_xlwings(
+    sheet: xw.Sheet,
+) -> list[tuple[int, int, int, int]]:
+    """Detect bordered rectangles in a sheet using COM border inspection.
+
+    Args:
+        sheet: xlwings worksheet.
+
+    Returns:
+        List of rectangles as (top_row, left_col, bottom_row, right_col).
+    """
     used = sheet.used_range
     max_row = used.last_cell.row
     max_col = used.last_cell.column
@@ -1203,112 +1219,142 @@ def detect_tables_xlwings(sheet: xw.Sheet) -> list[str]:  # noqa: C901
         for c in range(1, max_col + 1):
             if cell_has_any_border(r, c):
                 grid[r][c] = True
-    visited = [[False] * (max_col + 1) for _ in range(max_row + 1)]
+    return _detect_border_rectangles(grid, min_size=4)
 
-    def dfs(sr: int, sc: int, acc: list[tuple[int, int]]) -> None:
-        stack = [(sr, sc)]
-        while stack:
-            rr, cc = stack.pop()
-            if not (1 <= rr <= max_row and 1 <= cc <= max_col):
-                continue
-            if visited[rr][cc] or not grid[rr][cc]:
-                continue
-            visited[rr][cc] = True
-            acc.append((rr, cc))
-            for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                stack.append((rr + dr, cc + dc))
 
-    clusters: list[tuple[int, int, int, int]] = []
-    for r in range(1, max_row + 1):
-        for c in range(1, max_col + 1):
-            if grid[r][c] and not visited[r][c]:
-                cluster: list[tuple[int, int]] = []
-                dfs(r, c, cluster)
-                if len(cluster) < 4:
-                    continue
-                rows = [rc[0] for rc in cluster]
-                cols = [rc[1] for rc in cluster]
-                top_row = min(rows)
-                bottom_row = max(rows)
-                left_col = min(cols)
-                right_col = max(cols)
-                clusters.append((top_row, left_col, bottom_row, right_col))
+def _detect_border_rectangles(
+    has_border: np.ndarray | Sequence[Sequence[bool]], *, min_size: int
+) -> list[tuple[int, int, int, int]]:
+    """Detect border rectangles from a boolean grid.
 
-    def overlaps_for_merge(
-        a: tuple[int, int, int, int], b: tuple[int, int, int, int]
-    ) -> bool:
-        # Do not merge if one rect fully contains the other (separate clusters like big frame vs small table)
-        contains = (
-            a[0] <= b[0] and a[1] <= b[1] and a[2] >= b[2] and a[3] >= b[3]
-        ) or (b[0] <= a[0] and b[1] <= a[1] and b[2] >= a[2] and b[3] >= a[3])
-        if contains:
-            return False
-        return not (a[1] > b[3] or a[3] < b[1] or a[0] > b[2] or a[2] < b[0])
+    Args:
+        has_border: Boolean grid of border presence.
+        min_size: Minimum cluster size to keep.
 
+    Returns:
+        List of rectangles as (top_row, left_col, bottom_row, right_col).
+    """
+    return detect_border_clusters(np.asarray(has_border, dtype=bool), min_size=min_size)
+
+
+def _merge_rectangles(
+    rects: Sequence[tuple[int, int, int, int]],
+) -> list[tuple[int, int, int, int]]:
+    """Merge overlapping rectangles while preserving contained regions.
+
+    Args:
+        rects: Sequence of rectangles (top, left, bottom, right).
+
+    Returns:
+        Merged rectangles sorted by coordinates.
+    """
     merged_rects: list[tuple[int, int, int, int]] = []
-    for rect in sorted(clusters):
+    for rect in sorted(rects):
         merged = False
-        for i, ex in enumerate(merged_rects):
-            if overlaps_for_merge(rect, ex):
+        for i, existing in enumerate(merged_rects):
+            if _rectangles_overlap_for_merge(rect, existing):
                 merged_rects[i] = (
-                    min(rect[0], ex[0]),
-                    min(rect[1], ex[1]),
-                    max(rect[2], ex[2]),
-                    max(rect[3], ex[3]),
+                    min(rect[0], existing[0]),
+                    min(rect[1], existing[1]),
+                    max(rect[2], existing[2]),
+                    max(rect[3], existing[3]),
                 )
                 merged = True
                 break
         if not merged:
             merged_rects.append(rect)
-
-    dedup: set[str] = set()
-    for top_row, left_col, bottom_row, right_col in merged_rects:
-        top_row, left_col, bottom_row, right_col = shrink_to_content(
-            sheet, top_row, left_col, bottom_row, right_col, require_inside_border=False
-        )
-        try:
-            rng_vals = sheet.range((top_row, left_col), (bottom_row, right_col)).value
-            rng_vals = _normalize_matrix(rng_vals)
-            nonempty = sum(
-                1
-                for row in rng_vals
-                for v in (row if isinstance(row, list) else [row])
-                if not (v is None or str(v).strip() == "")
-            )
-        except Exception:
-            nonempty = 0
-        if nonempty < _DETECTION_CONFIG["min_nonempty_cells"]:
-            continue
-        clusters = _nonempty_clusters(rng_vals)
-        for r0, c0, r1, c1 in clusters:
-            sub = [row[c0 : c1 + 1] for row in rng_vals[r0 : r1 + 1]]
-            density, coverage = _table_density_metrics(sub)
-            if (
-                density < _DETECTION_CONFIG["density_min"]
-                and coverage < _DETECTION_CONFIG["coverage_min"]
-            ):
-                continue
-            if not _is_plausible_table(sub):
-                continue
-            score = _table_signal_score(sub)
-            if score < _DETECTION_CONFIG["table_score_threshold"]:
-                continue
-            addr = f"{xw.utils.col_name(left_col + c0)}{top_row + r0}:{xw.utils.col_name(left_col + c1)}{top_row + r1}"
-            if addr not in dedup:
-                dedup.add(addr)
-                tables.append(addr)
-    return tables
+    return merged_rects
 
 
-def detect_tables_openpyxl(  # noqa: C901
-    xlsx_path: Path, sheet_name: str
-) -> list[str]:
-    wb = load_workbook(
-        xlsx_path,
-        data_only=True,
-        read_only=False,
+def _rectangles_overlap_for_merge(
+    a: tuple[int, int, int, int], b: tuple[int, int, int, int]
+) -> bool:
+    """Return True when rectangles should be merged.
+
+    Args:
+        a: First rectangle (top, left, bottom, right).
+        b: Second rectangle (top, left, bottom, right).
+
+    Returns:
+        True if rectangles overlap and neither fully contains the other.
+    """
+    contains = (a[0] <= b[0] and a[1] <= b[1] and a[2] >= b[2] and a[3] >= b[3]) or (
+        b[0] <= a[0] and b[1] <= a[1] and b[2] >= a[2] and b[3] >= a[3]
     )
-    ws = wb[sheet_name]
+    if contains:
+        return False
+    return not (a[1] > b[3] or a[3] < b[1] or a[0] > b[2] or a[2] < b[0])
+
+
+def _collect_table_candidates_from_values(
+    values: Sequence[Sequence[object]],
+    *,
+    base_top: int,
+    base_left: int,
+    col_name: Callable[[int], str],
+) -> list[str]:
+    """Collect table candidates from a normalized value matrix.
+
+    Args:
+        values: Normalized matrix of cell values.
+        base_top: Top row index of the matrix in worksheet coordinates (1-based).
+        base_left: Left column index of the matrix in worksheet coordinates (1-based).
+        col_name: Function to convert column index to Excel letters.
+
+    Returns:
+        List of detected table candidate range strings.
+    """
+    normalized = [list(row) for row in values]
+    nonempty = _count_nonempty_cells(normalized)
+    if nonempty < _DETECTION_CONFIG["min_nonempty_cells"]:
+        return []
+
+    results: list[str] = []
+    clusters = _nonempty_clusters(normalized)
+    for r0, c0, r1, c1 in clusters:
+        sub = [row[c0 : c1 + 1] for row in normalized[r0 : r1 + 1]]
+        density, coverage = _table_density_metrics(sub)
+        if (
+            density < _DETECTION_CONFIG["density_min"]
+            and coverage < _DETECTION_CONFIG["coverage_min"]
+        ):
+            continue
+        if not _is_plausible_table(sub):
+            continue
+        score = _table_signal_score(sub)
+        if score < _DETECTION_CONFIG["table_score_threshold"]:
+            continue
+        addr = (
+            f"{col_name(base_left + c0)}{base_top + r0}:"
+            f"{col_name(base_left + c1)}{base_top + r1}"
+        )
+        results.append(addr)
+    return results
+
+
+def _count_nonempty_cells(values: Sequence[Sequence[object]]) -> int:
+    """Count non-empty cells in a normalized matrix.
+
+    Args:
+        values: Normalized matrix of values.
+
+    Returns:
+        Number of non-empty cells.
+    """
+    return sum(
+        1 for row in values for v in row if not (v is None or str(v).strip() == "")
+    )
+
+
+def _extract_openpyxl_table_refs(ws: Worksheet) -> list[str]:
+    """Extract table reference strings from an openpyxl worksheet.
+
+    Args:
+        ws: Target worksheet.
+
+    Returns:
+        List of table reference strings.
+    """
     tables: list[str] = []
     try:
         openpyxl_tables: list[object] = []
@@ -1325,39 +1371,56 @@ def detect_tables_openpyxl(  # noqa: C901
                 tables.append(str(addr))
     except Exception:
         pass
+    return tables
+
+
+def detect_tables_xlwings(sheet: xw.Sheet) -> list[str]:
+    """Detect table-like ranges via COM: ListObjects first, then border clusters."""
+    tables: list[str] = []
+    tables.extend(_extract_listobject_tables(sheet))
+
+    rects = _detect_border_rectangles_xlwings(sheet)
+    merged_rects = _merge_rectangles(rects)
+    dedup: set[str] = set(tables)
+
+    for top_row, left_col, bottom_row, right_col in merged_rects:
+        top_row, left_col, bottom_row, right_col = shrink_to_content(
+            sheet, top_row, left_col, bottom_row, right_col, require_inside_border=False
+        )
+        try:
+            rng_vals = sheet.range((top_row, left_col), (bottom_row, right_col)).value
+        except Exception:
+            continue
+        candidates = _collect_table_candidates_from_values(
+            _normalize_matrix(rng_vals),
+            base_top=top_row,
+            base_left=left_col,
+            col_name=xw.utils.col_name,
+        )
+        for addr in candidates:
+            if addr not in dedup:
+                dedup.add(addr)
+                tables.append(addr)
+    return tables
+
+
+def detect_tables_openpyxl(xlsx_path: Path, sheet_name: str) -> list[str]:
+    """Detect table-like ranges via openpyxl tables and border clusters."""
+    wb = load_workbook(
+        xlsx_path,
+        data_only=True,
+        read_only=False,
+    )
+    ws = wb[sheet_name]
+    tables = _extract_openpyxl_table_refs(ws)
 
     has_border, top_edge, bottom_edge, left_edge, right_edge, max_row, max_col = (
         load_border_maps_xlsx(xlsx_path, sheet_name)
     )
-    rects = detect_border_clusters(has_border, min_size=4)
+    rects = _detect_border_rectangles(has_border, min_size=4)
+    merged_rects = _merge_rectangles(rects)
+    dedup: set[str] = set(tables)
 
-    def overlaps_for_merge(
-        a: tuple[int, int, int, int], b: tuple[int, int, int, int]
-    ) -> bool:
-        contains = (
-            a[0] <= b[0] and a[1] <= b[1] and a[2] >= b[2] and a[3] >= b[3]
-        ) or (b[0] <= a[0] and b[1] <= a[1] and b[2] >= a[2] and b[3] >= a[3])
-        if contains:
-            return False
-        return not (a[1] > b[3] or a[3] < b[1] or a[0] > b[2] or a[2] < b[0])
-
-    merged_rects: list[tuple[int, int, int, int]] = []
-    for rect in sorted(rects):
-        merged = False
-        for i, ex in enumerate(merged_rects):
-            if overlaps_for_merge(rect, ex):
-                merged_rects[i] = (
-                    min(rect[0], ex[0]),
-                    min(rect[1], ex[1]),
-                    max(rect[2], ex[2]),
-                    max(rect[3], ex[3]),
-                )
-                merged = True
-                break
-        if not merged:
-            merged_rects.append(rect)
-
-    dedup: set[str] = set()
     for top_row, left_col, bottom_row, right_col in merged_rects:
         top_row, left_col, bottom_row, right_col = shrink_to_content_openpyxl(
             ws,
@@ -1373,30 +1436,13 @@ def detect_tables_openpyxl(  # noqa: C901
             min_nonempty_ratio=0.0,
         )
         vals_block = _get_values_block(ws, top_row, left_col, bottom_row, right_col)
-        vals_block = _normalize_matrix(vals_block)
-        nonempty = sum(
-            1
-            for row in vals_block
-            for v in row
-            if not (v is None or str(v).strip() == "")
+        candidates = _collect_table_candidates_from_values(
+            _normalize_matrix(vals_block),
+            base_top=top_row,
+            base_left=left_col,
+            col_name=get_column_letter,
         )
-        if nonempty < _DETECTION_CONFIG["min_nonempty_cells"]:
-            continue
-        clusters = _nonempty_clusters(vals_block)
-        for r0, c0, r1, c1 in clusters:
-            sub = [row[c0 : c1 + 1] for row in vals_block[r0 : r1 + 1]]
-            density, coverage = _table_density_metrics(sub)
-            if (
-                density < _DETECTION_CONFIG["density_min"]
-                and coverage < _DETECTION_CONFIG["coverage_min"]
-            ):
-                continue
-            if not _is_plausible_table(sub):
-                continue
-            score = _table_signal_score(sub)
-            if score < _DETECTION_CONFIG["table_score_threshold"]:
-                continue
-            addr = f"{get_column_letter(left_col + c0)}{top_row + r0}:{get_column_letter(left_col + c1)}{top_row + r1}"
+        for addr in candidates:
             if addr not in dedup:
                 dedup.add(addr)
                 tables.append(addr)

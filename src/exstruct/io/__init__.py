@@ -8,8 +8,7 @@ import re
 from types import ModuleType
 from typing import Literal, cast
 
-from openpyxl.utils import range_boundaries
-
+from ..core.ranges import parse_range_zero_based
 from ..errors import MissingDependencyError, OutputError, SerializationError
 from ..models import CellRow, Chart, PrintArea, PrintAreaView, Shape, WorkbookData
 from ..models.types import JsonStructure
@@ -73,16 +72,10 @@ def _parse_range_zero_based(range_str: str) -> tuple[int, int, int, int] | None:
     Parse an Excel range string into zero-based (r1, c1, r2, c2) bounds.
     Returns None on failure.
     """
-    cleaned = range_str.strip()
-    if not cleaned:
+    bounds = parse_range_zero_based(range_str)
+    if bounds is None:
         return None
-    if "!" in cleaned:
-        cleaned = cleaned.split("!", 1)[1]
-    try:
-        min_col, min_row, max_col, max_row = range_boundaries(cleaned)
-    except Exception:
-        return None
-    return (min_row - 1, min_col - 1, max_row - 1, max_col - 1)
+    return (bounds.r1, bounds.c1, bounds.r2, bounds.c2)
 
 
 def _row_in_area(row: CellRow, area: PrintArea) -> bool:

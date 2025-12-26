@@ -4,11 +4,11 @@ from dataclasses import dataclass
 import logging
 from typing import Any, cast
 
-from openpyxl.utils import range_boundaries
 import xlwings as xw
 
 from ...models import PrintArea
 from ..cells import WorkbookColorsMap, extract_sheet_colors_map_com
+from ..ranges import parse_range_zero_based
 from .base import PrintAreaData
 
 logger = logging.getLogger(__name__)
@@ -144,16 +144,10 @@ def _parse_print_area_range(range_str: str) -> tuple[int, int, int, int] | None:
     Returns:
         Zero-based (r1, c1, r2, c2) tuple or None on failure.
     """
-    cleaned = range_str.strip()
-    if not cleaned:
+    bounds = parse_range_zero_based(range_str)
+    if bounds is None:
         return None
-    if "!" in cleaned:
-        cleaned = cleaned.split("!", 1)[1]
-    try:
-        min_col, min_row, max_col, max_row = range_boundaries(cleaned)
-    except Exception:
-        return None
-    return (min_row - 1, min_col - 1, max_row - 1, max_col - 1)
+    return (bounds.r1, bounds.c1, bounds.r2, bounds.c2)
 
 
 def _normalize_area_for_sheet(part: str, ws_name: str) -> str | None:
