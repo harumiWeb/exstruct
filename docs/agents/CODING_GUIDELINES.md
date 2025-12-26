@@ -45,6 +45,9 @@ def extract_shapes(sheet):
 
 ## 1.3 境界は BaseModel、内部は dataclass を主なデータ構造にする
 
+Raw*Data (e.g., SheetRawData/WorkbookRawData) は内部専用で公開APIに出さない。
+Do not expose them via public APIs or re-export from package __init__.
+
 辞書やタプルではなく、**必ず Pydantic BaseModel か dataclass を返す**。
 
 メリット：
