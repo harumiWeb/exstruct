@@ -24,10 +24,10 @@ def test_extract_workbook_fallback_on_com_failure(
     wb.save(xlsx)
     wb.close()
 
-    def boom(_path: Path) -> Never:
+    def boom(_path: Path, *args: object, **kwargs: object) -> Never:
         raise RuntimeError("COM unavailable")
 
-    monkeypatch.setattr(integrate, "_open_workbook", boom)
+    monkeypatch.setattr(integrate, "xlwings_workbook", boom)
     result = integrate.extract_workbook(xlsx, mode="standard")
     assert result.sheets["Sheet1"].shapes == []
     assert result.sheets["Sheet1"].charts == []
@@ -35,9 +35,7 @@ def test_extract_workbook_fallback_on_com_failure(
     assert result.sheets["Sheet1"].table_candidates
 
 
-def test_extract_workbook_with_links(
-    monkeypatch: MonkeyPatch, tmp_path: Path
-) -> None:
+def test_extract_workbook_with_links(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     # create workbook with hyperlink
     path = tmp_path / "links.xlsx"
     wb = Workbook()
@@ -52,7 +50,7 @@ def test_extract_workbook_with_links(
     def _raise(*_args: object, **_kwargs: object) -> Never:
         raise RuntimeError("no COM")
 
-    monkeypatch.setattr("exstruct.core.integrate._open_workbook", _raise, raising=False)
+    monkeypatch.setattr(integrate, "xlwings_workbook", _raise)
 
     result = integrate.extract_workbook(path, mode="standard", include_cell_links=True)
     row = result.sheets["Sheet1"].rows[0]

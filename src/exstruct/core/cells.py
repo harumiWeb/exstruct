@@ -9,7 +9,6 @@ from pathlib import Path
 import re
 
 import numpy as np
-from openpyxl import load_workbook
 from openpyxl.styles.colors import Color
 from openpyxl.utils import get_column_letter, range_boundaries
 from openpyxl.worksheet.worksheet import Worksheet
@@ -17,6 +16,7 @@ import pandas as pd
 import xlwings as xw
 
 from ..models import CellRow
+from .workbook import openpyxl_workbook
 
 logger = logging.getLogger(__name__)
 _warned_keys: set[str] = set()
@@ -81,16 +81,13 @@ def extract_sheet_colors_map(
     Returns:
         WorkbookColorsMap containing per-sheet color maps.
     """
-    wb = load_workbook(file_path, data_only=True, read_only=False)
     sheets: dict[str, SheetColorsMap] = {}
-    try:
+    with openpyxl_workbook(file_path, data_only=True, read_only=False) as wb:
         for ws in wb.worksheets:
             sheet_map = _extract_sheet_colors(
                 ws, include_default_background, ignore_colors
             )
             sheets[ws.title] = sheet_map
-    finally:
-        wb.close()
     return WorkbookColorsMap(sheets=sheets)
 
 
@@ -501,21 +498,21 @@ def extract_sheet_cells_with_links(file_path: Path) -> dict[str, list[CellRow]]:
         - Links are mapped by column index string (e.g., "0") to hyperlink.target.
     """
     cell_rows = extract_sheet_cells(file_path)
-    wb = load_workbook(file_path, data_only=True, read_only=False)
     links_by_sheet: dict[str, dict[int, dict[str, str]]] = {}
-    for ws in wb.worksheets:
-        sheet_links: dict[int, dict[str, str]] = {}
-        for row in ws.iter_rows():
-            for cell in row:
-                link = getattr(cell, "hyperlink", None)
-                target = getattr(link, "target", None) if link else None
-                if not target:
-                    continue
-                col_str = str(
-                    cell.col_idx - 1
-                )  # zero-based to align with extract_sheet_cells
-                sheet_links.setdefault(cell.row, {})[col_str] = target
-        links_by_sheet[ws.title] = sheet_links
+    with openpyxl_workbook(file_path, data_only=True, read_only=False) as wb:
+        for ws in wb.worksheets:
+            sheet_links: dict[int, dict[str, str]] = {}
+            for row in ws.iter_rows():
+                for cell in row:
+                    link = getattr(cell, "hyperlink", None)
+                    target = getattr(link, "target", None) if link else None
+                    if not target:
+                        continue
+                    col_str = str(
+                        cell.col_idx - 1
+                    )  # zero-based to align with extract_sheet_cells
+                    sheet_links.setdefault(cell.row, {})[col_str] = target
+            links_by_sheet[ws.title] = sheet_links
 
     merged: dict[str, list[CellRow]] = {}
     for sheet_name, rows in cell_rows.items():
@@ -662,16 +659,22 @@ def shrink_to_content(  # noqa: C901
 def load_border_maps_xlsx(  # noqa: C901
     xlsx_path: Path, sheet_name: str
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, int, int]:
-    wb = load_workbook(xlsx_path, data_only=True, read_only=False)
-    if sheet_name not in wb.sheetnames:
-        wb.close()
-        raise KeyError(f"Sheet '{sheet_name}' not found in {xlsx_path}")
+    with openpyxl_workbook(xlsx_path, data_only=True, read_only=False) as wb:
+        if sheet_name not in wb.sheetnames:
+            raise KeyError(f"Sheet '{sheet_name}' not found in {xlsx_path}")
 
-    ws = wb[sheet_name]
-    try:
-        min_col, min_row, max_col, max_row = range_boundaries(ws.calculate_dimension())
-    except Exception:
-        min_col, min_row, max_col, max_row = 1, 1, ws.max_column or 1, ws.max_row or 1
+        ws = wb[sheet_name]
+        try:
+            min_col, min_row, max_col, max_row = range_boundaries(
+                ws.calculate_dimension()
+            )
+        except Exception:
+            min_col, min_row, max_col, max_row = (
+                1,
+                1,
+                ws.max_column or 1,
+                ws.max_row or 1,
+            )
 
     shape = (max_row + 1, max_col + 1)
     has_border = np.zeros(shape, dtype=bool)
@@ -709,7 +712,6 @@ def load_border_maps_xlsx(  # noqa: C901
                 if rgt:
                     right_edge[r, c] = True
 
-    wb.close()
     return has_border, top_edge, bottom_edge, left_edge, right_edge, max_row, max_col
 
 
@@ -1406,48 +1408,43 @@ def detect_tables_xlwings(sheet: xw.Sheet) -> list[str]:
 
 def detect_tables_openpyxl(xlsx_path: Path, sheet_name: str) -> list[str]:
     """Detect table-like ranges via openpyxl tables and border clusters."""
-    wb = load_workbook(
-        xlsx_path,
-        data_only=True,
-        read_only=False,
-    )
-    ws = wb[sheet_name]
-    tables = _extract_openpyxl_table_refs(ws)
+    with openpyxl_workbook(xlsx_path, data_only=True, read_only=False) as wb:
+        ws = wb[sheet_name]
+        tables = _extract_openpyxl_table_refs(ws)
 
-    has_border, top_edge, bottom_edge, left_edge, right_edge, max_row, max_col = (
-        load_border_maps_xlsx(xlsx_path, sheet_name)
-    )
-    rects = _detect_border_rectangles(has_border, min_size=4)
-    merged_rects = _merge_rectangles(rects)
-    dedup: set[str] = set(tables)
+        has_border, top_edge, bottom_edge, left_edge, right_edge, max_row, max_col = (
+            load_border_maps_xlsx(xlsx_path, sheet_name)
+        )
+        rects = _detect_border_rectangles(has_border, min_size=4)
+        merged_rects = _merge_rectangles(rects)
+        dedup: set[str] = set(tables)
 
-    for top_row, left_col, bottom_row, right_col in merged_rects:
-        top_row, left_col, bottom_row, right_col = shrink_to_content_openpyxl(
-            ws,
-            top_row,
-            left_col,
-            bottom_row,
-            right_col,
-            require_inside_border=False,
-            top_edge=top_edge,
-            bottom_edge=bottom_edge,
-            left_edge=left_edge,
-            right_edge=right_edge,
-            min_nonempty_ratio=0.0,
-        )
-        vals_block = _get_values_block(ws, top_row, left_col, bottom_row, right_col)
-        candidates = _collect_table_candidates_from_values(
-            _normalize_matrix(vals_block),
-            base_top=top_row,
-            base_left=left_col,
-            col_name=get_column_letter,
-        )
-        for addr in candidates:
-            if addr not in dedup:
-                dedup.add(addr)
-                tables.append(addr)
-    wb.close()
-    return tables
+        for top_row, left_col, bottom_row, right_col in merged_rects:
+            top_row, left_col, bottom_row, right_col = shrink_to_content_openpyxl(
+                ws,
+                top_row,
+                left_col,
+                bottom_row,
+                right_col,
+                require_inside_border=False,
+                top_edge=top_edge,
+                bottom_edge=bottom_edge,
+                left_edge=left_edge,
+                right_edge=right_edge,
+                min_nonempty_ratio=0.0,
+            )
+            vals_block = _get_values_block(ws, top_row, left_col, bottom_row, right_col)
+            candidates = _collect_table_candidates_from_values(
+                _normalize_matrix(vals_block),
+                base_top=top_row,
+                base_left=left_col,
+                col_name=get_column_letter,
+            )
+            for addr in candidates:
+                if addr not in dedup:
+                    dedup.add(addr)
+                    tables.append(addr)
+        return tables
 
 
 def detect_tables(sheet: xw.Sheet) -> list[str]:

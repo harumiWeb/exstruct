@@ -208,3 +208,12 @@ ExStruct の全機能について、正式なテスト要件をまとめたド�
 
 - [TBL-01] 矩形マージは包含関係の矩形を統合しない
 - [TBL-02] 値行列からテーブル候補の範囲文字列を生成できる
+
+## 2.10 Workbook
+
+- [WB-01] openpyxl_workbook は例外の有無に関係なく close を呼び出す
+- [WB-02] openpyxl_workbook は既知の openpyxl 警告を抑制するフィルタを設定する
+
+## 2.11 Logging
+
+- [LOG-01] log_fallback は理由コードを含む警告ログを出力する

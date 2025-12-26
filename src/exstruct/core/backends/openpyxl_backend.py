@@ -4,8 +4,6 @@ from dataclasses import dataclass
 import logging
 from pathlib import Path
 
-from openpyxl import load_workbook
-
 from ...models import PrintArea
 from ..cells import (
     WorkbookColorsMap,
@@ -15,6 +13,7 @@ from ..cells import (
     extract_sheet_colors_map,
 )
 from ..ranges import parse_range_zero_based
+from ..workbook import openpyxl_workbook
 from .base import CellData, PrintAreaData
 
 logger = logging.getLogger(__name__)
@@ -52,20 +51,15 @@ class OpenpyxlBackend:
             Mapping of sheet name to print area list.
         """
         try:
-            wb = load_workbook(self.file_path, data_only=True, read_only=True)
+            with openpyxl_workbook(
+                self.file_path, data_only=True, read_only=True
+            ) as wb:
+                areas = _extract_print_areas_from_defined_names(wb)
+                if not areas:
+                    areas = _extract_print_areas_from_sheet_props(wb)
+                return areas
         except Exception:
             return {}
-
-        try:
-            areas = _extract_print_areas_from_defined_names(wb)
-            if not areas:
-                areas = _extract_print_areas_from_sheet_props(wb)
-            return areas
-        finally:
-            try:
-                wb.close()
-            except Exception:
-                pass
 
     def extract_colors_map(
         self, *, include_default_background: bool, ignore_colors: set[str] | None

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-import logging
 import os
 from pathlib import Path
 from typing import Literal
@@ -10,8 +9,6 @@ from typing import Literal
 from ..models import CellRow, PrintArea, SheetData, WorkbookData
 from .backends.openpyxl_backend import OpenpyxlBackend
 from .cells import WorkbookColorsMap
-
-logger = logging.getLogger(__name__)
 
 ExtractionMode = Literal["light", "standard", "verbose"]
 CellData = dict[str, list[CellRow]]
@@ -184,8 +181,4 @@ def build_cells_tables_workbook(
             auto_print_areas=[],
             colors_map=sheet_colors.colors_map if sheet_colors else {},
         )
-    logger.warning(
-        "%s Falling back to cells+tables only; shapes and charts will be empty.",
-        reason,
-    )
     return WorkbookData(book_name=inputs.file_path.name, sheets=sheets)

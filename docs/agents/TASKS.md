@@ -43,17 +43,17 @@
   - [x] `save_print_area_views` / `save_auto_page_break_views` / `save_sheets` を共通 writer に集約
   - [x] 拡張子・命名規則を統一しテストを追加
 
-- [ ] workbook の open/close 管理を共通化（contextmanager 化）
-  - [ ] `core/workbook.py` に openpyxl/COM の contextmanager を用意
-  - [ ] 例外時の close/quit を統一
-  - [ ] `integrate.py` / `cells.py` からの散在呼び出しを置換
+- [x] workbook の open/close 管理を共通化（contextmanager 化）
+  - [x] `core/workbook.py` に openpyxl/COM の contextmanager を用意
+  - [x] 例外時の close/quit を統一
+  - [x] `integrate.py` / `cells.py` からの散在呼び出しを置換
 
 - [ ] モデル化フェーズの分離（生データ収集とモデル生成の段階化）
   - [ ] 生データ収集の出力を中間モデルで統一
   - [ ] `SheetData` / `WorkbookData` の生成を builder に移動
   - [ ] `integrate_sheet_content` を分割して責務整理
 
-- [ ] フォールバック/警告ログの統一（理由コードの整理）
-  - [ ] `errors.py` にフォールバック理由コードを定義
-  - [ ] ログ出力の文言を統一しテストを追加
-  - [ ] openpyxl/COM 切替時の warning を整理
+- [x] フォールバック/警告ログの統一（理由コードの整理）
+  - [x] `errors.py` にフォールバック理由コードを定義
+  - [x] ログ出力の文言を統一しテストを追加
+  - [x] openpyxl/COM 切替時の warning を整理
