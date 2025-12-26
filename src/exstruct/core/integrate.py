@@ -15,16 +15,15 @@ from .charts import get_charts
 from .logging_utils import log_fallback
 from .pipeline import (
     ExtractionArtifacts,
-    ExtractionInputs,
     build_cells_tables_workbook,
-    build_pre_com_pipeline,
+    build_pipeline_plan,
+    resolve_extraction_inputs,
     run_pipeline,
 )
 from .shapes import get_shapes_with_position
 from .workbook import xlwings_workbook
 
 logger = logging.getLogger(__name__)
-_ALLOWED_MODES: set[str] = {"light", "standard", "verbose"}
 
 
 def integrate_sheet_content(
@@ -78,10 +77,10 @@ def extract_workbook(  # noqa: C901
     file_path: str | Path,
     mode: Literal["light", "standard", "verbose"] = "standard",
     *,
-    include_cell_links: bool = False,
-    include_print_areas: bool = True,
+    include_cell_links: bool | None = None,
+    include_print_areas: bool | None = None,
     include_auto_page_breaks: bool = False,
-    include_colors_map: bool = False,
+    include_colors_map: bool | None = None,
     include_default_background: bool = False,
     ignore_colors: set[str] | None = None,
 ) -> WorkbookData:
@@ -92,10 +91,10 @@ def extract_workbook(  # noqa: C901
     Args:
         file_path: Workbook path.
         mode: Extraction mode.
-        include_cell_links: Whether to include cell hyperlinks.
-        include_print_areas: Whether to include print areas.
+        include_cell_links: Whether to include cell hyperlinks; None uses mode defaults.
+        include_print_areas: Whether to include print areas; None defaults to True.
         include_auto_page_breaks: Whether to include auto page breaks.
-        include_colors_map: Whether to include colors map.
+        include_colors_map: Whether to include colors map; None uses mode defaults.
         include_default_background: Whether to include default background color.
         ignore_colors: Optional set of color keys to ignore.
 
@@ -105,13 +104,8 @@ def extract_workbook(  # noqa: C901
     Raises:
         ValueError: If mode is unsupported.
     """
-    if mode not in _ALLOWED_MODES:
-        raise ValueError(f"Unsupported mode: {mode}")
-
-    normalized_file_path = file_path if isinstance(file_path, Path) else Path(file_path)
-
-    inputs = ExtractionInputs(
-        file_path=normalized_file_path,
+    inputs = resolve_extraction_inputs(
+        file_path,
         mode=mode,
         include_cell_links=include_cell_links,
         include_print_areas=include_print_areas,
@@ -120,8 +114,10 @@ def extract_workbook(  # noqa: C901
         include_default_background=include_default_background,
         ignore_colors=ignore_colors,
     )
+    normalized_file_path = inputs.file_path
+    plan = build_pipeline_plan(inputs)
     artifacts = run_pipeline(
-        build_pre_com_pipeline(inputs),
+        plan.pre_com_steps,
         inputs,
         ExtractionArtifacts(),
     )
@@ -138,7 +134,7 @@ def extract_workbook(  # noqa: C901
             reason=reason,
         )
 
-    if mode == "light":
+    if not plan.use_com:
         return _cells_and_tables_only("Light mode selected.", FallbackReason.LIGHT_MODE)
 
     if os.getenv("SKIP_COM_TESTS"):
@@ -151,17 +147,17 @@ def extract_workbook(  # noqa: C901
         with xlwings_workbook(normalized_file_path) as wb:
             try:
                 com_backend = ComBackend(wb)
-                if include_colors_map and artifacts.colors_map_data is None:
+                if inputs.include_colors_map and artifacts.colors_map_data is None:
                     artifacts.colors_map_data = com_backend.extract_colors_map(
-                        include_default_background=include_default_background,
-                        ignore_colors=ignore_colors,
+                        include_default_background=inputs.include_default_background,
+                        ignore_colors=inputs.ignore_colors,
                     )
                     if artifacts.colors_map_data is None:
                         try:
                             artifacts.colors_map_data = extract_sheet_colors_map(
                                 normalized_file_path,
-                                include_default_background=include_default_background,
-                                ignore_colors=ignore_colors,
+                                include_default_background=inputs.include_default_background,
+                                ignore_colors=inputs.ignore_colors,
                             )
                         except Exception as fallback_exc:
                             logger.warning(
@@ -170,13 +166,13 @@ def extract_workbook(  # noqa: C901
                             )
                             artifacts.colors_map_data = None
                 shape_data = get_shapes_with_position(wb, mode=mode)
-                if include_print_areas and not artifacts.print_area_data:
+                if inputs.include_print_areas and not artifacts.print_area_data:
                     # openpyxl couldn't read (e.g., .xls). Try COM as a fallback.
                     try:
                         artifacts.print_area_data = com_backend.extract_print_areas()
                     except Exception:
                         artifacts.print_area_data = {}
-                if include_auto_page_breaks:
+                if inputs.include_auto_page_breaks:
                     try:
                         artifacts.auto_page_break_data = (
                             com_backend.extract_auto_page_breaks()
@@ -189,10 +185,10 @@ def extract_workbook(  # noqa: C901
                     wb,
                     mode=mode,
                     print_area_data=artifacts.print_area_data
-                    if include_print_areas
+                    if inputs.include_print_areas
                     else None,
                     auto_page_break_data=artifacts.auto_page_break_data
-                    if include_auto_page_breaks
+                    if inputs.include_auto_page_breaks
                     else None,
                     colors_map_data=artifacts.colors_map_data,
                 )

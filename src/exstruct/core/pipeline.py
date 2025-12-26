@@ -60,6 +60,111 @@ class ExtractionArtifacts:
 ExtractionStep = Callable[[ExtractionInputs, ExtractionArtifacts], None]
 
 
+@dataclass(frozen=True)
+class PipelinePlan:
+    """Resolved pipeline plan for an extraction run.
+
+    Attributes:
+        pre_com_steps: Ordered list of steps to run before COM access.
+        use_com: Whether COM-based extraction should be attempted.
+    """
+
+    pre_com_steps: list[ExtractionStep]
+    use_com: bool
+
+
+@dataclass(frozen=True)
+class StepConfig:
+    """Configuration for a pipeline step.
+
+    Attributes:
+        name: Step name for debugging.
+        step: Callable to execute.
+        enabled: Predicate to include the step in the pipeline.
+    """
+
+    name: str
+    step: ExtractionStep
+    enabled: Callable[[ExtractionInputs], bool]
+
+
+def resolve_extraction_inputs(
+    file_path: str | Path,
+    *,
+    mode: ExtractionMode,
+    include_cell_links: bool | None,
+    include_print_areas: bool | None,
+    include_auto_page_breaks: bool,
+    include_colors_map: bool | None,
+    include_default_background: bool,
+    ignore_colors: set[str] | None,
+) -> ExtractionInputs:
+    """Resolve include flags and normalize inputs for the pipeline.
+
+    Args:
+        file_path: Workbook path (str or Path).
+        mode: Extraction mode.
+        include_cell_links: Whether to include hyperlinks; None uses mode defaults.
+        include_print_areas: Whether to include print areas; None defaults to True.
+        include_auto_page_breaks: Whether to include auto page breaks.
+        include_colors_map: Whether to include background colors; None uses mode defaults.
+        include_default_background: Include default background colors when colors_map is enabled.
+        ignore_colors: Optional set of colors to ignore when colors_map is enabled.
+
+    Returns:
+        Resolved ExtractionInputs.
+
+    Raises:
+        ValueError: If an unsupported mode is provided.
+    """
+    allowed_modes: set[str] = {"light", "standard", "verbose"}
+    if mode not in allowed_modes:
+        raise ValueError(f"Unsupported mode: {mode}")
+
+    normalized_file_path = file_path if isinstance(file_path, Path) else Path(file_path)
+    resolved_cell_links = (
+        include_cell_links if include_cell_links is not None else mode == "verbose"
+    )
+    resolved_print_areas = (
+        include_print_areas if include_print_areas is not None else True
+    )
+    resolved_colors_map = (
+        include_colors_map if include_colors_map is not None else mode == "verbose"
+    )
+    resolved_default_background = (
+        include_default_background if resolved_colors_map else False
+    )
+    resolved_ignore_colors = ignore_colors if resolved_colors_map else None
+    if resolved_colors_map and resolved_ignore_colors is None:
+        resolved_ignore_colors = set()
+
+    return ExtractionInputs(
+        file_path=normalized_file_path,
+        mode=mode,
+        include_cell_links=resolved_cell_links,
+        include_print_areas=resolved_print_areas,
+        include_auto_page_breaks=include_auto_page_breaks,
+        include_colors_map=resolved_colors_map,
+        include_default_background=resolved_default_background,
+        ignore_colors=resolved_ignore_colors,
+    )
+
+
+def build_pipeline_plan(inputs: ExtractionInputs) -> PipelinePlan:
+    """Build a pipeline plan based on resolved inputs.
+
+    Args:
+        inputs: Resolved pipeline inputs.
+
+    Returns:
+        PipelinePlan containing pre-COM steps and COM usage flag.
+    """
+    return PipelinePlan(
+        pre_com_steps=build_pre_com_pipeline(inputs),
+        use_com=inputs.mode != "light",
+    )
+
+
 def build_pre_com_pipeline(inputs: ExtractionInputs) -> list[ExtractionStep]:
     """Build pipeline steps that run before COM/Excel access.
 
@@ -69,13 +174,65 @@ def build_pre_com_pipeline(inputs: ExtractionInputs) -> list[ExtractionStep]:
     Returns:
         Ordered list of extraction steps to run before COM.
     """
-    steps: list[ExtractionStep] = [step_extract_cells]
-    if inputs.include_print_areas:
-        steps.append(step_extract_print_areas_openpyxl)
-    if inputs.include_colors_map and (
-        inputs.mode == "light" or os.getenv("SKIP_COM_TESTS")
-    ):
-        steps.append(step_extract_colors_map_openpyxl)
+    step_table: dict[ExtractionMode, Sequence[StepConfig]] = {
+        "light": (
+            StepConfig(
+                name="cells",
+                step=step_extract_cells,
+                enabled=lambda _inputs: True,
+            ),
+            StepConfig(
+                name="print_areas_openpyxl",
+                step=step_extract_print_areas_openpyxl,
+                enabled=lambda _inputs: _inputs.include_print_areas,
+            ),
+            StepConfig(
+                name="colors_map_openpyxl",
+                step=step_extract_colors_map_openpyxl,
+                enabled=lambda _inputs: _inputs.include_colors_map,
+            ),
+        ),
+        "standard": (
+            StepConfig(
+                name="cells",
+                step=step_extract_cells,
+                enabled=lambda _inputs: True,
+            ),
+            StepConfig(
+                name="print_areas_openpyxl",
+                step=step_extract_print_areas_openpyxl,
+                enabled=lambda _inputs: _inputs.include_print_areas,
+            ),
+            StepConfig(
+                name="colors_map_openpyxl_if_skip_com",
+                step=step_extract_colors_map_openpyxl,
+                enabled=lambda _inputs: _inputs.include_colors_map
+                and bool(os.getenv("SKIP_COM_TESTS")),
+            ),
+        ),
+        "verbose": (
+            StepConfig(
+                name="cells",
+                step=step_extract_cells,
+                enabled=lambda _inputs: True,
+            ),
+            StepConfig(
+                name="print_areas_openpyxl",
+                step=step_extract_print_areas_openpyxl,
+                enabled=lambda _inputs: _inputs.include_print_areas,
+            ),
+            StepConfig(
+                name="colors_map_openpyxl_if_skip_com",
+                step=step_extract_colors_map_openpyxl,
+                enabled=lambda _inputs: _inputs.include_colors_map
+                and bool(os.getenv("SKIP_COM_TESTS")),
+            ),
+        ),
+    }
+    steps: list[ExtractionStep] = []
+    for config in step_table[inputs.mode]:
+        if config.enabled(inputs):
+            steps.append(config.step)
     return steps
 
 

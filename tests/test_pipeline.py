@@ -7,6 +7,7 @@ from exstruct.core.pipeline import (
     ExtractionInputs,
     build_cells_tables_workbook,
     build_pre_com_pipeline,
+    resolve_extraction_inputs,
 )
 from exstruct.models import CellRow, PrintArea
 
@@ -28,6 +29,46 @@ def test_build_pre_com_pipeline_respects_flags(
     steps = build_pre_com_pipeline(inputs)
     step_names = [step.__name__ for step in steps]
     assert step_names == ["step_extract_cells"]
+
+
+def test_build_pre_com_pipeline_includes_colors_map_for_light(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("SKIP_COM_TESTS", raising=False)
+    inputs = ExtractionInputs(
+        file_path=tmp_path / "book.xlsx",
+        mode="light",
+        include_cell_links=False,
+        include_print_areas=True,
+        include_auto_page_breaks=False,
+        include_colors_map=True,
+        include_default_background=False,
+        ignore_colors=None,
+    )
+    steps = build_pre_com_pipeline(inputs)
+    step_names = [step.__name__ for step in steps]
+    assert step_names == [
+        "step_extract_cells",
+        "step_extract_print_areas_openpyxl",
+        "step_extract_colors_map_openpyxl",
+    ]
+
+
+def test_resolve_extraction_inputs_defaults(tmp_path: Path) -> None:
+    inputs = resolve_extraction_inputs(
+        tmp_path / "book.xlsx",
+        mode="standard",
+        include_cell_links=None,
+        include_print_areas=None,
+        include_auto_page_breaks=False,
+        include_colors_map=None,
+        include_default_background=True,
+        ignore_colors=None,
+    )
+    assert inputs.include_cell_links is False
+    assert inputs.include_print_areas is True
+    assert inputs.include_colors_map is False
+    assert inputs.include_default_background is False
 
 
 def test_build_cells_tables_workbook_uses_print_areas(

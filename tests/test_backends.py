@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from _pytest.monkeypatch import MonkeyPatch
+from openpyxl import Workbook
 
 from exstruct.core.backends.com_backend import ComBackend
 from exstruct.core.backends.openpyxl_backend import OpenpyxlBackend
@@ -70,6 +71,25 @@ def test_com_backend_extract_colors_map_returns_none_on_failure(
         backend.extract_colors_map(include_default_background=False, ignore_colors=None)
         is None
     )
+
+
+def test_openpyxl_backend_extract_print_areas(tmp_path: Path) -> None:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.append(["A", "B"])
+    ws.append([1, 2])
+    ws.print_area = "A1:B2"
+    file_path = tmp_path / "print_area.xlsx"
+    wb.save(file_path)
+    wb.close()
+
+    backend = OpenpyxlBackend(file_path)
+    areas = backend.extract_print_areas()
+    assert "Sheet1" in areas
+    assert areas["Sheet1"]
+    assert areas["Sheet1"][0].r1 == 0
+    assert areas["Sheet1"][0].c1 == 0
 
 
 def test_parse_range_zero_based_parses_sheet_prefix() -> None:

@@ -35,6 +35,27 @@ def test_extract_workbook_fallback_on_com_failure(
     assert result.sheets["Sheet1"].table_candidates
 
 
+def test_extract_workbook_fallback_includes_print_areas(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    xlsx = tmp_path / "print_area.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.append(["A", "B"])
+    ws.append([1, 2])
+    ws.print_area = "A1:B2"
+    wb.save(xlsx)
+    wb.close()
+
+    def boom(_path: Path, *args: object, **kwargs: object) -> Never:
+        raise RuntimeError("COM unavailable")
+
+    monkeypatch.setattr(integrate, "xlwings_workbook", boom)
+    result = integrate.extract_workbook(xlsx, mode="standard")
+    assert result.sheets["Sheet1"].print_areas
+
+
 def test_extract_workbook_with_links(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     # create workbook with hyperlink
     path = tmp_path / "links.xlsx"

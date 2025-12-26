@@ -16,10 +16,10 @@
   - [x] ステップごとの入力/出力モデル（中間構造）を定義
   - [x] `core/integrate.py` から抽出処理の実体を分離
 
-- [ ] パイプライン定義の集約（mode 切替を 1 箇所に統一）
-  - [ ] `ExtractionMode` と include_* フラグの解決ロジックをパイプライン層へ集約
-  - [ ] light/standard/verbose の差分を「ステップ構成表」で管理
-  - [ ] 既存の `engine.ExStructEngine.extract` から新パイプラインを呼び出し
+- [x] パイプライン定義の集約（mode 切替を 1 箇所に統一）
+  - [x] `ExtractionMode` と include_* フラグの解決ロジックをパイプライン層へ集約
+  - [x] light/standard/verbose の差分を「ステップ構成表」で管理
+  - [x] 既存の `engine.ExStructEngine.extract` から新パイプラインを呼び出し
 
 - [x] openpyxl/COM の backend 抽象化（get_* 系 API を統一）
   - [x] `core/backends/base.py`（抽象）を設計

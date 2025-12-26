@@ -242,15 +242,6 @@ class ExStructEngine:
             return self.options.mode != "light"
         return self.output.filters.include_print_areas
 
-    def _include_colors_map(self, *, mode: ExtractionMode) -> bool:
-        """
-        Decide whether to include background color maps in extraction.
-        Auto: verbose -> True, others -> False.
-        """
-        if self.options.include_colors_map is None:
-            return mode == "verbose"
-        return self.options.include_colors_map
-
     def _include_auto_print_areas(self) -> bool:
         """
         Decide whether to include auto page-break areas in output.
@@ -342,38 +333,21 @@ class ExStructEngine:
                 - verbose: All shapes (with size) and charts (with size).
         """
         chosen_mode = mode or self.options.mode
-        if chosen_mode not in ("light", "standard", "verbose"):
-            raise ValueError(f"Unsupported mode: {chosen_mode}")
-        include_links = (
-            self.options.include_cell_links
-            if self.options.include_cell_links is not None
-            else chosen_mode == "verbose"
-        )
-        include_print_areas = True  # Extract print areas even in light mode
         include_auto_page_breaks = (
             self.output.filters.include_auto_print_areas
             or self.output.destinations.auto_page_breaks_dir is not None
-        )
-        include_colors_map = self._include_colors_map(mode=chosen_mode)
-        include_default_background = (
-            self.options.colors.include_default_background
-            if include_colors_map
-            else False
-        )
-        ignore_colors = (
-            self.options.colors.ignore_colors_set() if include_colors_map else set()
         )
         normalized_file_path = self._ensure_path(file_path)
         with self._table_params_scope():
             return extract_workbook(
                 normalized_file_path,
                 mode=chosen_mode,
-                include_cell_links=include_links,
-                include_print_areas=include_print_areas,
+                include_cell_links=self.options.include_cell_links,
+                include_print_areas=None,
                 include_auto_page_breaks=include_auto_page_breaks,
-                include_colors_map=include_colors_map,
-                include_default_background=include_default_background,
-                ignore_colors=ignore_colors,
+                include_colors_map=self.options.include_colors_map,
+                include_default_background=self.options.colors.include_default_background,
+                ignore_colors=self.options.colors.ignore_colors_set(),
             )
 
     def serialize(

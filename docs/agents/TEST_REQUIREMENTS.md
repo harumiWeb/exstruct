@@ -185,6 +185,7 @@ ExStruct の全機能について、正式なテスト要件をまとめたド�
 - [MODE-06] standard で既存フィクスチャに回帰し不要図形が増えない
 - [MODE-07] 無効 mode は処理開始前にエラー
 - [INT-01] COM オープン失敗時はセル+table_candidates へのフォールバック
+- [INT-02] COM フォールバック時も print_areas を保持する
 - [IO-05] dict_without_empty_values で None/空リスト/空 dict を除去しネストを保持
 - [RENDER-01] Excel+COM+pypdfium2 の PDF/PNG スモークテスト（環境 ON/OFF）
 - [MODE-08] light では openpyxl で print_areas 抽出、デフォルト出力は除外（auto 判定）
@@ -193,6 +194,7 @@ ExStruct の全機能について、正式なテスト要件をまとめたド�
 
 - [PIPE-01] build*pre_com_pipeline は include*\* と mode に応じて必要なステップのみ含む
 - [PIPE-02] build_cells_tables_workbook は print_areas を条件に反映し table_candidates を保持
+- [PIPE-03] resolve_extraction_inputs は mode デフォルトで include_* を解決する
 
 ## 2.7 Backend
 

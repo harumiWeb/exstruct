@@ -52,7 +52,7 @@ class OpenpyxlBackend:
         """
         try:
             with openpyxl_workbook(
-                self.file_path, data_only=True, read_only=True
+                self.file_path, data_only=True, read_only=False
             ) as wb:
                 areas = _extract_print_areas_from_defined_names(wb)
                 if not areas:
