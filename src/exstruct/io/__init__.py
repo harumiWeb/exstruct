@@ -454,7 +454,7 @@ def save_sheets(
     format_hint = _ensure_format_hint(
         fmt,
         allowed=_FORMAT_HINTS,
-        error_type=ValueError,
+        error_type=SerializationError,
         error_message="Unsupported sheet export format: {fmt}",
     )
 
