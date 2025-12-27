@@ -62,7 +62,7 @@ def _sample_workbook() -> WorkbookData:
         shapes=[shape],
         charts=[chart],
         table_candidates=["A1:B2"],
-        print_areas=[PrintArea(r1=0, c1=0, r2=2, c2=2)],
+        print_areas=[PrintArea(r1=1, c1=0, r2=3, c2=2)],
     )
     return WorkbookData(book_name="book.xlsx", sheets={"Sheet1": sheet})
 

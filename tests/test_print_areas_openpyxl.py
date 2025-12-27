@@ -23,4 +23,4 @@ def test_light_mode_includes_print_areas_without_com(tmp_path: Path) -> None:
     areas = wb_data.sheets["Sheet1"].print_areas
     assert len(areas) == 1
     area = areas[0]
-    assert (area.r1, area.c1, area.r2, area.c2) == (0, 0, 1, 1)
+    assert (area.r1, area.c1, area.r2, area.c2) == (1, 0, 2, 1)

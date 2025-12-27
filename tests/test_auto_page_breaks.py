@@ -44,7 +44,7 @@ def test_extract_passes_auto_page_break_flag(
 
 
 def test_export_auto_page_breaks_writes_files(tmp_path: Path) -> None:
-    area = PrintArea(r1=0, c1=0, r2=1, c2=1)
+    area = PrintArea(r1=1, c1=0, r2=2, c2=1)
     sheet = SheetData(auto_print_areas=[area])
     wb = WorkbookData(book_name="b.xlsx", sheets={"Sheet1": sheet})
 

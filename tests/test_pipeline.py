@@ -16,7 +16,6 @@ from exstruct.models import CellRow, PrintArea
 def test_build_pre_com_pipeline_respects_flags(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.delenv("SKIP_COM_TESTS", raising=False)
     inputs = ExtractionInputs(
         file_path=tmp_path / "book.xlsx",
         mode="standard",
@@ -35,7 +34,6 @@ def test_build_pre_com_pipeline_respects_flags(
 def test_build_pre_com_pipeline_includes_colors_map_for_light(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.delenv("SKIP_COM_TESTS", raising=False)
     inputs = ExtractionInputs(
         file_path=tmp_path / "book.xlsx",
         mode="light",
@@ -130,7 +128,7 @@ def test_build_cells_tables_workbook_uses_print_areas(
     )
     artifacts = ExtractionArtifacts(
         cell_data={"Sheet1": [CellRow(r=1, c={"0": "v"})]},
-        print_area_data={"Sheet1": [PrintArea(r1=0, c1=0, r2=0, c2=0)]},
+        print_area_data={"Sheet1": [PrintArea(r1=1, c1=0, r2=1, c2=0)]},
     )
     wb = build_cells_tables_workbook(
         inputs=inputs,

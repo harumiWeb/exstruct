@@ -88,7 +88,7 @@ def test_openpyxl_backend_extract_print_areas(tmp_path: Path) -> None:
     areas = backend.extract_print_areas()
     assert "Sheet1" in areas
     assert areas["Sheet1"]
-    assert areas["Sheet1"][0].r1 == 0
+    assert areas["Sheet1"][0].r1 == 1
     assert areas["Sheet1"][0].c1 == 0
 
 

@@ -10,6 +10,11 @@
 4. COM 成功時は colors_map を COM 結果で上書き
 5. COM 失敗時は cells+tables のみでフォールバック
 
+## 座標系
+
+- 行は 1-based
+- 列は 0-based
+
 ## モード
 
 - light: COM を完全にスキップ、cells+tables のみ

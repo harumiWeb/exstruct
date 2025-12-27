@@ -641,8 +641,8 @@ def run_extraction_pipeline(inputs: ExtractionInputs) -> PipelineResult:
                 )
             except Exception as exc:
                 return _fallback(
-                    f"Shape extraction failed ({exc!r}).",
-                    FallbackReason.SHAPE_EXTRACTION_FAILED,
+                    f"COM pipeline failed ({exc!r}).",
+                    FallbackReason.COM_PIPELINE_FAILED,
                 )
     except Exception as exc:
         return _fallback(
@@ -667,6 +667,7 @@ def build_cells_tables_workbook(
     Returns:
         WorkbookData constructed from cells and detected tables.
     """
+    logger.debug("Building fallback workbook: %s", reason)
     backend = OpenpyxlBackend(inputs.file_path)
     colors_map_data = artifacts.colors_map_data
     if inputs.include_colors_map and colors_map_data is None:

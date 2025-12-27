@@ -16,7 +16,7 @@ def test_モデルのデフォルトとオプション値() -> None:
     assert shape.rotation is None
     assert shape.direction is None
 
-    cell = CellRow(r=0, c={"0": "v"})
+    cell = CellRow(r=1, c={"0": "v"})
     assert cell.c["0"] == "v"
 
     chart_series = ChartSeries(name="s")

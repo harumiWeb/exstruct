@@ -44,7 +44,7 @@ class ComBackend:
                     continue
                 r1, c1, r2, c2 = parsed
                 areas.setdefault(sheet.name, []).append(
-                    PrintArea(r1=r1, c1=c1, r2=r2, c2=c2)
+                    PrintArea(r1=r1 + 1, c1=c1, r2=r2 + 1, c2=c2)
                 )
         return areas
 

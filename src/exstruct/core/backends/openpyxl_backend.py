@@ -157,7 +157,9 @@ def _append_print_areas(areas: PrintAreaData, sheet_name: str, range_str: str) -
         if not parsed:
             continue
         r1, c1, r2, c2 = parsed
-        areas.setdefault(sheet_name, []).append(PrintArea(r1=r1, c1=c1, r2=r2, c2=c2))
+        areas.setdefault(sheet_name, []).append(
+            PrintArea(r1=r1 + 1, c1=c1, r2=r2 + 1, c2=c2)
+        )
 
 
 def _parse_print_area_range(range_str: str) -> tuple[int, int, int, int] | None:

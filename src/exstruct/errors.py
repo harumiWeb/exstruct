@@ -43,4 +43,4 @@ class FallbackReason(str, Enum):
     LIGHT_MODE = "light_mode"
     SKIP_COM_TESTS = "skip_com_tests"
     COM_UNAVAILABLE = "com_unavailable"
-    SHAPE_EXTRACTION_FAILED = "shape_extraction_failed"
+    COM_PIPELINE_FAILED = "com_pipeline_failed"

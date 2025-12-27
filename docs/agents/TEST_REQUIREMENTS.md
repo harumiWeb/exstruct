@@ -101,6 +101,7 @@ ExStruct の全機能について、正式なテスト要件をまとめたド�
 - [MOD-05] direction Literal で不正値は ValidationError
 - [MOD-06] rows/shapes/charts/tables はデフォルト空リスト
 - [MOD-07] WorkbookData は `__getitem__` と順序付き iteration を提供
+- [MOD-08] PrintArea は row=1-based / column=0-based を満たす
 
 ---
 
@@ -199,8 +200,8 @@ ExStruct の全機能について、正式なテスト要件をまとめたド�
 - [PIPE-05] colors_map は COM 成功時に COM 結果で上書きし、失敗時のみ openpyxl を使う
 - [PIPE-06] print_areas は openpyxl の結果を保持し、COM は不足分のみ補完する
 - [PIPE-07] PipelineState は com_attempted/com_succeeded/fallback_reason を保持する
-- [MOD-01] build_workbook_data は raw コンテナから WorkbookData/SheetData を構築する
-- [MOD-02] collect_sheet_raw_data は抽出済みデータを raw コンテナにまとめる
+- [PIPE-MOD-01] build_workbook_data は raw コンテナから WorkbookData/SheetData を構築する
+- [PIPE-MOD-02] collect_sheet_raw_data は抽出済みデータを raw コンテナにまとめる
 
 ## 2.7 Backend
 

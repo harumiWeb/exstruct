@@ -22,9 +22,9 @@ def test_build_workbook_data_from_raw() -> None:
             )
         ],
         table_candidates=["A1:A1"],
-        print_areas=[PrintArea(r1=0, c1=0, r2=0, c2=0)],
+        print_areas=[PrintArea(r1=1, c1=0, r2=1, c2=0)],
         auto_print_areas=[],
-        colors_map={"#FFFFFF": [(0, 0)]},
+        colors_map={"#FFFFFF": [(1, 0)]},
     )
     raw_workbook = WorkbookRawData(book_name="book.xlsx", sheets={"Sheet1": raw_sheet})
 

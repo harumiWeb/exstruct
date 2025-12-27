@@ -130,6 +130,8 @@ def _filter_table_candidates_to_area(
         if not bounds:
             continue
         r1, c1, r2, c2 = bounds
+        r1 += 1
+        r2 += 1
         if r1 >= area.r1 and r2 <= area.r2 and c1 >= area.c1 and c2 <= area.c2:
             filtered.append(candidate)
     return filtered
@@ -143,9 +145,9 @@ def _area_to_px_rect(
     Uses default Excel-like cell sizes; accuracy is highest when shapes/charts are COM-extracted.
     """
     left = area.c1 * col_px
-    top = area.r1 * row_px
+    top = (area.r1 - 1) * row_px
     right = (area.c2 + 1) * col_px
-    bottom = (area.r2 + 1) * row_px
+    bottom = area.r2 * row_px
     return left, top, right, bottom
 
 
