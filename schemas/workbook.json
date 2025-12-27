@@ -216,12 +216,12 @@
       "description": "Cell coordinate bounds for a print area.",
       "properties": {
         "c1": {
-          "description": "Start column (1-based).",
+          "description": "Start column (0-based).",
           "title": "C1",
           "type": "integer"
         },
         "c2": {
-          "description": "End column (1-based, inclusive).",
+          "description": "End column (0-based, inclusive).",
           "title": "C2",
           "type": "integer"
         },
@@ -448,7 +448,7 @@
             },
             "type": "array"
           },
-          "description": "Mapping of hex color codes to lists of (row, column) tuples where the background color matches.",
+          "description": "Mapping of hex color codes to lists of (row, column) tuples where row is 1-based and column is 0-based.",
           "title": "Colors Map",
           "type": "object"
         },

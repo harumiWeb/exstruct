@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 import subprocess
 import sys
@@ -31,7 +33,7 @@ def test_com_error_fallback(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     def _raise(*_a: object, **_k: object) -> Never:
         raise RuntimeError("COM not available")
 
-    monkeypatch.setattr("exstruct.core.integrate.xw.Book", _raise, raising=False)
+    monkeypatch.setattr("exstruct.core.pipeline.xlwings_workbook", _raise)
     data = extract(path)
     assert data.sheets
     sheet = next(iter(data.sheets.values()))
@@ -50,7 +52,7 @@ def test_shapes_extraction_failure_isolated(
         raise RuntimeError("shapes fail")
 
     monkeypatch.setattr(
-        "exstruct.core.integrate.get_shapes_with_position", _raise_shapes
+        "exstruct.core.pipeline.get_shapes_with_position", _raise_shapes
     )
 
     class DummyBook:
@@ -60,7 +62,11 @@ def test_shapes_extraction_failure_isolated(
         def close(self) -> None:
             pass
 
-    monkeypatch.setattr("exstruct.core.integrate.xw.Book", DummyBook, raising=False)
+    @contextmanager
+    def _dummy_workbook(*_a: object, **_k: object) -> Iterator[DummyBook]:
+        yield DummyBook()
+
+    monkeypatch.setattr("exstruct.core.pipeline.xlwings_workbook", _dummy_workbook)
 
     data = extract_workbook(path)
     for sheet in data.sheets.values():

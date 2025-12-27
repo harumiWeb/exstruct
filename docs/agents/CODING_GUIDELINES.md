@@ -43,9 +43,12 @@ def extract_shapes(sheet):
 
 ---
 
-## 1.3 Pydantic モデルを主なデータ構造にする
+## 1.3 境界は BaseModel、内部は dataclass を主なデータ構造にする
 
-辞書やタプルではなく、**必ず Pydantic BaseModel を返す**。
+Raw*Data (e.g., SheetRawData/WorkbookRawData) は内部専用で公開APIに出さない。
+Do not expose them via public APIs or re-export from package __init__.
+
+辞書やタプルではなく、**必ず Pydantic BaseModel か dataclass を返す**。
 
 メリット：
 
@@ -154,7 +157,7 @@ Codex を利用する場合、以下を事前にプロンプトに記載する�
 
 - 型ヒントは必須
 - 1 関数 = 1 責務
-- Pydantic モデルを返す
+- 境界は BaseModel、内部は dataclass モデルを返す
 - Docstring を Google スタイルで書く
 - import は正しい順序で書く
 - エラーハンドリングは簡潔に
@@ -172,7 +175,7 @@ Codex を利用する場合、以下を事前にプロンプトに記載する�
 必ず以下を守ってください：
 - 型ヒントは全ての引数と戻り値に付ける
 - １関数 = １責務
-- Pydantic BaseModel を返す
+- 境界は BaseModel、内部は dataclass を返す
 - import を正しい順序で並べる
 - docstring（Google スタイル）を書く
 - 複雑になりすぎないよう関数を分割する
@@ -190,7 +193,7 @@ AI が生成したコードをレビューする際は、以下の順に確認�
 1. 型ヒントが完全か
 2. docstring があるか
 3. import の順序が正しいか
-4. Pydantic モデルを返しているか
+4. 境界は BaseModel、内部は dataclass モデルを返しているか
 5. 関数が単一責務か
 6. 例外処理が適切か
 7. 複雑度が max 12 を超えていないか
@@ -213,7 +216,7 @@ AI が生成したコードをレビューする際は、以下の順に確認�
 # 10. ExStruct の設計原則まとめ
 
 - 型安全性（type safety）
-- データ構造の明確化（Pydantic）
+- データ構造の明確化（境界は BaseModel、内部は dataclass）
 - モジュールの疎結合化
 - 関数責務の最小化
 - AI と人間の共存を前提にしたコード規律

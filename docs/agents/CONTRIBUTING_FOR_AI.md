@@ -26,7 +26,7 @@
 
 - 型ヒントは全ての引数と戻り値に付ける
 - １関数 = １責務
-- Pydantic BaseModel を返す
+- 境界は BaseModel、内部は dataclass を返す
 - import を正しい順序で並べる
 - docstring（Google スタイル）を書く
 - 複雑になりすぎないよう関数を分割する
@@ -36,5 +36,5 @@
 
 - テスティングフレームワークは`pytest`, `pytest-mock`を使用
 - Excel ファイルのサンプルは `/tests/data/*.xlsx` に置く
-- 回帰テストとして Pydantic モデル一致を優先する
+- 回帰テストとして Pydantic/dataclass モデル一致を優先する
 - 静的解析にはruff, mypyを使用する。したがって、これらのlintに通る実装をする。

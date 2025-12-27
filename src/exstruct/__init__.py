@@ -11,6 +11,7 @@ from .engine import (
     DestinationOptions,
     ExStructEngine,
     FilterOptions,
+    FormatOptions,
     OutputOptions,
     StructOptions,
 )
@@ -76,6 +77,7 @@ __all__ = [
     "StructOptions",
     "OutputOptions",
     "FilterOptions",
+    "FormatOptions",
     "DestinationOptions",
     "ColorsOptions",
     "serialize_workbook",
@@ -365,16 +367,18 @@ def process_excel(
     engine = ExStructEngine(
         options=StructOptions(mode=mode),
         output=OutputOptions(
-            fmt=out_fmt,
-            pretty=pretty,
-            indent=indent,
-            sheets_dir=sheets_dir,
-            print_areas_dir=print_areas_dir,
-            auto_page_breaks_dir=auto_page_breaks_dir,
-            include_print_areas=None if mode == "light" else True,
-            include_shape_size=True if mode == "verbose" else False,
-            include_chart_size=True if mode == "verbose" else False,
-            stream=stream,
+            format=FormatOptions(fmt=out_fmt, pretty=pretty, indent=indent),
+            filters=FilterOptions(
+                include_print_areas=None if mode == "light" else True,
+                include_shape_size=True if mode == "verbose" else False,
+                include_chart_size=True if mode == "verbose" else False,
+            ),
+            destinations=DestinationOptions(
+                sheets_dir=sheets_dir,
+                print_areas_dir=print_areas_dir,
+                auto_page_breaks_dir=auto_page_breaks_dir,
+                stream=stream,
+            ),
         ),
     )
     engine.process(

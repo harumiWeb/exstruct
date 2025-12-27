@@ -3,7 +3,13 @@ from pathlib import Path
 
 from _pytest.monkeypatch import MonkeyPatch
 
-from exstruct.engine import ExStructEngine, OutputOptions, StructOptions
+from exstruct.engine import (
+    DestinationOptions,
+    ExStructEngine,
+    FilterOptions,
+    OutputOptions,
+    StructOptions,
+)
 from exstruct.models import (
     CellRow,
     Chart,
@@ -56,21 +62,25 @@ def _sample_workbook() -> WorkbookData:
         shapes=[shape],
         charts=[chart],
         table_candidates=["A1:B2"],
-        print_areas=[PrintArea(r1=0, c1=0, r2=2, c2=2)],
+        print_areas=[PrintArea(r1=1, c1=0, r2=3, c2=2)],
     )
     return WorkbookData(book_name="book.xlsx", sheets={"Sheet1": sheet})
 
 
 def test_engine_serialize_filters_shapes(tmp_path: Path) -> None:
     wb = _sample_workbook()
-    engine = ExStructEngine(output=OutputOptions(include_shapes=False))
+    engine = ExStructEngine(
+        output=OutputOptions(filters=FilterOptions(include_shapes=False))
+    )
     text = engine.serialize(wb, fmt="json")
     assert '"shapes"' not in text
 
 
 def test_engine_serialize_filters_tables(tmp_path: Path) -> None:
     wb = _sample_workbook()
-    engine = ExStructEngine(output=OutputOptions(include_tables=False))
+    engine = ExStructEngine(
+        output=OutputOptions(filters=FilterOptions(include_tables=False))
+    )
     text = engine.serialize(wb, fmt="json")
     assert "table_candidates" not in text
 
@@ -86,10 +96,12 @@ def test_engine_include_cell_links_toggle() -> None:
 
     engine_no_links = ExStructEngine(
         output=OutputOptions(
-            include_rows=True,
-            include_shapes=True,
-            include_charts=True,
-            include_tables=True,
+            filters=FilterOptions(
+                include_rows=True,
+                include_shapes=True,
+                include_charts=True,
+                include_tables=True,
+            )
         )
     )
     # overwrite output options to drop links by excluding rows manually would drop links, but links live inside rows; not filtered here.
@@ -112,7 +124,9 @@ def test_engine_include_cell_links_toggle() -> None:
 def test_engine_export_respects_sheets_dir(tmp_path: Path) -> None:
     wb = _sample_workbook()
     sheets_dir = tmp_path / "sheets"
-    engine = ExStructEngine(output=OutputOptions(sheets_dir=sheets_dir))
+    engine = ExStructEngine(
+        output=OutputOptions(destinations=DestinationOptions(sheets_dir=sheets_dir))
+    )
     out = tmp_path / "out.json"
     engine.export(wb, output_path=out)
     assert out.exists()
@@ -124,7 +138,9 @@ def test_engine_export_respects_sheets_dir(tmp_path: Path) -> None:
 def test_engine_export_print_areas_dir(tmp_path: Path) -> None:
     wb = _sample_workbook()
     areas_dir = tmp_path / "areas"
-    engine = ExStructEngine(output=OutputOptions(print_areas_dir=areas_dir))
+    engine = ExStructEngine(
+        output=OutputOptions(destinations=DestinationOptions(print_areas_dir=areas_dir))
+    )
     out = tmp_path / "out.json"
     engine.export(wb, output_path=out)
     files = list(areas_dir.glob("*.json"))
@@ -139,7 +155,10 @@ def test_engine_export_print_areas_respects_include_flag(tmp_path: Path) -> None
     wb = _sample_workbook()
     areas_dir = tmp_path / "areas"
     engine = ExStructEngine(
-        output=OutputOptions(print_areas_dir=areas_dir, include_print_areas=False)
+        output=OutputOptions(
+            filters=FilterOptions(include_print_areas=False),
+            destinations=DestinationOptions(print_areas_dir=areas_dir),
+        )
     )
     out = tmp_path / "out.json"
     engine.export(wb, output_path=out)
@@ -155,7 +174,9 @@ def test_engine_export_print_areas_light_mode_skips_shapes_and_charts(
     areas_dir = tmp_path / "areas"
     engine = ExStructEngine(
         options=StructOptions(mode="light"),
-        output=OutputOptions(print_areas_dir=areas_dir),
+        output=OutputOptions(
+            destinations=DestinationOptions(print_areas_dir=areas_dir)
+        ),
     )
     out = tmp_path / "out.json"
     engine.export(wb, output_path=out, fmt="json")
@@ -171,8 +192,10 @@ def test_engine_export_accepts_string_paths(tmp_path: Path) -> None:
     out = tmp_path / "out.json"
     engine = ExStructEngine(
         output=OutputOptions(
-            sheets_dir=str(sheets_dir),
-            print_areas_dir=str(areas_dir),
+            destinations=DestinationOptions(
+                sheets_dir=str(sheets_dir),
+                print_areas_dir=str(areas_dir),
+            )
         )
     )
     engine.export(wb, output_path=str(out), fmt="json")

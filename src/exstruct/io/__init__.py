@@ -1,18 +1,21 @@
 from __future__ import annotations
 
-import importlib
-import json
 import logging
 from pathlib import Path
 import re
-from types import ModuleType
 from typing import Literal, cast
 
-from openpyxl.utils import range_boundaries
-
-from ..errors import MissingDependencyError, OutputError, SerializationError
+from ..core.ranges import RangeBounds, parse_range_zero_based
+from ..errors import OutputError, SerializationError
 from ..models import CellRow, Chart, PrintArea, PrintAreaView, Shape, WorkbookData
 from ..models.types import JsonStructure
+from .serialize import (
+    _FORMAT_HINTS,
+    _ensure_format_hint,
+    _require_toon,
+    _require_yaml,
+    _serialize_payload_from_hint,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -68,21 +71,16 @@ def _sanitize_sheet_filename(name: str) -> str:
     return safe or "sheet"
 
 
-def _parse_range_zero_based(range_str: str) -> tuple[int, int, int, int] | None:
+def _parse_range_zero_based(range_str: str) -> RangeBounds | None:
+    """Parse an Excel range string into zero-based bounds.
+
+    Args:
+        range_str: Excel range string (e.g., "Sheet1!A1:B2").
+
+    Returns:
+        RangeBounds in zero-based coordinates, or None on failure.
     """
-    Parse an Excel range string into zero-based (r1, c1, r2, c2) bounds.
-    Returns None on failure.
-    """
-    cleaned = range_str.strip()
-    if not cleaned:
-        return None
-    if "!" in cleaned:
-        cleaned = cleaned.split("!", 1)[1]
-    try:
-        min_col, min_row, max_col, max_row = range_boundaries(cleaned)
-    except Exception:
-        return None
-    return (min_row - 1, min_col - 1, max_row - 1, max_col - 1)
+    return parse_range_zero_based(range_str)
 
 
 def _row_in_area(row: CellRow, area: PrintArea) -> bool:
@@ -132,8 +130,14 @@ def _filter_table_candidates_to_area(
         bounds = _parse_range_zero_based(candidate)
         if not bounds:
             continue
-        r1, c1, r2, c2 = bounds
-        if r1 >= area.r1 and r2 <= area.r2 and c1 >= area.c1 and c2 <= area.c2:
+        r1 = bounds.r1 + 1
+        r2 = bounds.r2 + 1
+        if (
+            r1 >= area.r1
+            and r2 <= area.r2
+            and bounds.c1 >= area.c1
+            and bounds.c2 <= area.c2
+        ):
             filtered.append(candidate)
     return filtered
 
@@ -146,9 +150,9 @@ def _area_to_px_rect(
     Uses default Excel-like cell sizes; accuracy is highest when shapes/charts are COM-extracted.
     """
     left = area.c1 * col_px
-    top = area.r1 * row_px
+    top = (area.r1 - 1) * row_px
     right = (area.c2 + 1) * col_px
-    bottom = (area.r2 + 1) * row_px
+    bottom = area.r2 * row_px
     return left, top, right, bottom
 
 
@@ -281,13 +285,12 @@ def save_print_area_views(
     Save each print area as an individual file in the specified format.
     Returns a map of area key (e.g., 'Sheet1#1') to written path.
     """
-    format_hint = fmt.lower()
-    if format_hint == "yml":
-        format_hint = "yaml"
-    if format_hint not in ("json", "yaml", "toon"):
-        raise SerializationError(
-            f"Unsupported print-area export format '{fmt}'. Allowed: json, yaml, yml, toon."
-        )
+    format_hint = _ensure_format_hint(
+        fmt,
+        allowed=_FORMAT_HINTS,
+        error_type=SerializationError,
+        error_message="Unsupported print-area export format '{fmt}'. Allowed: json, yaml, yml, toon.",
+    )
 
     views = build_print_area_views(
         workbook,
@@ -314,18 +317,10 @@ def save_print_area_views(
                 f"_area{idx + 1}_r{area.r1}-{area.r2}_c{area.c1}-{area.c2}{suffix}"
             )
             path = output_dir / file_name
-            match format_hint:
-                case "json":
-                    indent_val = 2 if pretty and indent is None else indent
-                    text = view.to_json(pretty=pretty, indent=indent_val)
-                case "yaml":
-                    text = view.to_yaml()
-                case "toon":
-                    text = view.to_toon()
-                case _:
-                    raise SerializationError(
-                        f"Unsupported print-area export format '{fmt}'. Allowed: json, yaml, yml, toon."
-                    )
+            payload = dict_without_empty_values(view.model_dump(exclude_none=True))
+            text = _serialize_payload_from_hint(
+                payload, format_hint, pretty=pretty, indent=indent
+            )
             _write_text(path, text)
             written[key] = path
     return written
@@ -348,13 +343,12 @@ def save_auto_page_break_views(
     Save auto page-break areas (computed via Excel COM) per sheet in the specified format.
     Returns a map of area key (e.g., 'Sheet1#auto#1') to written path.
     """
-    format_hint = fmt.lower()
-    if format_hint == "yml":
-        format_hint = "yaml"
-    if format_hint not in ("json", "yaml", "toon"):
-        raise SerializationError(
-            f"Unsupported auto page-break export format '{fmt}'. Allowed: json, yaml, yml, toon."
-        )
+    format_hint = _ensure_format_hint(
+        fmt,
+        allowed=_FORMAT_HINTS,
+        error_type=SerializationError,
+        error_message="Unsupported auto page-break export format '{fmt}'. Allowed: json, yaml, yml, toon.",
+    )
 
     views = _iter_area_views(
         workbook,
@@ -382,18 +376,10 @@ def save_auto_page_break_views(
                 f"_auto_page{idx + 1}_r{area.r1}-{area.r2}_c{area.c1}-{area.c2}{suffix}"
             )
             path = output_dir / file_name
-            match format_hint:
-                case "json":
-                    indent_val = 2 if pretty and indent is None else indent
-                    text = view.to_json(pretty=pretty, indent=indent_val)
-                case "yaml":
-                    text = view.to_yaml()
-                case "toon":
-                    text = view.to_toon()
-                case _:
-                    raise SerializationError(
-                        f"Unsupported auto page-break export format '{fmt}'. Allowed: json, yaml, yml, toon."
-                    )
+            payload = dict_without_empty_values(view.model_dump(exclude_none=True))
+            text = _serialize_payload_from_hint(
+                payload, format_hint, pretty=pretty, indent=indent
+            )
             _write_text(path, text)
             written[key] = path
     return written
@@ -409,32 +395,16 @@ def serialize_workbook(
     """
     Convert WorkbookData to string in the requested format without writing to disk.
     """
-    format_hint = fmt.lower()
-    if format_hint == "yml":
-        format_hint = "yaml"
+    format_hint = _ensure_format_hint(
+        fmt,
+        allowed=_FORMAT_HINTS,
+        error_type=SerializationError,
+        error_message="Unsupported export format '{fmt}'. Allowed: json, yaml, yml, toon.",
+    )
     filtered_dict = dict_without_empty_values(model.model_dump(exclude_none=True))
-
-    match format_hint:
-        case "json":
-            indent_val = 2 if pretty and indent is None else indent
-            return json.dumps(filtered_dict, ensure_ascii=False, indent=indent_val)
-        case "yaml":
-            yaml = _require_yaml()
-            return str(
-                yaml.safe_dump(
-                    filtered_dict,
-                    allow_unicode=True,
-                    sort_keys=False,
-                    indent=2,
-                )
-            )
-        case "toon":
-            toon = _require_toon()
-            return str(toon.encode(filtered_dict))
-        case _:
-            raise SerializationError(
-                f"Unsupported export format '{fmt}'. Allowed: json, yaml, yml, toon."
-            )
+    return _serialize_payload_from_hint(
+        filtered_dict, format_hint, pretty=pretty, indent=indent
+    )
 
 
 def save_sheets_as_json(
@@ -461,8 +431,10 @@ def save_sheets_as_json(
         )
         file_name = f"{_sanitize_sheet_filename(sheet_name)}.json"
         path = output_dir / file_name
-        indent_val = 2 if pretty and indent is None else indent
-        _write_text(path, json.dumps(payload, ensure_ascii=False, indent=indent_val))
+        text = _serialize_payload_from_hint(
+            payload, "json", pretty=pretty, indent=indent
+        )
+        _write_text(path, text)
         written[sheet_name] = path
     return written
 
@@ -479,11 +451,12 @@ def save_sheets(
     Save each sheet as an individual file in the specified format (json/yaml/toon).
     Payload includes book_name and the sheet's SheetData.
     """
-    format_hint = fmt.lower()
-    if format_hint == "yml":
-        format_hint = "yaml"
-    if format_hint not in ("json", "yaml", "toon"):
-        raise ValueError(f"Unsupported sheet export format: {fmt}")
+    format_hint = _ensure_format_hint(
+        fmt,
+        allowed=_FORMAT_HINTS,
+        error_type=SerializationError,
+        error_message="Unsupported sheet export format: {fmt}",
+    )
 
     output_dir.mkdir(parents=True, exist_ok=True)
     written: dict[str, Path] = {}
@@ -498,47 +471,12 @@ def save_sheets(
         suffix = {"json": ".json", "yaml": ".yaml", "toon": ".toon"}[format_hint]
         file_name = f"{_sanitize_sheet_filename(sheet_name)}{suffix}"
         path = output_dir / file_name
-        match format_hint:
-            case "json":
-                indent_val = 2 if pretty and indent is None else indent
-                text = json.dumps(payload, ensure_ascii=False, indent=indent_val)
-            case "yaml":
-                yaml = _require_yaml()
-                text = str(
-                    yaml.safe_dump(
-                        payload, allow_unicode=True, sort_keys=False, indent=2
-                    )
-                )
-            case "toon":
-                toon = _require_toon()
-                text = str(toon.encode(payload))
-            case _:
-                raise SerializationError(
-                    f"Unsupported sheet export format '{format_hint}'. Allowed: json, yaml, yml, toon."
-                )
+        text = _serialize_payload_from_hint(
+            payload, format_hint, pretty=pretty, indent=indent
+        )
         _write_text(path, text)
         written[sheet_name] = path
     return written
-
-
-def _require_yaml() -> ModuleType:
-    try:
-        module = importlib.import_module("yaml")
-    except ImportError as e:
-        raise MissingDependencyError(
-            "YAML export requires pyyaml. Install it via `pip install pyyaml` or add the 'yaml' extra."
-        ) from e
-    return module
-
-
-def _require_toon() -> ModuleType:
-    try:
-        module = importlib.import_module("toon")
-    except ImportError as e:
-        raise MissingDependencyError(
-            "TOON export requires python-toon. Install it via `pip install python-toon` or add the 'toon' extra."
-        ) from e
-    return module
 
 
 __all__ = [
@@ -552,4 +490,6 @@ __all__ = [
     "save_print_area_views",
     "save_auto_page_break_views",
     "serialize_workbook",
+    "_require_yaml",
+    "_require_toon",
 ]

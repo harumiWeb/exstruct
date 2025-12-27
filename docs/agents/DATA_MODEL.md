@@ -93,9 +93,9 @@ Chart {
 
 ```jsonc
 PrintArea {
-  r1: int  // 開始行 (0-based, inclusive)
+  r1: int  // 開始行 (1-based, inclusive)
   c1: int  // 開始列 (0-based, inclusive)
-  r2: int  // 終了行 (0-based, inclusive)
+  r2: int  // 終了行 (1-based, inclusive)
   c2: int  // 終了列 (0-based, inclusive)
 }
 ```
@@ -137,7 +137,7 @@ SheetData {
   table_candidates: [str]
   print_areas: [PrintArea]
   auto_print_areas: [PrintArea] // 自動改ページ矩形（COM 前提、デフォルト無効）
-  colors_map: {[colorHex: str]: [[int, int]]} // カラーごとのセルを列挙
+  colors_map: {[colorHex: str]: [[int, int]]} // (row=1-based, col=0-based) のセル座標を列挙
 }
 ```
 

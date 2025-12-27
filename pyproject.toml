@@ -1,6 +1,6 @@
 [project]
 name = "exstruct"
-version = "0.2.90"
+version = "0.3.0"
 description = "Excel to structured JSON (tables, shapes, charts) for LLM/RAG pipelines"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -32,6 +32,7 @@ dev = [
     "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",
     "ruff>=0.14.8",
+    "taskipy>=1.14.1",
 ]
 
 [project.optional-dependencies]
@@ -117,3 +118,11 @@ markers = [
     "com: requires Excel COM (Windows + Excel)",
     "render: requires Excel COM and pypdfium2; set RUN_RENDER_SMOKE=1 to enable",
 ]
+
+[tool.taskipy.tasks]
+ruff = "ruff check ."
+ruff-fix = "ruff check . --fix"
+mypy = "mypy src/exstruct --strict"
+test = "pytest -vv --cov=exstruct --cov-report=term-missing --cov-report=xml"
+docs = "mkdocs serve"
+build-docs = "mkdocs build && python scripts/gen_json_schema.py && python scripts/gen_model_docs.py"

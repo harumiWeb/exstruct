@@ -1,63 +1,81 @@
-# Architecture — ExStruct
+# Architecture - ExStruct
 
-ExStruct は複数のモジュールに分割し、責務を明確にしています。
+ExStruct はパイプライン中心の抽出アーキテクチャで、
+openpyxl と Excel COM（xlwings）を役割分担させています。
 
 ## 全体構造
 
 ```txt
 exstruct/
   core/
+    pipeline.py
+    integrate.py
+    modeling.py
+    workbook.py
+    backends/
+      base.py
+      openpyxl_backend.py
+      com_backend.py
     cells.py
     shapes.py
     charts.py
-    integrate.py
+    ranges.py
+    logging_utils.py
   models/
     __init__.py
     maps.py
   io/
+    serialize.py
   render/
   cli/
     main.py
 ```
 
+## パイプライン設計
+
+- `resolve_extraction_inputs` が include_* と mode を正規化
+- `PipelinePlan` は pre-com / com の静的ステップ構成のみ保持
+- 実行状態は `PipelineState` / `PipelineResult` に分離
+- `run_extraction_pipeline` が COM 可否判定とフォールバックを一元管理
+
 ## モジュール責務
 
 ### core/
 
-Excel API（xlwings）から情報を抽出する層  
-→ **外部依存が集まる場所**
+抽出の中心層（外部依存を集約）
 
-- `cells.py` → pandas 読み込み、セル行の構造化
-- `shapes.py` → ShapeType, AutoShapeType, 座標、テキスト抽出
-- `charts.py` → Series, Axis, ChartType 抽出
-- `integrate.py` → 座標を用いたセルへの図形の意味付与
+- `pipeline.py` → 抽出フロー、COM 判定、fallback、raw 生成
+- `backends/*` → openpyxl/COM の抽象化
+- `cells.py` → セル抽出、テーブル検出、colors_map
+- `shapes.py` → 図形抽出、方向推定
+- `charts.py` → チャート解析
+- `ranges.py` → 範囲解析の共通関数
+- `workbook.py` → openpyxl/xlwings の contextmanager
+- `modeling.py` → RawData から WorkbookData/SheetData を生成
+- `integrate.py` → pipeline 呼び出しに特化した薄い入口
 
 ### models/
 
-Pydantic による「中間データ構造」  
-→ **LLM が扱える最適な構造**
+Pydantic による公開データ構造
+（外部 API は BaseModel を返す）
 
 ### io/
 
-データの出力  
-→ JSON / TOON / YAML
+出力フォーマット（JSON / YAML / TOON）とファイル書き込み
 
 ### render/
 
-RAG 向けレンダリング  
-→ PDF/PNG 出力
+PDF/PNG 出力（RAG 用途）
 
 ### cli/
 
-CLI エントリポイント  
-→ `exstruct file.xlsx --format json`
+CLI エントリポイント
 
 ---
 
 ## AI エージェント向けガイド
 
-- モデル定義を変更したら core 層も変更する必要がある
-- core 層は xlwings と密結合
-- models 層は絶対に “副作用なし”
-- 関数は idempotent を保つこと
+- モデル変更は core の RawData 変換にも反映する
+- 外部依存（openpyxl/xlwings）は core の境界で完結させる
+- `PipelinePlan` は不変、実行状態は `PipelineState` へ分離
 - 仕様は docs/DATA_MODEL.md を最優先とする

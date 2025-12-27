@@ -47,10 +47,13 @@ for name, sheet in data:  # WorkbookData.__iter__
     print(name, len(sheet.rows))
 
 # ExStructEngine (per-instance options)
-from exstruct import ExStructEngine, StructOptions, OutputOptions
+from exstruct import ExStructEngine, FilterOptions, FormatOptions, OutputOptions, StructOptions
 engine = ExStructEngine(
     options=StructOptions(mode="standard"),
-    output=OutputOptions(include_shapes=False, pretty=True),
+    output=OutputOptions(
+        format=FormatOptions(pretty=True),
+        filters=FilterOptions(include_shapes=False),
+    ),
 )
 wb = engine.extract("file.xlsx")
 engine.export(wb, "filtered.json")

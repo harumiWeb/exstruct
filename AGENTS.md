@@ -123,7 +123,7 @@ mypy strict + Ruff check を完全に通過するコードのみ生成してく�
 遵守事項：
 
 - 型ヒント完全
-- Pydantic BaseModel を返す
+- 境界は BaseModel、内部は dataclass を返す
 - 1 関数 = 1 責務
 - import 順序厳守
 - Google スタイルの docstring

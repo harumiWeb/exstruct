@@ -58,7 +58,7 @@ def test_lightモードではCOMに触れずセルとテーブルのみ(
     def _boom(*_a: object, **_k: object) -> Never:
         raise AssertionError("COM should not be accessed in light mode")
 
-    monkeypatch.setattr("exstruct.core.integrate.xw.Book", _boom, raising=False)
+    monkeypatch.setattr("exstruct.core.pipeline.xlwings_workbook", _boom)
     data = extract(path, mode="light")
     sheet = next(iter(data.sheets.values()))
     assert sheet.shapes == []

@@ -49,10 +49,8 @@ def export_pdf(excel_path: str | Path, output_pdf: str | Path) -> list[str]:
             raise
         except Exception as exc:
             raise RenderError(
-                (
-                    "Failed to export PDF for "
-                    f"'{normalized_excel_path}' to '{normalized_output_pdf}'."
-                )
+                "Failed to export PDF for "
+                f"'{normalized_excel_path}' to '{normalized_output_pdf}'."
             ) from exc
         finally:
             if wb is not None:
@@ -60,9 +58,7 @@ def export_pdf(excel_path: str | Path, output_pdf: str | Path) -> list[str]:
             if app is not None:
                 app.quit()
         if not normalized_output_pdf.exists():
-            raise RenderError(
-                f"Failed to export PDF to '{normalized_output_pdf}'."
-            )
+            raise RenderError(f"Failed to export PDF to '{normalized_output_pdf}'.")
     return sheet_names
 
 
