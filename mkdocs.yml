@@ -27,6 +27,7 @@ nav:
   - CLI Guide: cli.md
   - Concept / Why ExStruct?: concept.md
   - Release Notes:
+      - v0.3.1: release-notes/v0.3.1.md
       - v0.3.0: release-notes/v0.3.0.md
       - v0.2.90: release-notes/v0.2.90.md
       - v0.2.80: release-notes/v0.2.80.md
