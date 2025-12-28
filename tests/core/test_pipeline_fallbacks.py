@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 from _pytest.monkeypatch import MonkeyPatch
@@ -69,6 +71,46 @@ def test_pipeline_fallback_com_unavailable(
 
     assert result.state.fallback_reason == FallbackReason.COM_UNAVAILABLE
     assert result.state.com_attempted is False
+    sheet = result.workbook.sheets["Sheet1"]
+    assert sheet.shapes == []
+    assert sheet.charts == []
+    assert sheet.rows
+
+
+def test_pipeline_fallback_com_pipeline_failed(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    path = tmp_path / "book.xlsx"
+    _make_basic_book(path)
+    monkeypatch.delenv("SKIP_COM_TESTS", raising=False)
+
+    @contextmanager
+    def _dummy_workbook(_path: Path) -> Iterator[object]:
+        yield object()
+
+    def _raise(
+        *_args: object,
+        **_kwargs: object,
+    ) -> None:
+        raise RuntimeError("pipeline failed")
+
+    monkeypatch.setattr("exstruct.core.pipeline.xlwings_workbook", _dummy_workbook)
+    monkeypatch.setattr("exstruct.core.pipeline.run_com_pipeline", _raise)
+
+    inputs = resolve_extraction_inputs(
+        path,
+        mode="standard",
+        include_cell_links=False,
+        include_print_areas=True,
+        include_auto_page_breaks=False,
+        include_colors_map=False,
+        include_default_background=False,
+        ignore_colors=None,
+    )
+    result = run_extraction_pipeline(inputs)
+
+    assert result.state.fallback_reason == FallbackReason.COM_PIPELINE_FAILED
+    assert result.state.com_attempted is True
     sheet = result.workbook.sheets["Sheet1"]
     assert sheet.shapes == []
     assert sheet.charts == []

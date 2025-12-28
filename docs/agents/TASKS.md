@@ -25,7 +25,7 @@
 - [x] core/charts.py: parse_series_formula の正常系パターン（カンマ/セミコロン区切り）
 - [x] core/charts.py: parse_series_formula の異常系（空/非 SERIES）
 - [x] core/pipeline.py: COM 不可時のフォールバック分岐（openpyxl 経由の結果検証）
-- [ ] core/pipeline.py: COM 失敗時のフォールバック分岐（例外誘発の分岐確認）
+- [x] core/pipeline.py: COM 失敗時のフォールバック分岐（例外誘発の分岐確認）
 - [ ] core/pipeline.py: include_auto_page_breaks フラグの計画分岐
 
 ## フェーズ 3: バックエンド/検出ロジック（中優先）
