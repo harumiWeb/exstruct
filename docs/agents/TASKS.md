@@ -45,3 +45,19 @@
 
 - [x] 既存の openpyxl 作成テストの延長（簡易 workbook の抽出/エクスポート）
 - [x] CLI/Engine の最小 E2E（JSON 生成の基本構造のみ検証）
+
+## 追加カバレッジ強化: cells.py / workbook.py
+
+### cells.py（低カバレッジ重点）
+- [ ] _normalize_color_key / _normalize_rgb の正規化パターン（#/ARGB/auto/theme/indexed）
+- [ ] _normalize_ignore_colors の空/重複/不正キーの除外
+- [ ] _resolve_cell_background / _resolve_fill_color_key の既定背景/None/パターン種別分岐
+- [ ] _color_to_key の theme/indexed/auto 分岐（openpyxl Color 風ダミー）
+- [ ] _header_like_row / _table_signal_score / _count_nonempty_cells の境界ケース
+- [ ] _collect_table_candidates_from_values の検出閾値と空入力（min_nonempty_cells）
+
+### workbook.py（低カバレッジ重点）
+- [ ] openpyxl_workbook の close 失敗時の例外抑制（close が例外でも継続）
+- [ ] xlwings_workbook の既存ブック検出経路（_find_open_workbook が返す場合）
+- [ ] _find_open_workbook の fullname 例外・resolve 例外のハンドリング
+- [ ] _find_open_workbook の全体例外時に None を返す経路
