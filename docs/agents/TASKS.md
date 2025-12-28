@@ -7,12 +7,12 @@
 
 ## フェーズ0: 準備
 - [x] 既存テスト構成・命名規則の確認（tests を階層化し日本語命名方針）
-- [ ] 既存のテストユーティリティ/fixture の再利用可否を整理
-- [ ] 追加対象の関数・分岐を一覧化（coverage.xml を参照して候補を確定）
+- [x] 既存のテストユーティリティ/fixture の再利用可否を整理（conftest: COM/Render 判定）
+- [x] 追加対象の関数・分岐を一覧化（coverage.xml の低カバレッジ）
 
 ## フェーズ1: 純粋関数/ユーティリティ（高優先）
-- [ ] core/shapes.py: _should_include_shape の分岐テスト（standard/light/verbose）
-- [ ] core/shapes.py: compute_line_angle_deg, angle_to_compass, has_arrow の境界値テスト
+- [x] core/shapes.py: _should_include_shape の分岐テスト（standard/light/verbose）
+- [x] core/shapes.py: compute_line_angle_deg, angle_to_compass, has_arrow の境界値テスト
 - [ ] core/cells.py: _coerce_numeric_preserve_format の入力パターンテスト
 - [ ] core/backends/com_backend.py: _split_csv_respecting_quotes の引用符対応テスト
 - [ ] core/backends/com_backend.py: _normalize_area_for_sheet の補正ロジックテスト
