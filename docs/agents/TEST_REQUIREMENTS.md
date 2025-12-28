@@ -256,5 +256,7 @@ Codecov では unit と com を分離し、com は carryforward で維持する�
 
 ## 10.2 Codecov 手動アップロード（任意）
 
-- unit 送信: `codecov -f coverage.xml -F unit`（CODECOV_TOKEN が必要）
-- COM 送信: `codecov -f coverage.xml -F com`（CODECOV_TOKEN が必要）
+手動アップロード時は `CODECOV_TOKEN` と `CODECOV_SHA` を設定する。
+
+- unit 送信: `codecov-cli upload-process -f coverage.xml -F unit -C %CODECOV_SHA% -t %CODECOV_TOKEN%`
+- COM 送信: `codecov-cli upload-process -f coverage.xml -F com -C %CODECOV_SHA% -t %CODECOV_TOKEN%`

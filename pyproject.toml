@@ -24,7 +24,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "codecov>=2.1.13",
+    "codecov-cli>=11.2.6",
     "mkdocs-material>=9.7.0",
     "mkdocstrings-python>=2.0.1",
     "mypy>=1.19.0",
@@ -127,7 +127,7 @@ mypy = "mypy src/exstruct --strict"
 test = "pytest -vv --cov=exstruct --cov-report=term-missing --cov-report=xml"
 test-unit = "pytest -vv -m \"not com and not render\" --cov=exstruct --cov-report=term-missing --cov-report=xml"
 test-com = "pytest -vv -m \"com\" --cov=exstruct --cov-report=term-missing --cov-report=xml"
-codecov-unit = "codecov -f coverage.xml -F unit  # requires CODECOV_TOKEN"
-codecov-com = "codecov -f coverage.xml -F com  # requires CODECOV_TOKEN"
+codecov-unit = "codecov-cli upload-process -f coverage.xml -F unit -C %CODECOV_SHA% -t %CODECOV_TOKEN%"
+codecov-com = "codecov-cli upload-process -f coverage.xml -F com -C %CODECOV_SHA% -t %CODECOV_TOKEN%"
 docs = "mkdocs serve"
 build-docs = "mkdocs build && python scripts/gen_json_schema.py && python scripts/gen_model_docs.py"
