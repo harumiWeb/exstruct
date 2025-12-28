@@ -124,7 +124,7 @@ markers = [
 ruff = "ruff check ."
 ruff-fix = "ruff check . --fix"
 mypy = "mypy src/exstruct --strict"
-test = "pytest -vv --cov=exstruct --cov-report=term-missing --cov-report=xml"
+test = "pytest -vv --cov=exstruct --cov-report=term-missing --cov-report=xml" # uv sync --extra render --extra toon
 test-unit = "pytest -vv -m \"not com and not render\" --cov=exstruct --cov-report=term-missing --cov-report=xml"
 test-com = "pytest -vv -m \"com\" --cov=exstruct --cov-report=term-missing --cov-report=xml"
 codecov-unit = "codecov-cli upload-process -f coverage.xml -F unit -C %CODECOV_SHA% -t %CODECOV_TOKEN%"

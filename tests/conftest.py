@@ -76,12 +76,12 @@ def _render_skip_reason() -> str | None:
 
 def pytest_runtest_setup(item: pytest.Item) -> None:
     """Skip tests based on resource markers and environment availability."""
-    if "render" in item.keywords:
+    if item.get_closest_marker("render") is not None:
         reason = _render_skip_reason()
         if reason:
             pytest.skip(reason)
         return
-    if "com" in item.keywords:
+    if item.get_closest_marker("com") is not None:
         reason = _com_skip_reason()
         if reason:
             pytest.skip(reason)
