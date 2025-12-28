@@ -1,10 +1,11 @@
 from importlib import util
+import json
 from pathlib import Path
 
 import pytest
 
 from exstruct.errors import MissingDependencyError
-from exstruct.models import CellRow, SheetData, WorkbookData
+from exstruct.models import CellRow, SheetData, SmartArt, SmartArtNode, WorkbookData
 
 HAS_PYYAML = util.find_spec("yaml") is not None
 HAS_TOON = util.find_spec("toon") is not None
@@ -95,3 +96,32 @@ def test_workbook_iter_and_getitem() -> None:
     assert pairs[0][1] is first
     with pytest.raises(KeyError):
         _ = wb["Nope"]
+
+
+def test_sheet_json_includes_smartart_roots() -> None:
+    smartart = SmartArt(
+        id=1,
+        text="sa",
+        l=0,
+        t=0,
+        w=10,
+        h=10,
+        layout_name="Layout",
+        roots=[
+            SmartArtNode(
+                text="root",
+                level=1,
+                children=[SmartArtNode(text="child", level=2, children=[])],
+            )
+        ],
+    )
+    sheet = SheetData(
+        rows=[],
+        shapes=[smartart],
+        charts=[],
+        table_candidates=[],
+    )
+    data = json.loads(sheet.to_json())
+    assert data["shapes"][0]["kind"] == "smartart"
+    assert data["shapes"][0]["roots"][0]["text"] == "root"
+    assert data["shapes"][0]["roots"][0]["children"][0]["text"] == "child"

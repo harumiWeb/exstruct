@@ -398,6 +398,12 @@ please read the contributor architecture guide.
 
 → [docs/contributors/architecture.md](docs/contributors/architecture.md)
 
+## Note on coverage
+
+The cell-structure inference logic (cells.py) relies on heuristic rules
+and Excel-specific behaviors. Full coverage is intentionally not pursued,
+as exhaustive testing would not reflect real-world reliability.
+
 ## License
 
 BSD-3-Clause. See `LICENSE` for details.

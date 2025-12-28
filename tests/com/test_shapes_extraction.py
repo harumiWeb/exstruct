@@ -4,6 +4,7 @@ import pytest
 import xlwings as xw
 
 from exstruct.core.integrate import extract_workbook
+from exstruct.models import Arrow
 
 pytestmark = pytest.mark.com
 
@@ -86,11 +87,14 @@ def test_図形の種別とテキストが抽出される(tmp_path: Path) -> Non
         (s.text == "" or s.text is None)
         and (s.type or "").startswith("AutoShape")
         and not (
-            s.direction
-            or s.begin_arrow_style is not None
-            or s.end_arrow_style is not None
-            or s.begin_id is not None
-            or s.end_id is not None
+            isinstance(s, Arrow)
+            and (
+                s.direction
+                or s.begin_arrow_style is not None
+                or s.end_arrow_style is not None
+                or s.begin_id is not None
+                or s.end_id is not None
+            )
         )
         for s in shapes
     )
@@ -107,7 +111,8 @@ def test_線図形の方向と矢印情報が抽出される(tmp_path: Path) -> 
     line = next(
         s
         for s in shapes
-        if s.begin_arrow_style is not None or s.end_arrow_style is not None
+        if isinstance(s, Arrow)
+        and (s.begin_arrow_style is not None or s.end_arrow_style is not None)
     )
     assert line.direction == "E"
 
@@ -121,14 +126,14 @@ def test_コネクターの接続元と接続先が抽出される(tmp_path: Pat
     shapes = wb_data.sheets["Sheet1"].shapes
 
     connectors = [
-        s
-        for s in shapes
-        if s.begin_id is not None or s.end_id is not None
+        s for s in shapes if isinstance(s, Arrow) and (s.begin_id or s.end_id)
     ]
 
     # If the environment could not wire connectors, simply skip the assertion.
     if not connectors:
-        pytest.skip("Excel failed to populate ConnectorFormat.ConnectedShape properties.")
+        pytest.skip(
+            "Excel failed to populate ConnectorFormat.ConnectedShape properties."
+        )
 
     conn = connectors[0]
     assert conn.begin_id is not None

@@ -403,6 +403,11 @@ ExStruct の内部実装を拡張する場合は、
 
 → [docs/contributors/architecture.md](docs/contributors/architecture.md)
 
+## カバレッジに関する注意
+
+セル構造推論ロジック（cells.py）は、ヒューリスティックルールと
+Excel 固有の動作に依存しています。網羅的なテストは現実世界の信頼性を反映できないため、完全なカバレッジは意図的に追求されていません。
+
 ## License
 
 BSD-3-Clause. See `LICENSE` for details.

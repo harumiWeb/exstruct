@@ -2,8 +2,6 @@
 
 [![PyPI version](https://badge.fury.io/py/exstruct.svg)](https://pypi.org/project/exstruct/) [![PyPI Downloads](https://static.pepy.tech/personalized-badge/exstruct?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/exstruct) ![Licence: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue?style=flat-square) [![pytest](https://github.com/harumiWeb/exstruct/actions/workflows/pytest.yml/badge.svg)](https://github.com/harumiWeb/exstruct/actions/workflows/pytest.yml) [![Codacy Badge](https://app.codacy.com/project/badge/Grade/e081cb4f634e4175b259eb7c34f54f60)](https://app.codacy.com/gh/harumiWeb/exstruct/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade) [![codecov](https://codecov.io/gh/harumiWeb/exstruct/graph/badge.svg?token=2XI1O8TTA9)](https://codecov.io/gh/harumiWeb/exstruct)
 
-
-
 ![ExStruct Image](/docs/assets/icon.webp)
 
 ExStruct reads Excel workbooks and outputs structured data (cells, table candidates, shapes, charts, print areas/views, auto page-break areas, hyperlinks) as JSON by default, with optional YAML/TOON formats. It targets both COM/Excel environments (rich extraction) and non-COM environments (cells + table candidates + print areas), with tunable detection heuristics and multiple output modes to fit LLM/RAG pipelines.
@@ -396,6 +394,12 @@ If you plan to extend ExStruct internals,
 please read the contributor architecture guide.
 
 → [docs/contributors/architecture.md](docs/contributors/architecture.md)
+
+## Note on coverage
+
+The cell-structure inference logic (cells.py) relies on heuristic rules
+and Excel-specific behaviors. Full coverage is intentionally not pursued,
+as exhaustive testing would not reflect real-world reliability.
 
 ## License
 

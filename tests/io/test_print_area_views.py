@@ -2,12 +2,34 @@ import json
 from pathlib import Path
 
 from exstruct.io import save_print_area_views
-from exstruct.models import CellRow, Chart, PrintArea, Shape, SheetData, WorkbookData
+from exstruct.models import (
+    Arrow,
+    CellRow,
+    Chart,
+    PrintArea,
+    Shape,
+    SheetData,
+    SmartArt,
+    SmartArtNode,
+    WorkbookData,
+)
 
 
 def _workbook_with_print_area() -> WorkbookData:
     shape_inside = Shape(id=1, text="inside", l=10, t=5, w=20, h=10, type="Rect")
     shape_outside = Shape(id=2, text="outside", l=200, t=200, w=30, h=30, type="Rect")
+    smartart_inside = SmartArt(
+        id=3,
+        text="sa",
+        l=15,
+        t=8,
+        w=20,
+        h=10,
+        type="SmartArt",
+        layout_name="Layout",
+        roots=[SmartArtNode(text="root", level=1, children=[])],
+    )
+    arrow_inside = Arrow(id=None, text="", l=5, t=5, w=20, h=2, type="Line")
     chart_inside = Chart(
         name="c1",
         chart_type="Line",
@@ -40,7 +62,7 @@ def _workbook_with_print_area() -> WorkbookData:
             CellRow(r=2, c={"1": "B"}),
             CellRow(r=3, c={"1": "C"}),
         ],
-        shapes=[shape_inside, shape_outside],
+        shapes=[shape_inside, smartart_inside, arrow_inside, shape_outside],
         charts=[chart_inside, chart_outside],
         table_candidates=["A1:B2", "C1:C1"],
         print_areas=[PrintArea(r1=1, c1=0, r2=2, c2=1)],
@@ -61,7 +83,8 @@ def test_save_print_area_views_filters_rows_and_tables(tmp_path: Path) -> None:
     # Only table candidates fully contained in the print area remain.
     assert data["table_candidates"] == ["A1:B2"]
     # Shapes/Charts filtered by overlap; outside or size-less charts are dropped.
-    assert len(data["shapes"]) == 1 and data["shapes"][0]["text"] == "inside"
+    kinds = {shape["kind"] for shape in data["shapes"]}
+    assert kinds == {"shape", "smartart", "arrow"}
     assert len(data["charts"]) == 1 and data["charts"][0]["name"] == "c1"
 
 
