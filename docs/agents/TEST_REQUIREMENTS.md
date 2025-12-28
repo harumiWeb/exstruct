@@ -241,3 +241,20 @@ ExStruct の全機能について、正式なテスト要件をまとめたド�
 
 - [E2E-01] light 抽出→serialize_workbook→export_sheets の一連が成功する
 - [E2E-02] Engine.process は output_path=None のとき stream へ JSON を出力できる
+
+---
+
+# 10. COM テスト運用（ローカル手動）
+
+CI では Excel COM を実行できないため、COM テストはローカル手動で実行する。
+Codecov では unit と com を分離し、com は carryforward で維持する。
+
+## 10.1 ローカル実行手順
+
+- unit（CI 相当）: `task test-unit`
+- COM: `task test-com`
+
+## 10.2 Codecov 手動アップロード（任意）
+
+- unit 送信: `codecov -f coverage.xml -F unit`（CODECOV_TOKEN が必要）
+- COM 送信: `codecov -f coverage.xml -F com`（CODECOV_TOKEN が必要）

@@ -161,6 +161,19 @@ wheels = [
 ]
 
 [[package]]
+name = "codecov"
+version = "2.1.13"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "coverage" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2c/bb/594b26d2c85616be6195a64289c578662678afa4910cef2d3ce8417cf73e/codecov-2.1.13.tar.gz", hash = "sha256:2362b685633caeaf45b9951a9b76ce359cd3581dd515b430c6c3f5dfb4d92a8c", size = 21416, upload-time = "2023-04-17T23:11:39.779Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/af/02/18785edcdf6266cdd6c6dc7635f1cbeefd9a5b4c3bb8aff8bd681e9dd095/codecov-2.1.13-py2.py3-none-any.whl", hash = "sha256:c2ca5e51bba9ebb43644c43d0690148a55086f7f5e6fd36170858fa4206744d5", size = 16512, upload-time = "2023-04-17T23:11:37.344Z" },
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -281,7 +294,7 @@ wheels = [
 
 [[package]]
 name = "exstruct"
-version = "0.2.90"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "numpy" },
@@ -306,6 +319,7 @@ yaml = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "codecov" },
     { name = "mkdocs-material" },
     { name = "mkdocstrings-python" },
     { name = "mypy" },
@@ -334,6 +348,7 @@ provides-extras = ["yaml", "toon", "render"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "codecov", specifier = ">=2.1.13" },
     { name = "mkdocs-material", specifier = ">=9.7.0" },
     { name = "mkdocstrings-python", specifier = ">=2.0.1" },
     { name = "mypy", specifier = ">=1.19.0" },

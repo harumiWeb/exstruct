@@ -35,12 +35,14 @@ jobs:
       - name: Run tests (full suite with skips)
         if: runner.os == 'Windows'
         env:
+          SKIP_COM_TESTS: "1"
           RUN_RENDER_SMOKE: "0"  # enable with 1 when Excel+pypdfium2 are available
         run: |
-          pytest --maxfail=1 --disable-warnings -q --cov=exstruct --cov-report=xml
+          pytest -m "not com and not render" --maxfail=1 --disable-warnings -q --cov=exstruct --cov-report=xml
       - name: Upload coverage to Codecov
         if: runner.os == 'Linux' && matrix.python-version == '3.12'
         uses: codecov/codecov-action@125fc84a9a348dbcf27191600683ec096ec9021c  # v4.x.x
         with:
           files: coverage.xml
+          flags: unit
           fail_ci_if_error: true
