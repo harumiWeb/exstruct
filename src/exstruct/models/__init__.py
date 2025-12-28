@@ -63,18 +63,15 @@ class SmartArtNode(BaseModel):
     """Node of SmartArt hierarchy."""
 
     text: str = Field(description="Visible text for the node.")
-    level: int = Field(description="Node depth level.")
-    children: list[SmartArtNode] = Field(
-        default_factory=list, description="Child nodes."
-    )
+    kids: list[SmartArtNode] = Field(default_factory=list, description="Child nodes.")
 
 
 class SmartArt(BaseShape):
     """SmartArt shape metadata with nested nodes."""
 
     kind: Literal["smartart"] = Field(default="smartart", description="Shape kind.")
-    layout_name: str = Field(description="SmartArt layout name.")
-    roots: list[SmartArtNode] = Field(
+    layout: str = Field(description="SmartArt layout name.")
+    nodes: list[SmartArtNode] = Field(
         default_factory=list, description="Root nodes of SmartArt tree."
     )
 

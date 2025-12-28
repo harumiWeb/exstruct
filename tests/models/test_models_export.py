@@ -98,7 +98,7 @@ def test_workbook_iter_and_getitem() -> None:
         _ = wb["Nope"]
 
 
-def test_sheet_json_includes_smartart_roots() -> None:
+def test_sheet_json_includes_smartart_nodes() -> None:
     smartart = SmartArt(
         id=1,
         text="sa",
@@ -106,12 +106,11 @@ def test_sheet_json_includes_smartart_roots() -> None:
         t=0,
         w=10,
         h=10,
-        layout_name="Layout",
-        roots=[
+        layout="Layout",
+        nodes=[
             SmartArtNode(
                 text="root",
-                level=1,
-                children=[SmartArtNode(text="child", level=2, children=[])],
+                kids=[SmartArtNode(text="child", kids=[])],
             )
         ],
     )
@@ -123,5 +122,5 @@ def test_sheet_json_includes_smartart_roots() -> None:
     )
     data = json.loads(sheet.to_json())
     assert data["shapes"][0]["kind"] == "smartart"
-    assert data["shapes"][0]["roots"][0]["text"] == "root"
-    assert data["shapes"][0]["roots"][0]["children"][0]["text"] == "child"
+    assert data["shapes"][0]["nodes"][0]["text"] == "root"
+    assert data["shapes"][0]["nodes"][0]["kids"][0]["text"] == "child"

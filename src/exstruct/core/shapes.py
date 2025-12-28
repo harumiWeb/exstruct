@@ -141,21 +141,16 @@ class _SmartArtLike(Protocol):
     AllNodes: Iterable[_SmartArtNodeLike]
 
 
-@runtime_checkable
-class _ShapeApiWithSmartArtLike(Protocol):
-    """COM shape interface exposing SmartArt."""
-
-    HasSmartArt: bool
-    SmartArt: _SmartArtLike
-
-
 def _shape_has_smartart(shp: xw.Shape) -> bool:
     """Return True if the shape exposes SmartArt content."""
     try:
         api = shp.api
     except Exception:
         return False
-    return isinstance(api, _ShapeApiWithSmartArtLike) and api.HasSmartArt
+    try:
+        return bool(api.HasSmartArt)
+    except Exception:
+        return False
 
 
 def _get_smartart_layout_name(smartart: _SmartArtLike | None) -> str:
@@ -202,16 +197,16 @@ def _collect_smartart_node_info(
 def _build_smartart_tree(nodes_info: list[tuple[int, str]]) -> list[SmartArtNode]:
     """Build nested SmartArtNode roots from flat (level, text) tuples."""
     roots: list[SmartArtNode] = []
-    stack: list[SmartArtNode] = []
+    stack: list[tuple[int, SmartArtNode]] = []
     for level, text in nodes_info:
-        node = SmartArtNode(text=text, level=level, children=[])
-        while stack and stack[-1].level >= level:
+        node = SmartArtNode(text=text, kids=[])
+        while stack and stack[-1][0] >= level:
             stack.pop()
         if stack:
-            stack[-1].children.append(node)
+            stack[-1][1].kids.append(node)
         else:
             roots.append(node)
-        stack.append(node)
+        stack.append((level, node))
     return roots
 
 
@@ -326,8 +321,8 @@ def get_shapes_with_position(  # noqa: C901
                         if mode == "verbose" or shape_type_str == "Group"
                         else None,
                         type=type_label,
-                        layout_name=_get_smartart_layout_name(smartart_obj),
-                        roots=_extract_smartart_nodes(smartart_obj),
+                        layout=_get_smartart_layout_name(smartart_obj),
+                        nodes=_extract_smartart_nodes(smartart_obj),
                     )
                 elif is_relationship_geom:
                     shape_obj = Arrow(

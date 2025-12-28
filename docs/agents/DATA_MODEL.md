@@ -44,14 +44,13 @@ Arrow extends BaseShape {
 
 SmartArtNode {
   text: str
-  level: int
-  children: [SmartArtNode]
+  kids: [SmartArtNode]
 }
 
 SmartArt extends BaseShape {
   kind: "smartart"
-  layout_name: str
-  roots: [SmartArtNode]
+  layout: str
+  nodes: [SmartArtNode]
 }
 ```
 
@@ -60,7 +59,7 @@ SmartArt extends BaseShape {
 - `direction` は線や矢印の向きを 8 方位に正規化したもの。
 - 矢印スタイルは Excel の enum に対応。
 - `begin_id` / `end_id` は、コネクタが接続している図形の `id` に対応（`ConnectorFormat.BeginConnectedShape` / `EndConnectedShape`）。
-- `SmartArtNode` はネスト構造で表現し、`roots` がツリーの根。
+- `SmartArtNode` はネスト構造で表現し、`nodes` がツリーの根。
 
 ---
 

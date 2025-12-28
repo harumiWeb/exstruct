@@ -33,11 +33,11 @@
 
 ## v0.3.1
 
-- ShapesとArrowsの分離（後のSmartArt追加のため）
+- Shapes と Arrows の分離（後の SmartArt 追加のため）
+- SmartArt 解析
 
 ## v0.4.0
 
-- SmartArt 解析
 - Excel Form Controls 解析
 
 ## v1.0.0

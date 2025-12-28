@@ -26,8 +26,8 @@ def _workbook_with_print_area() -> WorkbookData:
         w=20,
         h=10,
         type="SmartArt",
-        layout_name="Layout",
-        roots=[SmartArtNode(text="root", level=1, children=[])],
+        layout="Layout",
+        nodes=[SmartArtNode(text="root", kids=[])],
     )
     arrow_inside = Arrow(id=None, text="", l=5, t=5, w=20, h=2, type="Line")
     chart_inside = Chart(

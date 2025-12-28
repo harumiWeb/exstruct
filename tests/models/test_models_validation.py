@@ -31,11 +31,11 @@ def test_モデルのデフォルトとオプション値() -> None:
         t=6,
         w=50,
         h=40,
-        layout_name="Layout",
-        roots=[SmartArtNode(text="root", level=1, children=[])],
+        layout="Layout",
+        nodes=[SmartArtNode(text="root", kids=[])],
     )
-    assert smartart.layout_name == "Layout"
-    assert smartart.roots[0].text == "root"
+    assert smartart.layout == "Layout"
+    assert smartart.nodes[0].text == "root"
 
     cell = CellRow(r=1, c={"0": "v"})
     assert cell.c["0"] == "v"
