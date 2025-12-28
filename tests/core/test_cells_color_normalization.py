@@ -4,7 +4,11 @@ from typing import TypeVar, cast
 import pytest
 from typing_extensions import ParamSpec
 
-from exstruct.core.cells import _normalize_color_key, _normalize_rgb
+from exstruct.core.cells import (
+    _normalize_color_key,
+    _normalize_ignore_colors,
+    _normalize_rgb,
+)
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -51,3 +55,14 @@ def test_normalize_color_key(raw: str, expected: str) -> None:
 def test_normalize_rgb(raw: str, expected: str) -> None:
     """RGB/ARGB 文字列の正規化を確認する。"""
     assert _normalize_rgb(raw) == expected
+
+
+def test_normalize_ignore_colors_filters_empty_and_normalizes() -> None:
+    """ignore_colors の正規化と空キー除外を確認する。"""
+    result = _normalize_ignore_colors({" #aabbcc ", "", "AUTO:1", "auto:1"})
+    assert result == {"AABBCC", "auto:1"}
+
+
+def test_normalize_ignore_colors_none_returns_empty() -> None:
+    """ignore_colors が None の場合は空集合を返す。"""
+    assert _normalize_ignore_colors(None) == set()
