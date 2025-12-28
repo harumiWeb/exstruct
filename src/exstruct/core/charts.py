@@ -179,6 +179,8 @@ def get_charts(
         y_axis_range: list[int] = []
         chart_type_label: str = "unknown"
         error: str | None = None
+        chart_width: int | None = None
+        chart_height: int | None = None
 
         try:
             chart_com = sheet.api.ChartObjects(ch.name).Chart
@@ -186,8 +188,6 @@ def get_charts(
             chart_type_label = XL_CHART_TYPE_MAP.get(
                 chart_type_num, f"unknown_{chart_type_num}"
             )
-            chart_width: int | None = None
-            chart_height: int | None = None
             try:
                 chart_width = int(ch.width)
                 chart_height = int(ch.height)

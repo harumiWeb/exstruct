@@ -38,7 +38,7 @@
 ## フェーズ 4: 疑似 COM オブジェクトでの網羅（中優先）
 
 - [x] core/shapes.py: get_shapes_with_position のフィルタリング動作（ダミー shape）
-- [ ] core/charts.py: get_charts の Chart/Series 生成（ダミー chart）
+- [x] core/charts.py: get_charts の Chart/Series 生成（ダミー chart）
 - [ ] core/backends/com_backend.py: extract_auto_page_breaks の失敗分岐
 
 ## フェーズ 5: 統合テスト（低優先）
