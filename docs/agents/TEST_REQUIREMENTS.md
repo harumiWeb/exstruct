@@ -1,6 +1,6 @@
 ﻿# ExStruct テスト要件仕様書
 
-Version: 0.3
+Version: 0.4
 Status: Required for Release
 
 ExStruct の全機能について、正式なテスト要件をまとめたドキュメントです。AI エージェント／人間開発者が自動テスト・手動テストを設計するための基盤とします。
@@ -51,6 +51,7 @@ ExStruct の全機能について、正式なテスト要件をまとめたド�
 
 - [SHP-01] AutoShape の type を正規化
 - [SHP-02] TextFrame を正しく取得
+- [SHP-02a] `type` は Shape のみ保持し、Arrow/SmartArt では出力しない
 - [SHP-03] サイズ `w`,`h` は取得できない場合のみ null
 - [SHP-04] グループ図形は展開方針を一貫させる
 - [SHP-05] 座標 `l`,`t` は整数で取得しズームの影響を受けない
@@ -59,6 +60,13 @@ ExStruct の全機能について、正式なテスト要件をまとめたド�
 - [SHP-10] direction は 8 方位に正規化
 - [SHP-11] テキストなし図形は text=""
 - [SHP-12] 複数段落のテキストも取得
+
+## 2.2.1 SmartArt 抽出
+
+- [SHP-SA-01] SmartArt は `layout` を必須で出力する
+- [SHP-SA-02] SmartArt のノードは `nodes` にネスト構造で出力する
+- [SHP-SA-03] ノードの子は `kids` で表現する（level は出力しない）
+- [SHP-SA-04] SmartArt が存在する場合は `kind="smartart"` で判別できる
 
 ## 2.3 矢印方向推定
 
