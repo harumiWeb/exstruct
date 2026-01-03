@@ -6,6 +6,7 @@ from ..models import (
     Arrow,
     CellRow,
     Chart,
+    MergedCell,
     PrintArea,
     Shape,
     SheetData,
@@ -26,6 +27,7 @@ class SheetRawData:
         print_areas: Extracted print areas.
         auto_print_areas: Extracted auto page-break areas.
         colors_map: Mapping of color keys to (row, column) positions.
+        merged_cells: Extracted merged cell ranges.
     """
 
     rows: list[CellRow]
@@ -35,6 +37,7 @@ class SheetRawData:
     print_areas: list[PrintArea]
     auto_print_areas: list[PrintArea]
     colors_map: dict[str, list[tuple[int, int]]]
+    merged_cells: list[MergedCell]
 
 
 @dataclass(frozen=True)
@@ -67,6 +70,7 @@ def build_sheet_data(raw: SheetRawData) -> SheetData:
         print_areas=raw.print_areas,
         auto_print_areas=raw.auto_print_areas,
         colors_map=raw.colors_map,
+        merged_cells=raw.merged_cells,
     )
 
 

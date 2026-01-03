@@ -11,7 +11,7 @@ import xlwings as xw
 from ...models import PrintArea
 from ..cells import WorkbookColorsMap, extract_sheet_colors_map_com
 from ..ranges import parse_range_zero_based
-from .base import PrintAreaData
+from .base import MergedCellData, PrintAreaData
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +153,10 @@ class ComBackend:
             if failed:
                 continue
         return results
+
+    def extract_merged_cells(self) -> MergedCellData:
+        """Extract merged cell ranges via COM (not implemented)."""
+        raise NotImplementedError("COM merged cell extraction is not implemented.")
 
 
 def _parse_print_area_range(range_str: str) -> tuple[int, int, int, int] | None:

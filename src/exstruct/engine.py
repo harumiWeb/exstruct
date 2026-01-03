@@ -70,6 +70,7 @@ class StructOptions:
                       before extraction. Use this to tweak table detection heuristics
                       per engine instance without touching global state.
         include_colors_map: Whether to extract background color maps.
+        include_merged_cells: Whether to extract merged cell ranges.
         colors: Color extraction options.
     """
 
@@ -79,6 +80,7 @@ class StructOptions:
     )
     include_cell_links: bool | None = None  # None -> auto: verbose=True, others=False
     include_colors_map: bool | None = None  # None -> auto: verbose=True, others=False
+    include_merged_cells: bool | None = None  # None -> auto: light=False, others=True
     colors: ColorsOptions = field(default_factory=ColorsOptions)
 
 
@@ -120,6 +122,9 @@ class FilterOptions(BaseModel):
     )
     include_auto_print_areas: bool = Field(
         default=False, description="Include COM-computed auto page-break areas."
+    )
+    include_merged_cells: bool = Field(
+        default=True, description="Include merged cell ranges."
     )
 
 
@@ -279,6 +284,9 @@ class ExStructEngine:
             colors_map=sheet.colors_map,
             print_areas=sheet.print_areas if include_print_areas else [],
             auto_print_areas=sheet.auto_print_areas if include_auto_print_areas else [],
+            merged_cells=sheet.merged_cells
+            if self.output.filters.include_merged_cells
+            else [],
         )
 
     def _filter_workbook(
@@ -348,6 +356,7 @@ class ExStructEngine:
                 include_colors_map=self.options.include_colors_map,
                 include_default_background=self.options.colors.include_default_background,
                 ignore_colors=self.options.colors.ignore_colors_set(),
+                include_merged_cells=self.options.include_merged_cells,
             )
 
     def serialize(
