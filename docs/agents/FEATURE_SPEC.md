@@ -4,12 +4,11 @@
 
 ---
 
-## SmartArt解析機能追加
+## セル結合範囲取得機能の追加
 
-- shapeがSmartArtの場合に専用解析をするように条件分岐
-- Shapeの振る舞いが増えてきたので、ここでShape, Arrow, SmartArtにクラスを分ける
-- SmartArtは基本はShapeのフィールドを持ちつつ、Nodeの情報を再帰的に持つようにする
-- rootノードとそれ以外のノードでクラスを分ける
+- 新たに`MergedCell`モデルを作成、座標情報とセル値を持つ
+- `SheetData`に`merged_ranges`フィールドを追加し、list[MergedRange]を持つ
+- デフォルトモード以上（standard/verbose）で取得するようにする。engineには無効化オプションをつけておく（outputoptionsで出力時に削除する方向で）
 
 ## 今後のオプション（検討メモ）
 

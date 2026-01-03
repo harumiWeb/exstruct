@@ -76,6 +76,16 @@ class SmartArt(BaseShape):
     )
 
 
+class MergedCell(BaseModel):
+    """Metadata for a merged cell range."""
+
+    r1: int = Field(description="Start row (1-based).")
+    c1: int = Field(description="Start column (0-based).")
+    r2: int = Field(description="End row (1-based, inclusive).")
+    c2: int = Field(description="End column (0-based, inclusive).")
+    v: str = ""
+
+
 class CellRow(BaseModel):
     """A single row of cells with optional hyperlinks."""
 
@@ -159,6 +169,9 @@ class SheetData(BaseModel):
             "Mapping of hex color codes to lists of (row, column) tuples "
             "where row is 1-based and column is 0-based."
         ),
+    )
+    merged_cells: list[MergedCell] = Field(
+        default_factory=list, description="Merged cell ranges on the sheet."
     )
 
     def _as_payload(self) -> dict[str, object]:
