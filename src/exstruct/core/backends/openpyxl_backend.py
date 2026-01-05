@@ -13,10 +13,11 @@ from ..cells import (
     extract_sheet_cells,
     extract_sheet_cells_with_links,
     extract_sheet_colors_map,
+    extract_sheet_merged_cells,
 )
 from ..ranges import parse_range_zero_based
 from ..workbook import openpyxl_workbook
-from .base import CellData, PrintAreaData
+from .base import CellData, MergedCellData, PrintAreaData
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +87,17 @@ class OpenpyxlBackend:
                 "Color map extraction failed; skipping colors_map. (%r)", exc
             )
             return None
+
+    def extract_merged_cells(self) -> MergedCellData:
+        """Extract merged cell ranges per sheet.
+
+        Returns:
+            Mapping of sheet name to merged cell ranges.
+        """
+        try:
+            return extract_sheet_merged_cells(self.file_path)
+        except Exception:
+            return {}
 
     def detect_tables(self, sheet_name: str) -> list[str]:
         """Detect table candidates for a single sheet.

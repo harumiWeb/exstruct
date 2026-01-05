@@ -25,6 +25,7 @@ def test_build_workbook_data_from_raw() -> None:
         print_areas=[PrintArea(r1=1, c1=0, r2=1, c2=0)],
         auto_print_areas=[],
         colors_map={"#FFFFFF": [(1, 0)]},
+        merged_cells=[],
     )
     raw_workbook = WorkbookRawData(book_name="book.xlsx", sheets={"Sheet1": raw_sheet})
 

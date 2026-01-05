@@ -3,11 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from ...models import CellRow, PrintArea
+from ...models import CellRow, MergedCell, PrintArea
 from ..cells import WorkbookColorsMap
 
 CellData = dict[str, list[CellRow]]
 PrintAreaData = dict[str, list[PrintArea]]
+MergedCellData = dict[str, list[MergedCell]]
 
 
 @dataclass(frozen=True)
@@ -36,3 +37,6 @@ class Backend(Protocol):
         self, *, include_default_background: bool, ignore_colors: set[str] | None
     ) -> WorkbookColorsMap | None:
         """Extract colors map from the workbook."""
+
+    def extract_merged_cells(self) -> MergedCellData:
+        """Extract merged cell ranges from the workbook."""

@@ -112,3 +112,9 @@ def test_export_sheets_yamlとtoonが出力される(tmp_path: Path) -> None:
     toon_paths = export_sheets_as(wb, toon_dir, fmt="toon")
     assert toon_paths["SheetA"].suffix == ".toon"
     assert toon_paths["SheetA"].exists()
+
+
+def test_merged_cells_empty_is_omitted_in_sheet_json() -> None:
+    sheet = SheetData(rows=[CellRow(r=1, c={"0": "v"})], merged_cells=[])
+    payload = sheet.to_json()
+    assert "merged_cells" not in payload

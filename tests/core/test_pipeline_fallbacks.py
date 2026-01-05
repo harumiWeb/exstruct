@@ -34,6 +34,7 @@ def test_pipeline_fallback_skip_com_tests(
         include_colors_map=False,
         include_default_background=False,
         ignore_colors=None,
+        include_merged_cells=None,
     )
     result = run_extraction_pipeline(inputs)
 
@@ -66,6 +67,7 @@ def test_pipeline_fallback_com_unavailable(
         include_colors_map=False,
         include_default_background=False,
         ignore_colors=None,
+        include_merged_cells=None,
     )
     result = run_extraction_pipeline(inputs)
 
@@ -106,6 +108,7 @@ def test_pipeline_fallback_com_pipeline_failed(
         include_colors_map=False,
         include_default_background=False,
         ignore_colors=None,
+        include_merged_cells=None,
     )
     result = run_extraction_pipeline(inputs)
 

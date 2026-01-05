@@ -1,9 +1,10 @@
 ﻿# ExStruct テスト要件仕様書
 
-Version: 0.4
+Version: 0.5
 Status: Required for Release
 
 ExStruct の全機能について、正式なテスト要件をまとめたドキュメントです。AI エージェント／人間開発者が自動テスト・手動テストを設計するための基盤とします。
+全体のコードカバレッジは **78% 以上** を満たすこと。
 
 ---
 
@@ -46,6 +47,13 @@ ExStruct の全機能について、正式なテスト要件をまとめたド�
 - [COL-03] `ignore_colors` 指定時は対象色を除外（`#` 付き/大小文字を正規化）
 - [COL-04] COM 利用時は `DisplayFormat.Interior` を参照し条件付き書式を含めて取得
 - [COL-05] `_normalize_color_key` / `_normalize_rgb` は ARGB/#/auto/theme/indexed を正規化
+
+## 2.1.2 結合セル
+
+- [MRG-01] standard/verbose のみ `merged_cells` を抽出する（light は空）
+- [MRG-02] 1-based row / 0-based column の座標で出力する
+- [MRG-03] `v` は結合範囲の左上セル値（None は空文字）
+- [MRG-04] 複数範囲がある場合も全件を保持する
 
 ## 2.2 図形抽出
 
@@ -143,6 +151,7 @@ ExStruct の全機能について、正式なテスト要件をまとめたド�
 - [EXP-22] serialize_workbook は未対応フォーマットで SerializationError
 - [EXP-23] export/process API は output_path/sheets_dir/print_areas_dir/auto_page_breaks_dir に str/Path を渡しても正しく出力できる
 - [EXP-24] fmt="yml" は yaml として扱い、拡張子は .yaml になる
+- [EXP-25] OutputOptions の include_merged_cells=False で `merged_cells` を除外
 
 ---
 
@@ -213,6 +222,7 @@ ExStruct の全機能について、正式なテスト要件をまとめたド�
 - [PIPE-06] print_areas は openpyxl の結果を保持し、COM は不足分のみ補完する
 - [PIPE-07] PipelineState は com_attempted/com_succeeded/fallback_reason を保持する
 - [PIPE-08] include_auto_page_breaks=False の場合は auto_page_breaks の COM ステップを含めない
+- [PIPE-09] include_merged_cells=False の場合は merged_cells の抽出ステップを含めない
 - [PIPE-MOD-01] build_workbook_data は raw コンテナから WorkbookData/SheetData を構築する
 - [PIPE-MOD-02] collect_sheet_raw_data は抽出済みデータを raw コンテナにまとめる
 
@@ -223,6 +233,8 @@ ExStruct の全機能について、正式なテスト要件をまとめたド�
 - [BE-03] ComBackend は colors_map 抽出失敗時に None を返す
 - [BE-04] OpenpyxlBackend は colors_map 抽出失敗時に None を返す
 - [BE-05] ComBackend は print_areas 抽出失敗時に空マップで継続する
+- [BE-06] OpenpyxlBackend は merged_cells 抽出失敗時に空マップで継続する
+- [BE-07] ComBackend の merged_cells 未実装は NotImplementedError とする
 
 ## 2.8 Ranges
 

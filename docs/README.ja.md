@@ -2,14 +2,14 @@
 
 [![PyPI version](https://badge.fury.io/py/exstruct.svg)](https://pypi.org/project/exstruct/) [![PyPI Downloads](https://static.pepy.tech/personalized-badge/exstruct?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/exstruct) ![Licence: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue?style=flat-square) [![pytest](https://github.com/harumiWeb/exstruct/actions/workflows/pytest.yml/badge.svg)](https://github.com/harumiWeb/exstruct/actions/workflows/pytest.yml) [![Codacy Badge](https://app.codacy.com/project/badge/Grade/e081cb4f634e4175b259eb7c34f54f60)](https://app.codacy.com/gh/harumiWeb/exstruct/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade) [![codecov](https://codecov.io/gh/harumiWeb/exstruct/graph/badge.svg?token=2XI1O8TTA9)](https://codecov.io/gh/harumiWeb/exstruct)
 
-![ExStruct Image](assets/icon.webp)
+![ExStruct Image](/assets/icon.webp)
 
 ExStruct は Excel ワークブックを読み取り、構造化データ（セル・テーブル候補・図形・チャート・SmartArt・印刷範囲ビュー）をデフォルトで JSON に出力します。必要に応じて YAML/TOON も選択でき、COM/Excel 環境ではリッチ抽出、非 COM 環境ではセル＋テーブル候補＋印刷範囲へのフォールバックで安全に動作します。LLM/RAG 向けに検出ヒューリスティックや出力モードを調整可能です。
 
 ## 主な特徴
 
-- **Excel → 構造化 JSON**: セル、図形、チャート、SmartArt、テーブル候補、印刷範囲/自動改ページ範囲（PrintArea/PrintAreaView）をシート単位・範囲単位で出力。
-- **出力モード**: `light`（セル＋テーブル候補のみ）、`standard`（テキスト付き図形＋矢印、チャート、SmartArt）、`verbose`（全図形を幅高さ付きで出力、セルのハイパーリンクも出力）。
+- **Excel → 構造化 JSON**: セル、図形、チャート、SmartArt、テーブル候補、セル結合範囲、印刷範囲/自動改ページ範囲（PrintArea/PrintAreaView）をシート単位・範囲単位で出力。
+- **出力モード**: `light`（セル＋テーブル候補のみ）、`standard`（テキスト付き図形＋矢印、チャート、SmartArt、セル結合範囲）、`verbose`（全図形を幅高さ付きで出力、セルのハイパーリンクも出力）。
 - **フォーマット**: JSON（デフォルトはコンパクト、`--pretty` で整形）、YAML、TOON（任意依存）。
 - **テーブル検出のチューニング**: API でヒューリスティックを動的に変更可能。
 - **ハイパーリンク抽出**: `verbose` モード（または `include_cell_links=True` 指定）でセルのリンクを `links` に出力。
@@ -149,18 +149,18 @@ exstruct input.xlsx --pdf --image --dpi 144
 
 `<output>.pdf` と `<output>_images/` 配下に PNG を生成します。
 
-## ベンチマーク: Excel 構造化デモ
+## 例 ①: Excel 構造化デモ
 
 本ライブラリ exstruct がどの程度 Excel を構造化できるのかを示すため、
 以下の 3 要素を 1 シートにまとめた Excel を解析し、
-その JSON 出力を用いた AI 推論精度ベンチマーク を掲載します。
+その JSON 出力を用いた LLM 推論例 を掲載します。
 
 - 表（売上データ）
 - 折れ線グラフ
 - 図形のみで作成したフローチャート
 
 （下画像が実際のサンプル Excel シート）
-![Sample Excel](assets/demo_sheet.png)
+![Sample Excel](/assets/demo_sheet.png)
 サンプル Excel: `sample/sample.xlsx`
 
 ### 1. Input: Excel Sheet Overview
@@ -335,9 +335,169 @@ flowchart TD
 ```
 ````
 
-このことから、
+## 例 ②: 一般的な申請書
 
-**exstruct の JSON は AI にとって "そのまま意味として理解できる形式" である**
+### Excel データ
+
+![一般的な申請書Excel](/assets/demo_form.ja.png)
+
+### ExStruct JSON
+
+※長いので一部省略
+
+```json
+{
+  "book_name": "ja_form.xlsx",
+  "sheets": {
+    "Sheet1": {
+      "rows": [
+        { "r": 1, "c": { "0": "介護保険負担限度額認定申請書" } },
+        {
+          "r": 3,
+          "c": { "0": "（申請先）", "7": "  　　　　年　　　　月　　　　日" }
+        },
+        { "r": 4, "c": { "1": "X市長　" } },
+        ...
+      ],
+      "table_candidates": ["B25:C26", "C37:D50"],
+      "merged_cells": [
+        {
+          "r1": 55,
+          "c1": 5,
+          "r2": 55,
+          "c2": 10,
+          "v": "申請者が被保険者本人の場合には、下記について記載は不要です。"
+        },
+        { "r1": 54, "c1": 8, "r2": 54, "c2": 10 },
+        { "r1": 51, "c1": 5, "r2": 52, "c2": 6, "v": "有価証券" },
+        ...
+      ]
+    }
+  }
+}
+
+```
+
+### LLM 推論による ExStruct JSON → Markdown 変換結果
+
+```md
+# 介護保険負担限度額認定申請書
+
+（申請先）　　　　　　　　　　　　　　年　　月　　日  
+X 市長
+
+次のとおり関係書類を添えて、食費・居住費（滞在費）に係る負担限度額認定を申請します。
+
+---
+
+## 被保険者情報
+
+| 項目         | 内容                         |
+| ------------ | ---------------------------- |
+| フリガナ     |                              |
+| 被保険者氏名 |                              |
+| 被保険者番号 |                              |
+| 個人番号     |                              |
+| 生年月日     | 明・大・昭　　年　　月　　日 |
+| 住所         |                              |
+| 連絡先       |                              |
+
+---
+
+## 入所（院）した介護保険施設
+
+| 項目                  | 内容       |
+| --------------------- | ---------- |
+| 施設所在地・名称（※） |            |
+| 連絡先                |            |
+| 入所（院）年月日      | 年　月　日 |
+
+**（※）介護保険施設に入所（院）していない場合、およびショートステイ利用時は記入不要**
+
+---
+
+## 配偶者の有無
+
+| 項目         | 内容     |
+| ------------ | -------- |
+| 配偶者の有無 | 有 ・ 無 |
+
+※「無」の場合、以下の「配偶者に関する事項」は記入不要
+
+---
+
+## 配偶者に関する事項
+
+| 項目                                           | 内容                       |
+| ---------------------------------------------- | -------------------------- |
+| フリガナ                                       |                            |
+| 氏名                                           |                            |
+| 生年月日                                       | 明・大・昭　年　月　日     |
+| 個人番号                                       |                            |
+| 住所                                           | 〒                         |
+| 連絡先                                         |                            |
+| 本年 1 月 1 日現在の住所（現住所と異なる場合） | 〒                         |
+| 課税状況                                       | 市町村民税：課税 ・ 非課税 |
+
+---
+
+## 収入等に関する申告
+
+以下の該当する項目にチェックしてください。
+
+- □ ① 生活保護受給者
+- □ ② 市町村民税世帯非課税である老齢福祉年金受給者
+- □ ③ 市町村民税世帯非課税者で、課税年金収入額＋遺族年金・障害年金＋その他所得の合計が **年額 80 万円以下**
+- □ ④ 同上で **80 万円超〜120 万円以下**
+- □ ⑤ 同上で **120 万円超**
+
+※遺族年金には寡婦年金、寡夫年金、母子年金、準母子年金、遺児年金を含む
+
+---
+
+## 預貯金等に関する申告
+
+- □ 預貯金・有価証券等の合計額が以下の基準以下である
+  - ② の方：1000 万円（夫婦 2000 万円）
+  - ③ の方：650 万円（夫婦 1650 万円）
+  - ④ の方：550 万円（夫婦 1550 万円）
+  - ⑤ の方：500 万円（夫婦 1500 万円）
+  - ※第 2 号被保険者（40〜64 歳）は ③〜⑤ の方：1000 万円（夫婦 2000 万円）以下
+
+### 預貯金等の内訳
+
+| 項目                       | 金額             |
+| -------------------------- | ---------------- |
+| 預貯金額                   | 円               |
+| 有価証券（評価概算額）     | 円               |
+| その他（現金・負債を含む） | 円（内容を記入） |
+
+---
+
+## 申請者情報（※被保険者本人の場合は不要）
+
+| 項目                   | 内容 |
+| ---------------------- | ---- |
+| 申請者氏名             |      |
+| 連絡先（自宅・勤務先） |      |
+| 申請者住所             |      |
+| 本人との関係           |      |
+
+---
+
+## 注意事項
+
+1. この申請書における「配偶者」には、世帯分離している配偶者および内縁関係の者を含む。
+2. 預貯金等は、同じ種類を複数所有している場合すべて記入し、通帳等の写しを添付すること。
+3. 書き切れない場合は余白または別紙に記入して添付すること。
+4. 虚偽の申告により不正に特定入所者介護サービス費等の支給を受けた場合、介護保険法第 22 条第 1 項に基づき、支給額および最大 2 倍の加算金を返還する必要がある。
+```
+
+## 考察
+
+上記の実験結果から、
+
+**ExStruct の JSON は AI にとって "そのまま意味として理解できる形式" である**
 
 ということが明確に示されています。
 
@@ -346,6 +506,7 @@ flowchart TD
 - [Basic Excel](sample/basic/)
 - [Flowchart](sample/flowchart/)
 - [Gantt Chart](sample/gantt_chart/)
+- [Application forms with many merged cells](sample/forms_with_many_merged_cells/)
 
 ### 4. Summary
 
@@ -382,11 +543,6 @@ ExStruct は主に **ライブラリ** として利用される想定で、サ�
 - `export_print_areas_as(...)` や CLI `--print-areas-dir` で印刷範囲ごとにファイルを出力できます（印刷範囲が無い場合はファイルを作りません）。
 - CLI `--auto-page-breaks-dir`（COM 限定）、`DestinationOptions.auto_page_breaks_dir`（推奨）、または `export_auto_page_breaks(...)` で自動改ページ範囲ごとにファイルを出力できます。自動改ページが存在しない場合、`export_auto_page_breaks(...)` は `ValueError` を送出します。
 - `PrintAreaView` には範囲内の行・テーブル候補に加え、範囲と交差する図形/チャートを含みます（サイズ不明の図形は座標のみで判定）。`normalize=True` で行/列を範囲起点に再基準化できます。
-
-## ドキュメントビルド
-
-- サイトビルド前にモデル断片を再生成してください: `python scripts/gen_model_docs.py`
-- mkdocs + mkdocstrings でローカルビルド（開発用依存が必要）: `uv run mkdocs serve` または `uv run mkdocs build`
 
 ## アーキテクチャ
 

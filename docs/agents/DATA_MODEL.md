@@ -1,6 +1,6 @@
 # ExStruct データモデル仕様
 
-**Version**: 0.13  
+**Version**: 0.14  
 **Status**: Authoritative — 本ドキュメントは ExStruct が返す全モデルの唯一の正準ソースです。  
 core / io / integrate は必ずこの仕様に従うこと。モデルは **pydantic v2** で実装します。
 
@@ -148,7 +148,25 @@ PrintAreaView {
 
 ---
 
-# 8. SheetData Model
+# 8. MergedCell Model
+
+```jsonc
+MergedCell {
+  r1: int  // 開始行 (1-based)
+  c1: int  // 開始列 (0-based)
+  r2: int  // 終了行 (1-based, inclusive)
+  c2: int  // 終了列 (0-based, inclusive)
+  v: str   // 結合セルの代表値 (空文字の可能性あり)
+}
+```
+
+補足:
+
+- `standard` / `verbose` で取得される
+
+---
+
+# 9. SheetData Model
 
 ```jsonc
 SheetData {
@@ -159,6 +177,7 @@ SheetData {
   print_areas: [PrintArea]
   auto_print_areas: [PrintArea] // 自動改ページ矩形（COM 前提、デフォルト無効）
   colors_map: {[colorHex: str]: [[int, int]]} // (row=1-based, col=0-based) のセル座標を列挙
+  merged_cells: [MergedCell] // ?????? (standard/verbose)
 }
 ```
 
@@ -169,7 +188,7 @@ SheetData {
 
 ---
 
-# 9. WorkbookData Model (トップレベル)
+# 10. WorkbookData Model (トップレベル)
 
 ```jsonc
 WorkbookData {
@@ -184,7 +203,7 @@ WorkbookData {
 
 ---
 
-# 10. Export Helpers (SheetData / WorkbookData)
+# 11. Export Helpers (SheetData / WorkbookData)
 
 共通:
 
@@ -205,7 +224,7 @@ WorkbookData {
 
 ---
 
-# 11. Versioning Principles（エージェント向け）
+# 12. Versioning Principles（エージェント向け）
 
 - モデル変更時は必ず本ファイルを先に更新する。
 - モデルは純粋なデータコンテナとし、副作用を持たせない。
@@ -213,7 +232,7 @@ WorkbookData {
 
 ---
 
-# 12. Changelog
+# 13. Changelog
 
 - 0.3: serialize/save ヘルパーを追加、`WorkbookData` に `__iter__` / `__getitem__` を定義。
 - 0.4: `CellRow.links` を追加（ハイパーリンクは opt-in、verbose でデフォルト有効）。
@@ -226,3 +245,4 @@ WorkbookData {
 - 0.11: コネクタのフィールド名を `begin_id` / `end_id` にリネーム。
 - 0.12: SheetData に背景色情報を格納する`colors_map`を追加。
 - 0.13: Shape を `Shape` / `Arrow` / `SmartArt` に分離し、`SmartArtNode` のネスト構造を追加。
+- 0.14: セル結合範囲データを持つ`MergedCell`,`SheetData.merged_cells` を追加

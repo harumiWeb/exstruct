@@ -10,7 +10,16 @@ from typing import Literal
 import xlwings as xw
 
 from ..errors import FallbackReason
-from ..models import Arrow, CellRow, Chart, PrintArea, Shape, SmartArt, WorkbookData
+from ..models import (
+    Arrow,
+    CellRow,
+    Chart,
+    MergedCell,
+    PrintArea,
+    Shape,
+    SmartArt,
+    WorkbookData,
+)
 from .backends.com_backend import ComBackend
 from .backends.openpyxl_backend import OpenpyxlBackend
 from .cells import WorkbookColorsMap, detect_tables
@@ -23,6 +32,7 @@ from .workbook import xlwings_workbook
 ExtractionMode = Literal["light", "standard", "verbose"]
 CellData = dict[str, list[CellRow]]
 PrintAreaData = dict[str, list[PrintArea]]
+MergedCellData = dict[str, list[MergedCell]]
 ShapeData = dict[str, list[Shape | Arrow | SmartArt]]
 ChartData = dict[str, list[Chart]]
 
@@ -42,6 +52,7 @@ class ExtractionInputs:
         include_colors_map: Whether to include background colors map.
         include_default_background: Whether to include default background color.
         ignore_colors: Optional set of color keys to ignore.
+        include_merged_cells: Whether to include merged cell ranges.
     """
 
     file_path: Path
@@ -52,6 +63,7 @@ class ExtractionInputs:
     include_colors_map: bool
     include_default_background: bool
     ignore_colors: set[str] | None
+    include_merged_cells: bool
 
 
 @dataclass
@@ -65,6 +77,7 @@ class ExtractionArtifacts:
         colors_map_data: Extracted colors map for workbook sheets.
         shape_data: Extracted shapes per sheet.
         chart_data: Extracted charts per sheet.
+        merged_cell_data: Extracted merged cell ranges per sheet.
     """
 
     cell_data: CellData = field(default_factory=dict)
@@ -73,6 +86,7 @@ class ExtractionArtifacts:
     colors_map_data: WorkbookColorsMap | None = None
     shape_data: ShapeData = field(default_factory=dict)
     chart_data: ChartData = field(default_factory=dict)
+    merged_cell_data: MergedCellData = field(default_factory=dict)
 
 
 ExtractionStep = Callable[[ExtractionInputs, ExtractionArtifacts], None]
@@ -164,6 +178,7 @@ def resolve_extraction_inputs(
     include_colors_map: bool | None,
     include_default_background: bool,
     ignore_colors: set[str] | None,
+    include_merged_cells: bool | None,
 ) -> ExtractionInputs:
     """Resolve include flags and normalize inputs for the pipeline.
 
@@ -176,6 +191,7 @@ def resolve_extraction_inputs(
         include_colors_map: Whether to include background colors; None uses mode defaults.
         include_default_background: Include default background colors when colors_map is enabled.
         ignore_colors: Optional set of colors to ignore when colors_map is enabled.
+        include_merged_cells: Whether to include merged cell ranges; None uses mode defaults.
 
     Returns:
         Resolved ExtractionInputs.
@@ -203,6 +219,9 @@ def resolve_extraction_inputs(
     resolved_ignore_colors = ignore_colors if resolved_colors_map else None
     if resolved_colors_map and resolved_ignore_colors is None:
         resolved_ignore_colors = set()
+    resolved_merged_cells = (
+        include_merged_cells if include_merged_cells is not None else mode != "light"
+    )
 
     return ExtractionInputs(
         file_path=normalized_file_path,
@@ -213,6 +232,7 @@ def resolve_extraction_inputs(
         include_colors_map=resolved_colors_map,
         include_default_background=resolved_default_background,
         ignore_colors=resolved_ignore_colors,
+        include_merged_cells=resolved_merged_cells,
     )
 
 
@@ -258,6 +278,11 @@ def build_pre_com_pipeline(inputs: ExtractionInputs) -> list[ExtractionStep]:
                 step=step_extract_colors_map_openpyxl,
                 enabled=lambda _inputs: _inputs.include_colors_map,
             ),
+            StepConfig(
+                name="merged_cells_openpyxl",
+                step=step_extract_merged_cells_openpyxl,
+                enabled=lambda _inputs: _inputs.include_merged_cells,
+            ),
         ),
         "standard": (
             StepConfig(
@@ -276,6 +301,11 @@ def build_pre_com_pipeline(inputs: ExtractionInputs) -> list[ExtractionStep]:
                 enabled=lambda _inputs: _inputs.include_colors_map
                 and bool(os.getenv("SKIP_COM_TESTS")),
             ),
+            StepConfig(
+                name="merged_cells_openpyxl",
+                step=step_extract_merged_cells_openpyxl,
+                enabled=lambda _inputs: _inputs.include_merged_cells,
+            ),
         ),
         "verbose": (
             StepConfig(
@@ -293,6 +323,11 @@ def build_pre_com_pipeline(inputs: ExtractionInputs) -> list[ExtractionStep]:
                 step=step_extract_colors_map_openpyxl,
                 enabled=lambda _inputs: _inputs.include_colors_map
                 and bool(os.getenv("SKIP_COM_TESTS")),
+            ),
+            StepConfig(
+                name="merged_cells_openpyxl",
+                step=step_extract_merged_cells_openpyxl,
+                enabled=lambda _inputs: _inputs.include_merged_cells,
             ),
         ),
     }
@@ -432,6 +467,19 @@ def step_extract_colors_map_openpyxl(
     )
 
 
+def step_extract_merged_cells_openpyxl(
+    inputs: ExtractionInputs, artifacts: ExtractionArtifacts
+) -> None:
+    """Extract merged cell ranges via openpyxl.
+
+    Args:
+        inputs: Pipeline inputs.
+        artifacts: Artifact container to update.
+    """
+    backend = OpenpyxlBackend(inputs.file_path)
+    artifacts.merged_cell_data = backend.extract_merged_cells()
+
+
 def step_extract_shapes_com(
     inputs: ExtractionInputs, artifacts: ExtractionArtifacts, workbook: xw.Book
 ) -> None:
@@ -540,6 +588,7 @@ def collect_sheet_raw_data(
     cell_data: CellData,
     shape_data: ShapeData,
     chart_data: ChartData,
+    merged_cell_data: MergedCellData,
     workbook: xw.Book,
     mode: ExtractionMode = "standard",
     print_area_data: PrintAreaData | None = None,
@@ -552,6 +601,7 @@ def collect_sheet_raw_data(
         cell_data: Extracted cell rows per sheet.
         shape_data: Extracted shapes per sheet.
         chart_data: Extracted charts per sheet.
+        merged_cell_data: Extracted merged cells per sheet.
         workbook: xlwings workbook instance.
         mode: Extraction mode.
         print_area_data: Optional print area data per sheet.
@@ -574,6 +624,7 @@ def collect_sheet_raw_data(
             if auto_page_break_data
             else [],
             colors_map=_resolve_sheet_colors_map(colors_map_data, sheet_name),
+            merged_cells=merged_cell_data.get(sheet_name, []),
         )
         result[sheet_name] = sheet_raw
     return result
@@ -620,6 +671,7 @@ def run_extraction_pipeline(inputs: ExtractionInputs) -> PipelineResult:
                     cell_data=artifacts.cell_data,
                     shape_data=artifacts.shape_data,
                     chart_data=artifacts.chart_data,
+                    merged_cell_data=artifacts.merged_cell_data,
                     workbook=workbook,
                     mode=inputs.mode,
                     print_area_data=artifacts.print_area_data
@@ -691,6 +743,7 @@ def build_cells_tables_workbook(
             else [],
             auto_print_areas=[],
             colors_map=sheet_colors.colors_map if sheet_colors else {},
+            merged_cells=artifacts.merged_cell_data.get(sheet_name, []),
         )
     raw = WorkbookRawData(book_name=inputs.file_path.name, sheets=sheets)
     return build_workbook_data(raw)

@@ -4,14 +4,14 @@
 
 ![ExStruct Image](/docs/assets/icon.webp)
 
-ExStruct reads Excel workbooks and outputs structured data (cells, table candidates, shapes, charts, smartart, print areas/views, auto page-break areas, hyperlinks) as JSON by default, with optional YAML/TOON formats. It targets both COM/Excel environments (rich extraction) and non-COM environments (cells + table candidates + print areas), with tunable detection heuristics and multiple output modes to fit LLM/RAG pipelines.
+ExStruct reads Excel workbooks and outputs structured data (cells, table candidates, shapes, charts, smartart, merged cell ranges, print areas/views, auto page-break areas, hyperlinks) as JSON by default, with optional YAML/TOON formats. It targets both COM/Excel environments (rich extraction) and non-COM environments (cells + table candidates + print areas), with tunable detection heuristics and multiple output modes to fit LLM/RAG pipelines.
 
 [日本版 README](README.ja.md)
 
 ## Features
 
 - **Excel → Structured JSON**: cells, shapes, charts, smartart, table candidates, print areas/views, and auto page-break areas per sheet.
-- **Output modes**: `light` (cells + table candidates + print areas; no COM, shapes/charts empty), `standard` (texted shapes + arrows, charts, smartart, print areas), `verbose` (all shapes with width/height, charts with size, print areas). Verbose also emits cell hyperlinks and `colors_map`. Size output is flag-controlled.
+- **Output modes**: `light` (cells + table candidates + print areas; no COM, shapes/charts empty), `standard` (texted shapes + arrows, charts, smartart, merged cell ranges, print areas), `verbose` (all shapes with width/height, charts with size, merged cell ranges, print areas). Verbose also emits cell hyperlinks and `colors_map`. Size output is flag-controlled.
 - **Auto page-break export (COM only)**: capture Excel-computed auto page breaks and write per-area JSON/YAML/TOON when requested (CLI option appears only when COM is available).
 - **Formats**: JSON (compact by default, `--pretty` available), YAML, TOON (optional dependencies).
 - **Table detection tuning**: adjust heuristics at runtime via API.
@@ -133,8 +133,8 @@ Use higher thresholds to reduce false positives; lower them if true tables are m
 ## Output Modes
 
 - **light**: cells + table candidates (no COM needed).
-- **standard**: texted shapes + arrows, charts (COM if available), table candidates. Hyperlinks are off unless `include_cell_links=True`.
-- **verbose**: all shapes (with width/height), charts, table candidates, cell hyperlinks, and `colors_map`.
+- **standard**: texted shapes + arrows, charts (COM if available), merged cell ranges, table candidates. Hyperlinks are off unless `include_cell_links=True`.
+- **verbose**: all shapes (with width/height), charts, merged cell ranges, table candidates, cell hyperlinks, and `colors_map`.
 
 ## Error Handling / Fallbacks
 
@@ -152,7 +152,7 @@ exstruct input.xlsx --pdf --image --dpi 144
 
 Creates `<output>.pdf` and `<output>_images/` PNGs per sheet.
 
-## Benchmark: Excel Structuring Demo
+## Example 1: Excel Structuring Demo
 
 To show how well exstruct can structure Excel, we parse a workbook that combines three elements on one sheet and share an AI reasoning benchmark that uses the JSON output.
 
@@ -336,6 +336,87 @@ flowchart TD
 ```
 ````
 
+## Example 2: General Application Form
+
+### Excel Sheet
+
+![General Application Form Excel](/docs/assets/demo_form.en.png)
+
+### ExStruct JSON
+
+(Truncated for brevity)
+
+```json
+{
+  "book_name": "ja_form.xlsx",
+  "sheets": {
+    "Sheet1": {
+      "rows": [
+        { "r": 1, "c": { "0": "??????????????" } },
+        {
+          "r": 3,
+          "c": { "0": "???", "7": "  ???????????????" }
+        },
+        { "r": 4, "c": { "1": "X???" } },
+        ...
+      ],
+      "table_candidates": ["B25:C26", "C37:D50"],
+      "merged_cells": [
+        {
+          "r1": 55,
+          "c1": 5,
+          "r2": 55,
+          "c2": 10,
+          "v": "?????????????????????????????"
+        },
+        { "r1": 54, "c1": 8, "r2": 54, "c2": 10 },
+        { "r1": 51, "c1": 5, "r2": 52, "c2": 6, "v": "????" },
+        ...
+      ]
+    }
+  }
+}
+```
+
+### LLM reconstruction example
+
+```md
+# ??????????????
+
+????????????????????????  
+X ??
+
+?????????????????????????????????????????
+
+---
+
+## ??????
+
+| ??     | ??             |
+| ------ | -------------- |
+| ????   |                |
+| ?????  |                |
+| ?????? |                |
+| ????   |                |
+| ????   | ?????????????? |
+| ??     |                |
+| ???    |                |
+
+---
+
+## ?????????????
+
+| ??          | ??    |
+| ----------- | ----- |
+| ??????????? |       |
+| ???         |       |
+| ????????    | ????? |
+
+**???????????????????????????????????????**
+
+...
+```
+
 From this we can see:
 
 **exstruct's JSON is already in a format that AI can read and reason over directly.**
@@ -345,6 +426,7 @@ Other LLM inference samples using this library can be found in the following dir
 - [Basic Excel](sample/basic/)
 - [Flowchart](sample/flowchart/)
 - [Gantt Chart](sample/gantt_chart/)
+- [Application forms with many merged cells](sample/forms_with_many_merged_cells/)
 
 ### 4. Summary
 

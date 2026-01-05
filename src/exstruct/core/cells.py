@@ -15,7 +15,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 import pandas as pd
 import xlwings as xw
 
-from ..models import CellRow
+from ..models import CellRow, MergedCell
 from .workbook import openpyxl_workbook
 
 logger = logging.getLogger(__name__)
@@ -524,6 +524,41 @@ def extract_sheet_cells_with_links(file_path: Path) -> dict[str, list[CellRow]]:
         merged[sheet_name] = merged_rows
     wb.close()
     return merged
+
+
+def extract_sheet_merged_cells(file_path: Path) -> dict[str, list[MergedCell]]:
+    """Extract merged cell ranges per sheet via openpyxl.
+
+    Args:
+        file_path: Excel workbook path.
+
+    Returns:
+        Mapping of sheet name to merged cell ranges.
+    """
+    merged_by_sheet: dict[str, list[MergedCell]] = {}
+    with openpyxl_workbook(file_path, data_only=True, read_only=False) as wb:
+        for ws in wb.worksheets:
+            merged_ranges = getattr(ws, "merged_cells", None)
+            if merged_ranges is None:
+                merged_by_sheet[ws.title] = []
+                continue
+            results: list[MergedCell] = []
+            for merged_range in getattr(merged_ranges, "ranges", []):
+                bounds = range_boundaries(str(merged_range))
+                min_col, min_row, max_col, max_row = bounds
+                cell_value = ws.cell(row=min_row, column=min_col).value
+                value_str = "" if cell_value is None else str(cell_value)
+                results.append(
+                    MergedCell(
+                        r1=min_row,
+                        c1=min_col - 1,
+                        r2=max_row,
+                        c2=max_col - 1,
+                        v=value_str,
+                    )
+                )
+            merged_by_sheet[ws.title] = results
+    return merged_by_sheet
 
 
 def shrink_to_content(  # noqa: C901

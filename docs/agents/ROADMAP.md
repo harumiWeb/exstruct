@@ -36,6 +36,14 @@
 - Shapes と Arrows の分離（後の SmartArt 追加のため）
 - SmartArt 解析
 
+## v0.3.2
+
+- セル結合範囲取得機能追加
+
+## v0.3.3
+
+- 数式取得オプション追加
+
 ## v0.4.0
 
 - Excel Form Controls 解析

@@ -14,6 +14,7 @@ from exstruct.models import (
     CellRow,
     Chart,
     ChartSeries,
+    MergedCell,
     PrintArea,
     Shape,
     SheetData,
@@ -33,6 +34,7 @@ def test_engine_extract_uses_mode(monkeypatch: MonkeyPatch, tmp_path: Path) -> N
         include_colors_map: bool = False,
         include_default_background: bool = False,
         ignore_colors: set[str] | None = None,
+        include_merged_cells: bool | None = None,
     ) -> WorkbookData:
         called["mode"] = mode
         called["include_print_areas"] = include_print_areas
@@ -63,6 +65,7 @@ def _sample_workbook() -> WorkbookData:
         charts=[chart],
         table_candidates=["A1:B2"],
         print_areas=[PrintArea(r1=1, c1=0, r2=3, c2=2)],
+        merged_cells=[MergedCell(r1=1, c1=0, r2=1, c2=1, v="merged")],
     )
     return WorkbookData(book_name="book.xlsx", sheets={"Sheet1": sheet})
 
@@ -83,6 +86,15 @@ def test_engine_serialize_filters_tables(tmp_path: Path) -> None:
     )
     text = engine.serialize(wb, fmt="json")
     assert "table_candidates" not in text
+
+
+def test_engine_serialize_filters_merged_cells() -> None:
+    wb = _sample_workbook()
+    engine = ExStructEngine(
+        output=OutputOptions(filters=FilterOptions(include_merged_cells=False))
+    )
+    text = engine.serialize(wb, fmt="json")
+    assert "merged_cells" not in text
 
 
 def test_engine_include_cell_links_toggle() -> None:
