@@ -1,3 +1,4 @@
+from exstruct.core.cells import MergedCellRange
 from exstruct.core.modeling import SheetRawData, WorkbookRawData, build_workbook_data
 from exstruct.models import CellRow, Chart, ChartSeries, PrintArea, Shape
 
@@ -25,7 +26,7 @@ def test_build_workbook_data_from_raw() -> None:
         print_areas=[PrintArea(r1=1, c1=0, r2=1, c2=0)],
         auto_print_areas=[],
         colors_map={"#FFFFFF": [(1, 0)]},
-        merged_cells=[],
+        merged_cells=[MergedCellRange(r1=1, c1=0, r2=1, c2=0, v=" ")],
     )
     raw_workbook = WorkbookRawData(book_name="book.xlsx", sheets={"Sheet1": raw_sheet})
 
@@ -38,3 +39,4 @@ def test_build_workbook_data_from_raw() -> None:
     assert sheet.shapes
     assert sheet.charts
     assert sheet.print_areas
+    assert sheet.merged_cells is not None

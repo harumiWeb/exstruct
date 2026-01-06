@@ -14,7 +14,6 @@ from ..models import (
     Arrow,
     CellRow,
     Chart,
-    MergedCell,
     PrintArea,
     Shape,
     SmartArt,
@@ -22,7 +21,7 @@ from ..models import (
 )
 from .backends.com_backend import ComBackend
 from .backends.openpyxl_backend import OpenpyxlBackend
-from .cells import WorkbookColorsMap, detect_tables
+from .cells import MergedCellRange, WorkbookColorsMap, detect_tables
 from .charts import get_charts
 from .logging_utils import log_fallback
 from .modeling import SheetRawData, WorkbookRawData, build_workbook_data
@@ -32,7 +31,7 @@ from .workbook import xlwings_workbook
 ExtractionMode = Literal["light", "standard", "verbose"]
 CellData = dict[str, list[CellRow]]
 PrintAreaData = dict[str, list[PrintArea]]
-MergedCellData = dict[str, list[MergedCell]]
+MergedCellData = dict[str, list[MergedCellRange]]
 ShapeData = dict[str, list[Shape | Arrow | SmartArt]]
 ChartData = dict[str, list[Chart]]
 
@@ -53,6 +52,7 @@ class ExtractionInputs:
         include_default_background: Whether to include default background color.
         ignore_colors: Optional set of color keys to ignore.
         include_merged_cells: Whether to include merged cell ranges.
+        include_merged_values_in_rows: Whether to keep merged values in rows.
     """
 
     file_path: Path
@@ -64,6 +64,7 @@ class ExtractionInputs:
     include_default_background: bool
     ignore_colors: set[str] | None
     include_merged_cells: bool
+    include_merged_values_in_rows: bool
 
 
 @dataclass
@@ -179,6 +180,7 @@ def resolve_extraction_inputs(
     include_default_background: bool,
     ignore_colors: set[str] | None,
     include_merged_cells: bool | None,
+    include_merged_values_in_rows: bool,
 ) -> ExtractionInputs:
     """Resolve include flags and normalize inputs for the pipeline.
 
@@ -192,6 +194,7 @@ def resolve_extraction_inputs(
         include_default_background: Include default background colors when colors_map is enabled.
         ignore_colors: Optional set of colors to ignore when colors_map is enabled.
         include_merged_cells: Whether to include merged cell ranges; None uses mode defaults.
+        include_merged_values_in_rows: Whether to keep merged values in rows.
 
     Returns:
         Resolved ExtractionInputs.
@@ -222,6 +225,8 @@ def resolve_extraction_inputs(
     resolved_merged_cells = (
         include_merged_cells if include_merged_cells is not None else mode != "light"
     )
+    if not include_merged_values_in_rows:
+        resolved_merged_cells = True
 
     return ExtractionInputs(
         file_path=normalized_file_path,
@@ -233,6 +238,7 @@ def resolve_extraction_inputs(
         include_default_background=resolved_default_background,
         ignore_colors=resolved_ignore_colors,
         include_merged_cells=resolved_merged_cells,
+        include_merged_values_in_rows=include_merged_values_in_rows,
     )
 
 
@@ -583,6 +589,108 @@ def _resolve_sheet_colors_map(
     return sheet_colors.colors_map
 
 
+def _filter_rows_excluding_merged_values(
+    rows: list[CellRow],
+    merged_cells: list[MergedCellRange],
+) -> list[CellRow]:
+    """Remove merged-cell values from rows.
+
+    Args:
+        rows: Extracted rows.
+        merged_cells: Merged cell ranges.
+
+    Returns:
+        Filtered rows with merged-cell values removed.
+    """
+    if not rows or not merged_cells:
+        return rows
+    intervals_by_row = _build_merged_row_intervals(merged_cells)
+    if not intervals_by_row:
+        return rows
+    filtered_rows: list[CellRow] = []
+    for row in rows:
+        intervals = intervals_by_row.get(row.r)
+        if not intervals:
+            filtered_rows.append(row)
+            continue
+        filtered_cells: dict[str, int | float | str] = {}
+        for col_key, value in row.c.items():
+            col_index = _safe_col_index(col_key)
+            if col_index is None:
+                filtered_cells[col_key] = value
+                continue
+            if not _col_in_intervals(col_index, intervals):
+                filtered_cells[col_key] = value
+        if not filtered_cells:
+            continue
+        filtered_links = None
+        if row.links:
+            filtered_links = {
+                col_key: link
+                for col_key, link in row.links.items()
+                if col_key in filtered_cells
+            }
+            if not filtered_links:
+                filtered_links = None
+        filtered_rows.append(CellRow(r=row.r, c=filtered_cells, links=filtered_links))
+    return filtered_rows
+
+
+def _build_merged_row_intervals(
+    merged_cells: list[MergedCellRange],
+) -> dict[int, list[tuple[int, int]]]:
+    """Build row -> merged column intervals lookup.
+
+    Args:
+        merged_cells: Merged cell ranges.
+
+    Returns:
+        Mapping of row index to merged column intervals.
+    """
+    intervals_by_row: dict[int, list[tuple[int, int]]] = {}
+    for cell in merged_cells:
+        for row in range(cell.r1, cell.r2 + 1):
+            intervals_by_row.setdefault(row, []).append((cell.c1, cell.c2))
+    for row, intervals in intervals_by_row.items():
+        intervals_by_row[row] = _merge_intervals(intervals)
+    return intervals_by_row
+
+
+def _merge_intervals(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """Merge overlapping or adjacent intervals."""
+    if not intervals:
+        return []
+    sorted_intervals = sorted(intervals)
+    merged: list[tuple[int, int]] = []
+    current_start, current_end = sorted_intervals[0]
+    for start, end in sorted_intervals[1:]:
+        if start <= current_end + 1:
+            current_end = max(current_end, end)
+            continue
+        merged.append((current_start, current_end))
+        current_start, current_end = start, end
+    merged.append((current_start, current_end))
+    return merged
+
+
+def _col_in_intervals(col_index: int, intervals: list[tuple[int, int]]) -> bool:
+    """Check whether a column index falls in any interval."""
+    for start, end in intervals:
+        if col_index < start:
+            return False
+        if start <= col_index <= end:
+            return True
+    return False
+
+
+def _safe_col_index(col_key: str) -> int | None:
+    """Parse a column key to int, returning None on failure."""
+    try:
+        return int(col_key)
+    except ValueError:
+        return None
+
+
 def collect_sheet_raw_data(
     *,
     cell_data: CellData,
@@ -591,6 +699,7 @@ def collect_sheet_raw_data(
     merged_cell_data: MergedCellData,
     workbook: xw.Book,
     mode: ExtractionMode = "standard",
+    include_merged_values_in_rows: bool,
     print_area_data: PrintAreaData | None = None,
     auto_page_break_data: PrintAreaData | None = None,
     colors_map_data: WorkbookColorsMap | None = None,
@@ -607,6 +716,7 @@ def collect_sheet_raw_data(
         print_area_data: Optional print area data per sheet.
         auto_page_break_data: Optional auto page-break data per sheet.
         colors_map_data: Optional colors map data.
+        include_merged_values_in_rows: Whether to keep merged values in rows.
 
     Returns:
         Mapping of sheet name to raw sheet data.
@@ -614,8 +724,14 @@ def collect_sheet_raw_data(
     result: dict[str, SheetRawData] = {}
     for sheet_name, rows in cell_data.items():
         sheet = workbook.sheets[sheet_name]
+        merged_cells = merged_cell_data.get(sheet_name, [])
+        filtered_rows = (
+            rows
+            if include_merged_values_in_rows
+            else _filter_rows_excluding_merged_values(rows, merged_cells)
+        )
         sheet_raw = SheetRawData(
-            rows=rows,
+            rows=filtered_rows,
             shapes=shape_data.get(sheet_name, []),
             charts=chart_data.get(sheet_name, []) if mode != "light" else [],
             table_candidates=detect_tables(sheet),
@@ -624,7 +740,7 @@ def collect_sheet_raw_data(
             if auto_page_break_data
             else [],
             colors_map=_resolve_sheet_colors_map(colors_map_data, sheet_name),
-            merged_cells=merged_cell_data.get(sheet_name, []),
+            merged_cells=merged_cells,
         )
         result[sheet_name] = sheet_raw
     return result
@@ -674,6 +790,7 @@ def run_extraction_pipeline(inputs: ExtractionInputs) -> PipelineResult:
                     merged_cell_data=artifacts.merged_cell_data,
                     workbook=workbook,
                     mode=inputs.mode,
+                    include_merged_values_in_rows=inputs.include_merged_values_in_rows,
                     print_area_data=artifacts.print_area_data
                     if inputs.include_print_areas
                     else None,
@@ -733,8 +850,14 @@ def build_cells_tables_workbook(
             colors_map_data.get_sheet(sheet_name) if colors_map_data else None
         )
         tables = backend.detect_tables(sheet_name)
+        merged_cells = artifacts.merged_cell_data.get(sheet_name, [])
+        filtered_rows = (
+            rows
+            if inputs.include_merged_values_in_rows
+            else _filter_rows_excluding_merged_values(rows, merged_cells)
+        )
         sheets[sheet_name] = SheetRawData(
-            rows=rows,
+            rows=filtered_rows,
             shapes=[],
             charts=[],
             table_candidates=tables,
@@ -743,7 +866,7 @@ def build_cells_tables_workbook(
             else [],
             auto_print_areas=[],
             colors_map=sheet_colors.colors_map if sheet_colors else {},
-            merged_cells=artifacts.merged_cell_data.get(sheet_name, []),
+            merged_cells=merged_cells,
         )
     raw = WorkbookRawData(book_name=inputs.file_path.name, sheets=sheets)
     return build_workbook_data(raw)

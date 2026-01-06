@@ -6,13 +6,14 @@ from ..models import (
     Arrow,
     CellRow,
     Chart,
-    MergedCell,
+    MergedCells,
     PrintArea,
     Shape,
     SheetData,
     SmartArt,
     WorkbookData,
 )
+from .cells import MergedCellRange
 
 
 @dataclass(frozen=True)
@@ -37,7 +38,7 @@ class SheetRawData:
     print_areas: list[PrintArea]
     auto_print_areas: list[PrintArea]
     colors_map: dict[str, list[tuple[int, int]]]
-    merged_cells: list[MergedCell]
+    merged_cells: list[MergedCellRange]
 
 
 @dataclass(frozen=True)
@@ -70,8 +71,25 @@ def build_sheet_data(raw: SheetRawData) -> SheetData:
         print_areas=raw.print_areas,
         auto_print_areas=raw.auto_print_areas,
         colors_map=raw.colors_map,
-        merged_cells=raw.merged_cells,
+        merged_cells=_build_merged_cells(raw.merged_cells),
     )
+
+
+def _build_merged_cells(
+    merged_cells: list[MergedCellRange],
+) -> MergedCells | None:
+    """Build a compressed merged_cells model from raw ranges.
+
+    Args:
+        merged_cells: Raw merged cell ranges.
+
+    Returns:
+        MergedCells model or None when empty.
+    """
+    if not merged_cells:
+        return None
+    items = [(cell.r1, cell.c1, cell.r2, cell.c2, cell.v) for cell in merged_cells]
+    return MergedCells(items=items)
 
 
 def build_workbook_data(raw: WorkbookRawData) -> WorkbookData:

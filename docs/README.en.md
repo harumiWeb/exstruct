@@ -377,23 +377,58 @@ flowchart TD
         }
       ],
       "print_areas": [{ "r1": 1, "c1": 0, "r2": 66, "c2": 23 }],
-      "merged_cells": [
-        { "r1": 34, "c1": 15, "r2": 34, "c2": 23 },
-        {
-          "r1": 56,
-          "c1": 10,
-          "r2": 57,
-          "c2": 17,
-          "v": "Federal Share Calculation"
-        },
-        { "r1": 18, "c1": 10, "r2": 18, "c2": 23 },
-        { "r1": 15, "c1": 0, "r2": 15, "c2": 1 },
-        ...
-      ]
+      "merged_cells": {
+        "schema": ["r1", "c1", "r2", "c2", "v"],
+        "items": [
+          [34, 15, 34, 23, " "],
+          [56, 10, 57, 17, "Federal Share Calculation"],
+          [18, 10, 18, 23, " "],
+          [15, 0, 15, 1, " "],
+          ...
+        ]
+      }
     }
   }
 }
 
+```
+
+### Migration note (v0.3.5): merged_cells format change
+
+`merged_cells` changed from a list of objects to a schema/items structure in v0.3.5 (breaking change for JSON consumers).
+
+Old format (<= v0.3.2):
+
+```json
+"merged_cells": [
+  { "r1": 34, "c1": 15, "r2": 34, "c2": 23, "v": " " },
+  { "r1": 56, "c1": 10, "r2": 57, "c2": 17, "v": "Federal Share Calculation" }
+]
+```
+
+New format (v0.3.5+):
+
+```json
+"merged_cells": {
+  "schema": ["r1", "c1", "r2", "c2", "v"],
+  "items": [
+    [34, 15, 34, 23, " "],
+    [56, 10, 57, 17, "Federal Share Calculation"]
+  ]
+}
+```
+
+Migration example (support both during transition):
+
+```python
+def normalize_merged_cells(raw):
+    schema = ["r1", "c1", "r2", "c2", "v"]
+    if isinstance(raw, list):
+        items = [[d.get(k, " ") for k in schema] for d in raw]
+        return {"schema": schema, "items": items}
+    if isinstance(raw, dict) and "schema" in raw and "items" in raw:
+        return raw
+    return None
 ```
 
 ### LLM reconstruction example

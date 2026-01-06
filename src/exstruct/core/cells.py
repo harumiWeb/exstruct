@@ -15,7 +15,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 import pandas as pd
 import xlwings as xw
 
-from ..models import CellRow, MergedCell
+from ..models import CellRow
 from .workbook import openpyxl_workbook
 
 logger = logging.getLogger(__name__)
@@ -65,6 +65,17 @@ class WorkbookColorsMap:
             SheetColorsMap for the sheet, or None if missing.
         """
         return self.sheets.get(sheet_name)
+
+
+@dataclass(frozen=True)
+class MergedCellRange:
+    """Merged cell range with normalized value."""
+
+    r1: int
+    c1: int
+    r2: int
+    c2: int
+    v: str
 
 
 def extract_sheet_colors_map(
@@ -526,7 +537,7 @@ def extract_sheet_cells_with_links(file_path: Path) -> dict[str, list[CellRow]]:
     return merged
 
 
-def extract_sheet_merged_cells(file_path: Path) -> dict[str, list[MergedCell]]:
+def extract_sheet_merged_cells(file_path: Path) -> dict[str, list[MergedCellRange]]:
     """Extract merged cell ranges per sheet via openpyxl.
 
     Args:
@@ -535,21 +546,23 @@ def extract_sheet_merged_cells(file_path: Path) -> dict[str, list[MergedCell]]:
     Returns:
         Mapping of sheet name to merged cell ranges.
     """
-    merged_by_sheet: dict[str, list[MergedCell]] = {}
+    merged_by_sheet: dict[str, list[MergedCellRange]] = {}
     with openpyxl_workbook(file_path, data_only=True, read_only=False) as wb:
         for ws in wb.worksheets:
             merged_ranges = getattr(ws, "merged_cells", None)
             if merged_ranges is None:
                 merged_by_sheet[ws.title] = []
                 continue
-            results: list[MergedCell] = []
+            results: list[MergedCellRange] = []
             for merged_range in getattr(merged_ranges, "ranges", []):
                 bounds = range_boundaries(str(merged_range))
                 min_col, min_row, max_col, max_row = bounds
                 cell_value = ws.cell(row=min_row, column=min_col).value
                 value_str = "" if cell_value is None else str(cell_value)
+                if value_str == "":
+                    value_str = " "
                 results.append(
-                    MergedCell(
+                    MergedCellRange(
                         r1=min_row,
                         c1=min_col - 1,
                         r2=max_row,

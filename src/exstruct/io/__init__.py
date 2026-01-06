@@ -62,7 +62,9 @@ def dict_without_empty_values(obj: object) -> JsonStructure:
         | Arrow
         | SmartArt,
     ):
-        return dict_without_empty_values(obj.model_dump(exclude_none=True))
+        return dict_without_empty_values(
+            obj.model_dump(exclude_none=True, by_alias=True)
+        )
     return cast(JsonStructure, obj)
 
 
@@ -369,7 +371,9 @@ def save_print_area_views(
                 f"_area{idx + 1}_r{area.r1}-{area.r2}_c{area.c1}-{area.c2}{suffix}"
             )
             path = output_dir / file_name
-            payload = dict_without_empty_values(view.model_dump(exclude_none=True))
+            payload = dict_without_empty_values(
+                view.model_dump(exclude_none=True, by_alias=True)
+            )
             text = _serialize_payload_from_hint(
                 payload, format_hint, pretty=pretty, indent=indent
             )
@@ -428,7 +432,9 @@ def save_auto_page_break_views(
                 f"_auto_page{idx + 1}_r{area.r1}-{area.r2}_c{area.c1}-{area.c2}{suffix}"
             )
             path = output_dir / file_name
-            payload = dict_without_empty_values(view.model_dump(exclude_none=True))
+            payload = dict_without_empty_values(
+                view.model_dump(exclude_none=True, by_alias=True)
+            )
             text = _serialize_payload_from_hint(
                 payload, format_hint, pretty=pretty, indent=indent
             )
@@ -453,7 +459,9 @@ def serialize_workbook(
         error_type=SerializationError,
         error_message="Unsupported export format '{fmt}'. Allowed: json, yaml, yml, toon.",
     )
-    filtered_dict = dict_without_empty_values(model.model_dump(exclude_none=True))
+    filtered_dict = dict_without_empty_values(
+        model.model_dump(exclude_none=True, by_alias=True)
+    )
     return _serialize_payload_from_hint(
         filtered_dict, format_hint, pretty=pretty, indent=indent
     )
@@ -478,7 +486,7 @@ def save_sheets_as_json(
             {
                 "book_name": workbook.book_name,
                 "sheet_name": sheet_name,
-                "sheet": sheet_data.model_dump(exclude_none=True),
+                "sheet": sheet_data.model_dump(exclude_none=True, by_alias=True),
             }
         )
         file_name = f"{_sanitize_sheet_filename(sheet_name)}.json"
@@ -517,7 +525,7 @@ def save_sheets(
             {
                 "book_name": workbook.book_name,
                 "sheet_name": sheet_name,
-                "sheet": sheet_data.model_dump(exclude_none=True),
+                "sheet": sheet_data.model_dump(exclude_none=True, by_alias=True),
             }
         )
         suffix = {"json": ".json", "yaml": ".yaml", "toon": ".toon"}[format_hint]

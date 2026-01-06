@@ -115,6 +115,6 @@ def test_export_sheets_yamlとtoonが出力される(tmp_path: Path) -> None:
 
 
 def test_merged_cells_empty_is_omitted_in_sheet_json() -> None:
-    sheet = SheetData(rows=[CellRow(r=1, c={"0": "v"})], merged_cells=[])
+    sheet = SheetData(rows=[CellRow(r=1, c={"0": "v"})], merged_cells=None)
     payload = sheet.to_json()
     assert "merged_cells" not in payload

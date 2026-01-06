@@ -5,7 +5,14 @@ from pathlib import Path
 import pytest
 
 from exstruct.errors import MissingDependencyError
-from exstruct.models import CellRow, SheetData, SmartArt, SmartArtNode, WorkbookData
+from exstruct.models import (
+    CellRow,
+    MergedCells,
+    SheetData,
+    SmartArt,
+    SmartArtNode,
+    WorkbookData,
+)
 
 HAS_PYYAML = util.find_spec("yaml") is not None
 HAS_TOON = util.find_spec("toon") is not None
@@ -129,3 +136,20 @@ def test_sheet_json_includes_smartart_nodes() -> None:
     assert data["shapes"][0]["kind"] == "smartart"
     assert data["shapes"][0]["nodes"][0]["text"] == "root"
     assert data["shapes"][0]["nodes"][0]["kids"][0]["text"] == "child"
+
+
+def test_sheet_json_includes_merged_cells_schema() -> None:
+    """
+    Verify that SheetData.to_json serializes merged_cells with schema and items.
+
+    Asserts that the JSON output includes a merged_cells object with a schema
+    field containing ["r1", "c1", "r2", "c2", "v"] and an items array with the
+    provided merged cell data as a 5-element array.
+    """
+    sheet = SheetData(
+        rows=[],
+        merged_cells=MergedCells(items=[(1, 0, 1, 1, "merged")]),
+    )
+    data = json.loads(sheet.to_json())
+    assert data["merged_cells"]["schema"] == ["r1", "c1", "r2", "c2", "v"]
+    assert data["merged_cells"]["items"][0] == [1, 0, 1, 1, "merged"]

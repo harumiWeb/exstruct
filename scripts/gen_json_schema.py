@@ -10,6 +10,7 @@ from exstruct.models import (
     CellRow,
     Chart,
     ChartSeries,
+    MergedCells,
     PrintArea,
     PrintAreaView,
     Shape,
@@ -59,6 +60,7 @@ def main() -> int:
         "smartart_node": SmartArtNode,
         "chart": Chart,
         "chart_series": ChartSeries,
+        "merged_cells": MergedCells,
         "print_area": PrintArea,
         "print_area_view": PrintAreaView,
     }

@@ -71,6 +71,7 @@ class StructOptions:
                       per engine instance without touching global state.
         include_colors_map: Whether to extract background color maps.
         include_merged_cells: Whether to extract merged cell ranges.
+        include_merged_values_in_rows: Whether to keep merged values in rows.
         colors: Color extraction options.
     """
 
@@ -81,6 +82,7 @@ class StructOptions:
     include_cell_links: bool | None = None  # None -> auto: verbose=True, others=False
     include_colors_map: bool | None = None  # None -> auto: verbose=True, others=False
     include_merged_cells: bool | None = None  # None -> auto: light=False, others=True
+    include_merged_values_in_rows: bool = True
     colors: ColorsOptions = field(default_factory=ColorsOptions)
 
 
@@ -286,7 +288,7 @@ class ExStructEngine:
             auto_print_areas=sheet.auto_print_areas if include_auto_print_areas else [],
             merged_cells=sheet.merged_cells
             if self.output.filters.include_merged_cells
-            else [],
+            else None,
         )
 
     def _filter_workbook(
@@ -357,6 +359,7 @@ class ExStructEngine:
                 include_default_background=self.options.colors.include_default_background,
                 ignore_colors=self.options.colors.ignore_colors_set(),
                 include_merged_cells=self.options.include_merged_cells,
+                include_merged_values_in_rows=self.options.include_merged_values_in_rows,
             )
 
     def serialize(

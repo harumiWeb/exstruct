@@ -373,6 +373,55 @@
       "title": "ChartSeries",
       "type": "object"
     },
+    "MergedCells": {
+      "description": "Compressed merged cell ranges using schema + items.",
+      "properties": {
+        "items": {
+          "description": "Merged cell items as (r1, c1, r2, c2, v) tuples where rows are 1-based and columns are 0-based.",
+          "items": {
+            "maxItems": 5,
+            "minItems": 5,
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "type": "array"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "schema": {
+          "description": "Ordered field names for each item.",
+          "items": {
+            "enum": [
+              "r1",
+              "c1",
+              "r2",
+              "c2",
+              "v"
+            ],
+            "type": "string"
+          },
+          "title": "Schema",
+          "type": "array"
+        }
+      },
+      "title": "MergedCells",
+      "type": "object"
+    },
     "PrintArea": {
       "description": "Cell coordinate bounds for a print area.",
       "properties": {
@@ -668,6 +717,18 @@
       "description": "Mapping of hex color codes to lists of (row, column) tuples where row is 1-based and column is 0-based.",
       "title": "Colors Map",
       "type": "object"
+    },
+    "merged_cells": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MergedCells"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Merged cell ranges on the sheet."
     },
     "print_areas": {
       "description": "User-defined print areas.",

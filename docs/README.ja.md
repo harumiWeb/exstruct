@@ -360,22 +360,57 @@ flowchart TD
         ...
       ],
       "table_candidates": ["B25:C26", "C37:D50"],
-      "merged_cells": [
-        {
-          "r1": 55,
-          "c1": 5,
-          "r2": 55,
-          "c2": 10,
-          "v": "申請者が被保険者本人の場合には、下記について記載は不要です。"
-        },
-        { "r1": 54, "c1": 8, "r2": 54, "c2": 10 },
-        { "r1": 51, "c1": 5, "r2": 52, "c2": 6, "v": "有価証券" },
-        ...
-      ]
+      "merged_cells": {
+        "schema": ["r1", "c1", "r2", "c2", "v"],
+        "items": [
+          [55, 5, 55, 10, "申請者が被保険者本人の場合には、下記について記載は不要です。"],
+          [54, 8, 54, 10, " "],
+          [51, 5, 52, 6, "有価証券"],
+          ...
+        ]
+      }
     }
   }
 }
 
+```
+
+### 互換性メモ（v0.3.5）: merged_cells 形式変更
+
+`merged_cells` は v0.3.5 で「オブジェクト配列」から「schema/items」形式に変更されました（JSON 利用側には破壊的変更）。
+
+旧形式（<= v0.3.2）:
+
+```json
+"merged_cells": [
+  { "r1": 55, "c1": 5, "r2": 55, "c2": 10, "v": "申請者が被保険者本人の場合には、下記について記載は不要です。" },
+  { "r1": 51, "c1": 5, "r2": 52, "c2": 6, "v": "有価証券" }
+]
+```
+
+新形式（v0.3.5+）:
+
+```json
+"merged_cells": {
+  "schema": ["r1", "c1", "r2", "c2", "v"],
+  "items": [
+    [55, 5, 55, 10, "申請者が被保険者本人の場合には、下記について記載は不要です。"],
+    [51, 5, 52, 6, "有価証券"]
+  ]
+}
+```
+
+移行例（併存パース）:
+
+```python
+def normalize_merged_cells(raw):
+    schema = ["r1", "c1", "r2", "c2", "v"]
+    if isinstance(raw, list):
+        items = [[d.get(k, " ") for k in schema] for d in raw]
+        return {"schema": schema, "items": items}
+    if isinstance(raw, dict) and "schema" in raw and "items" in raw:
+        return raw
+    return None
 ```
 
 ### LLM 推論による ExStruct JSON → Markdown 変換結果

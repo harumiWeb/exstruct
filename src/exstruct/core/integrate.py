@@ -18,6 +18,7 @@ def extract_workbook(  # noqa: C901
     include_default_background: bool = False,
     ignore_colors: set[str] | None = None,
     include_merged_cells: bool | None = None,
+    include_merged_values_in_rows: bool = True,
 ) -> WorkbookData:
     """Extract workbook and return WorkbookData.
 
@@ -33,6 +34,7 @@ def extract_workbook(  # noqa: C901
         include_default_background: Whether to include default background color.
         ignore_colors: Optional set of color keys to ignore.
         include_merged_cells: Whether to include merged cell ranges; None uses mode defaults.
+        include_merged_values_in_rows: Whether to keep merged values in rows.
 
     Returns:
         Extracted WorkbookData.
@@ -50,6 +52,7 @@ def extract_workbook(  # noqa: C901
         include_default_background=include_default_background,
         ignore_colors=ignore_colors,
         include_merged_cells=include_merged_cells,
+        include_merged_values_in_rows=include_merged_values_in_rows,
     )
     result = run_extraction_pipeline(inputs)
     return result.workbook

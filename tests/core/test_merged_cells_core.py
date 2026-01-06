@@ -24,7 +24,7 @@ def test_extract_sheet_merged_cells_basic(tmp_path: Path) -> None:
     assert len(ranges) == 2
     tuples = {(r.r1, r.c1, r.r2, r.c2, r.v) for r in ranges}
     assert (1, 0, 2, 1, "Title") in tuples
-    assert (4, 3, 4, 4, "") in tuples
+    assert (4, 3, 4, 4, " ") in tuples
 
 
 def test_extract_sheet_merged_cells_empty(tmp_path: Path) -> None:

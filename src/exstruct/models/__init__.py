@@ -5,7 +5,12 @@ import json
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+
+def _default_merged_cells_schema() -> list[Literal["r1", "c1", "r2", "c2", "v"]]:
+    """Return default schema for merged cell items."""
+    return ["r1", "c1", "r2", "c2", "v"]
 
 
 class BaseShape(BaseModel):
@@ -76,14 +81,23 @@ class SmartArt(BaseShape):
     )
 
 
-class MergedCell(BaseModel):
-    """Metadata for a merged cell range."""
+class MergedCells(BaseModel):
+    """Compressed merged cell ranges using schema + items."""
 
-    r1: int = Field(description="Start row (1-based).")
-    c1: int = Field(description="Start column (0-based).")
-    r2: int = Field(description="End row (1-based, inclusive).")
-    c2: int = Field(description="End column (0-based, inclusive).")
-    v: str = ""
+    model_config = ConfigDict(populate_by_name=True)
+
+    schema_: list[Literal["r1", "c1", "r2", "c2", "v"]] = Field(
+        default_factory=_default_merged_cells_schema,
+        alias="schema",
+        description="Ordered field names for each item.",
+    )
+    items: list[tuple[int, int, int, int, str]] = Field(
+        default_factory=list,
+        description=(
+            "Merged cell items as (r1, c1, r2, c2, v) tuples where rows are 1-based "
+            "and columns are 0-based."
+        ),
+    )
 
 
 class CellRow(BaseModel):
@@ -170,14 +184,16 @@ class SheetData(BaseModel):
             "where row is 1-based and column is 0-based."
         ),
     )
-    merged_cells: list[MergedCell] = Field(
-        default_factory=list, description="Merged cell ranges on the sheet."
+    merged_cells: MergedCells | None = Field(
+        default=None, description="Merged cell ranges on the sheet."
     )
 
     def _as_payload(self) -> dict[str, object]:
         from ..io import dict_without_empty_values
 
-        return dict_without_empty_values(self.model_dump(exclude_none=True))  # type: ignore
+        return dict_without_empty_values(
+            self.model_dump(exclude_none=True, by_alias=True)
+        )  # type: ignore
 
     def to_json(self, *, pretty: bool = False, indent: int | None = None) -> str:
         """
@@ -325,7 +341,9 @@ class PrintAreaView(BaseModel):
     def _as_payload(self) -> dict[str, object]:
         from ..io import dict_without_empty_values
 
-        return dict_without_empty_values(self.model_dump(exclude_none=True))  # type: ignore
+        return dict_without_empty_values(
+            self.model_dump(exclude_none=True, by_alias=True)
+        )  # type: ignore
 
     def to_json(self, *, pretty: bool = False, indent: int | None = None) -> str:
         """

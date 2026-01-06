@@ -199,4 +199,14 @@ AI エージェントが ExStruct のコードを書く場合でも：
 
 ---
 
+# 10. 各種仕様の確認
+
+AI エージェントは必要に応じて以下のドキュメントを参照して ExStruct の開発をする
+
+- 処理アーキテクチャ: `docs/architecture/pipeline.md`
+- プロジェクトアーキテクチャ: `docs/contributors/architecture.md`
+- コーディングガイドライン: `docs/agents/CODING_GUIDELINES.md`
+- データモデル: `docs/agents/DATA_MODEL.md`
+- タスク: `docs/agents/TASKS.md`
+
 **以上。AI はこのガイドラインに従って ExStruct の開発に参加してください。**

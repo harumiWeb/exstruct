@@ -3,12 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from ...models import CellRow, MergedCell, PrintArea
-from ..cells import WorkbookColorsMap
+from ...models import CellRow, PrintArea
+from ..cells import MergedCellRange, WorkbookColorsMap
 
 CellData = dict[str, list[CellRow]]
 PrintAreaData = dict[str, list[PrintArea]]
-MergedCellData = dict[str, list[MergedCell]]
+MergedCellData = dict[str, list[MergedCellRange]]
 
 
 @dataclass(frozen=True)

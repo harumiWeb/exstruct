@@ -2,7 +2,7 @@
 
 [![PyPI version](https://badge.fury.io/py/exstruct.svg)](https://pypi.org/project/exstruct/) [![PyPI Downloads](https://static.pepy.tech/personalized-badge/exstruct?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/exstruct) ![Licence: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue?style=flat-square) [![pytest](https://github.com/harumiWeb/exstruct/actions/workflows/pytest.yml/badge.svg)](https://github.com/harumiWeb/exstruct/actions/workflows/pytest.yml) [![Codacy Badge](https://app.codacy.com/project/badge/Grade/e081cb4f634e4175b259eb7c34f54f60)](https://app.codacy.com/gh/harumiWeb/exstruct/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade) [![codecov](https://codecov.io/gh/harumiWeb/exstruct/graph/badge.svg?token=2XI1O8TTA9)](https://codecov.io/gh/harumiWeb/exstruct)
 
-![ExStruct Image](/docs/assets/icon.webp)
+![ExStruct Image](/assets/icon.webp)
 
 ExStruct は Excel ワークブックを読み取り、構造化データ（セル・テーブル候補・図形・チャート・SmartArt・印刷範囲ビュー）をデフォルトで JSON に出力します。必要に応じて YAML/TOON も選択でき、COM/Excel 環境ではリッチ抽出、非 COM 環境ではセル＋テーブル候補＋印刷範囲へのフォールバックで安全に動作します。LLM/RAG 向けに検出ヒューリスティックや出力モードを調整可能です。
 
@@ -160,7 +160,7 @@ exstruct input.xlsx --pdf --image --dpi 144
 - 図形のみで作成したフローチャート
 
 （下画像が実際のサンプル Excel シート）
-![Sample Excel](/docs/assets/demo_sheet.png)
+![Sample Excel](/assets/demo_sheet.png)
 サンプル Excel: `sample/sample.xlsx`
 
 ### 1. Input: Excel Sheet Overview
@@ -339,7 +339,7 @@ flowchart TD
 
 ### Excel データ
 
-![一般的な申請書Excel](/docs/assets/demo_form.ja.png)
+![一般的な申請書Excel](/assets/demo_form.ja.png)
 
 ### ExStruct JSON
 
@@ -360,22 +360,57 @@ flowchart TD
         ...
       ],
       "table_candidates": ["B25:C26", "C37:D50"],
-      "merged_cells": [
-        {
-          "r1": 55,
-          "c1": 5,
-          "r2": 55,
-          "c2": 10,
-          "v": "申請者が被保険者本人の場合には、下記について記載は不要です。"
-        },
-        { "r1": 54, "c1": 8, "r2": 54, "c2": 10 },
-        { "r1": 51, "c1": 5, "r2": 52, "c2": 6, "v": "有価証券" },
-        ...
-      ]
+      "merged_cells": {
+        "schema": ["r1", "c1", "r2", "c2", "v"],
+        "items": [
+          [55, 5, 55, 10, "申請者が被保険者本人の場合には、下記について記載は不要です。"],
+          [54, 8, 54, 10, " "],
+          [51, 5, 52, 6, "有価証券"],
+          ...
+        ]
+      }
     }
   }
 }
 
+```
+
+### 互換性メモ（v0.3.5）: merged_cells 形式変更
+
+`merged_cells` は v0.3.5 で「オブジェクト配列」から「schema/items」形式に変更されました（JSON 利用側には破壊的変更）。
+
+旧形式（<= v0.3.2）:
+
+```json
+"merged_cells": [
+  { "r1": 55, "c1": 5, "r2": 55, "c2": 10, "v": "申請者が被保険者本人の場合には、下記について記載は不要です。" },
+  { "r1": 51, "c1": 5, "r2": 52, "c2": 6, "v": "有価証券" }
+]
+```
+
+新形式（v0.3.5+）:
+
+```json
+"merged_cells": {
+  "schema": ["r1", "c1", "r2", "c2", "v"],
+  "items": [
+    [55, 5, 55, 10, "申請者が被保険者本人の場合には、下記について記載は不要です。"],
+    [51, 5, 52, 6, "有価証券"]
+  ]
+}
+```
+
+移行例（併存パース）:
+
+```python
+def normalize_merged_cells(raw):
+    schema = ["r1", "c1", "r2", "c2", "v"]
+    if isinstance(raw, list):
+        items = [[d.get(k, " ") for k in schema] for d in raw]
+        return {"schema": schema, "items": items}
+    if isinstance(raw, dict) and "schema" in raw and "items" in raw:
+        return raw
+    return None
 ```
 
 ### LLM 推論による ExStruct JSON → Markdown 変換結果

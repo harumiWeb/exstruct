@@ -14,7 +14,7 @@ from exstruct.models import (
     CellRow,
     Chart,
     ChartSeries,
-    MergedCell,
+    MergedCells,
     PrintArea,
     Shape,
     SheetData,
@@ -35,6 +35,7 @@ def test_engine_extract_uses_mode(monkeypatch: MonkeyPatch, tmp_path: Path) -> N
         include_default_background: bool = False,
         ignore_colors: set[str] | None = None,
         include_merged_cells: bool | None = None,
+        include_merged_values_in_rows: bool = True,
     ) -> WorkbookData:
         called["mode"] = mode
         called["include_print_areas"] = include_print_areas
@@ -65,7 +66,7 @@ def _sample_workbook() -> WorkbookData:
         charts=[chart],
         table_candidates=["A1:B2"],
         print_areas=[PrintArea(r1=1, c1=0, r2=3, c2=2)],
-        merged_cells=[MergedCell(r1=1, c1=0, r2=1, c2=1, v="merged")],
+        merged_cells=MergedCells(items=[(1, 0, 1, 1, "merged")]),
     )
     return WorkbookData(book_name="book.xlsx", sheets={"Sheet1": sheet})
 

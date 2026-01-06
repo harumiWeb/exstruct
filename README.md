@@ -2,7 +2,7 @@
 
 [![PyPI version](https://badge.fury.io/py/exstruct.svg)](https://pypi.org/project/exstruct/) [![PyPI Downloads](https://static.pepy.tech/personalized-badge/exstruct?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/exstruct) ![Licence: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue?style=flat-square) [![pytest](https://github.com/harumiWeb/exstruct/actions/workflows/pytest.yml/badge.svg)](https://github.com/harumiWeb/exstruct/actions/workflows/pytest.yml) [![Codacy Badge](https://app.codacy.com/project/badge/Grade/e081cb4f634e4175b259eb7c34f54f60)](https://app.codacy.com/gh/harumiWeb/exstruct/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade) [![codecov](https://codecov.io/gh/harumiWeb/exstruct/graph/badge.svg?token=2XI1O8TTA9)](https://codecov.io/gh/harumiWeb/exstruct)
 
-![ExStruct Image](/docs/assets/icon.webp)
+![ExStruct Image](docs/assets/icon.webp)
 
 ExStruct reads Excel workbooks and outputs structured data (cells, table candidates, shapes, charts, smartart, merged cell ranges, print areas/views, auto page-break areas, hyperlinks) as JSON by default, with optional YAML/TOON formats. It targets both COM/Excel environments (rich extraction) and non-COM environments (cells + table candidates + print areas), with tunable detection heuristics and multiple output modes to fit LLM/RAG pipelines.
 
@@ -43,8 +43,8 @@ exstruct input.xlsx -o out.json --pretty   # pretty JSON to a file
 exstruct input.xlsx --format yaml          # YAML (needs pyyaml)
 exstruct input.xlsx --format toon          # TOON (needs python-toon)
 exstruct input.xlsx --sheets-dir sheets/   # split per sheet in chosen format
-exstruct input.xlsx --print-areas-dir areas/  # split per print area (if any)
 exstruct input.xlsx --auto-page-breaks-dir auto_areas/  # COM only; option appears when available
+exstruct input.xlsx --print-areas-dir areas/  # split per print area (if any)
 exstruct input.xlsx --mode light           # cells + table candidates only
 exstruct input.xlsx --pdf --image          # PDF and PNGs (Excel required)
 ```
@@ -92,9 +92,9 @@ engine = ExStructEngine(
     ),
 )
 wb2 = engine.extract("input.xlsx")
-engine.export(wb2, Path("out_filtered.json"))  # drops shapes via filters
+engine.export(wb2, Path("out_filtered.json"))
 
-# Enable hyperlinks in other modes
+# Enable hyperlinks in standard mode
 engine_links = ExStructEngine(options=StructOptions(mode="standard", include_cell_links=True))
 with_links = engine_links.extract("input.xlsx")
 
@@ -161,7 +161,7 @@ To show how well exstruct can structure Excel, we parse a workbook that combines
 - Flowchart built only with shapes
 
 (Screenshot below is the actual sample Excel sheet)
-![Sample Excel](/docs/assets/demo_sheet.png)
+![Sample Excel](docs/assets/demo_sheet.png)
 Sample workbook: `sample/sample.xlsx`
 
 ### 1. Input: Excel Sheet Overview
@@ -336,11 +336,12 @@ flowchart TD
 ```
 ````
 
+
 ## Example 2: General Application Form
 
 ### Excel Sheet
 
-![General Application Form Excel](/docs/assets/demo_form_en.png)
+![General Application Form Excel](docs/assets/demo_form_en.png)
 
 ### ExStruct JSON
 
@@ -376,23 +377,58 @@ flowchart TD
         }
       ],
       "print_areas": [{ "r1": 1, "c1": 0, "r2": 66, "c2": 23 }],
-      "merged_cells": [
-        { "r1": 34, "c1": 15, "r2": 34, "c2": 23 },
-        {
-          "r1": 56,
-          "c1": 10,
-          "r2": 57,
-          "c2": 17,
-          "v": "Federal Share Calculation"
-        },
-        { "r1": 18, "c1": 10, "r2": 18, "c2": 23 },
-        { "r1": 15, "c1": 0, "r2": 15, "c2": 1 },
-        ...
-      ]
+      "merged_cells": {
+        "schema": ["r1", "c1", "r2", "c2", "v"],
+        "items": [
+          [34, 15, 34, 23, " "],
+          [56, 10, 57, 17, "Federal Share Calculation"],
+          [18, 10, 18, 23, " "],
+          [15, 0, 15, 1, " "],
+          ...
+        ]
+      }
     }
   }
 }
 
+```
+
+### Migration note (v0.3.5): merged_cells format change
+
+`merged_cells` changed from a list of objects to a schema/items structure in v0.3.5 (breaking change for JSON consumers).
+
+Old format (<= v0.3.2):
+
+```json
+"merged_cells": [
+  { "r1": 34, "c1": 15, "r2": 34, "c2": 23, "v": " " },
+  { "r1": 56, "c1": 10, "r2": 57, "c2": 17, "v": "Federal Share Calculation" }
+]
+```
+
+New format (v0.3.5+):
+
+```json
+"merged_cells": {
+  "schema": ["r1", "c1", "r2", "c2", "v"],
+  "items": [
+    [34, 15, 34, 23, " "],
+    [56, 10, 57, 17, "Federal Share Calculation"]
+  ]
+}
+```
+
+Migration example (support both during transition):
+
+```python
+def normalize_merged_cells(raw):
+    schema = ["r1", "c1", "r2", "c2", "v"]
+    if isinstance(raw, list):
+        items = [[d.get(k, " ") for k in schema] for d in raw]
+        return {"schema": schema, "items": items}
+    if isinstance(raw, dict) and "schema" in raw and "items" in raw:
+        return raw
+    return None
 ```
 
 ### LLM reconstruction example
@@ -595,6 +631,11 @@ This project is suitable for teams that:
 - Use `export_print_areas_as(...)` or CLI `--print-areas-dir` to write one file per print area (nothing is written if none exist).
 - Use CLI `--auto-page-breaks-dir` (COM only), `DestinationOptions.auto_page_breaks_dir` (preferred), or `export_auto_page_breaks(...)` to write per-auto-page-break files; the API raises `ValueError` if no auto page breaks exist.
 - `PrintAreaView` includes rows and table candidates inside the area, plus shapes/charts that overlap the area (size-less shapes are treated as points). `normalize=True` rebases row/col indices to the area origin.
+
+## Documentation build
+
+- Update generated model docs before building the site: `python scripts/gen_model_docs.py`.
+- Build locally with mkdocs + mkdocstrings (dev deps required): `uv run mkdocs serve` or `uv run mkdocs build`.
 
 ## Architecture
 
