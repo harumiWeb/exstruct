@@ -1,17 +1,11 @@
-# Task List
+﻿# Task List
 
-## 結合セル（MergedCell）テスト
+未完了 [ ], 完了 [x]
 
-- [ ] フィクスチャ作成：結合セルあり/なし、複数範囲、値あり/空文字の Excel を用意
-- [ ] OpenpyxlBackend.extract_merged_cells の正常系（座標・代表値）をユニットテスト
-- [ ] OpenpyxlBackend.extract_merged_cells の例外時フォールバック（空マップ）をテスト
-- [ ] ComBackend.extract_merged_cells が NotImplementedError を送出することをテスト
-- [ ] Pipeline: standard/verbose で merged_cells を含み、light では空になることをテスト
-- [ ] Pipeline: include_merged_cells=False で抽出ステップが無効化されることをテスト
-- [ ] Modeling: SheetRawData→SheetData で merged_cells が保持されることをテスト
-- [ ] Engine: OutputOptions.filters.include_merged_cells=False で出力から除外されることをテスト
-- [ ] Export: dict_without_empty_values により merged_cells 空リストが出力されないことをテスト
-
-## カバレッジ対応
-
-- [ ] 追加テストで 78% 以上の全体カバレッジを満たすことを確認
+- [ ] 仕様: `merged_cells` の新フォーマット（schema + items）をモデルと出力仕様に反映
+- [ ] 仕様: `include_merged_values_in_rows` フラグ追加（デフォルト True）
+- [ ] 実装: 既存の `merged_cells` 生成ロジックを新構造へ置換
+- [ ] 実装: `rows` から結合セル値を排除する分岐を追加（フラグ制御）
+- [ ] 実装: 結合セルの値がない場合は `" "` を出力
+- [ ] 更新: 既存の JSON 出力例・ドキュメントの整合性確認
+- [ ] テスト: 結合セルが多いケースの JSON 量削減を確認
