@@ -6,6 +6,7 @@ from exstruct.core.cells import MergedCellRange
 from exstruct.core.pipeline import (
     ExtractionArtifacts,
     ExtractionInputs,
+    _filter_rows_excluding_merged_values,
     build_cells_tables_workbook,
     build_com_pipeline,
     build_pre_com_pipeline,
@@ -219,3 +220,24 @@ def test_build_cells_tables_workbook_excludes_merged_values_in_rows(
     wb = build_cells_tables_workbook(inputs=inputs, artifacts=artifacts, reason="test")
     sheet = wb.sheets["Sheet1"]
     assert sheet.rows[0].c == {"2": "C"}
+
+
+def test_filter_rows_excluding_merged_values_updates_links() -> None:
+    rows = [
+        CellRow(
+            r=1,
+            c={"0": "A", "1": "B", "x": "keep"},
+            links={"0": "L0", "1": "L1", "x": "LX"},
+        )
+    ]
+    merged_cells = [MergedCellRange(r1=1, c1=0, r2=1, c2=1, v="A")]
+    filtered = _filter_rows_excluding_merged_values(rows, merged_cells)
+    assert filtered[0].c == {"x": "keep"}
+    assert filtered[0].links == {"x": "LX"}
+
+
+def test_filter_rows_excluding_merged_values_drops_empty_rows() -> None:
+    rows = [CellRow(r=1, c={"0": "A"}, links={"0": "L0"})]
+    merged_cells = [MergedCellRange(r1=1, c1=0, r2=1, c2=0, v="A")]
+    filtered = _filter_rows_excluding_merged_values(rows, merged_cells)
+    assert filtered == []
