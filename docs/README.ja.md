@@ -377,7 +377,7 @@ flowchart TD
 
 ### 互換性メモ（v0.3.5）: merged_cells 形式変更
 
-`merged_cells` は v0.15 で「オブジェクト配列」から「schema/items」形式に変更されました（JSON 利用側には破壊的変更）。
+`merged_cells` は v0.3.5 で「オブジェクト配列」から「schema/items」形式に変更されました（JSON 利用側には破壊的変更）。
 
 旧形式（<= v0.3.2）:
 
