@@ -2,6 +2,7 @@ from pathlib import Path
 
 from _pytest.monkeypatch import MonkeyPatch
 
+from exstruct.core.cells import MergedCellRange
 from exstruct.core.pipeline import (
     ExtractionArtifacts,
     ExtractionInputs,
@@ -10,7 +11,6 @@ from exstruct.core.pipeline import (
     build_pre_com_pipeline,
     resolve_extraction_inputs,
 )
-from exstruct.core.cells import MergedCellRange
 from exstruct.models import CellRow, PrintArea
 
 
@@ -214,9 +214,7 @@ def test_build_cells_tables_workbook_excludes_merged_values_in_rows(
     )
     artifacts = ExtractionArtifacts(
         cell_data={"Sheet1": [CellRow(r=1, c={"0": "A", "1": "B", "2": "C"})]},
-        merged_cell_data={
-            "Sheet1": [MergedCellRange(r1=1, c1=0, r2=1, c2=1, v="A")]
-        },
+        merged_cell_data={"Sheet1": [MergedCellRange(r1=1, c1=0, r2=1, c2=1, v="A")]},
     )
     wb = build_cells_tables_workbook(inputs=inputs, artifacts=artifacts, reason="test")
     sheet = wb.sheets["Sheet1"]
