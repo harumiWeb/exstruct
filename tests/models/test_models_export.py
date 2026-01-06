@@ -139,6 +139,13 @@ def test_sheet_json_includes_smartart_nodes() -> None:
 
 
 def test_sheet_json_includes_merged_cells_schema() -> None:
+    """
+    Verify that SheetData.to_json serializes merged_cells with schema and items.
+
+    Asserts that the JSON output includes a merged_cells object with a schema
+    field containing ["r1", "c1", "r2", "c2", "v"] and an items array with the
+    provided merged cell data as a 5-element array.
+    """
     sheet = SheetData(
         rows=[],
         merged_cells=MergedCells(items=[(1, 0, 1, 1, "merged")]),
