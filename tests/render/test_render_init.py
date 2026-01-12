@@ -4,7 +4,9 @@ import builtins
 from collections.abc import Callable
 from pathlib import Path
 import shutil
-from types import SimpleNamespace
+import sys
+from types import ModuleType, SimpleNamespace
+from typing import Any, cast
 
 import pytest
 import xlwings as xw
@@ -124,6 +126,27 @@ class FakePdfDocument:
 
     def __len__(self) -> int:
         return self._page_count
+
+
+class ExplodingPdfDocument:
+    """PdfDocument stub that raises on enter."""
+
+    def __init__(self, path: str) -> None:
+        _ = path
+
+    def __enter__(self) -> ExplodingPdfDocument:
+        raise RuntimeError("boom")
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: object | None,
+    ) -> bool | None:
+        _ = exc_type
+        _ = exc
+        _ = tb
+        return None
 
 
 class FakeImage:
@@ -302,26 +325,6 @@ def test_export_sheet_images_wraps_unknown_error(
     out_dir = tmp_path / "images"
     monkeypatch.setenv("EXSTRUCT_RENDER_SUBPROCESS", "0")
 
-    class ExplodingPdfDocument:
-        """PdfDocument stub that raises on enter."""
-
-        def __init__(self, path: str) -> None:
-            _ = path
-
-        def __enter__(self) -> ExplodingPdfDocument:
-            raise RuntimeError("boom")
-
-        def __exit__(
-            self,
-            exc_type: type[BaseException] | None,
-            exc: BaseException | None,
-            tb: object | None,
-        ) -> bool | None:
-            _ = exc_type
-            _ = exc
-            _ = tb
-            return None
-
     fake_pdfium = SimpleNamespace(PdfDocument=ExplodingPdfDocument)
     monkeypatch.setattr(render, "_require_pdfium", lambda: fake_pdfium)
     monkeypatch.setattr(
@@ -372,6 +375,150 @@ def test_use_render_subprocess_env_toggle(monkeypatch: pytest.MonkeyPatch) -> No
     assert render._use_render_subprocess() is True
     monkeypatch.setenv("EXSTRUCT_RENDER_SUBPROCESS", "0")
     assert render._use_render_subprocess() is False
+
+
+class FakeQueue:
+    """Stub queue for subprocess tests."""
+
+    def __init__(self) -> None:
+        self.payload: dict[str, list[str] | str] | None = None
+
+    def put(self, payload: dict[str, list[str] | str]) -> None:
+        self.payload = payload
+
+    def get(self) -> dict[str, list[str] | str]:
+        if self.payload is None:
+            return {"error": "no payload"}
+        return self.payload
+
+    def empty(self) -> bool:
+        return self.payload is None
+
+
+class FakeProcess:
+    """Stub process for subprocess tests."""
+
+    def __init__(
+        self,
+        queue: FakeQueue,
+        exitcode: int,
+        payload: dict[str, list[str] | str] | None = None,
+    ) -> None:
+        self._queue = queue
+        self.exitcode = exitcode
+        if payload is not None:
+            self._queue.put(payload)
+
+    def start(self) -> None:
+        if self._queue.payload is None:
+            self._queue.put({"paths": ["dummy"]})
+
+    def join(self) -> None:
+        return None
+
+
+class FakeContext:
+    """Stub multiprocessing context for subprocess tests."""
+
+    def __init__(self, queue: FakeQueue, process: FakeProcess) -> None:
+        self._queue = queue
+        self._process = process
+
+    def Queue(self) -> FakeQueue:
+        return self._queue
+
+    def Process(self, target: object, args: tuple[object, ...]) -> FakeProcess:
+        _ = target
+        _ = args
+        return self._process
+
+
+def test_render_pdf_pages_subprocess_success(tmp_path: Path) -> None:
+    """_render_pdf_pages_subprocess returns paths when worker succeeds."""
+    queue = FakeQueue()
+    process = FakeProcess(
+        queue,
+        exitcode=0,
+        payload={"paths": [str(tmp_path / "images" / "01_Sheet1.png")]},
+    )
+    context = FakeContext(queue, process)
+
+    def _get_context(_: str) -> FakeContext:
+        return context
+
+    pdf_path = tmp_path / "sheet_01.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4")
+    output_dir = tmp_path / "images"
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(render.mp, "get_context", _get_context)
+        result = render._render_pdf_pages_subprocess(
+            pdf_path, output_dir, 0, "Sheet1", 144
+        )
+
+    assert result == [output_dir / "01_Sheet1.png"]
+
+
+def test_render_pdf_pages_subprocess_error(tmp_path: Path) -> None:
+    """_render_pdf_pages_subprocess raises when worker reports error."""
+    queue = FakeQueue()
+    process = FakeProcess(queue, exitcode=0, payload={"error": "boom"})
+    context = FakeContext(queue, process)
+
+    def _get_context(_: str) -> FakeContext:
+        return context
+
+    pdf_path = tmp_path / "sheet_01.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4")
+    output_dir = tmp_path / "images"
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(render.mp, "get_context", _get_context)
+        with pytest.raises(RenderError, match="boom"):
+            render._render_pdf_pages_subprocess(pdf_path, output_dir, 0, "Sheet1", 144)
+
+
+def test_render_pdf_pages_worker_success(tmp_path: Path) -> None:
+    """_render_pdf_pages_worker writes images and returns paths."""
+    pdf_path = tmp_path / "sheet_01.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4")
+    output_dir = tmp_path / "images"
+    queue = FakeQueue()
+    fake_pdfium = cast(Any, ModuleType("pypdfium2"))
+    fake_pdfium.PdfDocument = FakePdfDocument
+
+    sys.modules["pypdfium2"] = fake_pdfium
+    try:
+        render._render_pdf_pages_worker(pdf_path, output_dir, 0, "Sheet1", 144, queue)
+    finally:
+        sys.modules.pop("pypdfium2", None)
+
+    assert queue.payload == {
+        "paths": [
+            str(output_dir / "01_Sheet1.png"),
+            str(output_dir / "01_Sheet1_p02.png"),
+        ]
+    }
+    assert (output_dir / "01_Sheet1.png").exists()
+    assert (output_dir / "01_Sheet1_p02.png").exists()
+
+
+def test_render_pdf_pages_worker_error(tmp_path: Path) -> None:
+    """_render_pdf_pages_worker reports errors via queue."""
+    pdf_path = tmp_path / "sheet_01.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4")
+    output_dir = tmp_path / "images"
+    queue = FakeQueue()
+
+    fake_pdfium = cast(Any, ModuleType("pypdfium2"))
+    fake_pdfium.PdfDocument = ExplodingPdfDocument
+    sys.modules["pypdfium2"] = fake_pdfium
+    try:
+        render._render_pdf_pages_worker(pdf_path, output_dir, 0, "Sheet1", 144, queue)
+    finally:
+        sys.modules.pop("pypdfium2", None)
+
+    assert queue.payload == {"error": "boom"}
 
 
 def test_sanitize_sheet_filename() -> None:
