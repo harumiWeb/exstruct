@@ -16,6 +16,15 @@ class FakeSheet:
 
     def __init__(self, name: str) -> None:
         self.name = name
+        self.api = FakeSheetApi()
+
+
+class FakeSheetApi:
+    """Stub of xlwings Sheet.api for PDF export."""
+
+    def ExportAsFixedFormat(self, file_format: int, output_path: str) -> None:
+        _ = file_format
+        Path(output_path).write_bytes(b"%PDF-1.4")
 
 
 class FakeBookApi:
@@ -87,6 +96,7 @@ class FakePdfDocument:
 
     def __init__(self, path: str) -> None:
         self._path = path
+        self._page_count = 2 if "sheet_01" in path else 1
 
     def __enter__(self) -> FakePdfDocument:
         return self
@@ -105,6 +115,9 @@ class FakePdfDocument:
     def __getitem__(self, index: int) -> FakePage:
         _ = index
         return FakePage()
+
+    def __len__(self) -> int:
+        return self._page_count
 
 
 class FakeImage:
@@ -242,38 +255,33 @@ def test_export_sheet_images_success(
     xlsx.write_bytes(b"dummy")
     out_dir = tmp_path / "images"
 
-    def _fake_export_pdf(excel_path: Path, output_pdf: Path) -> list[str]:
-        _ = excel_path
-        output_pdf.write_bytes(b"%PDF-1.4")
-        return ["Sheet/1", "  "]
-
     fake_pdfium = SimpleNamespace(PdfDocument=FakePdfDocument)
     monkeypatch.setattr(render, "_require_pdfium", lambda: fake_pdfium)
-    monkeypatch.setattr(render, "export_pdf", _fake_export_pdf)
+    monkeypatch.setattr(
+        render, "_require_excel_app", lambda: FakeApp(["Sheet/1", "  "], False)
+    )
 
     written = render.export_sheet_images(xlsx, out_dir, dpi=144)
 
     assert written[0].name == "01_Sheet_1.png"
-    assert written[1].name == "02_sheet.png"
+    assert written[1].name == "01_Sheet_1_p02.png"
+    assert written[2].name == "02_sheet.png"
     assert all(path.exists() for path in written)
 
 
 def test_export_sheet_images_propagates_render_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """export_sheet_images re-raises RenderError from export_pdf."""
+    """export_sheet_images re-raises RenderError from _require_excel_app."""
     xlsx = tmp_path / "input.xlsx"
     xlsx.write_bytes(b"dummy")
     out_dir = tmp_path / "images"
 
-    def _fake_export_pdf(excel_path: Path, output_pdf: Path) -> list[str]:
-        _ = excel_path
-        _ = output_pdf
-        raise RenderError("boom")
-
     fake_pdfium = SimpleNamespace(PdfDocument=FakePdfDocument)
     monkeypatch.setattr(render, "_require_pdfium", lambda: fake_pdfium)
-    monkeypatch.setattr(render, "export_pdf", _fake_export_pdf)
+    monkeypatch.setattr(
+        render, "_require_excel_app", lambda: (_ for _ in ()).throw(RenderError("boom"))
+    )
 
     with pytest.raises(RenderError, match="boom"):
         render.export_sheet_images(xlsx, out_dir)
@@ -286,11 +294,6 @@ def test_export_sheet_images_wraps_unknown_error(
     xlsx = tmp_path / "input.xlsx"
     xlsx.write_bytes(b"dummy")
     out_dir = tmp_path / "images"
-
-    def _fake_export_pdf(excel_path: Path, output_pdf: Path) -> list[str]:
-        _ = excel_path
-        output_pdf.write_bytes(b"%PDF-1.4")
-        return ["Sheet1"]
 
     class ExplodingPdfDocument:
         """PdfDocument stub that raises on enter."""
@@ -314,7 +317,9 @@ def test_export_sheet_images_wraps_unknown_error(
 
     fake_pdfium = SimpleNamespace(PdfDocument=ExplodingPdfDocument)
     monkeypatch.setattr(render, "_require_pdfium", lambda: fake_pdfium)
-    monkeypatch.setattr(render, "export_pdf", _fake_export_pdf)
+    monkeypatch.setattr(
+        render, "_require_excel_app", lambda: FakeApp(["Sheet1"], False)
+    )
 
     with pytest.raises(RenderError, match="Failed to export sheet images"):
         render.export_sheet_images(xlsx, out_dir)
