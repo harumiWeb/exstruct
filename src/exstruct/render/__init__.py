@@ -35,14 +35,15 @@ def export_pdf(excel_path: str | Path, output_pdf: str | Path) -> list[str]:
         temp_dir = Path(td)
         temp_xlsx = temp_dir / "book.xlsx"
         temp_pdf = temp_dir / "book.pdf"
-        shutil.copy(normalized_excel_path, temp_xlsx)
 
         app: xw.App | None = None
         wb: xw.Book | None = None
         try:
             app = _require_excel_app()
-            wb = app.books.open(str(temp_xlsx))
+            app.display_alerts = False
+            wb = app.books.open(str(normalized_excel_path))
             sheet_names = [s.name for s in wb.sheets]
+            wb.api.SaveAs(str(temp_xlsx))
             wb.api.ExportAsFixedFormat(0, str(temp_pdf))
             shutil.copy(temp_pdf, normalized_output_pdf)
         except RenderError:

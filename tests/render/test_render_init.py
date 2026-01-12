@@ -3,9 +3,11 @@ from __future__ import annotations
 import builtins
 from collections.abc import Callable
 from pathlib import Path
+import shutil
 from types import SimpleNamespace
 
 import pytest
+import xlwings as xw
 
 from exstruct.errors import MissingDependencyError, RenderError
 import exstruct.render as render
@@ -33,6 +35,9 @@ class FakeBookApi:
     def ExportAsFixedFormat(self, file_format: int, output_path: str) -> None:
         _ = file_format
         Path(output_path).write_bytes(b"%PDF-1.4")
+
+    def SaveAs(self, output_path: str) -> None:
+        Path(output_path).write_bytes(b"XLSX")
 
 
 class FakeBook:
@@ -68,6 +73,7 @@ class FakeApp:
 
     def __init__(self, sheet_names: list[str], raise_on_open: bool) -> None:
         self.books = FakeBooks(sheet_names, raise_on_open)
+        self.display_alerts = True
         self.quit_called = False
 
     def quit(self) -> None:
@@ -152,7 +158,7 @@ def _fake_app_factory(
 def test_require_excel_app_success(monkeypatch: pytest.MonkeyPatch) -> None:
     """_require_excel_app returns the constructed app instance."""
     fake_app = FakeApp(["Sheet1"], raise_on_open=False)
-    monkeypatch.setattr(render.xw, "App", lambda *a, **k: fake_app)
+    monkeypatch.setattr(xw, "App", lambda *a, **k: fake_app)
 
     assert render._require_excel_app() is fake_app
 
@@ -165,7 +171,7 @@ def test_require_excel_app_failure(monkeypatch: pytest.MonkeyPatch) -> None:
         _ = kwargs
         raise RuntimeError("boom")
 
-    monkeypatch.setattr(render.xw, "App", _raise)
+    monkeypatch.setattr(xw, "App", _raise)
 
     with pytest.raises(RenderError, match="Excel \\(COM\\) is not available"):
         render._require_excel_app()
@@ -177,7 +183,7 @@ def test_export_pdf_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
     xlsx.write_bytes(b"dummy")
     output_pdf = tmp_path / "out.pdf"
     sheet_names = ["Sheet1", "Summary"]
-    monkeypatch.setattr(render.xw, "App", _fake_app_factory(sheet_names))
+    monkeypatch.setattr(xw, "App", _fake_app_factory(sheet_names))
 
     result = render.export_pdf(xlsx, output_pdf)
 
@@ -192,9 +198,7 @@ def test_export_pdf_wraps_failure(
     xlsx = tmp_path / "input.xlsx"
     xlsx.write_bytes(b"dummy")
     output_pdf = tmp_path / "out.pdf"
-    monkeypatch.setattr(
-        render.xw, "App", _fake_app_factory(["Sheet1"], raise_on_open=True)
-    )
+    monkeypatch.setattr(xw, "App", _fake_app_factory(["Sheet1"], raise_on_open=True))
 
     with pytest.raises(RenderError, match="Failed to export PDF for"):
         render.export_pdf(xlsx, output_pdf)
@@ -207,9 +211,9 @@ def test_export_pdf_missing_output_raises(
     xlsx = tmp_path / "input.xlsx"
     xlsx.write_bytes(b"dummy")
     output_pdf = tmp_path / "out.pdf"
-    monkeypatch.setattr(render.xw, "App", _fake_app_factory(["Sheet1"]))
+    monkeypatch.setattr(xw, "App", _fake_app_factory(["Sheet1"]))
 
-    real_copy = render.shutil.copy
+    real_copy = shutil.copy
 
     def _copy(
         src: Path | str, dst: Path | str, *args: object, **kwargs: object
@@ -220,7 +224,7 @@ def test_export_pdf_missing_output_raises(
             return Path(dst)
         return Path(real_copy(src, dst))
 
-    monkeypatch.setattr(render.shutil, "copy", _copy)
+    monkeypatch.setattr(shutil, "copy", _copy)
 
     with pytest.raises(RenderError, match="Failed to export PDF to"):
         render.export_pdf(xlsx, output_pdf)
