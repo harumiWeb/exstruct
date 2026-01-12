@@ -332,6 +332,48 @@ def test_export_sheet_images_wraps_unknown_error(
         render.export_sheet_images(xlsx, out_dir)
 
 
+def test_export_sheet_images_uses_subprocess_when_enabled(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """export_sheet_images delegates to subprocess rendering when enabled."""
+    xlsx = tmp_path / "input.xlsx"
+    xlsx.write_bytes(b"dummy")
+    out_dir = tmp_path / "images"
+
+    calls: list[tuple[Path, Path, int, str, int]] = []
+
+    def _fake_subprocess(
+        pdf_path: Path,
+        output_dir: Path,
+        sheet_index: int,
+        safe_name: str,
+        dpi: int,
+    ) -> list[Path]:
+        calls.append((pdf_path, output_dir, sheet_index, safe_name, dpi))
+        return [output_dir / f"{sheet_index + 1:02d}_{safe_name}.png"]
+
+    monkeypatch.setenv("EXSTRUCT_RENDER_SUBPROCESS", "1")
+    monkeypatch.setattr(
+        render, "_require_excel_app", lambda: FakeApp(["SheetA", "SheetB"], False)
+    )
+    monkeypatch.setattr(render, "_require_pdfium", lambda: SimpleNamespace())
+    monkeypatch.setattr(render, "_render_pdf_pages_subprocess", _fake_subprocess)
+
+    written = render.export_sheet_images(xlsx, out_dir, dpi=144)
+
+    assert len(calls) == 2
+    assert written[0].name == "01_SheetA.png"
+    assert written[1].name == "02_SheetB.png"
+
+
+def test_use_render_subprocess_env_toggle(monkeypatch: pytest.MonkeyPatch) -> None:
+    """_use_render_subprocess respects the env toggle."""
+    monkeypatch.setenv("EXSTRUCT_RENDER_SUBPROCESS", "1")
+    assert render._use_render_subprocess() is True
+    monkeypatch.setenv("EXSTRUCT_RENDER_SUBPROCESS", "0")
+    assert render._use_render_subprocess() is False
+
+
 def test_sanitize_sheet_filename() -> None:
     """_sanitize_sheet_filename replaces invalid characters and defaults."""
     assert render._sanitize_sheet_filename("Sheet/1") == "Sheet_1"
