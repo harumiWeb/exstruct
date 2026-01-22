@@ -15,13 +15,13 @@
 
 ## PR #44 指摘対応
 
-- [ ] `src/exstruct/render/__init__.py` の `_page_index_from_suffix` を2桁固定ではなく可変桁の数値サフィックスに対応させ、`_rename_pages_for_print_area` の上書きリスクを解消する
-- [ ] `src/exstruct/render/__init__.py` の `_export_sheet_pdf` の `finally` 内 `return` を削除し、PrintArea 復元失敗はログに残して例外を握りつぶさない
-- [ ] `src/exstruct/core/pipeline.py` の `step_extract_formulas_map_*` の挙動を docstring に合わせる（失敗時にログしてスキップ）か、docstring を実装に合わせて修正する
-- [ ] `docs/README.ja.md` の `**verbose**` 説明行を日本語に統一する
+- [x] `src/exstruct/render/__init__.py` の `_page_index_from_suffix` を2桁固定ではなく可変桁の数値サフィックスに対応させ、`_rename_pages_for_print_area` の上書きリスクを解消する
+- [x] `src/exstruct/render/__init__.py` の `_export_sheet_pdf` の `finally` 内 `return` を削除し、PrintArea 復元失敗はログに残して例外を握りつぶさない
+- [x] `src/exstruct/core/pipeline.py` の `step_extract_formulas_map_*` の挙動を docstring に合わせる（失敗時にログしてスキップ）か、docstring を実装に合わせて修正する
+- [x] `docs/README.ja.md` の `**verbose**` 説明行を日本語に統一する
 
 ## PR #44 コメント/Codecov 対応
 
-- [ ] Codecov パッチカバレッジ低下（60.53%）の指摘に対応し、対象ファイルの不足分テストを追加する（`src/exstruct/render/__init__.py`, `src/exstruct/core/cells.py`, `src/exstruct/core/backends/com_backend.py`, `src/exstruct/core/pipeline.py`, `src/exstruct/core/backends/openpyxl_backend.py`）
+- [x] Codecov パッチカバレッジ低下（60.53%）の指摘に対応し、対象ファイルの不足分テストを追加する（`src/exstruct/render/__init__.py`, `src/exstruct/core/cells.py`, `src/exstruct/core/backends/com_backend.py`, `src/exstruct/core/pipeline.py`, `src/exstruct/core/backends/openpyxl_backend.py`）
 - [ ] Codecov の「Files with missing lines」で具体的な未カバー行を確認し、テスト観点を整理する
-- [ ] Codacy 警告対応: `src/exstruct/render/__init__.py:274` の finally 内 return により例外が握りつぶされる可能性（`PyLintPython3_W0150`）を解消する
+- [x] Codacy 警告対応: `src/exstruct/render/__init__.py:274` の finally 内 return により例外が握りつぶされる可能性（`PyLintPython3_W0150`）を解消する
