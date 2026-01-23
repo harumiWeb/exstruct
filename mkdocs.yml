@@ -25,6 +25,7 @@ nav:
       - Data Models (generated): generated/models.md
       - JSON Schemas: schemas.md
   - CLI Guide: cli.md
+  - MCP Server: mcp.md
   - Concept / Why ExStruct?: concept.md
   - Release Notes:
       - v0.3.7: release-notes/v0.3.7.md
