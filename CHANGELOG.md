@@ -8,6 +8,18 @@ All notable changes to this project are documented in this file. This changelog 
 
 - _No unreleased changes yet._
 
+## [0.4.2] - 2026-01-23
+
+### Changed
+
+- Renamed MCP tool names to remove dots for compatibility with strict client validators (PR [#47](https://github.com/harumiWeb/exstruct/pull/47)).
+
+## [0.4.1] - 2026-01-23
+
+### Fixed
+
+- Pinned `httpx<1.0` for MCP extras to prevent runtime failures with pre-release `httpx` builds (PR [#47](https://github.com/harumiWeb/exstruct/pull/47)).
+
 ## [0.4.0] - 2026-01-23
 
 ### Added
