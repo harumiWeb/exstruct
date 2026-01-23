@@ -4,23 +4,85 @@
 
 ---
 
-## 数式取得機能追加
+## MCPサーバー機能追加
 
-- 新たに数式文字列をそのまま取得する機能を追加
-- `SheetData`モデルに`formulas_map`を新設予定`formulas_map: dict[str, list[tuple[int,int]]]`
-- 数式の値は定義されている数式をそのまま取得する
-- セル座標はcolors_mapと同じようにr,cの数値で表記
-- デフォルトはverboseモード以上で出力、もしくはオプションからONにする
-- 定義されている数式文字列をシンプルに取得する実装
-- 数式の表記形式は「=A1」のようにユーザーが見るままの数式文字列にする
-- 共有数式や配列数式は一旦は展開しない実装にする
-- 空文字は除外、=だけのセルも数式文字として取得
-- formulas_mapのキーは「式文字列（先頭=を含む）」で固定する
-- 既存の値はSheetData.rowsにあり、数式はSheetData.formulas_mapにあることで共存する
-- データ取得時はformulas_map が ON のときだけ data_only=False で再読込
-- オプションは`StructOptions`にて`include_formulas_map: bool = False`で設定を受け付ける
-- `.xls`形式かつ数式取得ONの時は処理が遅くなるという警告を出しつつ、COMで取得処理をする。
-- cell.value が ArrayFormula の場合に value.text（実際の式文字列）を使う
+### 目的
+
+- MCP クライアント（Codex / Claude / VS Code Copilot / Gemini CLI 等）から ExStruct を「ツール」として安全に呼び出せるようにする
+- 推論はエージェント側で行い、MCP は制御面（実行・結果参照）に徹する
+
+### スコープ（MVP）
+
+- stdio トランスポートの MCP サーバー
+- ツール: `exstruct.extract`
+- 抽出結果は **必ずファイル出力**（MCP 応答はパス + 軽いメタ情報）
+- 安全なパス制約（allowlist / deny glob）
+
+### 前提・制約
+
+- 1MB 程度の Excel を想定
+- 処理時間は長くなっても高品質重視
+- Windows 以外は COM なしの簡易読み取り（ライブラリのスタンスに準拠）
+
+### 出力 JSON の仕様
+
+- `mode` で出力粒度を選択: `light` / `standard` / `verbose`
+- 互換方針: 追加は OK、破壊的変更は NG
+
+#### `light`
+
+- 軽量メタデータ中心（シート名、件数、主要範囲など）
+- 大きなセル本文や詳細構造は含めない
+
+#### `standard`
+
+- 通常運用向けの基本情報
+- セル情報は要約・圧縮前提
+
+#### `verbose`
+
+- 詳細な構造情報を含む
+- 大容量になりやすいため、ファイル出力＋チャンク取得前提
+
+### MCP ツール仕様（案）
+
+#### `exstruct.extract`
+
+- 入力: `xlsx_path`, `mode`, `format`, `out_dir?`, `out_name?`, `options?`
+- 出力: `out_path`, `workbook_meta`, `warnings`, `engine`
+- 実装: 内部 API を優先、フォールバックで CLI サブプロセス
+
+#### `exstruct.read_json_chunk`（実用化フェーズ）
+
+- 入力: `out_path`, `sheet?`, `max_bytes?`, `filter?`, `cursor?`
+- 出力: `chunk`, `next_cursor?`
+- 方針: 返却サイズを抑制し、段階的に取得できること
+
+#### `exstruct.validate_input`（実用化フェーズ）
+
+- 入力: `xlsx_path`
+- 出力: `is_readable`, `warnings`, `errors`
+
+### サーバー設計
+
+- stdio 優先
+- ログは stderr / ファイル（stdio を汚さない）
+- `--root` によりアクセス範囲を固定
+- `--deny-glob` により防御的に除外
+- `--on-conflict` で出力衝突方針を指定（overwrite / skip / rename）
+
+### ディレクトリ構成（案）
+
+```
+src/exstruct/
+  mcp/
+    __init__.py
+    server.py          # MCP server entrypoint (stdio)
+    tools.py           # tool definitions + handlers
+    io.py              # path validation, safe read/write
+    extract_runner.py  # internal API call or subprocess fallback
+    chunk_reader.py    # JSON partial read / pointer / sheet filters
+```
 
 ---
 
