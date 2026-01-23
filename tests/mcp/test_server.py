@@ -3,9 +3,8 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 import importlib
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
-import anyio
 import pytest
 
 from exstruct.mcp import server
@@ -19,6 +18,8 @@ from exstruct.mcp.tools import (
     ValidateInputToolInput,
     ValidateInputToolOutput,
 )
+
+anyio: Any = pytest.importorskip("anyio")
 
 ToolFunc = Callable[..., object] | Callable[..., Awaitable[object]]
 
