@@ -30,6 +30,11 @@ def _make_basic_book(path: Path) -> None:
 
 
 def _ensure_excel() -> None:
+    """
+    Ensure Excel COM is available for tests and skip the current test if it is not.
+    
+    If the SKIP_COM_TESTS environment variable is set, this function skips the test. Otherwise it tries to start a hidden xlwings App and quits it; if starting the App fails, the function skips the test due to unavailable Excel COM.
+    """
     if os.getenv("SKIP_COM_TESTS"):
         pytest.skip("SKIP_COM_TESTS is set; skipping Excel-dependent test.")
     try:

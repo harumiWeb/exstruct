@@ -21,28 +21,29 @@ def extract_workbook(  # noqa: C901
     include_merged_cells: bool | None = None,
     include_merged_values_in_rows: bool = True,
 ) -> WorkbookData:
-    """Extract workbook and return WorkbookData.
-
-    Falls back to cells+tables if Excel COM is unavailable.
-
-    Args:
-        file_path: Workbook path.
-        mode: Extraction mode.
-        include_cell_links: Whether to include cell hyperlinks; None uses mode defaults.
-        include_print_areas: Whether to include print areas; None defaults to True.
-        include_auto_page_breaks: Whether to include auto page breaks.
-        include_colors_map: Whether to include colors map; None uses mode defaults.
-        include_default_background: Whether to include default background color.
-        ignore_colors: Optional set of color keys to ignore.
-        include_formulas_map: Whether to include formulas map; None uses mode defaults.
-        include_merged_cells: Whether to include merged cell ranges; None uses mode defaults.
-        include_merged_values_in_rows: Whether to keep merged values in rows.
-
+    """
+    Extract a workbook into a structured WorkbookData representation.
+    
+    May fall back to cells+tables extraction if Excel COM automation is unavailable.
+    
+    Parameters:
+        file_path (str | Path): Path to the workbook file.
+        mode (Literal['light', 'standard', 'verbose']): Extraction mode that controls detail level.
+        include_cell_links (bool | None): Include cell hyperlinks; `None` uses mode defaults.
+        include_print_areas (bool | None): Include print areas; `None` defaults to True.
+        include_auto_page_breaks (bool): Include automatic page break information.
+        include_colors_map (bool | None): Include a colors map; `None` uses mode defaults.
+        include_default_background (bool): Include default background color when present.
+        ignore_colors (set[str] | None): Set of color keys to ignore during color mapping.
+        include_formulas_map (bool | None): Include a map of cell formulas; `None` uses mode defaults.
+        include_merged_cells (bool | None): Include merged cell ranges; `None` uses mode defaults.
+        include_merged_values_in_rows (bool): Preserve merged cell values in row-wise output.
+    
     Returns:
-        Extracted WorkbookData.
-
+        WorkbookData: The extracted workbook representation.
+    
     Raises:
-        ValueError: If mode is unsupported.
+        ValueError: If `mode` is not one of "light", "standard", or "verbose".
     """
     inputs = resolve_extraction_inputs(
         file_path,

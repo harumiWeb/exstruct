@@ -71,6 +71,11 @@ def test_detect_tables_openpyxl_respects_table_params(
 
 
 def test_normalize_formula_value_prefers_array_text() -> None:
+    """
+    Verify that _normalize_formula_value prefers an array-like object's text and treats an empty string as no formula.
+    
+    Asserts that an object with a `text` attribute is converted to a formula string prefixed with '=' (e.g., "=SUM(A1:A3)"), and that an empty string is normalized to None.
+    """
     class _ArrayFormulaLike:
         text = "SUM(A1:A3)"
 
@@ -143,6 +148,16 @@ def test_extract_sheet_formulas_map_com_collects_formulas() -> None:
         used_range = _DummyUsedRange()
 
         def range(self, _start: object, _end: object) -> _DummyRange:
+            """
+            Return a new _DummyRange representing a requested cell range.
+            
+            Parameters:
+            	_start (object): Start coordinate or cell reference for the range request (ignored by this dummy implementation).
+            	_end (object): End coordinate or cell reference for the range request (ignored by this dummy implementation).
+            
+            Returns:
+            	_DummyRange: A fresh _DummyRange instance corresponding to the requested range.
+            """
             return _DummyRange()
 
     class _DummyWorkbook:

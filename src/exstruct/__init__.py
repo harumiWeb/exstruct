@@ -90,28 +90,14 @@ ExtractionMode = Literal["light", "standard", "verbose"]
 
 def extract(file_path: str | Path, mode: ExtractionMode = "standard") -> WorkbookData:
     """
-    Extract an Excel workbook into WorkbookData.
-
-    Args:
-        file_path: Path to .xlsx/.xlsm/.xls.
-        mode: "light" / "standard" / "verbose"
-            - light: cells + table detection only (no COM, shapes/charts empty). Print areas via openpyxl.
-            - standard: texted shapes + arrows + charts (COM if available), print areas included. Shape/chart size is kept but hidden by default in output.
-            - verbose: all shapes (including textless) with size, charts with size, and colors_map.
-
+    Extracts an Excel workbook into a WorkbookData structure.
+    
+    Parameters:
+        file_path (str | Path): Path to the workbook file (.xlsx, .xlsm, .xls).
+        mode (ExtractionMode): Extraction detail level. "light" includes cells and table detection only (no COM, shapes/charts empty; print areas via openpyxl). "standard" includes texted shapes, arrows, charts (COM if available) and print areas. "verbose" also includes shape/chart sizes, cell link map, colors map, and formulas map.
+    
     Returns:
-        WorkbookData containing sheets, rows, shapes, charts, and print areas.
-
-    Raises:
-        ValueError: If an invalid mode is provided.
-
-    Examples:
-        Extract with hyperlinks (verbose) and inspect table candidates:
-
-        >>> from exstruct import extract
-        >>> wb = extract("input.xlsx", mode="verbose")
-        >>> wb.sheets["Sheet1"].table_candidates
-        ['A1:B5']
+        WorkbookData: Parsed workbook representation containing sheets, rows, shapes, charts, and print areas.
     """
     include_links = True if mode == "verbose" else False
     include_colors_map = True if mode == "verbose" else None

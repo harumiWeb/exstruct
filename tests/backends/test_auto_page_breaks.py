@@ -16,6 +16,13 @@ from exstruct.models import PrintArea, SheetData, WorkbookData
 def test_extract_passes_auto_page_break_flag(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
+    """
+    Verify that extract_workbook is invoked with include_auto_page_breaks set to True.
+    
+    Creates a fake extractor that captures the include_auto_page_breaks argument, replaces
+    exstruct.engine.extract_workbook with it, runs ExStructEngine.extract against a dummy
+    workbook path configured to export auto page breaks, and asserts the captured flag is True.
+    """
     called: dict[str, object] = {}
 
     def fake_extract(
@@ -31,6 +38,20 @@ def test_extract_passes_auto_page_break_flag(
         include_merged_cells: bool | None = None,
         include_merged_values_in_rows: bool = True,
     ) -> WorkbookData:
+        """
+        Test stub for workbook extraction that records the auto page breaks flag.
+        
+        This fake extractor captures the value of `include_auto_page_breaks` in the outer
+        `called` mapping and returns a minimal `WorkbookData` with `book_name` set to
+        the provided path's filename and an empty `sheets` mapping.
+        
+        Parameters:
+            path (Path): Filesystem path used to derive the returned `WorkbookData.book_name`.
+            include_auto_page_breaks (bool): Flag whose value is written to `called["include_auto_page_breaks"]`.
+        
+        Returns:
+            WorkbookData: A minimal workbook data object with `book_name` set to `path.name` and no sheets.
+        """
         called["include_auto_page_breaks"] = include_auto_page_breaks
         return WorkbookData(book_name=path.name, sheets={})
 

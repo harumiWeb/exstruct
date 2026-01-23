@@ -102,10 +102,11 @@ class OpenpyxlBackend:
             return {}
 
     def extract_formulas_map(self) -> WorkbookFormulasMap | None:
-        """Extract formulas_map using openpyxl.
-
+        """
+        Extract a mapping of workbook formulas for each sheet.
+        
         Returns:
-            WorkbookFormulasMap or None when extraction fails.
+            WorkbookFormulasMap | None: A mapping from sheet name to its formulas, or `None` if extraction fails.
         """
         try:
             return extract_sheet_formulas_map(self.file_path)
@@ -116,13 +117,14 @@ class OpenpyxlBackend:
             return None
 
     def detect_tables(self, sheet_name: str) -> list[str]:
-        """Detect table candidates for a single sheet.
-
-        Args:
-            sheet_name: Target worksheet name.
-
+        """
+        Detects table candidate ranges within the specified worksheet.
+        
+        Parameters:
+            sheet_name (str): Name of the worksheet to analyze for table candidates.
+        
         Returns:
-            List of table candidate ranges.
+            list[str]: Detected table candidate ranges as A1-style range strings; empty list if none are found or detection fails.
         """
         try:
             return detect_tables_openpyxl(self.file_path, sheet_name)

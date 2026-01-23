@@ -37,6 +37,11 @@ def test_render_smoke_pdf_and_png(tmp_path: Path) -> None:
 
 
 def test_render_multiple_print_ranges_images(tmp_path: Path) -> None:
+    """
+    Verify that processing a workbook with multiple print ranges across four sheets produces an images directory containing exactly four PNG files.
+    
+    Uses the test asset 'assets/multiple_print_ranges_4sheets.xlsx', runs process_excel with image output enabled, and asserts the generated images directory exists and contains four .png images.
+    """
     xlsx = (
         Path(__file__).resolve().parents[1]
         / "assets"

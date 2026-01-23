@@ -19,15 +19,16 @@ __all__ = ["openpyxl_workbook", "xlwings_workbook", "_find_open_workbook", "xw"]
 def openpyxl_workbook(
     file_path: Path, *, data_only: bool, read_only: bool
 ) -> Iterator[Any]:
-    """Open an openpyxl workbook and ensure it is closed.
-
-    Args:
-        file_path: Workbook path.
-        data_only: Whether to read formula results.
-        read_only: Whether to open in read-only mode.
-
+    """
+    Open an openpyxl Workbook for temporary use and ensure it is closed on exit.
+    
+    Parameters:
+        file_path (Path): Path to the workbook file.
+        data_only (bool): If True, read stored cell values instead of formulas.
+        read_only (bool): If True, open the workbook in optimized read-only mode.
+    
     Yields:
-        openpyxl workbook instance.
+        openpyxl.workbook.workbook.Workbook: The opened workbook instance.
     """
     with warnings.catch_warnings():
         warnings.filterwarnings(

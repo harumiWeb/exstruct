@@ -261,6 +261,24 @@ class ExStructEngine:
     def _filter_sheet(
         self, sheet: SheetData, include_auto_override: bool | None = None
     ) -> SheetData:
+        """
+        Return a filtered copy of a SheetData according to the engine's output filters and resolved size/print-area flags.
+        
+        Parameters:
+            sheet: The original SheetData to filter.
+            include_auto_override: If not None, overrides the engine's automatic decision for including auto page-break areas; if None, the engine's auto rule is used.
+        
+        Returns:
+            A new SheetData where:
+              - rows are kept only if include_rows is enabled; otherwise an empty list.
+              - shapes are kept only if include_shapes is enabled; when kept and shape-size inclusion is disabled, each shape's width and height are cleared.
+              - charts are kept only if include_charts is enabled; when kept and chart-size inclusion is disabled, each chart's width and height are cleared.
+              - table_candidates are kept only if include_tables is enabled; otherwise an empty list.
+              - colors_map and formulas_map are preserved as-is.
+              - print_areas are kept only if print areas are included by the engine; otherwise an empty list.
+              - auto_print_areas are kept only if auto page-break areas are included (after applying include_auto_override); otherwise an empty list.
+              - merged_cells are kept only if include_merged_cells is enabled; otherwise set to None.
+        """
         include_shape_size, include_chart_size = self._resolve_size_flags()
         include_print_areas = self._include_print_areas()
         include_auto_print_areas = (
@@ -335,15 +353,15 @@ class ExStructEngine:
         self, file_path: str | Path, *, mode: ExtractionMode | None = None
     ) -> WorkbookData:
         """
-        Extract a workbook and return normalized workbook data.
-
-        Args:
-            file_path: Path to the .xlsx/.xlsm/.xls file to extract.
-            mode: Extraction mode; defaults to the engine's StructOptions.mode.
-                - light: COM-free; cells, table candidates, and print areas only.
-                - standard: Shapes with text/arrows plus charts; print areas included;
-                  size fields retained but hidden from default output.
-                - verbose: All shapes (with size) and charts (with size).
+        Produce a normalized WorkbookData extracted from the given workbook file.
+        
+        Parameters:
+            file_path (str | Path): Path to the .xlsx/.xlsm/.xls file to extract.
+            mode (ExtractionMode | None): Extraction mode to use; if None the engine's configured mode is used.
+                Modes: "light", "standard", "verbose".
+        
+        Returns:
+            WorkbookData: Normalized workbook data extracted from the file.
         """
         chosen_mode = mode or self.options.mode
         include_auto_page_breaks = (

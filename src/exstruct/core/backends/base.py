@@ -42,4 +42,9 @@ class Backend(Protocol):
         """Extract merged cell ranges from the workbook."""
 
     def extract_formulas_map(self) -> WorkbookFormulasMap | None:
-        """Extract formulas map from the workbook."""
+        """
+        Retrieve the workbook's formulas organized by worksheet.
+        
+        Returns:
+            WorkbookFormulasMap | None: A mapping of worksheet identifiers to their formulas, or `None` if the backend cannot provide a formulas map.
+        """
