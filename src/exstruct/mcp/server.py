@@ -4,6 +4,7 @@ import argparse
 import functools
 import importlib
 import logging
+import os
 from pathlib import Path
 import time
 from types import ModuleType
@@ -68,6 +69,11 @@ def run_server(config: ServerConfig) -> None:
     Args:
         config: Server configuration.
     """
+    os.environ.setdefault("EXSTRUCT_BORDER_CLUSTER_BACKEND", "python")
+    logger.info(
+        "Border cluster backend set to %s for MCP.",
+        os.getenv("EXSTRUCT_BORDER_CLUSTER_BACKEND"),
+    )
     _import_mcp()
     policy = PathPolicy(root=config.root, deny_globs=config.deny_globs)
     logger.info("MCP root: %s", policy.normalize_root())

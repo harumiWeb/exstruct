@@ -6,8 +6,10 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 import logging
 import math
+import os
 from pathlib import Path
 import re
+import time
 from typing import Literal
 
 import numpy as np
@@ -40,6 +42,7 @@ _DETECTION_CONFIG = {
 }
 _DEFAULT_BACKGROUND_HEX = "FFFFFF"
 _XL_COLOR_NONE = -4142
+_BORDER_CLUSTER_BACKEND_ENV = "EXSTRUCT_BORDER_CLUSTER_BACKEND"
 
 ExtractionMode = Literal["light", "standard", "verbose"]
 
@@ -930,6 +933,20 @@ def load_border_maps_xlsx(  # noqa: C901
     scan_max_row = min(max_row, resolved_limits.max_rows)
     scan_max_col = min(max_col, resolved_limits.max_cols)
 
+    logger.info(
+        "Openpyxl border scan start (sheet=%s, min_row=%s, min_col=%s, max_row=%s, max_col=%s, scan_max_row=%s, scan_max_col=%s, empty_row_run=%s, empty_col_run=%s).",
+        sheet_name,
+        min_row,
+        min_col,
+        max_row,
+        max_col,
+        scan_max_row,
+        scan_max_col,
+        resolved_limits.empty_row_run,
+        resolved_limits.empty_col_run,
+    )
+    scan_start = time.monotonic()
+
     shape = (scan_max_row + 1, scan_max_col + 1)
     has_border = np.zeros(shape, dtype=bool)
     top_edge = np.zeros(shape, dtype=bool)
@@ -937,6 +954,7 @@ def load_border_maps_xlsx(  # noqa: C901
     left_edge = np.zeros(shape, dtype=bool)
     right_edge = np.zeros(shape, dtype=bool)
     col_has_border = np.zeros(shape[1], dtype=bool)
+    border_cells = 0
 
     def edge_has_style(edge: object) -> bool:
         if edge is None:
@@ -964,6 +982,7 @@ def load_border_maps_xlsx(  # noqa: C901
                 row_has_border = True
                 col_has_border[c] = True
                 has_border[r, c] = True
+                border_cells += 1
                 if t:
                     top_edge[r, c] = True
                 if btm:
@@ -1001,6 +1020,11 @@ def load_border_maps_xlsx(  # noqa: C901
                     )
                 break
 
+    _log_border_scan_complete(
+        sheet_name=sheet_name,
+        border_cells=border_cells,
+        elapsed=time.monotonic() - scan_start,
+    )
     return (
         has_border,
         top_edge,
@@ -1009,6 +1033,17 @@ def load_border_maps_xlsx(  # noqa: C901
         right_edge,
         scan_max_row,
         scan_max_col,
+    )
+
+
+def _log_border_scan_complete(
+    *, sheet_name: str, border_cells: int, elapsed: float
+) -> None:
+    logger.info(
+        "Openpyxl border scan completed (sheet=%s, border_cells=%s, elapsed=%.2fs).",
+        sheet_name,
+        border_cells,
+        elapsed,
     )
 
 
@@ -1061,17 +1096,50 @@ def _detect_border_clusters_python(
     return rects
 
 
+def _resolve_border_cluster_backend() -> Literal["auto", "python", "numpy"]:
+    value = os.getenv(_BORDER_CLUSTER_BACKEND_ENV, "").strip().lower()
+    if value in {"python", "numpy"}:
+        return "python" if value == "python" else "numpy"
+    return "auto"
+
+
 def detect_border_clusters(
     has_border: np.ndarray, min_size: int = 4
 ) -> list[tuple[int, int, int, int]]:
+    start = time.monotonic()
+    backend = _resolve_border_cluster_backend()
+    if backend == "python":
+        rects = _detect_border_clusters_python(has_border, min_size)
+        logger.info(
+            "detect_border_clusters forced python completed in %.2fs (rects=%s).",
+            time.monotonic() - start,
+            len(rects),
+        )
+        return rects
     try:
-        return _detect_border_clusters_numpy(has_border, min_size)
-    except Exception:
+        rects = _detect_border_clusters_numpy(has_border, min_size)
+        logger.info(
+            "detect_border_clusters numpy completed in %.2fs (rects=%s).",
+            time.monotonic() - start,
+            len(rects),
+        )
+        return rects
+    except Exception as exc:
         warn_once(
             "scipy-missing",
             "scipy is not available. Falling back to pure-Python BFS for connected components, which may be significantly slower.",
         )
-        return _detect_border_clusters_python(has_border, min_size)
+        logger.info(
+            "detect_border_clusters numpy failed (%r); falling back to python.",
+            exc,
+        )
+        rects = _detect_border_clusters_python(has_border, min_size)
+        logger.info(
+            "detect_border_clusters python completed in %.2fs (rects=%s).",
+            time.monotonic() - start,
+            len(rects),
+        )
+        return rects
 
 
 def _get_values_block(
@@ -1718,18 +1786,44 @@ def detect_tables_openpyxl(
     scan_limits: TableScanLimits | None = None,
 ) -> list[str]:
     """Detect table-like ranges via openpyxl tables and border clusters."""
+    start = time.monotonic()
+    resolved_limits = _resolve_table_scan_limits(mode, scan_limits)
+    logger.info(
+        "detect_tables_openpyxl start (sheet=%s, mode=%s, max_rows=%s, max_cols=%s, empty_row_run=%s, empty_col_run=%s).",
+        sheet_name,
+        mode,
+        resolved_limits.max_rows,
+        resolved_limits.max_cols,
+        resolved_limits.empty_row_run,
+        resolved_limits.empty_col_run,
+    )
     with openpyxl_workbook(xlsx_path, data_only=True, read_only=False) as wb:
         ws = wb[sheet_name]
         tables = _extract_openpyxl_table_refs(ws)
 
+        border_start = time.monotonic()
         has_border, top_edge, bottom_edge, left_edge, right_edge, max_row, max_col = (
             load_border_maps_xlsx(
                 xlsx_path,
                 sheet_name,
-                scan_limits=_resolve_table_scan_limits(mode, scan_limits),
+                scan_limits=resolved_limits,
             )
         )
+        logger.info(
+            "detect_tables_openpyxl border maps completed in %.2fs (sheet=%s, max_row=%s, max_col=%s).",
+            time.monotonic() - border_start,
+            sheet_name,
+            max_row,
+            max_col,
+        )
+        rects_start = time.monotonic()
         rects = _detect_border_rectangles(has_border, min_size=4)
+        logger.info(
+            "detect_tables_openpyxl border rectangles completed in %.2fs (sheet=%s, rects=%s).",
+            time.monotonic() - rects_start,
+            sheet_name,
+            len(rects),
+        )
         merged_rects = _merge_rectangles(rects)
         dedup: set[str] = set(tables)
 
@@ -1758,6 +1852,12 @@ def detect_tables_openpyxl(
                 if addr not in dedup:
                     dedup.add(addr)
                     tables.append(addr)
+        logger.info(
+            "detect_tables_openpyxl completed in %.2fs (sheet=%s, tables=%s).",
+            time.monotonic() - start,
+            sheet_name,
+            len(tables),
+        )
         return tables
 
 
