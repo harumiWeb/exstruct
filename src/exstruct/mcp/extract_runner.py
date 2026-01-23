@@ -1,0 +1,194 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field
+
+from exstruct import ExtractionMode, process_excel
+
+from .io import PathPolicy
+
+
+class WorkbookMeta(BaseModel):
+    """Lightweight workbook metadata for MCP responses."""
+
+    sheet_names: list[str] = Field(default_factory=list, description="Sheet names.")
+    sheet_count: int = Field(default=0, description="Total number of sheets.")
+
+
+class ExtractRequest(BaseModel):
+    """Input model for ExStruct MCP extraction."""
+
+    xlsx_path: Path
+    mode: ExtractionMode = "standard"
+    format: Literal["json", "yaml", "yml", "toon"] = "json"  # noqa: A003
+    out_dir: Path | None = None
+    out_name: str | None = None
+    options: dict[str, Any] = Field(default_factory=dict)
+
+
+class ExtractResult(BaseModel):
+    """Output model for ExStruct MCP extraction."""
+
+    out_path: str
+    workbook_meta: WorkbookMeta | None = None
+    warnings: list[str] = Field(default_factory=list)
+    engine: Literal["internal_api", "cli_subprocess"] = "internal_api"
+
+
+def run_extract(
+    request: ExtractRequest, *, policy: PathPolicy | None = None
+) -> ExtractResult:
+    """Run an extraction with file output.
+
+    Args:
+        request: Extraction request payload.
+        policy: Optional path policy for access control.
+
+    Returns:
+        Extraction result with output path and metadata.
+
+    Raises:
+        FileNotFoundError: If the input file does not exist.
+        ValueError: If paths violate the policy.
+    """
+    resolved_input = _resolve_input_path(request.xlsx_path, policy=policy)
+    output_path = _resolve_output_path(
+        resolved_input,
+        request.format,
+        out_dir=request.out_dir,
+        out_name=request.out_name,
+        policy=policy,
+    )
+    _ensure_output_dir(output_path)
+
+    process_excel(
+        file_path=resolved_input,
+        output_path=output_path,
+        out_fmt=request.format,
+        mode=request.mode,
+    )
+
+    meta, warnings = _try_read_workbook_meta(resolved_input)
+    return ExtractResult(
+        out_path=str(output_path),
+        workbook_meta=meta,
+        warnings=warnings,
+        engine="internal_api",
+    )
+
+
+def _resolve_input_path(path: Path, *, policy: PathPolicy | None) -> Path:
+    """Resolve and validate the input path.
+
+    Args:
+        path: Candidate input path.
+        policy: Optional path policy.
+
+    Returns:
+        Resolved input path.
+
+    Raises:
+        FileNotFoundError: If the input file does not exist.
+        ValueError: If the path violates the policy.
+    """
+    resolved = policy.ensure_allowed(path) if policy else path.resolve()
+    if not resolved.exists():
+        raise FileNotFoundError(f"Input file not found: {resolved}")
+    return resolved
+
+
+def _resolve_output_path(
+    input_path: Path,
+    fmt: Literal["json", "yaml", "yml", "toon"],
+    *,
+    out_dir: Path | None,
+    out_name: str | None,
+    policy: PathPolicy | None,
+) -> Path:
+    """Build and validate the output path.
+
+    Args:
+        input_path: Resolved input path.
+        fmt: Output format.
+        out_dir: Optional output directory.
+        out_name: Optional output filename.
+        policy: Optional path policy.
+
+    Returns:
+        Resolved output path.
+
+    Raises:
+        ValueError: If the path violates the policy.
+    """
+    target_dir = out_dir or input_path.parent
+    target_dir = policy.ensure_allowed(target_dir) if policy else target_dir.resolve()
+    suffix = _format_suffix(fmt)
+    name = _normalize_output_name(input_path, out_name, suffix)
+    output_path = (target_dir / name).resolve()
+    if policy is not None:
+        output_path = policy.ensure_allowed(output_path)
+    return output_path
+
+
+def _normalize_output_name(input_path: Path, out_name: str | None, suffix: str) -> str:
+    """Normalize output filename with a suffix.
+
+    Args:
+        input_path: Input file path.
+        out_name: Optional output filename override.
+        suffix: Format-specific suffix.
+
+    Returns:
+        Output filename with suffix.
+    """
+    if out_name:
+        candidate = Path(out_name)
+        return candidate.name if candidate.suffix else f"{candidate.name}{suffix}"
+    return f"{input_path.stem}{suffix}"
+
+
+def _ensure_output_dir(path: Path) -> None:
+    """Ensure the output directory exists.
+
+    Args:
+        path: Output file path.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+
+def _format_suffix(fmt: Literal["json", "yaml", "yml", "toon"]) -> str:
+    """Return suffix for output format.
+
+    Args:
+        fmt: Output format.
+
+    Returns:
+        File suffix for the format.
+    """
+    return ".yml" if fmt == "yml" else f".{fmt}"
+
+
+def _try_read_workbook_meta(path: Path) -> tuple[WorkbookMeta | None, list[str]]:
+    """Try reading lightweight workbook metadata.
+
+    Args:
+        path: Excel workbook path.
+
+    Returns:
+        Tuple of metadata (or None) and warnings.
+    """
+    try:
+        from openpyxl import load_workbook
+    except ImportError as exc:
+        return None, [f"openpyxl is not available: {exc}"]
+
+    try:
+        workbook = load_workbook(path, read_only=True, data_only=True)
+    except Exception as exc:  # pragma: no cover - surface as warning
+        return None, [f"Failed to read workbook metadata: {exc}"]
+
+    sheet_names = list(workbook.sheetnames)
+    workbook.close()
+    return WorkbookMeta(sheet_names=sheet_names, sheet_count=len(sheet_names)), []
