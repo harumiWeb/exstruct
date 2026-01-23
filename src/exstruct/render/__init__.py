@@ -354,9 +354,9 @@ def _export_sheet_pdf(
             0, str(pdf_path), IgnorePrintAreas=ignore_print_areas
         )
     except TypeError:
-        if ignore_print_areas and page_setup is None:
+        if ignore_print_areas:
             try:
-                page_setup = getattr(sheet_api, "PageSetup", None)
+                page_setup = page_setup or getattr(sheet_api, "PageSetup", None)
                 if page_setup is not None:
                     page_setup.PrintArea = ""
             except Exception as exc:
