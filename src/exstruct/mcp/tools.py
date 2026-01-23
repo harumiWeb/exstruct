@@ -13,7 +13,13 @@ from .chunk_reader import (
     ReadJsonChunkResult,
     read_json_chunk,
 )
-from .extract_runner import ExtractRequest, ExtractResult, WorkbookMeta, run_extract
+from .extract_runner import (
+    ExtractRequest,
+    ExtractResult,
+    OnConflictPolicy,
+    WorkbookMeta,
+    run_extract,
+)
 from .io import PathPolicy
 from .validate_input import (
     ValidateInputRequest,
@@ -30,6 +36,7 @@ class ExtractToolInput(BaseModel):
     format: Literal["json", "yaml", "yml", "toon"] = "json"  # noqa: A003
     out_dir: str | None = None
     out_name: str | None = None
+    on_conflict: OnConflictPolicy | None = None
     options: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -75,7 +82,10 @@ class ValidateInputToolOutput(BaseModel):
 
 
 def run_extract_tool(
-    payload: ExtractToolInput, *, policy: PathPolicy | None = None
+    payload: ExtractToolInput,
+    *,
+    policy: PathPolicy | None = None,
+    on_conflict: OnConflictPolicy | None = None,
 ) -> ExtractToolOutput:
     """Run the extraction tool handler.
 
@@ -92,6 +102,7 @@ def run_extract_tool(
         format=payload.format,
         out_dir=Path(payload.out_dir) if payload.out_dir else None,
         out_name=payload.out_name,
+        on_conflict=payload.on_conflict or on_conflict or "overwrite",
         options=payload.options,
     )
     result = run_extract(request, policy=policy)

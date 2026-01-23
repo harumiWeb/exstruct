@@ -6,7 +6,6 @@ import importlib
 import logging
 import os
 from pathlib import Path
-import time
 from types import ModuleType
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -15,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from exstruct import ExtractionMode
 
+from .extract_runner import OnConflictPolicy
 from .io import PathPolicy
 from .tools import (
     ExtractToolInput,
@@ -41,6 +41,9 @@ class ServerConfig(BaseModel):
     deny_globs: list[str] = Field(default_factory=list, description="Denied glob list.")
     log_level: str = Field(default="INFO", description="Logging level.")
     log_file: Path | None = Field(default=None, description="Optional log file path.")
+    on_conflict: OnConflictPolicy = Field(
+        default="overwrite", description="Output conflict policy."
+    )
     warmup: bool = Field(default=False, description="Warm up heavy imports on start.")
 
 
@@ -79,7 +82,7 @@ def run_server(config: ServerConfig) -> None:
     logger.info("MCP root: %s", policy.normalize_root())
     if config.warmup:
         _warmup_exstruct()
-    app = _create_app(policy)
+    app = _create_app(policy, on_conflict=config.on_conflict)
     app.run()
 
 
@@ -107,6 +110,12 @@ def _parse_args(argv: list[str] | None) -> ServerConfig:
     )
     parser.add_argument("--log-file", type=Path, help="Optional log file path.")
     parser.add_argument(
+        "--on-conflict",
+        choices=["overwrite", "skip", "rename"],
+        default="overwrite",
+        help="Output conflict policy (overwrite/skip/rename).",
+    )
+    parser.add_argument(
         "--warmup",
         action="store_true",
         help="Warm up heavy imports on startup to reduce tool latency.",
@@ -117,6 +126,7 @@ def _parse_args(argv: list[str] | None) -> ServerConfig:
         deny_globs=list(args.deny_glob),
         log_level=args.log_level,
         log_file=args.log_file,
+        on_conflict=args.on_conflict,
         warmup=bool(args.warmup),
     )
 
@@ -159,7 +169,7 @@ def _warmup_exstruct() -> None:
     logger.info("Warmup completed.")
 
 
-def _create_app(policy: PathPolicy) -> FastMCP:
+def _create_app(policy: PathPolicy, *, on_conflict: OnConflictPolicy) -> FastMCP:
     """Create the MCP FastMCP application.
 
     Args:
@@ -171,11 +181,13 @@ def _create_app(policy: PathPolicy) -> FastMCP:
     from mcp.server.fastmcp import FastMCP
 
     app = FastMCP("ExStruct MCP", json_response=True)
-    _register_tools(app, policy)
+    _register_tools(app, policy, default_on_conflict=on_conflict)
     return app
 
 
-def _register_tools(app: FastMCP, policy: PathPolicy) -> None:
+def _register_tools(
+    app: FastMCP, policy: PathPolicy, *, default_on_conflict: OnConflictPolicy
+) -> None:
     """Register MCP tools for the server.
 
     Args:
@@ -189,6 +201,7 @@ def _register_tools(app: FastMCP, policy: PathPolicy) -> None:
         format: Literal["json", "yaml", "yml", "toon"] = "json",  # noqa: A002
         out_dir: str | None = None,
         out_name: str | None = None,
+        on_conflict: OnConflictPolicy | None = None,
         options: dict[str, Any] | None = None,
     ) -> ExtractToolOutput:
         """Handle the ExStruct extraction tool call.
@@ -204,20 +217,23 @@ def _register_tools(app: FastMCP, policy: PathPolicy) -> None:
         Returns:
             Extraction result payload.
         """
-        logger.info("exstruct.extract start: %s", xlsx_path)
-        start = time.monotonic()
         payload = ExtractToolInput(
             xlsx_path=xlsx_path,
             mode=mode,
             format=format,
             out_dir=out_dir,
             out_name=out_name,
+            on_conflict=on_conflict,
             options=options or {},
         )
-        work = functools.partial(run_extract_tool, payload, policy=policy)
+        effective_on_conflict = on_conflict or default_on_conflict
+        work = functools.partial(
+            run_extract_tool,
+            payload,
+            policy=policy,
+            on_conflict=effective_on_conflict,
+        )
         result = cast(ExtractToolOutput, await anyio.to_thread.run_sync(work))
-        elapsed = time.monotonic() - start
-        logger.info("exstruct.extract done in %.2fs", elapsed)
         return result
 
     tool = app.tool(name="exstruct.extract")

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-import time
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -12,6 +11,8 @@ from exstruct import ExtractionMode, process_excel
 from .io import PathPolicy
 
 logger = logging.getLogger(__name__)
+
+OnConflictPolicy = Literal["overwrite", "skip", "rename"]
 
 
 class WorkbookMeta(BaseModel):
@@ -29,6 +30,7 @@ class ExtractRequest(BaseModel):
     format: Literal["json", "yaml", "yml", "toon"] = "json"  # noqa: A003
     out_dir: Path | None = None
     out_name: str | None = None
+    on_conflict: OnConflictPolicy = "overwrite"
     options: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -65,20 +67,29 @@ def run_extract(
         out_name=request.out_name,
         policy=policy,
     )
+    output_path, warning, skipped = _apply_conflict_policy(
+        output_path, request.on_conflict
+    )
+    warnings: list[str] = []
+    if warning:
+        warnings.append(warning)
+    if skipped:
+        return ExtractResult(
+            out_path=str(output_path),
+            workbook_meta=None,
+            warnings=warnings,
+            engine="internal_api",
+        )
     _ensure_output_dir(output_path)
 
-    start = time.monotonic()
     process_excel(
         file_path=resolved_input,
         output_path=output_path,
         out_fmt=request.format,
         mode=request.mode,
     )
-    logger.info("process_excel completed in %.2fs", time.monotonic() - start)
-
-    meta_start = time.monotonic()
-    meta, warnings = _try_read_workbook_meta(resolved_input)
-    logger.info("workbook meta read completed in %.2fs", time.monotonic() - meta_start)
+    meta, meta_warnings = _try_read_workbook_meta(resolved_input)
+    warnings.extend(meta_warnings)
     return ExtractResult(
         out_path=str(output_path),
         workbook_meta=meta,
@@ -176,6 +187,49 @@ def _format_suffix(fmt: Literal["json", "yaml", "yml", "toon"]) -> str:
         File suffix for the format.
     """
     return ".yml" if fmt == "yml" else f".{fmt}"
+
+
+def _apply_conflict_policy(
+    output_path: Path, on_conflict: OnConflictPolicy
+) -> tuple[Path, str | None, bool]:
+    """Apply output conflict policy to a resolved output path.
+
+    Args:
+        output_path: Target output file path.
+        on_conflict: Conflict handling policy.
+
+    Returns:
+        Tuple of (resolved output path, warning message or None, skipped flag).
+    """
+    if not output_path.exists():
+        return output_path, None, False
+    if on_conflict == "skip":
+        return (
+            output_path,
+            f"Output exists; skipping write: {output_path.name}",
+            True,
+        )
+    if on_conflict == "rename":
+        renamed = _next_available_path(output_path)
+        return (
+            renamed,
+            f"Output exists; renamed to: {renamed.name}",
+            False,
+        )
+    return output_path, None, False
+
+
+def _next_available_path(path: Path) -> Path:
+    """Return the next available path by appending a numeric suffix."""
+    if not path.exists():
+        return path
+    stem = path.stem
+    suffix = path.suffix
+    for idx in range(1, 10_000):
+        candidate = path.with_name(f"{stem}_{idx}{suffix}")
+        if not candidate.exists():
+            return candidate
+    raise RuntimeError(f"Failed to resolve unique path for {path}")
 
 
 def _try_read_workbook_meta(path: Path) -> tuple[WorkbookMeta | None, list[str]]:
