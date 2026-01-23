@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 import importlib
+import logging
 from pathlib import Path
 from typing import Any, cast
 
@@ -173,3 +174,32 @@ def test_run_server_sets_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     assert created["imported"] is True
     assert created["ran"] is True
     assert created["on_conflict"] == "overwrite"
+
+
+def test_configure_logging_with_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log_file = tmp_path / "server.log"
+    config = server.ServerConfig(root=tmp_path, log_file=log_file)
+    captured: dict[str, object] = {}
+
+    def _basic_config(**kwargs: object) -> None:
+        captured.update(kwargs)
+
+    monkeypatch.setattr(logging, "basicConfig", _basic_config)
+    server._configure_logging(config)
+    handlers = cast(list[logging.Handler], captured["handlers"])
+    assert any(isinstance(handler, logging.FileHandler) for handler in handlers)
+
+
+def test_warmup_exstruct_imports(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+
+    def _record(name: str) -> object:
+        calls.append(name)
+        return object()
+
+    monkeypatch.setattr(importlib, "import_module", _record)
+    server._warmup_exstruct()
+    assert "exstruct.core.cells" in calls
+    assert "exstruct.core.integrate" in calls

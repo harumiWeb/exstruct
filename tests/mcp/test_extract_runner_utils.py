@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import builtins
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 import pytest
@@ -59,3 +61,85 @@ def test_try_read_workbook_meta(tmp_path: Path) -> None:
     assert meta.sheet_count == 1
     assert meta.sheet_names == ["Sheet1"]
     assert warnings == []
+
+
+def test_run_extract_skips_when_output_exists(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    input_path = tmp_path / "input.xlsx"
+    output_path = tmp_path / "input.json"
+    input_path.write_text("x", encoding="utf-8")
+    output_path.write_text("y", encoding="utf-8")
+
+    def _raise(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("process_excel should not be called")
+
+    monkeypatch.setattr(extract_runner, "process_excel", _raise)
+    request = extract_runner.ExtractRequest(
+        xlsx_path=input_path,
+        on_conflict="skip",
+        format="json",
+    )
+    result = extract_runner.run_extract(request)
+    assert result.workbook_meta is None
+    assert any("skipping write" in warning for warning in result.warnings)
+
+
+def test_run_extract_creates_output_dir(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    input_path = tmp_path / "input.xlsx"
+    input_path.write_text("x", encoding="utf-8")
+    out_dir = tmp_path / "nested" / "out"
+
+    def _noop(*_args: object, **_kwargs: object) -> None:
+        return None
+
+    monkeypatch.setattr(extract_runner, "process_excel", _noop)
+    monkeypatch.setattr(extract_runner, "_try_read_workbook_meta", lambda _: (None, []))
+    request = extract_runner.ExtractRequest(
+        xlsx_path=input_path,
+        out_dir=out_dir,
+        format="json",
+    )
+    extract_runner.run_extract(request)
+    assert out_dir.exists()
+
+
+def test_try_read_workbook_meta_import_error(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    path = tmp_path / "missing.xlsx"
+
+    def _import(
+        name: str,
+        globals_: Mapping[str, object] | None = None,
+        locals_: Mapping[str, object] | None = None,
+        fromlist: Sequence[str] = (),
+        level: int = 0,
+    ) -> object:
+        if name == "openpyxl":
+            raise ImportError("missing")
+        return builtins.__import__(name, globals_, locals_, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", _import)
+    meta, warnings = extract_runner._try_read_workbook_meta(path)
+    assert meta is None
+    assert any("openpyxl is not available" in warning for warning in warnings)
+
+
+def test_try_read_workbook_meta_load_failure(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    path = tmp_path / "broken.xlsx"
+    path.write_text("x", encoding="utf-8")
+
+    def _raise(*_args: object, **_kwargs: object) -> None:
+        raise ValueError("boom")
+
+    import openpyxl
+
+    monkeypatch.setattr(openpyxl, "load_workbook", _raise)
+    meta, warnings = extract_runner._try_read_workbook_meta(path)
+    assert meta is None
+    assert any("Failed to read workbook metadata" in warning for warning in warnings)

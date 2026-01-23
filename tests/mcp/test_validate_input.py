@@ -50,3 +50,28 @@ def test_validate_input_warns_on_com(
     result = validate_input(request)
     assert result.is_readable is True
     assert any("COM unavailable" in warning for warning in result.warnings)
+
+
+def test_validate_input_rejects_directory(tmp_path: Path) -> None:
+    path = tmp_path / "input.xlsx"
+    path.mkdir()
+    request = ValidateInputRequest(xlsx_path=path)
+    result = validate_input(request)
+    assert result.is_readable is False
+    assert any("Path is not a file" in error for error in result.errors)
+
+
+def test_validate_input_handles_read_failure(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    path = tmp_path / "input.xlsx"
+    path.write_text("x", encoding="utf-8")
+
+    def _raise(*_args: object, **_kwargs: object) -> object:
+        raise OSError("boom")
+
+    monkeypatch.setattr(Path, "open", _raise)
+    request = ValidateInputRequest(xlsx_path=path)
+    result = validate_input(request)
+    assert result.is_readable is False
+    assert any("Failed to read file" in error for error in result.errors)
