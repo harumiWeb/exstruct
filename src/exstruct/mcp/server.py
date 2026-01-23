@@ -236,7 +236,7 @@ def _register_tools(
         result = cast(ExtractToolOutput, await anyio.to_thread.run_sync(work))
         return result
 
-    tool = app.tool(name="exstruct.extract")
+    tool = app.tool(name="exstruct_extract")
     tool(_extract_tool)
 
     async def _read_json_chunk_tool(  # pylint: disable=redefined-builtin
@@ -273,7 +273,7 @@ def _register_tools(
         result = cast(ReadJsonChunkToolOutput, await anyio.to_thread.run_sync(work))
         return result
 
-    chunk_tool = app.tool(name="exstruct.read_json_chunk")
+    chunk_tool = app.tool(name="exstruct_read_json_chunk")
     chunk_tool(_read_json_chunk_tool)
 
     async def _validate_input_tool(xlsx_path: str) -> ValidateInputToolOutput:
@@ -294,7 +294,7 @@ def _register_tools(
         result = cast(ValidateInputToolOutput, await anyio.to_thread.run_sync(work))
         return result
 
-    validate_tool = app.tool(name="exstruct.validate_input")
+    validate_tool = app.tool(name="exstruct_validate_input")
     validate_tool(_validate_input_tool)
 
 

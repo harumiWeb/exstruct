@@ -14,7 +14,7 @@
 ### スコープ（MVP）
 
 - stdio トランスポートの MCP サーバー
-- ツール: `exstruct.extract`
+- ツール: `exstruct_extract`
 - 抽出結果は **必ずファイル出力**（MCP 応答はパス + 軽いメタ情報）
 - 安全なパス制約（allowlist / deny glob）
 
@@ -46,19 +46,19 @@
 
 ### MCP ツール仕様（案）
 
-#### `exstruct.extract`
+#### `exstruct_extract`
 
 - 入力: `xlsx_path`, `mode`, `format`, `out_dir?`, `out_name?`, `options?`
 - 出力: `out_path`, `workbook_meta`, `warnings`, `engine`
 - 実装: 内部 API を優先、フォールバックで CLI サブプロセス
 
-#### `exstruct.read_json_chunk`（実用化フェーズ）
+#### `exstruct_read_json_chunk`（実用化フェーズ）
 
 - 入力: `out_path`, `sheet?`, `max_bytes?`, `filter?`, `cursor?`
 - 出力: `chunk`, `next_cursor?`
 - 方針: 返却サイズを抑制し、段階的に取得できること
 
-#### `exstruct.validate_input`（実用化フェーズ）
+#### `exstruct_validate_input`（実用化フェーズ）
 
 - 入力: `xlsx_path`
 - 出力: `is_readable`, `warnings`, `errors`

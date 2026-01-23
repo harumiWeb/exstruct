@@ -32,14 +32,14 @@ exstruct-mcp --root C:\\data --log-file C:\\logs\\exstruct-mcp.log --on-conflict
 
 ## Tools
 
-- `exstruct.extract`
-- `exstruct.read_json_chunk`
-- `exstruct.validate_input`
+- `exstruct_extract`
+- `exstruct_read_json_chunk`
+- `exstruct_validate_input`
 
 ## Basic flow
 
-1. Call `exstruct.extract` to generate the output JSON file
-2. Use `exstruct.read_json_chunk` to read only the parts you need
+1. Call `exstruct_extract` to generate the output JSON file
+2. Use `exstruct_read_json_chunk` to read only the parts you need
 
 ## AI agent configuration examples
 

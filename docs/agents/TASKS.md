@@ -8,7 +8,7 @@
 - [x] 依存追加: `pyproject.toml` に `exstruct[mcp]` の extras を追加
 - [x] エントリポイント: `exstruct-mcp = exstruct.mcp.server:main` を定義
 - [x] MCP 基盤: `src/exstruct/mcp/server.py` を追加（stdio サーバー起動）
-- [x] ツール定義: `src/exstruct/mcp/tools.py` に `exstruct.extract` を実装
+- [x] ツール定義: `src/exstruct/mcp/tools.py` に `exstruct_extract` を実装
 - [x] パス制約: `src/exstruct/mcp/io.py` に allowlist / deny glob を実装
 - [x] 抽出実行: `src/exstruct/mcp/extract_runner.py` に内部 API 優先の実行層を実装
 - [x] 出力モデル: Pydantic で入出力モデルを定義（mypy strict / Ruff 遵守）
@@ -17,8 +17,8 @@
 
 ## MCPサーバー（実用化）
 
-- [x] `exstruct.read_json_chunk` を追加（大容量 JSON 対応）
-- [x] `exstruct.validate_input` を追加（事前検証）
+- [x] `exstruct_read_json_chunk` を追加（大容量 JSON 対応）
+- [x] `exstruct_validate_input` を追加（事前検証）
 - [x] `--on-conflict` の出力衝突ポリシー実装
 - [x] Windows/非Windows の読み取り差分を明文化
 - [x] 最低限のテスト追加（パス制約 / 入出力モデル / 例外）

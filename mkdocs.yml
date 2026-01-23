@@ -28,6 +28,7 @@ nav:
   - MCP Server: mcp.md
   - Concept / Why ExStruct?: concept.md
   - Release Notes:
+      - v0.4.0: release-notes/v0.4.0.md
       - v0.3.7: release-notes/v0.3.7.md
       - v0.3.6: release-notes/v0.3.6.md
       - v0.3.5: release-notes/v0.3.5.md

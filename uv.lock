@@ -452,7 +452,7 @@ wheels = [
 
 [[package]]
 name = "exstruct"
-version = "0.3.7"
+version = "0.4.1"
 source = { editable = "." }
 dependencies = [
     { name = "numpy" },
@@ -465,6 +465,7 @@ dependencies = [
 
 [package.optional-dependencies]
 all = [
+    { name = "httpx" },
     { name = "mcp" },
     { name = "pillow" },
     { name = "pypdfium2" },
@@ -472,6 +473,7 @@ all = [
     { name = "pyyaml" },
 ]
 mcp = [
+    { name = "httpx" },
     { name = "mcp" },
 ]
 render = [
@@ -501,6 +503,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx", marker = "extra == 'all'", specifier = ">=0.27,<1.0" },
+    { name = "httpx", marker = "extra == 'mcp'", specifier = ">=0.27,<1.0" },
     { name = "mcp", marker = "extra == 'all'", specifier = ">=1.6.0,<2.0.0" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.6.0,<2.0.0" },
     { name = "numpy", specifier = ">=2.3.5" },

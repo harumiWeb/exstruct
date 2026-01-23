@@ -60,9 +60,9 @@ exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict re
 
 利用可能なツール:
 
-- `exstruct.extract`
-- `exstruct.read_json_chunk`
-- `exstruct.validate_input`
+- `exstruct_extract`
+- `exstruct_read_json_chunk`
+- `exstruct_validate_input`
 
 注意点:
 

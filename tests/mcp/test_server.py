@@ -138,10 +138,10 @@ def test_register_tools_uses_default_on_conflict(
 
     server._register_tools(app, policy, default_on_conflict="rename")
 
-    extract_tool = cast(Callable[..., Awaitable[object]], app.tools["exstruct.extract"])
+    extract_tool = cast(Callable[..., Awaitable[object]], app.tools["exstruct_extract"])
     anyio.run(_call_async, extract_tool, {"xlsx_path": "in.xlsx"})
     read_chunk_tool = cast(
-        Callable[..., Awaitable[object]], app.tools["exstruct.read_json_chunk"]
+        Callable[..., Awaitable[object]], app.tools["exstruct_read_json_chunk"]
     )
     anyio.run(
         _call_async,
@@ -149,7 +149,7 @@ def test_register_tools_uses_default_on_conflict(
         {"out_path": "out.json", "filter": {"rows": [1, 2]}},
     )
     validate_tool = cast(
-        Callable[..., Awaitable[object]], app.tools["exstruct.validate_input"]
+        Callable[..., Awaitable[object]], app.tools["exstruct_validate_input"]
     )
     anyio.run(_call_async, validate_tool, {"xlsx_path": "in.xlsx"})
 
