@@ -1,0 +1,37 @@
+{
+  "cases": [
+    {
+      "id": "ffr_425_01",
+      "type": "application_form",
+      "xlsx": "data/raw/ffr_425_01.xlsx",
+      "question": "このExcel申請書（Federal Financial Report / SF-425）から、次の情報を抽出し、JSONのみで返してください。\n\n抽出項目:\n1. item_1_agency: 「1. Federal Agency and Organizational Element」に記載されている提出先機関名\n2. item_6_report_type: チェックされている Report Type（Quarterly / Semi-Annual / Annual / Final のいずれか）\n3. item_7_accounting_basis: Basis of Accounting（Cash または Accrual）\n4. item_9_reporting_period_end: Reporting Period End Date（YYYY-MM-DD形式、未記入の場合は null）\n5. not_required_by_epa_items: \"Not Required by EPA\" と明示されている取引項目の一覧（項目名の配列）\n\n出力形式（厳守）:\n{\n  \"item_1_agency\": \"...\",\n  \"item_6_report_type\": \"...\",\n  \"item_7_accounting_basis\": \"...\",\n  \"item_9_reporting_period_end\": \"YYYY-MM-DD\" | null,\n  \"not_required_by_epa_items\": [\"...\", \"...\"]\n}",
+      "truth": "data/truth/ffr_425_01.json",
+      "sheet_scope": null,
+      "render": {
+        "dpi": 220,
+        "max_pages": 2
+      }
+    },
+    {
+      "id": "flowchart_image_01",
+      "type": "flowchart",
+      "xlsx": "data/raw/flowchart_image_01.xlsx",
+      "question": "このフローチャートの開始から終了までの主要な処理ステップを順番に抽出し、次のJSON形式のみで返してください。\n\n出力形式（厳守）:\n{\n  \"steps\": [\"step1\", \"step2\", \"step3\", ...]\n}\n\n注意事項:\n- 開始ノードと終了ノードも含めてください\n- 分岐やループがある場合は、代表的な主経路として線形化してください\n- ステップ名は図中のラベル文字列をそのまま使用してください",
+      "truth": "data/truth/flowchart_image_01.json",
+      "sheet_scope": null,
+      "render": {
+        "dpi": 220,
+        "max_pages": 1
+      }
+    },
+    {
+      "id": "gantt_01",
+      "type": "gantt",
+      "xlsx": "data/raw/gantt_01.xlsx",
+      "question": "このガントチャートのPhase3のタスク名とその開始日、終了日を抽出し、次のJSON形式のみで返してください: {\"tasks\":[{\"name\":\"...\",\"start_date\":\"YYYY-MM-DD\",\"end_date\":\"YYYY-MM-DD\"}, ...]}",
+      "truth": "data/truth/gantt_01.json",
+      "sheet_scope": null,
+      "render": { "dpi": 200, "max_pages": 4 }
+    }
+  ]
+}
