@@ -120,6 +120,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "ruff" },
+    { name = "taskipy" },
 ]
 
 [package.metadata]
@@ -139,7 +140,10 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "ruff", specifier = ">=0.14.8" }]
+dev = [
+    { name = "ruff", specifier = ">=0.14.8" },
+    { name = "taskipy", specifier = ">=1.14.1" },
+]
 
 [[package]]
 name = "certifi"

@@ -25,7 +25,16 @@ exbench = "bench.cli:app"
 [dependency-groups]
 dev = [
     "ruff>=0.14.8",
+    "taskipy>=1.14.1",
 ]
 
 [tool.uv.sources]
 exstruct = { workspace = true }
+
+[tool.taskipy.tasks]
+setup = "python -m pip install -U pip && pip install -e .. && pip install -e ."
+extract = "exbench extract --case all --method all"
+ask = "exbench ask --case all --method all --model gpt-4o"
+eval = "exbench eval --case all --method all"
+report = "exbench report"
+all = "task extract && task ask && task eval && task report"
