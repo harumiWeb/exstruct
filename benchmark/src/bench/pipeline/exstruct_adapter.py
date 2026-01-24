@@ -5,7 +5,11 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from exstruct import ExtractionMode, extract as exstruct_extract
+from exstruct import (
+    ExtractionMode,
+    ExStructEngine,
+    StructOptions,
+)
 from exstruct.models import SheetData, WorkbookData
 
 from .common import write_text
@@ -62,7 +66,8 @@ def extract_exstruct(
         config: Optional ExStruct text extraction configuration.
     """
     resolved_config = config or ExstructTextConfig()
-    workbook = exstruct_extract(xlsx_path, mode=resolved_config.mode)
+    engine = ExStructEngine(options=StructOptions(include_merged_values_in_rows=False))
+    workbook = engine.extract(xlsx_path, mode=resolved_config.mode)
     workbook = _filter_workbook_sheets(workbook, sheet_scope)
     payload = workbook.to_json(
         pretty=resolved_config.pretty, indent=resolved_config.indent
