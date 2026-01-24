@@ -511,8 +511,6 @@ def report() -> None:
     out_md = RESULTS_DIR / "report.md"
     out_md.write_text("\n".join(md_lines), encoding="utf-8")
     print(f"[green]Wrote {out_md}[/green]")
-    print("[cyan]Summary (from report.md)[/cyan]")
-    print(g.to_markdown(index=False))
 
     # Per-case detail reports
     detail_cols = [
@@ -546,6 +544,9 @@ def report() -> None:
         print(f"[green]Wrote {case_md}[/green]")
         print(f"[cyan]Details ({case_id})[/cyan]")
         print(case_df.to_markdown(index=False))
+
+    print("[magenta]Summary (from report.md)[/magenta]")
+    print(g.to_markdown(index=False))
 
 
 if __name__ == "__main__":
