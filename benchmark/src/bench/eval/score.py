@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import re
+import unicodedata
 from typing import Any
 
-from .exact_match import exact_match
+from .exact_match import canonical, exact_match
 
 
 def _list_score(truth_list: list[Any], pred_list: Any) -> float:
@@ -20,8 +22,8 @@ def _list_score(truth_list: list[Any], pred_list: Any) -> float:
     if not truth_list:
         return 0.0
     # Use exact match on elements; ignore order and duplicates.
-    truth_set = {_normalize_scalar(v) for v in truth_list}
-    pred_set = {_normalize_scalar(v) for v in pred_list}
+    truth_set = {_normalize_element(v) for v in truth_list}
+    pred_set = {_normalize_element(v) for v in pred_list}
     if not truth_set:
         return 0.0
     return len(truth_set & pred_set) / len(truth_set)
@@ -31,7 +33,24 @@ def _normalize_scalar(value: Any) -> str:
     """Normalize scalar values for set comparison."""
     if value is None:
         return "null"
-    return str(value).strip()
+    text = str(value)
+    text = _strip_circled_numbers(text)
+    text = unicodedata.normalize("NFKC", text)
+    text = text.replace("※", "")
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def _strip_circled_numbers(text: str) -> str:
+    """Remove circled-number characters (e.g., ①②) for robust matching."""
+    return "".join(ch for ch in text if unicodedata.category(ch) != "No")
+
+
+def _normalize_element(value: Any) -> str:
+    """Normalize list elements for comparison."""
+    if isinstance(value, (dict, list)):
+        return canonical(value)
+    return _normalize_scalar(value)
 
 
 def _list_score_ordered(truth_list: list[Any], pred_list: Any) -> float:
@@ -48,8 +67,8 @@ def _list_score_ordered(truth_list: list[Any], pred_list: Any) -> float:
         return 0.0
     if not truth_list:
         return 0.0
-    truth_norm = [_normalize_scalar(v) for v in truth_list]
-    pred_norm = [_normalize_scalar(v) for v in pred_list]
+    truth_norm = [_normalize_element(v) for v in truth_list]
+    pred_norm = [_normalize_element(v) for v in pred_list]
     lcs_len = _lcs_length(truth_norm, pred_norm)
     return lcs_len / len(truth_norm)
 
@@ -71,6 +90,45 @@ def _lcs_length(a: list[str], b: list[str]) -> int:
     return dp[-1]
 
 
+def _dict_score(truth_dict: dict[str, Any], pred_dict: dict[str, Any]) -> float:
+    """Compute a key-level score for nested dicts (order-insensitive lists)."""
+    total = len(truth_dict)
+    if total == 0:
+        return 0.0
+    score_sum = 0.0
+    for key, truth_val in truth_dict.items():
+        if key not in pred_dict:
+            continue
+        pred_val = pred_dict[key]
+        score_sum += _value_score(truth_val, pred_val, ordered=False)
+    return score_sum / total
+
+
+def _dict_score_ordered(truth_dict: dict[str, Any], pred_dict: dict[str, Any]) -> float:
+    """Compute a key-level score for nested dicts (order-aware lists)."""
+    total = len(truth_dict)
+    if total == 0:
+        return 0.0
+    score_sum = 0.0
+    for key, truth_val in truth_dict.items():
+        if key not in pred_dict:
+            continue
+        pred_val = pred_dict[key]
+        score_sum += _value_score(truth_val, pred_val, ordered=True)
+    return score_sum / total
+
+
+def _value_score(truth: Any, pred: Any, *, ordered: bool) -> float:
+    """Score a value with optional list ordering."""
+    if isinstance(truth, dict):
+        if not isinstance(pred, dict):
+            return 0.0
+        return _dict_score_ordered(truth, pred) if ordered else _dict_score(truth, pred)
+    if isinstance(truth, list):
+        return _list_score_ordered(truth, pred) if ordered else _list_score(truth, pred)
+    return 1.0 if exact_match(truth, pred) else 0.0
+
+
 def key_score(truth: Any, pred: Any) -> float:
     """Compute a key-level score against the truth payload.
 
@@ -84,21 +142,9 @@ def key_score(truth: Any, pred: Any) -> float:
         1.0 if exactly equal, else 0.0.
     """
     if isinstance(truth, dict):
-        total = len(truth)
-        if total == 0:
-            return 0.0
         if not isinstance(pred, dict):
             return 0.0
-        score_sum = 0.0
-        for key, truth_val in truth.items():
-            if key not in pred:
-                continue
-            pred_val = pred[key]
-            if isinstance(truth_val, list):
-                score_sum += _list_score(truth_val, pred_val)
-                continue
-            score_sum += 1.0 if exact_match(truth_val, pred_val) else 0.0
-        return score_sum / total
+        return _dict_score(truth, pred)
     if isinstance(truth, list):
         return _list_score(truth, pred)
     return 1.0 if exact_match(truth, pred) else 0.0
@@ -107,21 +153,9 @@ def key_score(truth: Any, pred: Any) -> float:
 def key_score_ordered(truth: Any, pred: Any) -> float:
     """Compute a key-level score that respects list order."""
     if isinstance(truth, dict):
-        total = len(truth)
-        if total == 0:
-            return 0.0
         if not isinstance(pred, dict):
             return 0.0
-        score_sum = 0.0
-        for key, truth_val in truth.items():
-            if key not in pred:
-                continue
-            pred_val = pred[key]
-            if isinstance(truth_val, list):
-                score_sum += _list_score_ordered(truth_val, pred_val)
-                continue
-            score_sum += 1.0 if exact_match(truth_val, pred_val) else 0.0
-        return score_sum / total
+        return _dict_score_ordered(truth, pred)
     if isinstance(truth, list):
         return _list_score_ordered(truth, pred)
     return 1.0 if exact_match(truth, pred) else 0.0
