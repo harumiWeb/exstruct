@@ -522,6 +522,35 @@ def report() -> None:
     md_lines.append("")
     md_lines.append(g.to_markdown(index=False))
     md_lines.append("")
+    md_lines.append("## Normalization leniency summary")
+    md_lines.append("")
+    ruleset = load_ruleset(DATA_DIR / "normalization_rules.json")
+    if ruleset.cases:
+        summary_rows: list[dict[str, str | int]] = []
+        for case_id, rules in sorted(ruleset.cases.items()):
+            details = []
+            for rule in rules.list_object_rules:
+                parts = [
+                    f"strings={','.join(rule.string_fields) or '-'}",
+                    f"strings_contains={','.join(rule.string_fields_contains) or '-'}",
+                    f"lists_contains={','.join(rule.list_fields_contains) or '-'}",
+                    f"strip_prefix={','.join(rule.strip_prefix.keys()) or '-'}",
+                ]
+                details.append(f"{rule.list_key}({'; '.join(parts)})")
+            summary_rows.append(
+                {
+                    "case_id": case_id,
+                    "alias_rules": len(rules.alias_rules),
+                    "split_rules": len(rules.split_rules),
+                    "composite_rules": len(rules.composite_rules),
+                    "list_object_rules": len(rules.list_object_rules),
+                    "details": " | ".join(details) if details else "-",
+                }
+            )
+        md_lines.append(pd.DataFrame(summary_rows).to_markdown(index=False))
+    else:
+        md_lines.append("_No normalization rules defined._")
+    md_lines.append("")
     md_lines.append("## Detailed reports")
     md_lines.append("")
     for case_id in sorted(df["case_id"].unique()):

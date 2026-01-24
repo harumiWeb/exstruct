@@ -77,6 +77,30 @@
         "dpi": 220,
         "max_pages": 1
       }
+    },
+    {
+      "id": "heatstroke_flow_01",
+      "type": "flowchart",
+      "xlsx": "data/raw/heatstroke_flow_01.xlsx",
+      "question": "このExcelに記載されている熱中症対応フローについて、上から順に各対応ステップを抽出してください。各ステップについて、step_name（工程名）、description（内容要約）、special_conditions（条件や注意事項がある場合のみ配列で記載）を含むJSONを、次の形式のみで返してください。\n\n{\n  \"steps\": [\n    {\n      \"step_name\": \"...\",\n      \"description\": \"...\",\n      \"special_conditions\": [\"...\"]\n    }\n  ]\n}",
+      "truth": "data/truth/heatstroke_flow_01.json",
+      "sheet_scope": null,
+      "render": {
+        "dpi": 200,
+        "max_pages": 1
+      }
+    },
+    {
+      "id": "workflow_01",
+      "type": "workflow",
+      "xlsx": "data/raw/workflow_01.xlsx",
+      "question": "このExcelに記載されている業務フロー図（ネット注文フローチャート）について、工程を上から順に整理してください。各工程について、actor（実行主体）、step_name（工程名）、next_steps（次に進む工程名の配列）を含むJSONを、次の形式のみで返してください。\n\n{\n  \"steps\": [\n    {\n      \"actor\": \"お客様|当社\",\n      \"step_name\": \"...\",\n      \"next_steps\": [\"...\"]\n    }\n  ]\n}",
+      "truth": "data/truth/workflow_01.json",
+      "sheet_scope": null,
+      "render": {
+        "dpi": 200,
+        "max_pages": 1
+      }
     }
   ]
 }

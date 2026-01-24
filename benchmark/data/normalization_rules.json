@@ -1,5 +1,35 @@
 {
   "cases": {
+    "heatstroke_flow_01": {
+      "alias_rules": [],
+      "split_rules": [],
+      "composite_rules": [],
+      "list_object_rules": [
+        {
+          "list_key": "steps",
+          "string_fields": ["step_name"],
+          "string_fields_contains": [],
+          "list_fields_contains": [],
+          "strip_prefix": {
+            "step_name": "^[0-9]+[\\.．]\\s*"
+          }
+        }
+      ]
+    },
+    "workflow_01": {
+      "alias_rules": [],
+      "split_rules": [],
+      "composite_rules": [],
+      "list_object_rules": [
+        {
+          "list_key": "steps",
+          "string_fields": ["step_name"],
+          "string_fields_contains": [],
+          "list_fields_contains": [],
+          "strip_prefix": {}
+        }
+      ]
+    },
     "certificate_of_employment_01": {
       "alias_rules": [
         {

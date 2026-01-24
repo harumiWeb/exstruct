@@ -6,6 +6,7 @@ from typing import Any
 
 from .exact_match import canonical, exact_match
 from .normalization_rules import (
+    ListObjectRule,
     NormalizationRules,
     RuleIndex,
     build_rule_index,
@@ -73,6 +74,142 @@ def _expand_pred_item(value: Any, index: RuleIndex) -> list[str]:
     if text in index.split_map:
         return index.split_map[text]
     return [text]
+
+
+_SPLIT_PATTERN = re.compile(r"[、,，・/／]+")
+
+
+def _coerce_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(v) for v in value if v is not None]
+    if isinstance(value, str):
+        return [value]
+    return []
+
+
+def _normalize_text_field(
+    value: Any, index: RuleIndex, *, prefix_pattern: str | None
+) -> str:
+    text = str(value)
+    if prefix_pattern:
+        text = re.sub(prefix_pattern, "", text).strip()
+    return _normalize_scalar_with_rules(text, index)
+
+
+def _normalize_list_field(
+    value: Any, index: RuleIndex, rule: ListObjectRule, field_name: str
+) -> list[str]:
+    items = _coerce_list(value)
+    if len(items) == 1 and field_name in rule.list_fields_contains:
+        items = [t for t in _SPLIT_PATTERN.split(items[0]) if t.strip()]
+    return [_normalize_scalar_with_rules(v, index) for v in items if str(v).strip()]
+
+
+def _object_matches(
+    truth_obj: dict[str, Any],
+    pred_obj: dict[str, Any],
+    rule: ListObjectRule,
+    index: RuleIndex,
+) -> bool:
+    for field in rule.string_fields:
+        if field not in truth_obj or field not in pred_obj:
+            return False
+        t_val = _normalize_text_field(
+            truth_obj[field], index, prefix_pattern=rule.strip_prefix.get(field)
+        )
+        p_val = _normalize_text_field(
+            pred_obj[field], index, prefix_pattern=rule.strip_prefix.get(field)
+        )
+        if t_val != p_val:
+            return False
+
+    for field in rule.string_fields_contains:
+        if field not in truth_obj or field not in pred_obj:
+            return False
+        t_val = _normalize_text_field(
+            truth_obj[field], index, prefix_pattern=rule.strip_prefix.get(field)
+        )
+        p_val = _normalize_text_field(
+            pred_obj[field], index, prefix_pattern=rule.strip_prefix.get(field)
+        )
+        if t_val not in p_val and p_val not in t_val:
+            return False
+
+    for field in rule.list_fields:
+        if field not in truth_obj or field not in pred_obj:
+            return False
+        t_list = _normalize_list_field(truth_obj[field], index, rule, field)
+        p_list = _normalize_list_field(pred_obj[field], index, rule, field)
+        if set(t_list) != set(p_list):
+            return False
+
+    for field in rule.list_fields_contains:
+        if field not in truth_obj or field not in pred_obj:
+            return False
+        t_list = _normalize_list_field(truth_obj[field], index, rule, field)
+        p_list = _normalize_list_field(pred_obj[field], index, rule, field)
+        if t_list and not p_list:
+            return False
+        combined = " ".join(p_list)
+        for t_val in t_list:
+            if t_val not in combined:
+                return False
+
+    return True
+
+
+def _lcs_length_objects(
+    a: list[dict[str, Any]],
+    b: list[dict[str, Any]],
+    *,
+    rule: ListObjectRule,
+    index: RuleIndex,
+) -> int:
+    if not a or not b:
+        return 0
+    dp = [0] * (len(b) + 1)
+    for i in range(1, len(a) + 1):
+        prev = 0
+        for j in range(1, len(b) + 1):
+            temp = dp[j]
+            if _object_matches(a[i - 1], b[j - 1], rule, index):
+                dp[j] = prev + 1
+            else:
+                dp[j] = max(dp[j], dp[j - 1])
+            prev = temp
+    return dp[-1]
+
+
+def _list_score_objects_normalized(
+    truth_list: list[Any],
+    pred_list: Any,
+    *,
+    rule: ListObjectRule,
+    index: RuleIndex,
+    ordered: bool,
+) -> float:
+    if not isinstance(pred_list, list):
+        return 0.0
+    if not truth_list:
+        return 0.0
+    truth_objs = [t for t in truth_list if isinstance(t, dict)]
+    pred_objs = [p for p in pred_list if isinstance(p, dict)]
+    if not truth_objs:
+        return 0.0
+    if ordered:
+        lcs_len = _lcs_length_objects(truth_objs, pred_objs, rule=rule, index=index)
+        return lcs_len / len(truth_objs)
+    matched = 0
+    used: set[int] = set()
+    for t in truth_objs:
+        for i, p in enumerate(pred_objs):
+            if i in used:
+                continue
+            if _object_matches(t, p, rule, index):
+                matched += 1
+                used.add(i)
+                break
+    return matched / len(truth_objs)
 
 
 def _list_score_ordered(truth_list: list[Any], pred_list: Any) -> float:
@@ -183,7 +320,10 @@ def _dict_score_ordered(truth_dict: dict[str, Any], pred_dict: dict[str, Any]) -
 
 
 def _dict_score_normalized(
-    truth_dict: dict[str, Any], pred_dict: dict[str, Any], index: RuleIndex
+    truth_dict: dict[str, Any],
+    pred_dict: dict[str, Any],
+    index: RuleIndex,
+    list_object_rules: dict[str, ListObjectRule],
 ) -> float:
     """Compute a key-level score for nested dicts with normalization rules."""
     total = len(truth_dict)
@@ -194,12 +334,27 @@ def _dict_score_normalized(
         if key not in pred_dict:
             continue
         pred_val = pred_dict[key]
-        score_sum += _value_score_normalized(truth_val, pred_val, index, ordered=False)
+        rule = list_object_rules.get(key)
+        if rule and isinstance(truth_val, list) and isinstance(pred_val, list):
+            score_sum += _list_score_objects_normalized(
+                truth_val, pred_val, rule=rule, index=index, ordered=False
+            )
+            continue
+        score_sum += _value_score_normalized(
+            truth_val,
+            pred_val,
+            index,
+            ordered=False,
+            list_object_rules=list_object_rules,
+        )
     return score_sum / total
 
 
 def _dict_score_ordered_normalized(
-    truth_dict: dict[str, Any], pred_dict: dict[str, Any], index: RuleIndex
+    truth_dict: dict[str, Any],
+    pred_dict: dict[str, Any],
+    index: RuleIndex,
+    list_object_rules: dict[str, ListObjectRule],
 ) -> float:
     """Compute a key-level score with normalized, order-aware list scoring."""
     total = len(truth_dict)
@@ -210,7 +365,19 @@ def _dict_score_ordered_normalized(
         if key not in pred_dict:
             continue
         pred_val = pred_dict[key]
-        score_sum += _value_score_normalized(truth_val, pred_val, index, ordered=True)
+        rule = list_object_rules.get(key)
+        if rule and isinstance(truth_val, list) and isinstance(pred_val, list):
+            score_sum += _list_score_objects_normalized(
+                truth_val, pred_val, rule=rule, index=index, ordered=True
+            )
+            continue
+        score_sum += _value_score_normalized(
+            truth_val,
+            pred_val,
+            index,
+            ordered=True,
+            list_object_rules=list_object_rules,
+        )
     return score_sum / total
 
 
@@ -226,16 +393,21 @@ def _value_score(truth: Any, pred: Any, *, ordered: bool) -> float:
 
 
 def _value_score_normalized(
-    truth: Any, pred: Any, index: RuleIndex, *, ordered: bool
+    truth: Any,
+    pred: Any,
+    index: RuleIndex,
+    *,
+    ordered: bool,
+    list_object_rules: dict[str, ListObjectRule],
 ) -> float:
     """Score a value using normalization rules."""
     if isinstance(truth, dict):
         if not isinstance(pred, dict):
             return 0.0
         return (
-            _dict_score_ordered_normalized(truth, pred, index)
+            _dict_score_ordered_normalized(truth, pred, index, list_object_rules)
             if ordered
-            else _dict_score_normalized(truth, pred, index)
+            else _dict_score_normalized(truth, pred, index, list_object_rules)
         )
     if isinstance(truth, list):
         return (
@@ -283,10 +455,11 @@ def key_score_ordered(truth: Any, pred: Any) -> float:
 def key_score_normalized(truth: Any, pred: Any, rules: NormalizationRules) -> float:
     """Compute a normalized score using optional rules."""
     index = build_rule_index(rules)
+    list_object_rules = rules.list_object_rule_map()
     if isinstance(truth, dict):
         if not isinstance(pred, dict):
             return 0.0
-        return _dict_score_normalized(truth, pred, index)
+        return _dict_score_normalized(truth, pred, index, list_object_rules)
     if isinstance(truth, list):
         return _list_score_normalized(truth, pred, index)
     truth_norm = _normalize_scalar_with_rules(truth, index)
@@ -299,10 +472,11 @@ def key_score_ordered_normalized(
 ) -> float:
     """Compute an order-aware normalized score using optional rules."""
     index = build_rule_index(rules)
+    list_object_rules = rules.list_object_rule_map()
     if isinstance(truth, dict):
         if not isinstance(pred, dict):
             return 0.0
-        return _dict_score_ordered_normalized(truth, pred, index)
+        return _dict_score_ordered_normalized(truth, pred, index, list_object_rules)
     if isinstance(truth, list):
         return _list_score_ordered_normalized(truth, pred, index)
     truth_norm = _normalize_scalar_with_rules(truth, index)

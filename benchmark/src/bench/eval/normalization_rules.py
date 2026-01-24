@@ -29,12 +29,28 @@ class CompositeRule(BaseModel):
     parts: list[str]
 
 
+class ListObjectRule(BaseModel):
+    """Normalization rules for lists of objects."""
+
+    list_key: str
+    string_fields: list[str] = Field(default_factory=list)
+    string_fields_contains: list[str] = Field(default_factory=list)
+    list_fields: list[str] = Field(default_factory=list)
+    list_fields_contains: list[str] = Field(default_factory=list)
+    strip_prefix: dict[str, str] = Field(default_factory=dict)
+
+
 class NormalizationRules(BaseModel):
     """Normalization rules for a single case."""
 
     alias_rules: list[AliasRule] = Field(default_factory=list)
     split_rules: list[SplitRule] = Field(default_factory=list)
     composite_rules: list[CompositeRule] = Field(default_factory=list)
+    list_object_rules: list[ListObjectRule] = Field(default_factory=list)
+
+    def list_object_rule_map(self) -> dict[str, ListObjectRule]:
+        """Return list-object rules keyed by list key."""
+        return {rule.list_key: rule for rule in self.list_object_rules}
 
 
 class NormalizationRuleset(BaseModel):
