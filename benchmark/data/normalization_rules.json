@@ -1,5 +1,17 @@
 {
   "cases": {
+    "certificate_of_employment_01": {
+      "alias_rules": [
+        {
+          "canonical": "※本証明書の内容について、就労先事業者等に無断で作成又は改変を行ったときは、刑法上の罪に問われる場合があります。",
+          "aliases": [
+            "※本証明書の内容について、就労先事業者等に無断で作成し又は改変を行ったときには、刑法上の罪に問われる場合があります。"
+          ]
+        }
+      ],
+      "split_rules": [],
+      "composite_rules": []
+    },
     "tax_report_01": {
       "alias_rules": [
         {
