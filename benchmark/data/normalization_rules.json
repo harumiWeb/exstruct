@@ -7,7 +7,9 @@
       "list_object_rules": [
         {
           "list_key": "steps",
-          "string_fields": ["step_name"],
+          "string_fields": [
+            "step_name"
+          ],
           "string_fields_contains": [],
           "list_fields_contains": [],
           "strip_prefix": {
@@ -23,7 +25,9 @@
       "list_object_rules": [
         {
           "list_key": "steps",
-          "string_fields": ["step_name"],
+          "string_fields": [
+            "step_name"
+          ],
           "string_fields_contains": [],
           "list_fields_contains": [],
           "strip_prefix": {}
@@ -46,27 +50,60 @@
       "alias_rules": [
         {
           "canonical": "合計",
-          "aliases": ["⑬から㉕までの計", "13から25までの計"]
+          "aliases": [
+            "⑬から㉕までの計",
+            "13から25までの計"
+          ]
         }
       ],
       "split_rules": [
         {
           "trigger": "勤労学生、障害者控除",
-          "parts": ["勤労学生控除", "障害者控除"]
+          "parts": [
+            "勤労学生控除",
+            "障害者控除"
+          ]
         },
         {
           "trigger": "勤労学生・障害者控除",
-          "parts": ["勤労学生控除", "障害者控除"]
+          "parts": [
+            "勤労学生控除",
+            "障害者控除"
+          ]
         }
       ],
       "composite_rules": [
         {
           "canonical": "事業(営業等)",
-          "parts": ["事業", "営業等"]
+          "parts": [
+            "事業",
+            "営業等"
+          ]
         },
         {
           "canonical": "事業(農業)",
-          "parts": ["事業", "農業"]
+          "parts": [
+            "事業",
+            "農業"
+          ]
+        }
+      ]
+    },
+    "flowchart_02": {
+      "alias_rules": [],
+      "split_rules": [],
+      "composite_rules": [],
+      "list_object_rules": [
+        {
+          "list_key": "steps",
+          "string_fields": [
+            "step_type"
+          ],
+          "string_fields_contains": [
+            "step_name"
+          ],
+          "list_fields_contains": [],
+          "strip_prefix": {}
         }
       ]
     }
