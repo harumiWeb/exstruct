@@ -41,6 +41,15 @@
         "dpi": 220,
         "max_pages": 1
       }
+    },
+    {
+      "id": "tax_report_01",
+      "type": "application_form",
+      "xlsx": "data/raw/tax_report_01.xlsx",
+      "question": "このExcel帳票（令和○年度分 市民税・県民税申告書）について、次の3点を抽出し、JSONのみで返してください。\n\n(1) income_section_labels: 右側の「1 収入金額等」セクションに並んでいる収入項目のラベルを、上から順に配列で返してください。\n\n(2) deduction_section_labels: 右下の「4 所得から差し引かれる金額」セクションに並んでいる控除項目のラベルを、上から順に配列で返してください。\n\n(3) required_documents_note: 右端に縦書きで記載されている注意文のうち、「源泉徴収票、控除証明書などの必要書類（コピー可）は…」で始まる文を、そのまま1つの文字列として返してください。\n\n出力形式（厳守）:\n{\n  \"income_section_labels\": [\"...\", \"...\"],\n  \"deduction_section_labels\": [\"...\", \"...\"],\n  \"required_documents_note\": \"...\"\n}\n\n注意:\n- チェックボックス記号（□など）は含めないでください。\n- ラベルは帳票に印字されている見たままの文字列（空白や中黒を含む場合はそのまま）にしてください。\n- 余分な説明文やコードフェンスは付けず、JSONのみを返してください。",
+      "truth": "data/truth/tax_report_01.json",
+      "sheet_scope": null,
+      "render": { "dpi": 220, "max_pages": 1 }
     }
   ]
 }
