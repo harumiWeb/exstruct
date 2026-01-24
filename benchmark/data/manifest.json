@@ -62,6 +62,18 @@
         "dpi": 220,
         "max_pages": 1
       }
+    },
+    {
+      "id": "basic_01",
+      "type": "mixed_document",
+      "xlsx": "data/raw/basic_01.xlsx",
+      "question": "このExcel帳票について、次の3点を抽出し、JSONのみで返してください。\n\n(1) sales_table: 左上の売上表について、月をキーとして各製品の数値を抽出してください。\n\n(2) chart_series: 右上の折れ線グラフに含まれる系列名を、凡例の表示順で配列として返してください。\n\n(3) flowchart_paths: 下部のフローチャートについて、開始から終了までの処理パスを条件付きで2通り抽出してください。\n  - format_valid = true の場合の処理パス\n  - format_valid = false の場合の処理パス\n\n出力形式（厳守）:\n{\n  \"sales_table\": {\n    \"Jan-25\": {\"製品A\": 0, \"製品B\": 0, \"製品C\": 0},\n    \"Feb-25\": {\"製品A\": 0, \"製品B\": 0, \"製品C\": 0}\n  },\n  \"chart_series\": [\"...\", \"...\"],\n  \"flowchart_paths\": {\n    \"format_valid_true\": [\"...\", \"...\"],\n    \"format_valid_false\": [\"...\", \"...\"]\n  }\n}\n\n注意:\n- 数値は整数で返してください。\n- フローチャートのパスは、図形内の文言をそのまま順番に並べてください。\n- 余分な説明文やコードフェンスは付けず、JSONのみを返してください。",
+      "truth": "data/truth/basic_01.json",
+      "sheet_scope": null,
+      "render": {
+        "dpi": 220,
+        "max_pages": 1
+      }
     }
   ]
 }
