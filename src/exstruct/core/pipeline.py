@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 import logging
 import os
 from pathlib import Path
+import time
 from typing import Literal
 
 import xlwings as xw
@@ -459,7 +460,7 @@ def run_pipeline(
         Updated artifacts after running all steps.
     """
     for step in steps:
-        step(inputs, artifacts)
+        _run_timed_step(step, inputs, artifacts)
     return artifacts
 
 
@@ -481,8 +482,44 @@ def run_com_pipeline(
         Updated artifacts after running all COM steps.
     """
     for step in steps:
-        step(inputs, artifacts, workbook)
+        _run_timed_com_step(step, inputs, artifacts, workbook)
     return artifacts
+
+
+def _run_timed_step(
+    step: ExtractionStep, inputs: ExtractionInputs, artifacts: ExtractionArtifacts
+) -> None:
+    """Run a pipeline step while logging its duration.
+
+    Args:
+        step: Pipeline step to execute.
+        inputs: Pipeline inputs.
+        artifacts: Artifact container to update.
+    """
+    start = time.monotonic()
+    step(inputs, artifacts)
+    elapsed = time.monotonic() - start
+    logger.info("Pipeline step %s completed in %.2fs", step.__name__, elapsed)
+
+
+def _run_timed_com_step(
+    step: ComExtractionStep,
+    inputs: ExtractionInputs,
+    artifacts: ExtractionArtifacts,
+    workbook: xw.Book,
+) -> None:
+    """Run a COM pipeline step while logging its duration.
+
+    Args:
+        step: COM pipeline step to execute.
+        inputs: Pipeline inputs.
+        artifacts: Artifact container to update.
+        workbook: xlwings workbook instance.
+    """
+    start = time.monotonic()
+    step(inputs, artifacts, workbook)
+    elapsed = time.monotonic() - start
+    logger.info("COM step %s completed in %.2fs", step.__name__, elapsed)
 
 
 def step_extract_cells(
@@ -864,7 +901,7 @@ def collect_sheet_raw_data(
             rows=filtered_rows,
             shapes=shape_data.get(sheet_name, []),
             charts=chart_data.get(sheet_name, []) if mode != "light" else [],
-            table_candidates=detect_tables(sheet),
+            table_candidates=detect_tables(sheet, mode=mode),
             print_areas=print_area_data.get(sheet_name, []) if print_area_data else [],
             auto_print_areas=auto_page_break_data.get(sheet_name, [])
             if auto_page_break_data
@@ -892,13 +929,24 @@ def run_extraction_pipeline(inputs: ExtractionInputs) -> PipelineResult:
     state = PipelineState()
 
     def _fallback(message: str, reason: FallbackReason) -> PipelineResult:
+        """Run the fallback pipeline for non-COM extraction.
+
+        Args:
+            message: Human-readable fallback reason.
+            reason: Structured fallback reason enum.
+
+        Returns:
+            PipelineResult for the fallback run.
+        """
         state.fallback_reason = reason
         log_fallback(logger, reason, message)
+        logger.info("Fallback pipeline start: %s", reason.value)
         workbook = build_cells_tables_workbook(
             inputs=inputs,
             artifacts=artifacts,
             reason=message,
         )
+        logger.info("Fallback pipeline completed.")
         return PipelineResult(workbook=workbook, artifacts=artifacts, state=state)
 
     if not plan.use_com:
@@ -970,7 +1018,7 @@ def build_cells_tables_workbook(
     Returns:
         WorkbookData: A workbook composed from the available per-sheet cell rows, detected table candidates, merged-cell information, and any resolved formulas and colors maps. Shapes and charts are empty in this fallback path; formulas and colors maps are extracted from artifacts or from the Openpyxl backend when requested and not already present.
     """
-    logger.debug("Building fallback workbook: %s", reason)
+    logger.info("Building fallback workbook: %s", reason)
     backend = OpenpyxlBackend(inputs.file_path)
     colors_map_data = artifacts.colors_map_data
     if inputs.include_colors_map and colors_map_data is None:
@@ -987,13 +1035,19 @@ def build_cells_tables_workbook(
         formulas_map_data = backend.extract_formulas_map()
     sheets: dict[str, SheetRawData] = {}
     for sheet_name, rows in artifacts.cell_data.items():
+        detect_start = time.monotonic()
         sheet_colors = (
             colors_map_data.get_sheet(sheet_name) if colors_map_data else None
         )
         sheet_formulas = (
             formulas_map_data.get_sheet(sheet_name) if formulas_map_data else None
         )
-        tables = backend.detect_tables(sheet_name)
+        tables = backend.detect_tables(sheet_name, mode=inputs.mode)
+        logger.info(
+            "detect_tables for %s completed in %.2fs",
+            sheet_name,
+            time.monotonic() - detect_start,
+        )
         merged_cells = artifacts.merged_cell_data.get(sheet_name, [])
         filtered_rows = (
             rows

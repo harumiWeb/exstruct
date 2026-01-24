@@ -52,6 +52,30 @@ exstruct input.xlsx --pdf --image          # PDF and PNGs (Excel required)
 
 Auto page-break exports are available via API and CLI when Excel/COM is available; the CLI exposes `--auto-page-breaks-dir` only in COM-capable environments.
 
+## MCP Server (stdio)
+
+Install the MCP extras and run the stdio server:
+
+```bash
+pip install exstruct[mcp]
+exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict rename
+```
+
+Available tools:
+
+- `exstruct_extract`
+- `exstruct_read_json_chunk`
+- `exstruct_validate_input`
+
+Notes:
+
+- Logs go to stderr (and optionally `--log-file`) to avoid contaminating stdio responses.
+- On Windows with Excel, standard/verbose can use COM for richer extraction. On non-Windows, COM is unavailable and extraction uses openpyxl-based fallbacks.
+
+MCP Setup Guide for Each AI Agent:
+
+[MCP Server](https://harumiweb.github.io/exstruct/mcp/)
+
 ## Quick Start (Python)
 
 ```python
@@ -336,7 +360,6 @@ flowchart TD
     I --> J
 ```
 ````
-
 
 ## Example 2: General Application Form
 

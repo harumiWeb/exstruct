@@ -61,6 +61,7 @@ def coord_to_cell_by_edges(
     """
 
     def find_index(edges: list[float], pos: float) -> int | None:
+        """Return the 1-based index for a position inside edge intervals."""
         for i in range(1, len(edges)):
             if edges[i - 1] <= pos < edges[i]:
                 return i

@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import logging
 from pathlib import Path
+from typing import Literal
 
 from ...models import PrintArea
 from ..cells import (
@@ -116,18 +117,25 @@ class OpenpyxlBackend:
             )
             return None
 
-    def detect_tables(self, sheet_name: str) -> list[str]:
+    def detect_tables(
+        self,
+        sheet_name: str,
+        *,
+        mode: Literal["light", "standard", "verbose"] = "standard",
+    ) -> list[str]:
         """
         Detects table candidate ranges within the specified worksheet.
 
         Parameters:
             sheet_name (str): Name of the worksheet to analyze for table candidates.
+            mode (Literal["light", "standard", "verbose"]): Extraction mode, used to
+                adjust scan limits in openpyxl-based detection.
 
         Returns:
             list[str]: Detected table candidate ranges as A1-style range strings; empty list if none are found or detection fails.
         """
         try:
-            return detect_tables_openpyxl(self.file_path, sheet_name)
+            return detect_tables_openpyxl(self.file_path, sheet_name, mode=mode)
         except Exception:
             return []
 

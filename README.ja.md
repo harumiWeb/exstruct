@@ -49,6 +49,30 @@ exstruct input.xlsx --pdf --image          # PDF と PNG（Excel 必須）
 
 自動改ページ範囲の書き出しは API/CLI 両方に対応（Excel/COM が必要）し、CLI は利用可能な環境でのみ `--auto-page-breaks-dir` を表示します。
 
+## MCPサーバー (標準入出力)
+
+MCPの拡張機能をインストールし、標準入出力サーバーを実行します。
+
+```bash
+pip install exstruct[mcp]
+exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict rename
+```
+
+利用可能なツール:
+
+- `exstruct_extract`
+- `exstruct_read_json_chunk`
+- `exstruct_validate_input`
+
+注意点:
+
+- 標準入出力の応答を汚染しないよう、ログは標準エラー出力（およびオプションで`--log-file`で指定したファイル）に出力されます。
+- WindowsのExcel環境では、標準/詳細モードでCOMを利用して、よりリッチな抽出が可能です。Windows以外ではCOMは利用できず、抽出はopenpyxlベースのフォールバック機能を使用します。
+
+各AIエージェントでのMCP設定ガイド:
+
+[MCPサーバー](https://harumiweb.github.io/exstruct/mcp/)
+
 ## クイックスタート Python
 
 ```python

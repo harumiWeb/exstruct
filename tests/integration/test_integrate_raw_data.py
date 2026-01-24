@@ -47,7 +47,7 @@ def test_collect_sheet_raw_data_includes_extracted_fields(
 
     monkeypatch.setattr(
         "exstruct.core.pipeline.detect_tables",
-        lambda _sheet: ["A1:B2"],
+        lambda _sheet, **_kwargs: ["A1:B2"],
     )
 
     colors_map = WorkbookColorsMap(
@@ -100,7 +100,9 @@ def test_collect_sheet_raw_data_skips_charts_in_light_mode(
     sheet = SimpleNamespace(name="Sheet1")
     workbook = SimpleNamespace(sheets={"Sheet1": sheet})
 
-    monkeypatch.setattr("exstruct.core.pipeline.detect_tables", lambda _sheet: [])
+    monkeypatch.setattr(
+        "exstruct.core.pipeline.detect_tables", lambda _sheet, **_kwargs: []
+    )
 
     result = collect_sheet_raw_data(
         cell_data={"Sheet1": []},

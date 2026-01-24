@@ -23,7 +23,7 @@ def test_detect_tables_xlsx_uses_openpyxl(monkeypatch: MonkeyPatch) -> None:
     """xlsx は openpyxl 経由で検出されることを確認する。"""
     sheet = _DummySheet(book=_DummyBook("C:/tmp/book.xlsx"), name="Sheet1")
 
-    def _openpyxl_tables(_path: object, _name: str) -> list[str]:
+    def _openpyxl_tables(_path: object, _name: str, **_kwargs: object) -> list[str]:
         return ["A1:B2"]
 
     def _com_tables(_sheet: object) -> list[str]:

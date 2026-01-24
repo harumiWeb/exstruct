@@ -1,6 +1,6 @@
 [project]
 name = "exstruct"
-version = "0.3.7"
+version = "0.4.2"
 description = "Excel to structured JSON (tables, shapes, charts) for LLM/RAG pipelines"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -37,12 +37,25 @@ dev = [
 ]
 
 [project.optional-dependencies]
+all = [
+    "pyyaml>=6.0.3",
+    "python-toon>=0.1.3",
+    "pypdfium2>=5.1.0",
+    "Pillow>=12.0.0",
+    "mcp>=1.25.0,<2.0.0",
+    "httpx>=0.27,<1.0",
+]
 yaml = ["pyyaml>=6.0.3"]
 toon = ["python-toon>=0.1.3"]
 render = ["pypdfium2>=5.1.0", "Pillow>=12.0.0"]
+mcp = [
+    "mcp>=1.25.0,<2.0.0",
+    "httpx>=0.27,<1.0",
+]
 
 [project.scripts]
 exstruct = "exstruct.cli.main:main"
+exstruct-mcp = "exstruct.mcp.server:main"
 
 [project.urls]
 Homepage = "https://harumiweb.github.io/exstruct/"
@@ -120,6 +133,7 @@ markers = [
 ruff = "ruff check ."
 ruff-fix = "ruff check . --fix"
 mypy = "mypy src/exstruct --strict"
+precommit-run = "pre-commit run -a"
 test = "pytest -vv --cov=exstruct --cov-report=term-missing --cov-report=xml" # uv sync --extra render --extra toon
 test-unit = "pytest -vv -m \"not com and not render\" --cov=exstruct --cov-report=term-missing --cov-report=xml"
 test-com = "pytest -vv -m \"com\" --cov=exstruct --cov-report=term-missing --cov-report=xml"

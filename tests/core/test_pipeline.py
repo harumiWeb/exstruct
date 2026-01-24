@@ -272,7 +272,7 @@ def test_resolve_extraction_inputs_sets_ignore_colors(tmp_path: Path) -> None:
 def test_build_cells_tables_workbook_uses_print_areas(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
-    def fake_detect_tables(_: Path, __: str) -> list[str]:
+    def fake_detect_tables(_: Path, __: str, **_kwargs: object) -> list[str]:
         return ["A1:B2"]
 
     monkeypatch.setattr(
@@ -1012,7 +1012,7 @@ def test_run_extraction_pipeline_com_success(
         """
         return PipelinePlan(pre_com_steps=[_pre_step], com_steps=[], use_com=True)
 
-    def _fake_detect_tables(_: object) -> list[str]:
+    def _fake_detect_tables(_: object, **_kwargs: object) -> list[str]:
         """
         Provide a detector that always reports no table ranges.
 

@@ -24,6 +24,8 @@ ExtractionMode = Literal["light", "standard", "verbose"]
 
 
 class TableParams(TypedDict, total=False):
+    """Table detection parameter overrides."""
+
     table_score_threshold: float
     density_min: float
     coverage_min: float
@@ -198,6 +200,7 @@ class ExStructEngine:
         options: StructOptions | None = None,
         output: OutputOptions | None = None,
     ) -> None:
+        """Initialize the engine with optional struct/output options."""
         self.options = options or StructOptions()
         self.output = output or OutputOptions()
 
@@ -207,6 +210,7 @@ class ExStructEngine:
         return ExStructEngine()
 
     def _apply_table_params(self) -> None:
+        """Apply table parameter overrides if configured."""
         if self.options.table_params:
             set_table_detection_params(**self.options.table_params)
 
@@ -315,6 +319,15 @@ class ExStructEngine:
     def _filter_workbook(
         self, wb: WorkbookData, *, include_auto_override: bool | None = None
     ) -> WorkbookData:
+        """Return a filtered workbook based on output flags.
+
+        Args:
+            wb: Original workbook data.
+            include_auto_override: Optional override for auto print areas.
+
+        Returns:
+            Filtered WorkbookData.
+        """
         filtered = {
             name: self._filter_sheet(sheet, include_auto_override=include_auto_override)
             for name, sheet in wb.sheets.items()

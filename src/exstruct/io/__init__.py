@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 import re
+import time
 from typing import Literal, cast
 
 from ..core.ranges import RangeBounds, parse_range_zero_based
@@ -70,10 +71,12 @@ def dict_without_empty_values(obj: object) -> JsonStructure:
 
 def _write_text(path: Path, text: str) -> None:
     """Write UTF-8 text to disk, wrapping IO errors."""
+    start = time.monotonic()
     try:
         path.write_text(text, encoding="utf-8")
     except Exception as exc:
         raise OutputError(f"Failed to write output to '{path}'.") from exc
+    logger.info("Wrote output to %s in %.2fs", path, time.monotonic() - start)
 
 
 def save_as_json(
@@ -453,18 +456,34 @@ def serialize_workbook(
     """
     Convert WorkbookData to string in the requested format without writing to disk.
     """
+    total_start = time.monotonic()
     format_hint = _ensure_format_hint(
         fmt,
         allowed=_FORMAT_HINTS,
         error_type=SerializationError,
         error_message="Unsupported export format '{fmt}'. Allowed: json, yaml, yml, toon.",
     )
+    dump_start = time.monotonic()
     filtered_dict = dict_without_empty_values(
         model.model_dump(exclude_none=True, by_alias=True)
     )
-    return _serialize_payload_from_hint(
+    logger.info(
+        "serialize_workbook model_dump completed in %.2fs",
+        time.monotonic() - dump_start,
+    )
+    serialize_start = time.monotonic()
+    result = _serialize_payload_from_hint(
         filtered_dict, format_hint, pretty=pretty, indent=indent
     )
+    logger.info(
+        "serialize_workbook serialization completed in %.2fs",
+        time.monotonic() - serialize_start,
+    )
+    logger.info(
+        "serialize_workbook total completed in %.2fs",
+        time.monotonic() - total_start,
+    )
+    return result
 
 
 def save_sheets_as_json(
