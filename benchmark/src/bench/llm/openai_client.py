@@ -62,19 +62,23 @@ class OpenAIResponsesClient:
         load_dotenv(dotenv_path=ROOT / ".env")
         self.client = OpenAI()
 
-    def ask_text(self, *, model: str, question: str, context_text: str) -> LLMResult:
+    def ask_text(
+        self, *, model: str, question: str, context_text: str, temperature: float
+    ) -> LLMResult:
         """Call Responses API with text-only input.
 
         Args:
             model: OpenAI model name (e.g., "gpt-4o").
             question: User question to answer.
             context_text: Extracted context text from the workbook.
+            temperature: Sampling temperature for the response.
 
         Returns:
             LLMResult containing the model output and usage metadata.
         """
         resp = self.client.responses.create(
             model=model,
+            temperature=temperature,
             input=[
                 {
                     "role": "user",
@@ -105,7 +109,7 @@ class OpenAIResponsesClient:
         )
 
     def ask_images(
-        self, *, model: str, question: str, image_paths: list[Path]
+        self, *, model: str, question: str, image_paths: list[Path], temperature: float
     ) -> LLMResult:
         """Call Responses API with image + text input.
 
@@ -113,6 +117,7 @@ class OpenAIResponsesClient:
             model: OpenAI model name (e.g., "gpt-4o").
             question: User question to answer.
             image_paths: PNG image paths to include as vision input.
+            temperature: Sampling temperature for the response.
 
         Returns:
             LLMResult containing the model output and usage metadata.
@@ -129,6 +134,7 @@ class OpenAIResponsesClient:
 
         resp = self.client.responses.create(
             model=model,
+            temperature=temperature,
             input=[{"role": "user", "content": content}],
         )
 

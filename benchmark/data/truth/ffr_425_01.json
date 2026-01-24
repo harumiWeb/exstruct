@@ -1,10 +1,9 @@
 {
   "item_1_agency": "United States Environmental Protection Agency",
-  "item_6_report_type": "Quarterly",
+  "item_6_report_type": null,
   "item_7_accounting_basis": "Cash",
   "item_9_reporting_period_end": null,
   "not_required_by_epa_items": [
-    "Federal Cash",
     "Cash Receipts",
     "Cash Disbursements",
     "Cash on Hand"

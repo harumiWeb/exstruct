@@ -42,6 +42,7 @@ class PromptRecord(BaseModel):
     case_id: str
     method: str
     model: str
+    temperature: float
     question: str
     prompt_hash: str
     images: list[str] | None = None
@@ -53,6 +54,7 @@ class ResponseRecord(BaseModel):
     case_id: str
     method: str
     model: str
+    temperature: float
     prompt_hash: str
     text: str
     input_tokens: int
@@ -144,6 +146,29 @@ def _resolve_case_path(path_str: str, *, case_id: str, label: str) -> Path | Non
     return None
 
 
+def _reset_case_outputs(case_id: str) -> None:
+    """Delete existing prompt/response logs for a case."""
+    for directory in (PROMPTS_DIR, RESPONSES_DIR):
+        path = directory / f"{case_id}.jsonl"
+        if path.exists():
+            path.unlink()
+
+
+def _dump_jsonl(obj: BaseModel) -> str:
+    """Serialize a record for JSONL output.
+
+    Args:
+        obj: Pydantic model to serialize.
+
+    Returns:
+        Single-line JSON string with stable key ordering.
+    """
+    payload = obj.model_dump(exclude_none=True)
+    return json.dumps(
+        payload, ensure_ascii=False, sort_keys=True, separators=(", ", ": ")
+    )
+
+
 @app.command()
 def extract(case: str = "all", method: str = "all") -> None:
     """Extract contexts for selected cases and methods.
@@ -198,13 +223,19 @@ def extract(case: str = "all", method: str = "all") -> None:
 
 
 @app.command()
-def ask(case: str = "all", method: str = "all", model: str = "gpt-4o") -> None:
+def ask(
+    case: str = "all",
+    method: str = "all",
+    model: str = "gpt-4o",
+    temperature: float = 0.0,
+) -> None:
     """Run LLM extraction against prepared contexts.
 
     Args:
         case: Comma-separated case ids or "all".
         method: Comma-separated method names or "all".
         model: OpenAI model name.
+        temperature: Sampling temperature for the model.
     """
     mf = load_manifest(_manifest_path())
     cases = _select_cases(mf.cases, case)
@@ -219,6 +250,7 @@ def ask(case: str = "all", method: str = "all", model: str = "gpt-4o") -> None:
     for c in cases:
         console.rule(f"ASK {c.id}")
         q = c.question
+        _reset_case_outputs(c.id)
 
         for m in methods:
             if m == "image_vlm":
@@ -239,11 +271,17 @@ def ask(case: str = "all", method: str = "all", model: str = "gpt-4o") -> None:
                     case_id=c.id,
                     method=m,
                     model=model,
+                    temperature=temperature,
                     question=q,
                     prompt_hash=prompt_hash,
                     images=[p.name for p in img_paths],
                 )
-                res = client.ask_images(model=model, question=q, image_paths=img_paths)
+                res = client.ask_images(
+                    model=model,
+                    question=q,
+                    image_paths=img_paths,
+                    temperature=temperature,
+                )
             else:
                 txt_path = EXTRACTED_DIR / m / f"{c.id}.txt"
                 if not txt_path.exists():
@@ -255,10 +293,16 @@ def ask(case: str = "all", method: str = "all", model: str = "gpt-4o") -> None:
                     case_id=c.id,
                     method=m,
                     model=model,
+                    temperature=temperature,
                     question=q,
                     prompt_hash=prompt_hash,
                 )
-                res = client.ask_text(model=model, question=q, context_text=context)
+                res = client.ask_text(
+                    model=model,
+                    question=q,
+                    context_text=context,
+                    temperature=temperature,
+                )
 
             prompt_file = PROMPTS_DIR / f"{c.id}.jsonl"
             resp_file = RESPONSES_DIR / f"{c.id}.jsonl"
@@ -266,6 +310,7 @@ def ask(case: str = "all", method: str = "all", model: str = "gpt-4o") -> None:
                 case_id=c.id,
                 method=m,
                 model=model,
+                temperature=temperature,
                 prompt_hash=prompt_hash,
                 text=res.text,
                 input_tokens=res.input_tokens,
@@ -274,12 +319,8 @@ def ask(case: str = "all", method: str = "all", model: str = "gpt-4o") -> None:
                 raw=res.raw,
             )
 
-            prompt_line = json.dumps(
-                prompt_rec.model_dump(exclude_none=True), ensure_ascii=False
-            )
-            resp_line = json.dumps(
-                resp_rec.model_dump(exclude_none=True), ensure_ascii=False
-            )
+            prompt_line = _dump_jsonl(prompt_rec)
+            resp_line = _dump_jsonl(resp_rec)
             with prompt_file.open("a", encoding="utf-8") as f:
                 f.write(prompt_line + "\n")
             with resp_file.open("a", encoding="utf-8") as f:
