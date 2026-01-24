@@ -50,6 +50,18 @@
       "truth": "data/truth/tax_report_01.json",
       "sheet_scope": null,
       "render": { "dpi": 220, "max_pages": 1 }
+    },
+    {
+      "id": "smartart_01",
+      "type": "organization_chart",
+      "xlsx": "data/raw/smartart_01.xlsx",
+      "question": "このExcel帳票（SmartArtで作成された組織図）について、次の3点を抽出し、JSONのみで返してください。\n\n(1) top_structure: 最上位から第2階層までの組織構造を、親子関係が分かる形で抽出してください。\n\n(2) sales_departments: 「営業部」の直下にある課の名称を、上から順に配列で返してください。\n\n(3) production_sites: 「生産部」の直下にある工場名を、上から順に配列で返してください。\n\n出力形式（厳守）:\n{\n  \"top_structure\": {\n    \"取締役会\": {\n      \"社長\": [\"...\"]\n    }\n  },\n  \"sales_departments\": [\"...\", \"...\"],\n  \"production_sites\": [\"...\", \"...\"]\n}\n\n注意:\n- 図形の色や配置座標は含めないでください。テキスト内容と階層関係のみを対象とします。\n- 余分な説明文やコードフェンスは付けず、JSONのみを返してください。",
+      "truth": "data/truth/smartart_01.json",
+      "sheet_scope": null,
+      "render": {
+        "dpi": 220,
+        "max_pages": 1
+      }
     }
   ]
 }
