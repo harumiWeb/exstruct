@@ -151,3 +151,52 @@ class OpenAIResponsesClient:
             cost_usd=cost,
             raw=raw,
         )
+
+    def ask_markdown(
+        self, *, model: str, json_text: str, temperature: float
+    ) -> LLMResult:
+        """Call Responses API to convert JSON into Markdown.
+
+        Args:
+            model: OpenAI model name (e.g., "gpt-4o").
+            json_text: JSON payload to convert to Markdown.
+            temperature: Sampling temperature for the response.
+
+        Returns:
+            LLMResult containing the model output and usage metadata.
+        """
+        instructions = (
+            "You are a strict Markdown formatter. Output Markdown only.\n"
+            "Rules:\n"
+            "- Use '## <key>' for top-level keys.\n"
+            "- For lists of scalars, use bullet lists.\n"
+            "- For lists of objects, use Markdown tables with columns in key order.\n"
+            "- For nested objects or lists inside table cells, use compact JSON.\n"
+        )
+        resp = self.client.responses.create(
+            model=model,
+            temperature=temperature,
+            input=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": instructions},
+                        {"type": "input_text", "text": f"[JSON]\n{json_text}"},
+                    ],
+                }
+            ],
+        )
+
+        text = resp.output_text
+        usage = getattr(resp, "usage", None)
+        in_tok, out_tok = _extract_usage_tokens(usage)
+        cost = estimate_cost_usd(model, in_tok, out_tok)
+
+        raw = json.loads(resp.model_dump_json())
+        return LLMResult(
+            text=text,
+            input_tokens=in_tok,
+            output_tokens=out_tok,
+            cost_usd=cost,
+            raw=raw,
+        )

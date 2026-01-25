@@ -19,7 +19,14 @@
       ]
     },
     "workflow_01": {
-      "alias_rules": [],
+      "alias_rules": [
+        {
+          "canonical": "キャンセル",
+          "aliases": [
+            "買わない"
+          ]
+        }
+      ],
       "split_rules": [],
       "composite_rules": [],
       "list_object_rules": [

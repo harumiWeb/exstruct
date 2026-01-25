@@ -9,6 +9,8 @@ from rich import print
 from rich.console import Console
 import typer
 
+from .eval.markdown_render import render_markdown
+from .eval.markdown_score import markdown_coverage_score, markdown_precision_score
 from .eval.normalize import normalize_json_text
 from .eval.normalization_rules import load_ruleset
 from .eval.report import write_results_csv
@@ -24,6 +26,8 @@ from .manifest import Case, load_manifest
 from .paths import (
     DATA_DIR,
     EXTRACTED_DIR,
+    MARKDOWN_DIR,
+    MARKDOWN_RESPONSES_DIR,
     PROMPTS_DIR,
     RESPONSES_DIR,
     RESULTS_DIR,
@@ -70,6 +74,21 @@ class ResponseRecord(BaseModel):
     raw: dict[str, Any]
 
 
+class MarkdownRecord(BaseModel):
+    """Markdown conversion metadata saved for each request."""
+
+    case_id: str
+    method: str
+    model: str
+    temperature: float
+    prompt_hash: str
+    text: str
+    input_tokens: int
+    output_tokens: int
+    cost_usd: float
+    raw: dict[str, Any]
+
+
 class ResultRow(BaseModel):
     """Evaluation row for CSV output."""
 
@@ -83,6 +102,8 @@ class ResultRow(BaseModel):
     score_norm_ordered: float | None = None
     score_raw: float | None = None
     score_raw_precision: float | None = None
+    score_md: float | None = None
+    score_md_precision: float | None = None
     ok: bool
     input_tokens: int
     output_tokens: int
@@ -165,6 +186,13 @@ def _reset_case_outputs(case_id: str) -> None:
         path = directory / f"{case_id}.jsonl"
         if path.exists():
             path.unlink()
+
+
+def _reset_markdown_outputs(case_id: str) -> None:
+    """Delete existing markdown logs for a case."""
+    path = MARKDOWN_RESPONSES_DIR / f"{case_id}.jsonl"
+    if path.exists():
+        path.unlink()
 
 
 def _dump_jsonl(obj: BaseModel) -> str:
@@ -256,7 +284,7 @@ def ask(
         raise typer.BadParameter(f"No cases matched: {case}")
     methods = _select_methods(method)
 
-    client = OpenAIResponsesClient()
+    client = OpenAIResponsesClient() if use_llm else None
     ensure_dir(PROMPTS_DIR)
     ensure_dir(RESPONSES_DIR)
     total_cost = 0.0
@@ -350,6 +378,98 @@ def ask(
 
 
 @app.command()
+def markdown(
+    case: str = "all",
+    method: str = "all",
+    model: str = "gpt-4o",
+    temperature: float = 0.0,
+    use_llm: bool = True,
+) -> None:
+    """Generate Markdown outputs from the latest JSON responses.
+
+    Args:
+        case: Comma-separated case ids or "all".
+        method: Comma-separated method names or "all".
+        model: OpenAI model name for Markdown conversion.
+        temperature: Sampling temperature for the model.
+        use_llm: If True, call the LLM for conversion; otherwise use renderer.
+    """
+    mf = load_manifest(_manifest_path())
+    cases = _select_cases(mf.cases, case)
+    if not cases:
+        raise typer.BadParameter(f"No cases matched: {case}")
+    methods = _select_methods(method)
+
+    client = OpenAIResponsesClient()
+    ensure_dir(MARKDOWN_DIR)
+    ensure_dir(MARKDOWN_RESPONSES_DIR)
+    total_cost = 0.0
+    total_calls = 0
+
+    for c in cases:
+        console.rule(f"MARKDOWN {c.id}")
+        resp_file = RESPONSES_DIR / f"{c.id}.jsonl"
+        if not resp_file.exists():
+            print(f"[yellow]skip: no responses for {c.id}[/yellow]")
+            continue
+        _reset_markdown_outputs(c.id)
+        latest: dict[str, dict[str, Any]] = {}
+        for line in resp_file.read_text(encoding="utf-8").splitlines():
+            rec = json.loads(line)
+            if rec.get("method") in methods:
+                latest[rec["method"]] = rec
+
+        case_dir = MARKDOWN_DIR / c.id
+        ensure_dir(case_dir)
+        md_file = MARKDOWN_RESPONSES_DIR / f"{c.id}.jsonl"
+
+        for m, rec in latest.items():
+            try:
+                pred_obj = normalize_json_text(rec["text"])
+                json_text = json.dumps(pred_obj, ensure_ascii=False)
+                prompt_hash = sha256_text(json_text)
+                if use_llm:
+                    if client is None:
+                        raise RuntimeError(
+                            "LLM client unavailable for markdown conversion."
+                        )
+                    res = client.ask_markdown(
+                        model=model, json_text=json_text, temperature=temperature
+                    )
+                    md_text = res.text
+                    md_rec = MarkdownRecord(
+                        case_id=c.id,
+                        method=m,
+                        model=model,
+                        temperature=temperature,
+                        prompt_hash=prompt_hash,
+                        text=md_text,
+                        input_tokens=res.input_tokens,
+                        output_tokens=res.output_tokens,
+                        cost_usd=res.cost_usd,
+                        raw=res.raw,
+                    )
+                    total_cost += res.cost_usd
+                    total_calls += 1
+                    line = _dump_jsonl(md_rec)
+                    with md_file.open("a", encoding="utf-8") as f:
+                        f.write(line + "\n")
+                else:
+                    md_text = render_markdown(pred_obj, title=c.id)
+
+                out_md = case_dir / f"{m}.md"
+                out_md.write_text(md_text, encoding="utf-8")
+                print(f"[green]{c.id} {m} -> {out_md}[/green]")
+            except Exception as exc:
+                print(f"[yellow]skip: markdown {c.id} {m} ({exc})[/yellow]")
+
+    if use_llm:
+        print(
+            f"[green]Markdown cost: ${total_cost:.6f} ({total_calls} call(s))[/green]"
+        )
+
+
+@app.command()
 def eval(case: str = "all", method: str = "all") -> None:
     """Evaluate the latest responses and write results CSV.
 
@@ -365,6 +485,7 @@ def eval(case: str = "all", method: str = "all") -> None:
 
     rows: list[ResultRow] = []
     ruleset = load_ruleset(DATA_DIR / "normalization_rules.json")
+    md_outputs: dict[str, dict[str, dict[str, Any]]] = {}
 
     for c in cases:
         truth_path = _resolve_case_path(c.truth, case_id=c.id, label="truth")
@@ -383,6 +504,14 @@ def eval(case: str = "all", method: str = "all") -> None:
                 latest[rec["method"]] = rec
 
         rules = ruleset.for_case(c.id)
+        md_file = MARKDOWN_RESPONSES_DIR / f"{c.id}.jsonl"
+        if md_file.exists():
+            latest_md: dict[str, dict[str, Any]] = {}
+            for line in md_file.read_text(encoding="utf-8").splitlines():
+                rec = json.loads(line)
+                if rec.get("method") in methods:
+                    latest_md[rec["method"]] = rec
+            md_outputs[c.id] = latest_md
         for m, rec in latest.items():
             ok = False
             score = 0.0
@@ -391,6 +520,8 @@ def eval(case: str = "all", method: str = "all") -> None:
             score_norm_ordered: float | None = None
             score_raw: float | None = None
             score_raw_precision: float | None = None
+            score_md: float | None = None
+            score_md_precision: float | None = None
             err: str | None = None
             try:
                 pred_obj = normalize_json_text(rec["text"])
@@ -402,6 +533,12 @@ def eval(case: str = "all", method: str = "all") -> None:
                 )
                 score_raw = raw_coverage_score(truth, pred_obj)
                 score_raw_precision = raw_precision_score(truth, pred_obj)
+                md_truth = render_markdown(truth, title=c.id)
+                md_rec = md_outputs.get(c.id, {}).get(m)
+                if md_rec is not None:
+                    md_text = str(md_rec.get("text", ""))
+                    score_md = markdown_coverage_score(md_truth, md_text)
+                    score_md_precision = markdown_precision_score(md_truth, md_text)
                 ok = score == 1.0
             except Exception as exc:
                 err = str(exc)
@@ -418,6 +555,8 @@ def eval(case: str = "all", method: str = "all") -> None:
                     score_norm_ordered=score_norm_ordered,
                     score_raw=score_raw,
                     score_raw_precision=score_raw_precision,
+                    score_md=score_md,
+                    score_md_precision=score_md_precision,
                     ok=ok,
                     input_tokens=int(rec.get("input_tokens", 0)),
                     output_tokens=int(rec.get("output_tokens", 0)),
@@ -458,6 +597,10 @@ def report() -> None:
         agg["acc_raw"] = ("score_raw", "mean")
     if "score_raw_precision" in df.columns:
         agg["raw_precision"] = ("score_raw_precision", "mean")
+    if "score_md" in df.columns and df["score_md"].notna().any():
+        agg["acc_md"] = ("score_md", "mean")
+    if "score_md_precision" in df.columns and df["score_md_precision"].notna().any():
+        agg["md_precision"] = ("score_md_precision", "mean")
     g = df.groupby("method").agg(**agg).reset_index()
 
     detail_dir = RESULTS_DIR / "detailed_reports"
@@ -470,10 +613,10 @@ def report() -> None:
         "This report summarizes extraction accuracy for each method on the benchmark cases."
     )
     md_lines.append(
-        "Scores are computed per case and aggregated by method. Both exact and normalized"
+        "Scores are computed per case and aggregated by method. Exact, normalized, raw,"
     )
     md_lines.append(
-        "tracks are reported to ensure fair comparison across formatting variations."
+        "and markdown tracks are reported to ensure fair comparison across variations."
     )
     md_lines.append("")
     md_lines.append("## Evaluation protocol (public)")
@@ -486,6 +629,7 @@ def report() -> None:
     md_lines.append("- Input contexts: generated by bench.cli extract")
     md_lines.append("- Normalization: data/normalization_rules.json (optional track)")
     md_lines.append("- Evaluation: bench.cli eval (Exact + Normalized + Raw)")
+    md_lines.append("- Markdown conversion: bench.cli markdown (optional)")
     md_lines.append("- Report: bench.cli report (summary + per-case)")
     md_lines.append("")
     md_lines.append("Recommended disclosure when publishing results:")
@@ -507,6 +651,9 @@ def report() -> None:
     md_lines.append(
         "- Raw: loose coverage/precision over flattened text tokens (schema-agnostic)."
     )
+    md_lines.append(
+        "- Markdown: coverage/precision against canonical Markdown rendered from truth."
+    )
     md_lines.append("")
     md_lines.append("Recommended interpretation:")
     md_lines.append("")
@@ -519,6 +666,7 @@ def report() -> None:
     md_lines.append(
         "- Use Raw to compare how much ground-truth text is captured regardless of schema."
     )
+    md_lines.append("- Use Markdown to evaluate JSON-to-Markdown conversion quality.")
     md_lines.append(
         "- When tracks disagree, favor Normalized for Excel-heavy layouts where labels"
     )
@@ -542,10 +690,55 @@ def report() -> None:
     md_lines.append(
         "  intended to reflect raw data capture without penalizing minor label variations."
     )
+    md_lines.append(
+        "- Markdown: coverage/precision comparing LLM Markdown to canonical truth Markdown."
+    )
     md_lines.append("")
     md_lines.append("## Summary by method")
     md_lines.append("")
     md_lines.append(g.to_markdown(index=False))
+    md_lines.append("")
+    md_lines.append("## Exstruct positioning notes (public)")
+    md_lines.append("")
+    md_lines.append(
+        "Recommended primary indicators for exstruct positioning (RAG pre-processing):"
+    )
+    md_lines.append("")
+    md_lines.append("- Normalized accuracy: acc_norm / acc_norm_ordered")
+    md_lines.append("- Raw coverage/precision: acc_raw / raw_precision")
+    md_lines.append("- Markdown coverage/precision: acc_md / md_precision")
+    md_lines.append("")
+    md_lines.append("Current deltas vs. best method (n=11, when available):")
+    md_lines.append("")
+    metric_labels = [
+        ("acc_norm", "Normalized accuracy"),
+        ("acc_norm_ordered", "Normalized ordered accuracy"),
+        ("acc_raw", "Raw coverage"),
+        ("raw_precision", "Raw precision"),
+        ("acc_md", "Markdown coverage"),
+        ("md_precision", "Markdown precision"),
+    ]
+    if "method" in g.columns and not g.empty:
+        ex_row = g[g["method"] == "exstruct"]
+        for metric, label in metric_labels:
+            if metric not in g.columns:
+                continue
+            best_val = g[metric].max()
+            best_methods = g[g[metric] == best_val]["method"].tolist()
+            if ex_row.empty:
+                ex_val = None
+            else:
+                ex_val = float(ex_row[metric].iloc[0])
+            if ex_val is None:
+                md_lines.append(f"- {label}: exstruct n/a; best {best_val:.6f}")
+                continue
+            delta = ex_val - best_val
+            md_lines.append(
+                f"- {label}: exstruct {ex_val:.6f} vs best {best_val:.6f}"
+                f" ({', '.join(best_methods)}), delta {delta:+.6f}"
+            )
+    else:
+        md_lines.append("- (summary unavailable)")
     md_lines.append("")
     md_lines.append("## Normalization leniency summary")
     md_lines.append("")
@@ -597,6 +790,8 @@ def report() -> None:
         "score_norm_ordered",
         "score_raw",
         "score_raw_precision",
+        "score_md",
+        "score_md_precision",
         "input_tokens",
         "output_tokens",
         "cost_usd",

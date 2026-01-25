@@ -11,6 +11,8 @@ OUT_DIR = ROOT / "outputs"
 EXTRACTED_DIR = OUT_DIR / "extracted"
 PROMPTS_DIR = OUT_DIR / "prompts"
 RESPONSES_DIR = OUT_DIR / "responses"
+MARKDOWN_DIR = OUT_DIR / "markdown"
+MARKDOWN_RESPONSES_DIR = MARKDOWN_DIR / "responses"
 RESULTS_DIR = OUT_DIR / "results"
 
 
