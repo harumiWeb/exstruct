@@ -14,6 +14,14 @@ RESPONSES_DIR = OUT_DIR / "responses"
 MARKDOWN_DIR = OUT_DIR / "markdown"
 MARKDOWN_RESPONSES_DIR = MARKDOWN_DIR / "responses"
 RESULTS_DIR = OUT_DIR / "results"
+RUB_DIR = ROOT / "rub"
+RUB_MANIFEST = RUB_DIR / "manifest.json"
+RUB_TRUTH_DIR = RUB_DIR / "truth"
+RUB_SCHEMA_DIR = RUB_DIR / "schemas"
+RUB_OUT_DIR = OUT_DIR / "rub"
+RUB_PROMPTS_DIR = RUB_OUT_DIR / "prompts"
+RUB_RESPONSES_DIR = RUB_OUT_DIR / "responses"
+RUB_RESULTS_DIR = RUB_OUT_DIR / "results"
 
 
 def resolve_path(path: str | Path) -> Path:

@@ -31,6 +31,11 @@ from .paths import (
     PROMPTS_DIR,
     RESPONSES_DIR,
     RESULTS_DIR,
+    RUB_MANIFEST,
+    RUB_OUT_DIR,
+    RUB_PROMPTS_DIR,
+    RUB_RESPONSES_DIR,
+    RUB_RESULTS_DIR,
     resolve_path,
 )
 from .pipeline.common import ensure_dir, sha256_text, write_json
@@ -39,6 +44,8 @@ from .pipeline.html_text import html_to_text, xlsx_to_html
 from .pipeline.image_render import xlsx_to_pngs_via_pdf
 from .pipeline.openpyxl_pandas import extract_openpyxl
 from .pipeline.pdf_text import pdf_to_text, xlsx_to_pdf
+from .rub.manifest import RubTask, load_rub_manifest
+from .rub.score import score_exact
 
 app = typer.Typer(add_completion=False)
 console = Console()
@@ -87,6 +94,39 @@ class MarkdownRecord(BaseModel):
     output_tokens: int
     cost_usd: float
     raw: dict[str, Any]
+
+
+class RubResponseRecord(BaseModel):
+    """RUB response metadata saved for each request."""
+
+    task_id: str
+    source_case_id: str
+    method: str
+    model: str
+    temperature: float
+    prompt_hash: str
+    question: str
+    text: str
+    input_tokens: int
+    output_tokens: int
+    cost_usd: float
+    raw: dict[str, Any]
+
+
+class RubResultRow(BaseModel):
+    """RUB evaluation row for CSV output."""
+
+    task_id: str
+    source_case_id: str
+    type: str
+    method: str
+    model: str | None
+    score: float
+    ok: bool
+    input_tokens: int
+    output_tokens: int
+    cost_usd: float
+    error: str | None
 
 
 class ResultRow(BaseModel):
@@ -162,6 +202,49 @@ def _select_methods(method: str) -> list[str]:
     return deduped
 
 
+def _rub_manifest_path() -> Path:
+    """Return the path to the RUB manifest.
+
+    Returns:
+        Path to rub/manifest.json.
+    """
+    return RUB_MANIFEST
+
+
+def _select_tasks(tasks: list[RubTask], task: str) -> list[RubTask]:
+    """Select RUB tasks by id list or all.
+
+    Args:
+        tasks: Task list from the RUB manifest.
+        task: Comma-separated task ids or "all".
+
+    Returns:
+        Filtered list of tasks.
+    """
+    if task == "all":
+        return tasks
+    ids = {t.strip() for t in task.split(",") if t.strip()}
+    return [t for t in tasks if t.id in ids]
+
+
+def _resolve_task_path(path_str: str, *, task_id: str, label: str) -> Path | None:
+    """Resolve a RUB manifest path, warning if missing.
+
+    Args:
+        path_str: Path string from the manifest.
+        task_id: Task identifier for log messages.
+        label: Label for the path type (e.g., "truth").
+
+    Returns:
+        Resolved Path if it exists, otherwise None.
+    """
+    resolved = resolve_path(path_str)
+    if resolved.exists():
+        return resolved
+    print(f"[yellow]skip: missing {label} for {task_id}: {resolved}[/yellow]")
+    return None
+
+
 def _resolve_case_path(path_str: str, *, case_id: str, label: str) -> Path | None:
     """Resolve a manifest path, warning if missing.
 
@@ -184,6 +267,14 @@ def _reset_case_outputs(case_id: str) -> None:
     """Delete existing prompt/response logs for a case."""
     for directory in (PROMPTS_DIR, RESPONSES_DIR):
         path = directory / f"{case_id}.jsonl"
+        if path.exists():
+            path.unlink()
+
+
+def _reset_rub_outputs(task_id: str) -> None:
+    """Delete existing RUB prompt/response logs for a task."""
+    for directory in (RUB_PROMPTS_DIR, RUB_RESPONSES_DIR):
+        path = directory / f"{task_id}.jsonl"
         if path.exists():
             path.unlink()
 
@@ -467,6 +558,198 @@ def markdown(
         print(
             f"[green]Markdown cost: ${total_cost:.6f} ({total_calls} call(s))[/green]"
         )
+
+
+@app.command()
+def rub_ask(
+    task: str = "all",
+    method: str = "all",
+    model: str = "gpt-4o",
+    temperature: float = 0.0,
+) -> None:
+    """Run RUB Stage B queries using Markdown outputs as context.
+
+    Args:
+        task: Comma-separated task ids or "all".
+        method: Comma-separated method names or "all".
+        model: OpenAI model name for Stage B queries.
+        temperature: Sampling temperature for the model.
+    """
+    rub_manifest = load_rub_manifest(_rub_manifest_path())
+    tasks = _select_tasks(rub_manifest.tasks, task)
+    if not tasks:
+        raise typer.BadParameter(f"No tasks matched: {task}")
+    methods = _select_methods(method)
+
+    ensure_dir(RUB_OUT_DIR)
+    ensure_dir(RUB_PROMPTS_DIR)
+    ensure_dir(RUB_RESPONSES_DIR)
+
+    client = OpenAIResponsesClient()
+    total_cost = 0.0
+    total_calls = 0
+
+    for t in tasks:
+        console.rule(f"RUB {t.id}")
+        _reset_rub_outputs(t.id)
+        resp_file = RUB_RESPONSES_DIR / f"{t.id}.jsonl"
+        for m in methods:
+            md_path = MARKDOWN_DIR / t.source_case_id / f"{m}.md"
+            if not md_path.exists():
+                print(f"[yellow]skip: missing markdown {t.id} {m}[/yellow]")
+                continue
+            context_text = md_path.read_text(encoding="utf-8")
+            prompt_hash = sha256_text(f"{t.question}\n{context_text}")
+            try:
+                res = client.ask_text(
+                    model=model,
+                    question=t.question,
+                    context_text=context_text,
+                    temperature=temperature,
+                )
+                rec = RubResponseRecord(
+                    task_id=t.id,
+                    source_case_id=t.source_case_id,
+                    method=m,
+                    model=model,
+                    temperature=temperature,
+                    prompt_hash=prompt_hash,
+                    question=t.question,
+                    text=res.text,
+                    input_tokens=res.input_tokens,
+                    output_tokens=res.output_tokens,
+                    cost_usd=res.cost_usd,
+                    raw=res.raw,
+                )
+                line = _dump_jsonl(rec)
+                with resp_file.open("a", encoding="utf-8") as f:
+                    f.write(line + "\n")
+                total_cost += res.cost_usd
+                total_calls += 1
+                print(f"[green]{t.id} {m} -> {resp_file}[/green]")
+            except Exception as exc:
+                print(f"[yellow]skip: rub {t.id} {m} ({exc})[/yellow]")
+
+    print(f"[green]RUB cost: ${total_cost:.6f} ({total_calls} call(s))[/green]")
+
+
+@app.command()
+def rub_eval(task: str = "all", method: str = "all") -> None:
+    """Evaluate RUB responses and write results CSV.
+
+    Args:
+        task: Comma-separated task ids or "all".
+        method: Comma-separated method names or "all".
+    """
+    rub_manifest = load_rub_manifest(_rub_manifest_path())
+    tasks = _select_tasks(rub_manifest.tasks, task)
+    if not tasks:
+        raise typer.BadParameter(f"No tasks matched: {task}")
+    methods = _select_methods(method)
+
+    rows: list[RubResultRow] = []
+    for t in tasks:
+        truth_path = _resolve_task_path(t.truth, task_id=t.id, label="truth")
+        if not truth_path:
+            continue
+        truth = json.loads(truth_path.read_text(encoding="utf-8"))
+
+        resp_file = RUB_RESPONSES_DIR / f"{t.id}.jsonl"
+        if not resp_file.exists():
+            print(f"[yellow]skip: no RUB responses for {t.id}[/yellow]")
+            continue
+        latest: dict[str, dict[str, Any]] = {}
+        for line in resp_file.read_text(encoding="utf-8").splitlines():
+            rec = json.loads(line)
+            if rec.get("method") in methods:
+                latest[rec["method"]] = rec
+
+        for m, rec in latest.items():
+            score = 0.0
+            ok = False
+            err: str | None = None
+            try:
+                pred_obj = normalize_json_text(rec["text"])
+                score_res = score_exact(
+                    truth, pred_obj, unordered_paths=t.unordered_paths
+                )
+                score = score_res.score
+                ok = score_res.ok
+            except Exception as exc:
+                err = str(exc)
+
+            rows.append(
+                RubResultRow(
+                    task_id=t.id,
+                    source_case_id=t.source_case_id,
+                    type=t.type,
+                    method=m,
+                    model=rec.get("model"),
+                    score=score,
+                    ok=ok,
+                    input_tokens=int(rec.get("input_tokens", 0)),
+                    output_tokens=int(rec.get("output_tokens", 0)),
+                    cost_usd=float(rec.get("cost_usd", 0.0)),
+                    error=err,
+                )
+            )
+
+    out_csv = RUB_RESULTS_DIR / "rub_results.csv"
+    write_results_csv([row.model_dump() for row in rows], out_csv)
+    print(f"[green]Wrote {out_csv} ({len(rows)} rows)[/green]")
+
+
+@app.command()
+def rub_report() -> None:
+    """Generate a RUB Markdown report from the results CSV."""
+    csv_path = RUB_RESULTS_DIR / "rub_results.csv"
+    if not csv_path.exists():
+        raise typer.Exit(code=1)
+
+    import pandas as pd
+
+    df = pd.read_csv(csv_path)
+    agg: dict[str, tuple[str, str]] = {
+        "rus": ("score", "mean"),
+        "avg_in": ("input_tokens", "mean"),
+        "avg_cost": ("cost_usd", "mean"),
+        "n": ("task_id", "count"),
+    }
+    g = df.groupby("method").agg(**agg).reset_index()
+
+    detail_dir = RUB_RESULTS_DIR / "detailed_reports"
+    detail_dir.mkdir(parents=True, exist_ok=True)
+
+    md_lines: list[str] = []
+    md_lines.append("# RUB Report")
+    md_lines.append("")
+    md_lines.append(
+        "This report summarizes Reconstruction Utility Benchmark (RUB) results."
+    )
+    md_lines.append(
+        "Scores are computed on Stage B task accuracy using Markdown-only inputs."
+    )
+    md_lines.append("")
+    md_lines.append("## Summary by method")
+    md_lines.append("")
+    md_lines.append(g.to_markdown(index=False))
+    md_lines.append("")
+
+    for task_id, task_df in df.groupby("task_id"):
+        task_path = detail_dir / f"report_{task_id}.md"
+        lines = [
+            "# RUB Report",
+            "",
+            f"## Details: {task_id}",
+            "",
+            task_df.to_markdown(index=False),
+            "",
+        ]
+        task_path.write_text("\n".join(lines), encoding="utf-8")
+
+    report_path = RUB_RESULTS_DIR / "report.md"
+    report_path.write_text("\n".join(md_lines), encoding="utf-8")
+    print(f"[green]Wrote {report_path}[/green]")
 
 
 @app.command()
