@@ -1,0 +1,24 @@
+{
+  "tasks": [
+    {
+      "name": "Core Feature Dev",
+      "start_date": "2026-01-26",
+      "end_date": "2026-02-03"
+    },
+    {
+      "name": "Edge Case Handling",
+      "start_date": "2026-01-27",
+      "end_date": "2026-02-03"
+    },
+    {
+      "name": "Integration Work",
+      "start_date": "2026-01-29",
+      "end_date": "2026-02-04"
+    },
+    {
+      "name": "Internal Review",
+      "start_date": "2026-02-01",
+      "end_date": "2026-02-04"
+    }
+  ]
+}

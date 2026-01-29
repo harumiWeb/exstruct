@@ -1,0 +1,148 @@
+{
+  "cases": [
+    {
+      "id": "ffr_425_01",
+      "type": "application_form",
+      "xlsx": "data/raw/ffr_425_01.xlsx",
+      "question": "このExcel帳票（Federal Financial Report / SF-425）について、次の情報を抽出し、JSONのみで返してください。\n\n(1) checkbox_groups: チェックボックスのグループ名と、その選択肢ラベル一覧を抽出してください（\"Report Type\" と \"Basis of Accounting\" の2グループのみ）。\n(2) not_required_by_epa_scope: 赤字の注記 \"Not Required by EPA\" がかかっているセクション名を返してください（例: \"Federal Cash\"）。\n(3) section_headers: 帳票上部の番号付きセクション見出し（1〜9）のうち、見出しテキストのみを配列で返してください（例: \"Federal Agency and Organizational Element to Which Report is Submitted\" など）。\n\n出力形式（厳守）:\n{\n  \"checkbox_groups\": {\n    \"Report Type\": [\"Quarterly\", \"Semi-Annual\", \"Annual\", \"Final\"],\n    \"Basis of Accounting\": [\"Cash\", \"Accrual\"]\n  },\n  \"not_required_by_epa_scope\": \"...\",\n  \"section_headers\": [\"...\", \"...\", \"...\"]\n}\n\n注意:\n- チェックボックスの記号（□など）は含めないでください。ラベル文字列のみを返してください。\n- section_headers は表示順（上から左→右）で返してください。\n- 余分な説明文やコードフェンスは付けず、JSONのみを返してください。",
+      "truth": "data/truth/ffr_425_01.json",
+      "sheet_scope": null,
+      "render": {
+        "dpi": 220,
+        "max_pages": 2
+      }
+    },
+    {
+      "id": "flowchart_01",
+      "type": "flowchart",
+      "xlsx": "data/raw/flowchart_01.xlsx",
+      "question": "このフローチャートの開始から終了までの主要な処理ステップを順番に抽出し、次のJSON形式のみで返してください。\n\n出力形式（厳守）:\n{\n  \"steps\": [\"step1\", \"step2\", \"step3\", ...]\n}\n\n注意事項:\n- 開始ノードと終了ノードも含めてください\n- 分岐やループがある場合は、代表的な主経路として線形化してください\n- ステップ名は図中のラベル文字列をそのまま使用してください",
+      "truth": "data/truth/flowchart_01.json",
+      "sheet_scope": null,
+      "render": {
+        "dpi": 220,
+        "max_pages": 1
+      }
+    },
+    {
+      "id": "gantt_01",
+      "type": "gantt",
+      "xlsx": "data/raw/gantt_01.xlsx",
+      "question": "このガントチャートのPhase3のタスク名とその開始日、終了日を抽出し、次のJSON形式のみで返してください: {\"tasks\":[{\"name\":\"...\",\"start_date\":\"YYYY-MM-DD\",\"end_date\":\"YYYY-MM-DD\"}, ...]}",
+      "truth": "data/truth/gantt_01.json",
+      "sheet_scope": null,
+      "render": {
+        "dpi": 200,
+        "max_pages": 4
+      }
+    },
+    {
+      "id": "certificate_of_employment_01",
+      "type": "application_form",
+      "xlsx": "data/raw/certificate_of_employment_01.xlsx",
+      "question": "このExcel帳票（就労証明書）について、次の3点を抽出し、JSONのみで返してください。\n\n(1) checkbox_groups: 以下の3つのチェックボックス項目について、それぞれの選択肢ラベルを抽出してください。\n  - 業種\n  - 雇用の形態\n  - 雇用(予定)期間等（無期 / 有期）\n\n(2) numbered_sections: 帳票の「No.」列に対応する番号付き項目の見出し（1〜14）を、番号をキーとして抽出してください。\n\n(3) warning_text: 赤字で記載されている注意文を、そのまま1つの文字列として抽出してください。\n\n出力形式（厳守）:\n{\n  \"checkbox_groups\": {\n    \"業種\": [\"...\", \"...\"],\n    \"雇用の形態\": [\"...\", \"...\"],\n    \"雇用(予定)期間等\": [\"...\", \"...\"]\n  },\n  \"numbered_sections\": {\n    \"1\": \"...\",\n    \"2\": \"...\",\n    \"3\": \"...\"\n  },\n  \"warning_text\": \"...\"\n}\n\n注意:\n- チェックボックス記号（□など）は含めず、ラベル文字列のみを返してください。\n- numbered_sections は 1〜14 すべてを含めてください。\n- 余分な説明文やコードフェンスは付けず、JSONのみを返してください。",
+      "truth": "data/truth/certificate_of_employment_01.json",
+      "sheet_scope": null,
+      "render": {
+        "dpi": 220,
+        "max_pages": 1
+      }
+    },
+    {
+      "id": "tax_report_01",
+      "type": "application_form",
+      "xlsx": "data/raw/tax_report_01.xlsx",
+      "question": "この市民税・県民税申告書の右側に配置されている縦方向の帳票構造を解析してください。\n\n次の条件をすべて満たすJSONを返してください。\n\n1. 「収入金額」ブロックに含まれる項目名を、上から順に配列で列挙してください。\n2. 上記項目群を視覚的にまとめている「合計」項目名を1つ指定してください。\n3. 「所得から差し引かれる金額」ブロックに含まれる項目名を、上から順に配列で列挙してください。\n4. 上記控除項目群を視覚的にまとめている「合計」項目名を1つ指定してください。\n\n制約:\n- 項目名は帳票に記載されている日本語表記をそのまま使用してください。\n- 数値、記号、注釈文は含めないでください。\n- 同一列・同一枠内にある項目同士の位置関係に基づいて判断してください。\n- JSONのみを返してください。\n\n出力形式:\n{\n  \"income_items\": [\"...\", \"...\"],\n  \"income_total\": \"...\",\n  \"deduction_items\": [\"...\", \"...\"],\n  \"deduction_total\": \"...\"\n}",
+      "truth": "data/truth/tax_report_01.json",
+      "sheet_scope": null,
+      "render": {
+        "dpi": 240,
+        "max_pages": 1
+      }
+    },
+    {
+      "id": "smartart_01",
+      "type": "organization_chart",
+      "xlsx": "data/raw/smartart_01.xlsx",
+      "question": "このExcel帳票（SmartArtで作成された組織図）について、次の3点を抽出し、JSONのみで返してください。\n\n(1) top_structure: 最上位から第2階層までの組織構造を、親子関係が分かる形で抽出してください。\n\n(2) sales_departments: 「営業部」の直下にある課の名称を、上から順に配列で返してください。\n\n(3) production_sites: 「生産部」の直下にある工場名を、上から順に配列で返してください。\n\n出力形式（厳守）:\n{\n  \"top_structure\": {\n    \"取締役会\": {\n      \"社長\": [\"...\"]\n    }\n  },\n  \"sales_departments\": [\"...\", \"...\"],\n  \"production_sites\": [\"...\", \"...\"]\n}\n\n注意:\n- 図形の色や配置座標は含めないでください。テキスト内容と階層関係のみを対象とします。\n- 余分な説明文やコードフェンスは付けず、JSONのみを返してください。",
+      "truth": "data/truth/smartart_01.json",
+      "sheet_scope": null,
+      "render": {
+        "dpi": 220,
+        "max_pages": 1
+      }
+    },
+    {
+      "id": "basic_01",
+      "type": "mixed_document",
+      "xlsx": "data/raw/basic_01.xlsx",
+      "question": "このExcel帳票について、次の3点を抽出し、JSONのみで返してください。\n\n(1) sales_table: 左上の売上表について、月をキーとして各製品の数値を抽出してください。\n\n(2) chart_series: 右上の折れ線グラフに含まれる系列名を、凡例の表示順で配列として返してください。\n\n(3) flowchart_paths: 下部のフローチャートについて、開始から終了までの処理パスを条件付きで2通り抽出してください。\n  - format_valid = true の場合の処理パス\n  - format_valid = false の場合の処理パス\n\n出力形式（厳守）:\n{\n  \"sales_table\": {\n    \"Jan-25\": {\"製品A\": 0, \"製品B\": 0, \"製品C\": 0},\n    \"Feb-25\": {\"製品A\": 0, \"製品B\": 0, \"製品C\": 0}\n  },\n  \"chart_series\": [\"...\", \"...\"],\n  \"flowchart_paths\": {\n    \"format_valid_true\": [\"...\", \"...\"],\n    \"format_valid_false\": [\"...\", \"...\"]\n  }\n}\n\n注意:\n- 数値は整数で返してください。\n- フローチャートのパスは、図形内の文言をそのまま順番に並べてください。\n- 余分な説明文やコードフェンスは付けず、JSONのみを返してください。",
+      "truth": "data/truth/basic_01.json",
+      "sheet_scope": null,
+      "render": {
+        "dpi": 220,
+        "max_pages": 1
+      }
+    },
+    {
+      "id": "heatstroke_flow_01",
+      "type": "flowchart",
+      "xlsx": "data/raw/heatstroke_flow_01.xlsx",
+      "question": "このExcelに記載されている熱中症対応フローについて、上から順に各対応ステップを抽出してください。各ステップについて、step_name（工程名）、description（内容要約）、special_conditions（条件や注意事項がある場合のみ配列で記載）を含むJSONを、次の形式のみで返してください。\n\n{\n  \"steps\": [\n    {\n      \"step_name\": \"...\",\n      \"description\": \"...\",\n      \"special_conditions\": [\"...\"]\n    }\n  ]\n}",
+      "truth": "data/truth/heatstroke_flow_01.json",
+      "sheet_scope": null,
+      "render": {
+        "dpi": 200,
+        "max_pages": 1
+      }
+    },
+    {
+      "id": "workflow_01",
+      "type": "workflow",
+      "xlsx": "data/raw/workflow_01.xlsx",
+      "question": "このExcelに記載されている業務フロー図（ネット注文フローチャート）について、工程を上から順に整理してください。各工程について、actor（実行主体）、step_name（工程名）、next_steps（次に進む工程名の配列）を含むJSONを、次の形式のみで返してください。\n\n{\n  \"steps\": [\n    {\n      \"actor\": \"お客様|当社\",\n      \"step_name\": \"...\",\n      \"next_steps\": [\"...\"]\n    }\n  ]\n}",
+      "truth": "data/truth/workflow_01.json",
+      "sheet_scope": null,
+      "render": {
+        "dpi": 200,
+        "max_pages": 1
+      }
+    },
+    {
+      "id": "basic_form_01",
+      "type": "application_form",
+      "xlsx": "data/raw/basic_form_01.xlsx",
+      "question": "このExcel申請書に記載されている入力項目を、意味的なブロック単位で整理してください。申請者本人に関する項目、配偶者に関する項目、収入等に関する申告、預貯金等に関する申告の4分類に分け、それぞれに含まれる項目名を配列でまとめたJSONを、次の形式のみで返してください。\n\n{\n  \"applicant\": [],\n  \"spouse\": [],\n  \"income_declaration\": [],\n  \"asset_declaration\": []\n}",
+      "truth": "data/truth/basic_form_01.json",
+      "sheet_scope": null,
+      "render": {
+        "dpi": 200,
+        "max_pages": 1
+      }
+    },
+    {
+      "id": "flowchart_02",
+      "type": "flowchart",
+      "xlsx": "data/raw/flowchart_02.xlsx",
+      "question": "このExcelに記載されているログイン処理フローについて、工程を上から順に整理してください。各工程について、step_name（工程名）、step_type（start|process|decision|end）、next_steps（条件付き遷移を含む次工程）を含むJSONを、次の形式のみで返してください。\n\n{\n  \"steps\": [\n    {\n      \"step_name\": \"...\",\n      \"step_type\": \"start|process|decision|end\",\n      \"next_steps\": [\n        {\n          \"condition\": \"...\",\n          \"next\": \"...\"\n        }\n      ]\n    }\n  ]\n}",
+      "truth": "data/truth/flowchart_02.json",
+      "sheet_scope": null,
+      "render": {
+        "dpi": 200,
+        "max_pages": 1
+      }
+    },
+    {
+      "id": "food_inspection_record_01",
+      "type": "inspection_log",
+      "xlsx": "data/raw/food_inspection_record_01.xlsx",
+      "question": "This workbook contains three sheets (\"検食簿（1）\", \"検食簿 (2)\", \"検食簿 (3)\"). For the first date on each sheet, extract the lunch menu items and snack items and return JSON in the following format:\n\n{\n  \"sheets\": {\n    \"検食簿（1）\": {\"date\": \"...\", \"lunch_menu\": [\"...\"], \"snacks\": [\"...\"]},\n    \"検食簿 (2)\": {\"date\": \"...\", \"lunch_menu\": [\"...\"], \"snacks\": [\"...\"]},\n    \"検食簿 (3)\": {\"date\": \"...\", \"lunch_menu\": [\"...\"], \"snacks\": [\"...\"]}\n  }\n}\n\nJSON only.",
+      "truth": "data/truth/food_inspection_record_01.json",
+      "sheet_scope": null,
+      "render": {
+        "dpi": 220,
+        "max_pages": 3
+      }
+    }
+  ]
+}

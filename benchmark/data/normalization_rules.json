@@ -1,0 +1,118 @@
+{
+  "cases": {
+    "heatstroke_flow_01": {
+      "alias_rules": [],
+      "split_rules": [],
+      "composite_rules": [],
+      "list_object_rules": [
+        {
+          "list_key": "steps",
+          "string_fields": [
+            "step_name"
+          ],
+          "string_fields_contains": [],
+          "list_fields_contains": [],
+          "strip_prefix": {
+            "step_name": "^[0-9]+[\\.．]\\s*"
+          }
+        }
+      ]
+    },
+    "workflow_01": {
+      "alias_rules": [
+        {
+          "canonical": "キャンセル",
+          "aliases": [
+            "買わない"
+          ]
+        }
+      ],
+      "split_rules": [],
+      "composite_rules": [],
+      "list_object_rules": [
+        {
+          "list_key": "steps",
+          "string_fields": [
+            "step_name"
+          ],
+          "string_fields_contains": [],
+          "list_fields_contains": [],
+          "strip_prefix": {}
+        }
+      ]
+    },
+    "certificate_of_employment_01": {
+      "alias_rules": [
+        {
+          "canonical": "※本証明書の内容について、就労先事業者等に無断で作成又は改変を行ったときは、刑法上の罪に問われる場合があります。",
+          "aliases": [
+            "※本証明書の内容について、就労先事業者等に無断で作成し又は改変を行ったときには、刑法上の罪に問われる場合があります。"
+          ]
+        }
+      ],
+      "split_rules": [],
+      "composite_rules": []
+    },
+    "tax_report_01": {
+      "alias_rules": [
+        {
+          "canonical": "合計",
+          "aliases": [
+            "⑬から㉕までの計",
+            "13から25までの計"
+          ]
+        }
+      ],
+      "split_rules": [
+        {
+          "trigger": "勤労学生、障害者控除",
+          "parts": [
+            "勤労学生控除",
+            "障害者控除"
+          ]
+        },
+        {
+          "trigger": "勤労学生・障害者控除",
+          "parts": [
+            "勤労学生控除",
+            "障害者控除"
+          ]
+        }
+      ],
+      "composite_rules": [
+        {
+          "canonical": "事業(営業等)",
+          "parts": [
+            "事業",
+            "営業等"
+          ]
+        },
+        {
+          "canonical": "事業(農業)",
+          "parts": [
+            "事業",
+            "農業"
+          ]
+        }
+      ]
+    },
+    "flowchart_02": {
+      "alias_rules": [],
+      "split_rules": [],
+      "composite_rules": [],
+      "list_object_rules": [
+        {
+          "list_key": "steps",
+          "string_fields": [
+            "step_type"
+          ],
+          "string_fields_contains": [
+            "step_name"
+          ],
+          "list_fields_contains": [],
+          "strip_prefix": {}
+        }
+      ]
+    }
+  }
+}

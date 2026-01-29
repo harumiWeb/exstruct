@@ -3,6 +3,7 @@ repos:
     rev: v0.4.5
     hooks:
       - id: ruff
+        exclude: ^benchmark/
       - id: ruff-format
 
   - repo: https://github.com/pre-commit/mirrors-mypy
@@ -12,3 +13,4 @@ repos:
         additional_dependencies:
           - pydantic>=2.0.0
           - types-PyYAML
+        exclude: ^benchmark/

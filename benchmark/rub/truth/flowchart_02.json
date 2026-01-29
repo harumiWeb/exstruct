@@ -1,0 +1,87 @@
+{
+  "steps": [
+    {
+      "step_name": "ログイン画面",
+      "step_type": "start",
+      "next_steps": [
+        {
+          "condition": "always",
+          "next": "登録情報を入力"
+        }
+      ]
+    },
+    {
+      "step_name": "登録情報を入力",
+      "step_type": "process",
+      "next_steps": [
+        {
+          "condition": "always",
+          "next": "入力内容は正しいか"
+        }
+      ]
+    },
+    {
+      "step_name": "入力内容は正しいか",
+      "step_type": "decision",
+      "next_steps": [
+        {
+          "condition": "はい",
+          "next": "サーバーに認証リクエストを送信"
+        },
+        {
+          "condition": "いいえ",
+          "next": "再入力を提示"
+        }
+      ]
+    },
+    {
+      "step_name": "再入力を提示",
+      "step_type": "process",
+      "next_steps": [
+        {
+          "condition": "always",
+          "next": "登録情報を入力"
+        }
+      ]
+    },
+    {
+      "step_name": "サーバーに認証リクエストを送信",
+      "step_type": "process",
+      "next_steps": [
+        {
+          "condition": "always",
+          "next": "認証に成功か"
+        }
+      ]
+    },
+    {
+      "step_name": "認証に成功か",
+      "step_type": "decision",
+      "next_steps": [
+        {
+          "condition": "はい",
+          "next": "操作画面に遷移"
+        },
+        {
+          "condition": "いいえ",
+          "next": "認証エラーを提示"
+        }
+      ]
+    },
+    {
+      "step_name": "認証エラーを提示",
+      "step_type": "process",
+      "next_steps": [
+        {
+          "condition": "always",
+          "next": "再入力を提示"
+        }
+      ]
+    },
+    {
+      "step_name": "操作画面に遷移",
+      "step_type": "end",
+      "next_steps": []
+    }
+  ]
+}

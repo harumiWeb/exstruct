@@ -1,0 +1,41 @@
+[project]
+name = "benchmark"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "beautifulsoup4>=4.14.3",
+    "exstruct",
+    "lxml>=6.0.2",
+    "matplotlib>=3.8.0",
+    "openai>=2.15.0",
+    "openpyxl>=3.1.5",
+    "pandas>=2.3.3",
+    "pydantic>=2.12.5",
+    "pymupdf>=1.26.7",
+    "python-dotenv>=1.2.1",
+    "rich>=14.2.0",
+    "tabulate>=0.9.0",
+    "typer>=0.21.1",
+]
+
+[project.scripts]
+exbench = "bench.cli:app"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.8",
+    "taskipy>=1.14.1",
+]
+
+[tool.uv.sources]
+exstruct = { workspace = true }
+
+[tool.taskipy.tasks]
+setup = "python -m pip install -U pip && pip install -e .. && pip install -e ."
+extract = "exbench extract --case all --method all"
+ask = "exbench ask --case all --method all --model gpt-4o"
+eval = "exbench eval --case all --method all"
+report = "exbench report"
+all = "task extract && task ask && task eval && task report"

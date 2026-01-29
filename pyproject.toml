@@ -74,6 +74,7 @@ omit = [
 target-version = "py311"
 src = ["exstruct"]
 fix = true
+exclude = ["benchmark/**"]
 
 # 静的解析ルール
 [tool.ruff.lint]
@@ -113,6 +114,7 @@ max-complexity = 12
 [tool.mypy]
 packages = ["exstruct"]
 python_version = "3.11"
+exclude = "benchmark/.*"
 
 # 外部ライブラリの型情報がない場合は無視
 ignore_missing_imports = true
@@ -141,3 +143,8 @@ codecov-unit = "codecov-cli upload-process -f coverage.xml -F unit -C %CODECOV_S
 codecov-com = "codecov-cli upload-process -f coverage.xml -F com -C %CODECOV_SHA% -t %CODECOV_TOKEN%"
 docs = "mkdocs serve"
 build-docs = "mkdocs build && python scripts/gen_json_schema.py && python scripts/gen_model_docs.py"
+
+[tool.uv.workspace]
+members = [
+    "benchmark",
+]

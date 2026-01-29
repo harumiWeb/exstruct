@@ -1,0 +1,84 @@
+{
+  "steps": [
+    {
+      "actor": "お客様",
+      "step_name": "商品検索",
+      "next_steps": ["検討"]
+    },
+    {
+      "actor": "当社",
+      "step_name": "商品情報を表示",
+      "next_steps": ["検討"]
+    },
+    {
+      "actor": "お客様",
+      "step_name": "検討",
+      "next_steps": ["キャンセル", "カートに追加"]
+    },
+    {
+      "actor": "お客様",
+      "step_name": "キャンセル",
+      "next_steps": []
+    },
+    {
+      "actor": "お客様",
+      "step_name": "カートに追加",
+      "next_steps": ["在庫確認"]
+    },
+    {
+      "actor": "当社",
+      "step_name": "在庫確認",
+      "next_steps": ["レジに進む"]
+    },
+    {
+      "actor": "お客様",
+      "step_name": "レジに進む",
+      "next_steps": ["支払い方法の選択"]
+    },
+    {
+      "actor": "お客様",
+      "step_name": "支払い方法の選択",
+      "next_steps": ["支払いの案内"]
+    },
+    {
+      "actor": "当社",
+      "step_name": "支払いの案内",
+      "next_steps": ["支払い処理"]
+    },
+    {
+      "actor": "当社",
+      "step_name": "支払い処理",
+      "next_steps": ["注文の確定"]
+    },
+    {
+      "actor": "お客様",
+      "step_name": "注文の確定",
+      "next_steps": ["配送先入力"]
+    },
+    {
+      "actor": "お客様",
+      "step_name": "配送先入力",
+      "next_steps": ["配送先確認"]
+    },
+    {
+      "actor": "当社",
+      "step_name": "配送先確認",
+      "next_steps": ["注文確認メールを送信"]
+    },
+    {
+      "actor": "当社",
+      "step_name": "注文確認メールを送信",
+      "next_steps": ["商品を準備・発送"]
+    },
+    {
+      "actor": "当社",
+      "step_name": "商品を準備・発送",
+      "next_steps": ["商品受取"]
+    },
+    {
+      "actor": "お客様",
+      "step_name": "商品受取",
+      "next_steps": []
+    }
+  ]
+}

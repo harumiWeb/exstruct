@@ -1,0 +1,128 @@
+{
+  "tasks": [
+    {
+      "id": "ffr_425_01",
+      "source_case_id": "ffr_425_01",
+      "type": "application_form",
+      "question": "Extract section headers. JSON only: {\"section_headers\":[\"...\"]}",
+      "truth": "rub/truth_lite/ffr_425_01.json",
+      "unordered_paths": [
+        "section_headers"
+      ],
+      "track": "reconstruction"
+    },
+    {
+      "id": "certificate_of_employment_01",
+      "source_case_id": "certificate_of_employment_01",
+      "type": "application_form",
+      "question": "Extract section names. JSON only: {\"sections\":[\"...\"]}",
+      "truth": "rub/truth_lite/certificate_of_employment_01.json",
+      "unordered_paths": [
+        "sections"
+      ],
+      "track": "reconstruction"
+    },
+    {
+      "id": "tax_report_01",
+      "source_case_id": "tax_report_01",
+      "type": "application_form",
+      "question": "Extract income item labels. JSON only: {\"income_items\":[\"...\"]}",
+      "truth": "rub/truth_lite/tax_report_01.json",
+      "unordered_paths": [
+        "income_items"
+      ],
+      "track": "reconstruction"
+    },
+    {
+      "id": "basic_01",
+      "source_case_id": "basic_01",
+      "type": "mixed_document",
+      "question": "Extract chart series names. JSON only: {\"chart_series\":[\"...\"]}",
+      "truth": "rub/truth_lite/basic_01.json",
+      "unordered_paths": [
+        "chart_series"
+      ],
+      "track": "reconstruction"
+    },
+    {
+      "id": "heatstroke_flow_01",
+      "source_case_id": "heatstroke_flow_01",
+      "type": "flowchart",
+      "question": "Extract step names in order. JSON only: {\"steps\":[\"...\"]}",
+      "truth": "rub/truth_lite/heatstroke_flow_01.json",
+      "track": "reconstruction"
+    },
+    {
+      "id": "workflow_01",
+      "source_case_id": "workflow_01",
+      "type": "workflow",
+      "question": "Extract node names. JSON only: {\"nodes\":[\"...\"]}",
+      "truth": "rub/truth_lite/workflow_01.json",
+      "unordered_paths": [
+        "nodes"
+      ],
+      "track": "reconstruction"
+    },
+    {
+      "id": "flowchart_02",
+      "source_case_id": "flowchart_02",
+      "type": "flowchart",
+      "question": "Extract node names. JSON only: {\"nodes\":[\"...\"]}",
+      "truth": "rub/truth_lite/flowchart_02.json",
+      "unordered_paths": [
+        "nodes"
+      ],
+      "track": "reconstruction"
+    },
+    {
+      "id": "food_inspection_record_01",
+      "source_case_id": "food_inspection_record_01",
+      "type": "inspection_log",
+      "question": "Extract first date per sheet. JSON only: {\"dates_by_sheet\": {\"sheet\": \"date\"}}",
+      "truth": "rub/truth_lite/food_inspection_record_01.json",
+      "track": "reconstruction"
+    },
+    {
+      "id": "basic_form_01",
+      "source_case_id": "basic_form_01",
+      "type": "application_form",
+      "question": "Extract applicant field labels. JSON only: {\"applicant_fields\":[\"...\"]}",
+      "truth": "rub/truth_lite/basic_form_01.json",
+      "unordered_paths": [
+        "applicant_fields"
+      ],
+      "track": "reconstruction"
+    },
+    {
+      "id": "flowchart_01",
+      "source_case_id": "flowchart_01",
+      "type": "flowchart",
+      "question": "Extract flowchart step names in order. JSON only: {\"steps\":[\"...\"]}",
+      "truth": "rub/truth_lite/flowchart_01.json",
+      "track": "reconstruction"
+    },
+    {
+      "id": "gantt_01",
+      "source_case_id": "gantt_01",
+      "type": "gantt",
+      "question": "Extract task names. JSON only: {\"task_names\":[\"...\"]}",
+      "truth": "rub/truth_lite/gantt_01.json",
+      "unordered_paths": [
+        "task_names"
+      ],
+      "track": "reconstruction"
+    },
+    {
+      "id": "smartart_01",
+      "source_case_id": "smartart_01",
+      "type": "organization_chart",
+      "question": "Extract sales_departments and production_sites. JSON only: {\"sales_departments\":[\"...\"],\"production_sites\":[\"...\"]}",
+      "truth": "rub/truth_lite/smartart_01.json",
+      "unordered_paths": [
+        "sales_departments",
+        "production_sites"
+      ],
+      "track": "reconstruction"
+    }
+  ]
+}
