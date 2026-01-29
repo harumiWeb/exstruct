@@ -84,6 +84,20 @@ python -m bench.cli report-public
 This command writes plots under `outputs/plots/` and inserts them into
 `REPORT.md` between the chart markers.
 
+## Public bundle (for publishing)
+
+Create a clean, shareable bundle under `benchmark/public/`:
+
+```bash
+python scripts/publicize.py
+```
+
+Windows PowerShell:
+
+```powershell
+.\scripts\publicize.ps1
+```
+
 ## Markdown conversion (optional)
 
 Generate Markdown from the latest JSON responses:
