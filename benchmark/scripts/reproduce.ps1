@@ -55,6 +55,7 @@ try {
 
     Write-Info "Generating reports."
     & $python -m bench.cli report
+    & $python -m bench.cli report-public
 } finally {
     Pop-Location
 }

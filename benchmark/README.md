@@ -73,6 +73,17 @@ Outputs:
 - outputs/results/results.csv
 - outputs/results/report.md
 
+## Public report (REPORT.md)
+
+Generate chart images and update `REPORT.md` in the benchmark root:
+
+```bash
+python -m bench.cli report-public
+```
+
+This command writes plots under `outputs/plots/` and inserts them into
+`REPORT.md` between the chart markers.
+
 ## Markdown conversion (optional)
 
 Generate Markdown from the latest JSON responses:

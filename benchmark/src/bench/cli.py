@@ -46,6 +46,7 @@ from .pipeline.html_text import html_to_text, xlsx_to_html
 from .pipeline.image_render import xlsx_to_pngs_via_pdf
 from .pipeline.openpyxl_pandas import extract_openpyxl
 from .pipeline.pdf_text import pdf_to_text, xlsx_to_pdf
+from .report_public import generate_charts, load_report_data, update_public_report
 from .rub.manifest import RubTask, load_rub_manifest
 from .rub.score import RubPartialScore, score_exact, score_partial
 
@@ -121,6 +122,7 @@ class RubResultRow(BaseModel):
     task_id: str
     source_case_id: str
     type: str
+    track: str
     method: str
     model: str | None
     score: float
@@ -811,6 +813,7 @@ def rub_eval(
                     task_id=t.id,
                     source_case_id=t.source_case_id,
                     type=t.type,
+                    track=t.track,
                     method=m,
                     model=rec.get("model"),
                     score=score,
@@ -872,6 +875,13 @@ def rub_report() -> None:
     md_lines.append(g.to_markdown(index=False))
     md_lines.append("")
 
+    if "track" in df.columns:
+        md_lines.append("## Summary by track")
+        md_lines.append("")
+        g_track = df.groupby(["track", "method"]).agg(**agg).reset_index()
+        md_lines.append(g_track.to_markdown(index=False))
+        md_lines.append("")
+
     for task_id, task_df in df.groupby("task_id"):
         task_path = detail_dir / f"report_{task_id}.md"
         lines = [
@@ -886,6 +896,15 @@ def rub_report() -> None:
 
     report_path = RUB_RESULTS_DIR / "report.md"
     report_path.write_text("\n".join(md_lines), encoding="utf-8")
+    print(f"[green]Wrote {report_path}[/green]")
+
+
+@app.command()
+def report_public() -> None:
+    """Generate chart images and update the public REPORT.md."""
+    data = load_report_data()
+    chart_paths = generate_charts(data)
+    report_path = update_public_report(chart_paths)
     print(f"[green]Wrote {report_path}[/green]")
 
 

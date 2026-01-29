@@ -59,3 +59,4 @@ echo "[reproduce] Evaluating results."
 
 echo "[reproduce] Generating reports."
 "$python_bin" -m bench.cli report
+"$python_bin" -m bench.cli report-public
