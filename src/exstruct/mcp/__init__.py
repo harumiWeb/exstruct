@@ -16,14 +16,25 @@ from .extract_runner import (
     run_extract,
 )
 from .io import PathPolicy
+from .patch_runner import (
+    PatchDiffItem,
+    PatchOp,
+    PatchRequest,
+    PatchResult,
+    PatchValue,
+    run_patch,
+)
 from .tools import (
     ExtractToolInput,
     ExtractToolOutput,
+    PatchToolInput,
+    PatchToolOutput,
     ReadJsonChunkToolInput,
     ReadJsonChunkToolOutput,
     ValidateInputToolInput,
     ValidateInputToolOutput,
     run_extract_tool,
+    run_patch_tool,
     run_read_json_chunk_tool,
     run_validate_input_tool,
 )
@@ -39,6 +50,13 @@ __all__ = [
     "ExtractOptions",
     "ExtractToolInput",
     "ExtractToolOutput",
+    "PatchDiffItem",
+    "PatchOp",
+    "PatchRequest",
+    "PatchResult",
+    "PatchToolInput",
+    "PatchToolOutput",
+    "PatchValue",
     "PathPolicy",
     "ReadJsonChunkFilter",
     "ReadJsonChunkRequest",
@@ -54,6 +72,8 @@ __all__ = [
     "validate_input",
     "run_extract",
     "run_extract_tool",
+    "run_patch",
+    "run_patch_tool",
     "run_read_json_chunk_tool",
     "run_validate_input_tool",
 ]

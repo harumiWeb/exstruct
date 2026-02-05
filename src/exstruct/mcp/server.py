@@ -19,11 +19,14 @@ from .io import PathPolicy
 from .tools import (
     ExtractToolInput,
     ExtractToolOutput,
+    PatchToolInput,
+    PatchToolOutput,
     ReadJsonChunkToolInput,
     ReadJsonChunkToolOutput,
     ValidateInputToolInput,
     ValidateInputToolOutput,
     run_extract_tool,
+    run_patch_tool,
     run_read_json_chunk_tool,
     run_validate_input_tool,
 )
@@ -194,6 +197,7 @@ def _register_tools(
         app: FastMCP application instance.
         policy: Path policy for filesystem access.
     """
+    patch_default_on_conflict: OnConflictPolicy = "rename"
 
     async def _extract_tool(  # pylint: disable=redefined-builtin
         xlsx_path: str,
@@ -296,6 +300,45 @@ def _register_tools(
 
     validate_tool = app.tool(name="exstruct_validate_input")
     validate_tool(_validate_input_tool)
+
+    async def _patch_tool(
+        xlsx_path: str,
+        ops: list[dict[str, Any]],
+        out_dir: str | None = None,
+        out_name: str | None = None,
+        on_conflict: OnConflictPolicy | None = None,
+    ) -> PatchToolOutput:
+        """Handle the ExStruct patch tool call.
+
+        Args:
+            xlsx_path: Path to the Excel workbook.
+            ops: Patch operations to apply.
+            out_dir: Optional output directory.
+            out_name: Optional output filename.
+            on_conflict: Optional conflict policy override.
+
+        Returns:
+            Patch result payload.
+        """
+        payload = PatchToolInput(
+            xlsx_path=xlsx_path,
+            ops=ops,
+            out_dir=out_dir,
+            out_name=out_name,
+            on_conflict=on_conflict,
+        )
+        effective_on_conflict = on_conflict or patch_default_on_conflict
+        work = functools.partial(
+            run_patch_tool,
+            payload,
+            policy=policy,
+            on_conflict=effective_on_conflict,
+        )
+        result = cast(PatchToolOutput, await anyio.to_thread.run_sync(work))
+        return result
+
+    patch_tool = app.tool(name="exstruct_patch")
+    patch_tool(_patch_tool)
 
 
 def _coerce_filter(filter_data: dict[str, Any] | None) -> dict[str, Any] | None:

@@ -11,6 +11,7 @@ from exstruct.mcp.chunk_reader import (
     ReadJsonChunkResult,
 )
 from exstruct.mcp.extract_runner import ExtractRequest, ExtractResult
+from exstruct.mcp.patch_runner import PatchRequest, PatchResult
 from exstruct.mcp.validate_input import ValidateInputRequest, ValidateInputResult
 
 
@@ -91,3 +92,26 @@ def test_run_validate_input_tool_builds_request(
     request = captured["request"]
     assert isinstance(request, ValidateInputRequest)
     assert request.xlsx_path == Path("input.xlsx")
+
+
+def test_run_patch_tool_builds_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    def _fake_run_patch(
+        request: PatchRequest, *, policy: object | None = None
+    ) -> PatchResult:
+        captured["request"] = request
+        return PatchResult(out_path="out.xlsx", patch_diff=[])
+
+    monkeypatch.setattr(tools, "run_patch", _fake_run_patch)
+    payload = tools.PatchToolInput(
+        xlsx_path="input.xlsx",
+        ops=[{"op": "add_sheet", "sheet": "New"}],
+    )
+    tools.run_patch_tool(payload, on_conflict="rename")
+    request = captured["request"]
+    assert isinstance(request, PatchRequest)
+    assert request.xlsx_path == Path("input.xlsx")
+    assert request.on_conflict == "rename"

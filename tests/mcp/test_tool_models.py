@@ -3,7 +3,7 @@ from __future__ import annotations
 from pydantic import ValidationError
 import pytest
 
-from exstruct.mcp.tools import ExtractToolInput, ReadJsonChunkToolInput
+from exstruct.mcp.tools import ExtractToolInput, PatchToolInput, ReadJsonChunkToolInput
 
 
 def test_extract_tool_input_defaults() -> None:
@@ -17,3 +17,13 @@ def test_extract_tool_input_defaults() -> None:
 def test_read_json_chunk_rejects_invalid_max_bytes() -> None:
     with pytest.raises(ValidationError):
         ReadJsonChunkToolInput(out_path="out.json", max_bytes=0)
+
+
+def test_patch_tool_input_defaults() -> None:
+    payload = PatchToolInput(
+        xlsx_path="input.xlsx",
+        ops=[{"op": "add_sheet", "sheet": "New"}],
+    )
+    assert payload.out_dir is None
+    assert payload.out_name is None
+    assert payload.on_conflict is None

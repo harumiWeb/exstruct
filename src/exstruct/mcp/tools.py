@@ -22,6 +22,13 @@ from .extract_runner import (
     run_extract,
 )
 from .io import PathPolicy
+from .patch_runner import (
+    PatchDiffItem,
+    PatchOp,
+    PatchRequest,
+    PatchResult,
+    run_patch,
+)
 from .validate_input import (
     ValidateInputRequest,
     ValidateInputResult,
@@ -80,6 +87,24 @@ class ValidateInputToolOutput(BaseModel):
     is_readable: bool
     warnings: list[str] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)
+
+
+class PatchToolInput(BaseModel):
+    """MCP tool input for patching Excel files."""
+
+    xlsx_path: str
+    ops: list[PatchOp]
+    out_dir: str | None = None
+    out_name: str | None = None
+    on_conflict: OnConflictPolicy | None = None
+
+
+class PatchToolOutput(BaseModel):
+    """MCP tool output for patching Excel files."""
+
+    out_path: str
+    patch_diff: list[PatchDiffItem] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
 
 def run_extract_tool(
@@ -150,6 +175,33 @@ def run_validate_input_tool(
     return _to_validate_input_output(result)
 
 
+def run_patch_tool(
+    payload: PatchToolInput,
+    *,
+    policy: PathPolicy | None = None,
+    on_conflict: OnConflictPolicy | None = None,
+) -> PatchToolOutput:
+    """Run the patch tool handler.
+
+    Args:
+        payload: Tool input payload.
+        policy: Optional path policy for access control.
+        on_conflict: Optional conflict policy override.
+
+    Returns:
+        Tool output payload.
+    """
+    request = PatchRequest(
+        xlsx_path=Path(payload.xlsx_path),
+        ops=payload.ops,
+        out_dir=Path(payload.out_dir) if payload.out_dir else None,
+        out_name=payload.out_name,
+        on_conflict=payload.on_conflict or on_conflict or "rename",
+    )
+    result = run_patch(request, policy=policy)
+    return _to_patch_tool_output(result)
+
+
 def _to_tool_output(result: ExtractResult) -> ExtractToolOutput:
     """Convert internal result to tool output model.
 
@@ -200,4 +252,20 @@ def _to_validate_input_output(
         is_readable=result.is_readable,
         warnings=result.warnings,
         errors=result.errors,
+    )
+
+
+def _to_patch_tool_output(result: PatchResult) -> PatchToolOutput:
+    """Convert internal result to patch tool output.
+
+    Args:
+        result: Internal patch result.
+
+    Returns:
+        Tool output payload.
+    """
+    return PatchToolOutput(
+        out_path=result.out_path,
+        patch_diff=result.patch_diff,
+        warnings=result.warnings,
     )
