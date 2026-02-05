@@ -85,18 +85,53 @@ def test_run_patch_add_sheet_rejects_duplicate(
     _create_workbook(input_path)
     ops = [PatchOp(op="add_sheet", sheet="Sheet1")]
     request = PatchRequest(xlsx_path=input_path, ops=ops, on_conflict="rename")
-    with pytest.raises(ValueError):
-        run_patch(request, policy=PathPolicy(root=tmp_path))
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.error is not None
+    assert result.error.op_index == 0
 
 
-def test_run_patch_rejects_value_starting_with_equal() -> None:
-    with pytest.raises(ValidationError):
-        PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="=SUM(1,1)")
+def test_patch_op_allows_value_starting_with_equal() -> None:
+    op = PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="=SUM(1,1)")
+    assert op.value == "=SUM(1,1)"
 
 
 def test_run_patch_rejects_formula_without_equal() -> None:
     with pytest.raises(ValidationError):
         PatchOp(op="set_formula", sheet="Sheet1", cell="A1", formula="SUM(1,1)")
+
+
+def test_run_patch_set_value_with_equal_requires_auto_formula(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    ops = [PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="=SUM(1,1)")]
+    request = PatchRequest(xlsx_path=input_path, ops=ops, on_conflict="rename")
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.error is not None
+    assert "rejects values starting with" in result.error.message
+
+
+def test_run_patch_set_value_with_equal_auto_formula(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    ops = [PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="=SUM(1,1)")]
+    request = PatchRequest(
+        xlsx_path=input_path, ops=ops, on_conflict="rename", auto_formula=True
+    )
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    workbook = load_workbook(result.out_path)
+    try:
+        formula_value = workbook["Sheet1"]["A1"].value
+        if isinstance(formula_value, str) and not formula_value.startswith("="):
+            formula_value = f"={formula_value}"
+        assert formula_value == "=SUM(1,1)"
+    finally:
+        workbook.close()
 
 
 def test_run_patch_rejects_path_outside_root(
@@ -173,6 +208,6 @@ def test_run_patch_atomicity(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     ]
     request = PatchRequest(xlsx_path=input_path, ops=ops, on_conflict="rename")
     output_path = tmp_path / "book_patched.xlsx"
-    with pytest.raises(ValueError):
-        run_patch(request, policy=PathPolicy(root=tmp_path))
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.error is not None
     assert not output_path.exists()

@@ -24,6 +24,7 @@ from .extract_runner import (
 from .io import PathPolicy
 from .patch_runner import (
     PatchDiffItem,
+    PatchErrorDetail,
     PatchOp,
     PatchRequest,
     PatchResult,
@@ -97,6 +98,7 @@ class PatchToolInput(BaseModel):
     out_dir: str | None = None
     out_name: str | None = None
     on_conflict: OnConflictPolicy | None = None
+    auto_formula: bool = False
 
 
 class PatchToolOutput(BaseModel):
@@ -105,6 +107,7 @@ class PatchToolOutput(BaseModel):
     out_path: str
     patch_diff: list[PatchDiffItem] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    error: PatchErrorDetail | None = None
 
 
 def run_extract_tool(
@@ -197,6 +200,7 @@ def run_patch_tool(
         out_dir=Path(payload.out_dir) if payload.out_dir else None,
         out_name=payload.out_name,
         on_conflict=payload.on_conflict or on_conflict or "rename",
+        auto_formula=payload.auto_formula,
     )
     result = run_patch(request, policy=policy)
     return _to_patch_tool_output(result)
@@ -268,4 +272,5 @@ def _to_patch_tool_output(result: PatchResult) -> PatchToolOutput:
         out_path=result.out_path,
         patch_diff=result.patch_diff,
         warnings=result.warnings,
+        error=result.error,
     )

@@ -23,11 +23,13 @@
 - `out_dir: str | None`
 - `out_name: str | None`
 - `on_conflict: "overwrite" | "skip" | "rename" | None`
+- `auto_formula: bool`（default: false）
 
 ### Output
 - `out_path: str`
 - `patch_diff: list[PatchDiffItem]`
 - `warnings: list[str]`
+- `error: PatchErrorDetail | null`
 
 ---
 
@@ -64,7 +66,8 @@
 - `cell`
   - A1形式を必須（例: `B3`）
 - `set_value`
-  - `value` が `=` から始まる文字列は拒否
+  - `value` が `=` から始まる場合は通常は拒否
+  - `auto_formula=true` のときは `set_formula` 相当として処理
 - `set_formula`
   - `formula` は必ず `=` から開始
 
@@ -84,6 +87,7 @@
 最低限の構造:
 
 - `op: "set_value" | "set_formula" | "add_sheet"`
+- `op_index: int`
 - `sheet: str`
 - `cell: str | null`
 - `before: PatchValue | null`
@@ -94,6 +98,14 @@
 
 - `kind: "value" | "formula" | "sheet"`
 - `value: str | int | float | null`
+
+`PatchErrorDetail`:
+
+- `op_index: int`
+- `op: "set_value" | "set_formula" | "add_sheet"`
+- `sheet: str`
+- `cell: str | null`
+- `message: str`
 
 ---
 
@@ -119,7 +131,8 @@
 
 ## 9. エラー処理
 
-- パス違反 / シート不在 / セル不正 / 数式不正: `ValueError`
+- パス違反 / セル不正 / 数式不正: `ValueError`
+- シート不在 / 操作不正: `PatchErrorDetail` を `error` に格納
 - 読み込み不能: `FileNotFoundError` / `OSError`
 - バックエンド例外: `RuntimeError`
 

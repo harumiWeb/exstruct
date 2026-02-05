@@ -18,6 +18,7 @@ from .extract_runner import (
 from .io import PathPolicy
 from .patch_runner import (
     PatchDiffItem,
+    PatchErrorDetail,
     PatchOp,
     PatchRequest,
     PatchResult,
@@ -51,6 +52,7 @@ __all__ = [
     "ExtractToolInput",
     "ExtractToolOutput",
     "PatchDiffItem",
+    "PatchErrorDetail",
     "PatchOp",
     "PatchRequest",
     "PatchResult",

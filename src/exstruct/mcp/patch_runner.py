@@ -156,8 +156,6 @@ def _validate_set_value(op: PatchOp) -> None:
     """Validate set_value operation."""
     if op.formula is not None:
         raise ValueError("set_value does not accept formula.")
-    if isinstance(op.value, str) and op.value.startswith("="):
-        raise ValueError("set_value rejects values starting with '='.")
 
 
 def _validate_set_formula(op: PatchOp) -> None:
@@ -180,12 +178,23 @@ class PatchValue(BaseModel):
 class PatchDiffItem(BaseModel):
     """Applied change record for patch operations."""
 
+    op_index: int
     op: PatchOpType
     sheet: str
     cell: str | None = None
     before: PatchValue | None = None
     after: PatchValue | None = None
     status: PatchStatus = "applied"
+
+
+class PatchErrorDetail(BaseModel):
+    """Structured error details for patch failures."""
+
+    op_index: int
+    op: PatchOpType
+    sheet: str
+    cell: str | None
+    message: str
 
 
 class PatchRequest(BaseModel):
@@ -196,6 +205,7 @@ class PatchRequest(BaseModel):
     out_dir: Path | None = None
     out_name: str | None = None
     on_conflict: OnConflictPolicy = "rename"
+    auto_formula: bool = False
 
 
 class PatchResult(BaseModel):
@@ -204,6 +214,7 @@ class PatchResult(BaseModel):
     out_path: str
     patch_diff: list[PatchDiffItem] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    error: PatchErrorDetail | None = None
 
 
 def run_patch(
@@ -247,12 +258,18 @@ def run_patch(
                 resolved_input,
                 output_path,
                 request.ops,
+                request.auto_formula,
             )
             return PatchResult(
                 out_path=str(output_path), patch_diff=diff, warnings=warnings
             )
-        except ValueError:
-            raise
+        except PatchOpError as exc:
+            return PatchResult(
+                out_path=str(output_path),
+                patch_diff=[],
+                warnings=warnings,
+                error=exc.detail,
+            )
         except Exception as exc:
             fallback = _maybe_fallback_openpyxl(
                 resolved_input,
@@ -260,6 +277,7 @@ def run_patch(
                 request.ops,
                 warnings,
                 reason=f"COM patch failed; falling back to openpyxl. ({exc!r})",
+                auto_formula=request.auto_formula,
             )
             if fallback is not None:
                 return fallback
@@ -267,7 +285,13 @@ def run_patch(
 
     if com.reason:
         warnings.append(f"COM unavailable: {com.reason}")
-    return _apply_with_openpyxl(resolved_input, output_path, request.ops, warnings)
+    return _apply_with_openpyxl(
+        resolved_input,
+        output_path,
+        request.ops,
+        warnings,
+        auto_formula=request.auto_formula,
+    )
 
 
 def _apply_with_openpyxl(
@@ -275,10 +299,19 @@ def _apply_with_openpyxl(
     output_path: Path,
     ops: list[PatchOp],
     warnings: list[str],
+    *,
+    auto_formula: bool,
 ) -> PatchResult:
     """Apply patch operations using openpyxl."""
     try:
-        diff = _apply_ops_openpyxl(input_path, output_path, ops)
+        diff = _apply_ops_openpyxl(input_path, output_path, ops, auto_formula)
+    except PatchOpError as exc:
+        return PatchResult(
+            out_path=str(output_path),
+            patch_diff=[],
+            warnings=warnings,
+            error=exc.detail,
+        )
     except ValueError:
         raise
     except FileNotFoundError:
@@ -299,13 +332,20 @@ def _maybe_fallback_openpyxl(
     warnings: list[str],
     *,
     reason: str,
+    auto_formula: bool,
 ) -> PatchResult | None:
     """Attempt openpyxl fallback after COM failure."""
     if input_path.suffix.lower() == ".xls":
         warnings.append(reason)
         return None
     warnings.append(reason)
-    return _apply_with_openpyxl(input_path, output_path, ops, warnings)
+    return _apply_with_openpyxl(
+        input_path,
+        output_path,
+        ops,
+        warnings,
+        auto_formula=auto_formula,
+    )
 
 
 def _resolve_input_path(path: Path, *, policy: PathPolicy | None) -> Path:
@@ -389,7 +429,10 @@ def _next_available_path(path: Path) -> Path:
 
 
 def _apply_ops_openpyxl(
-    input_path: Path, output_path: Path, ops: list[PatchOp]
+    input_path: Path,
+    output_path: Path,
+    ops: list[PatchOp],
+    auto_formula: bool,
 ) -> list[PatchDiffItem]:
     """Apply operations using openpyxl."""
     try:
@@ -402,7 +445,7 @@ def _apply_ops_openpyxl(
 
     workbook = load_workbook(input_path)
     try:
-        diff = _apply_ops_to_openpyxl_workbook(workbook, ops)
+        diff = _apply_ops_to_openpyxl_workbook(workbook, ops, auto_formula)
         workbook.save(output_path)
     finally:
         workbook.close()
@@ -410,13 +453,16 @@ def _apply_ops_openpyxl(
 
 
 def _apply_ops_to_openpyxl_workbook(
-    workbook: OpenpyxlWorkbookProtocol, ops: list[PatchOp]
+    workbook: OpenpyxlWorkbookProtocol, ops: list[PatchOp], auto_formula: bool
 ) -> list[PatchDiffItem]:
     """Apply ops to an openpyxl workbook instance."""
     sheets = _openpyxl_sheet_map(workbook)
     diff: list[PatchDiffItem] = []
-    for op in ops:
-        diff.append(_apply_openpyxl_op(workbook, sheets, op))
+    for index, op in enumerate(ops):
+        try:
+            diff.append(_apply_openpyxl_op(workbook, sheets, op, index, auto_formula))
+        except ValueError as exc:
+            raise PatchOpError.from_op(index, op, exc) from exc
     return diff
 
 
@@ -434,6 +480,8 @@ def _apply_openpyxl_op(
     workbook: OpenpyxlWorkbookProtocol,
     sheets: dict[str, OpenpyxlWorksheetProtocol],
     op: PatchOp,
+    index: int,
+    auto_formula: bool,
 ) -> PatchDiffItem:
     """Apply a single op to openpyxl workbook."""
     if op.op == "add_sheet":
@@ -442,6 +490,7 @@ def _apply_openpyxl_op(
         sheet = workbook.create_sheet(title=op.sheet)
         sheets[op.sheet] = sheet
         return PatchDiffItem(
+            op_index=index,
             op=op.op,
             sheet=op.sheet,
             cell=None,
@@ -458,9 +507,16 @@ def _apply_openpyxl_op(
     cell = existing_sheet[cell_ref]
     before = _openpyxl_cell_value(cell)
     if op.op == "set_value":
-        cell.value = op.value
-        after = PatchValue(kind="value", value=op.value)
+        if isinstance(op.value, str) and op.value.startswith("="):
+            if not auto_formula:
+                raise ValueError("set_value rejects values starting with '='.")
+            cell.value = op.value
+            after = PatchValue(kind="formula", value=op.value)
+        else:
+            cell.value = op.value
+            after = PatchValue(kind="value", value=op.value)
         return PatchDiffItem(
+            op_index=index,
             op=op.op,
             sheet=op.sheet,
             cell=cell_ref,
@@ -474,6 +530,7 @@ def _apply_openpyxl_op(
         cell.value = formula
         after = PatchValue(kind="formula", value=formula)
         return PatchDiffItem(
+            op_index=index,
             op=op.op,
             sheet=op.sheet,
             cell=cell_ref,
@@ -502,15 +559,23 @@ def _normalize_formula(value: object) -> str:
 
 
 def _apply_ops_xlwings(
-    input_path: Path, output_path: Path, ops: list[PatchOp]
+    input_path: Path,
+    output_path: Path,
+    ops: list[PatchOp],
+    auto_formula: bool,
 ) -> list[PatchDiffItem]:
     """Apply operations using Excel COM via xlwings."""
     diff: list[PatchDiffItem] = []
     try:
         with _xlwings_workbook(input_path) as workbook:
             sheets = {sheet.name: sheet for sheet in workbook.sheets}
-            for op in ops:
-                diff.append(_apply_xlwings_op(workbook, sheets, op))
+            for index, op in enumerate(ops):
+                try:
+                    diff.append(
+                        _apply_xlwings_op(workbook, sheets, op, index, auto_formula)
+                    )
+                except ValueError as exc:
+                    raise PatchOpError.from_op(index, op, exc) from exc
             workbook.save(str(output_path))
     except ValueError:
         raise
@@ -523,6 +588,8 @@ def _apply_xlwings_op(
     workbook: XlwingsWorkbookProtocol,
     sheets: dict[str, XlwingsSheetProtocol],
     op: PatchOp,
+    index: int,
+    auto_formula: bool,
 ) -> PatchDiffItem:
     """Apply a single op to an xlwings workbook."""
     if op.op == "add_sheet":
@@ -532,6 +599,7 @@ def _apply_xlwings_op(
         sheet = workbook.sheets.add(name=op.sheet, after=last)
         sheets[op.sheet] = sheet
         return PatchDiffItem(
+            op_index=index,
             op=op.op,
             sheet=op.sheet,
             cell=None,
@@ -548,9 +616,16 @@ def _apply_xlwings_op(
     rng = existing_sheet.range(cell_ref)
     before = _xlwings_cell_value(rng)
     if op.op == "set_value":
-        rng.value = op.value
-        after = PatchValue(kind="value", value=op.value)
+        if isinstance(op.value, str) and op.value.startswith("="):
+            if not auto_formula:
+                raise ValueError("set_value rejects values starting with '='.")
+            rng.formula = op.value
+            after = PatchValue(kind="formula", value=op.value)
+        else:
+            rng.value = op.value
+            after = PatchValue(kind="value", value=op.value)
         return PatchDiffItem(
+            op_index=index,
             op=op.op,
             sheet=op.sheet,
             cell=cell_ref,
@@ -564,6 +639,7 @@ def _apply_xlwings_op(
         rng.formula = formula
         after = PatchValue(kind="formula", value=formula)
         return PatchDiffItem(
+            op_index=index,
             op=op.op,
             sheet=op.sheet,
             cell=cell_ref,
@@ -602,3 +678,23 @@ def _xlwings_workbook(file_path: Path) -> Iterator[XlwingsWorkbookProtocol]:
             app.quit()
         except Exception:
             pass
+
+
+class PatchOpError(ValueError):
+    """Patch operation error with structured detail."""
+
+    def __init__(self, detail: PatchErrorDetail) -> None:
+        super().__init__(detail.message)
+        self.detail = detail
+
+    @classmethod
+    def from_op(cls, index: int, op: PatchOp, exc: Exception) -> PatchOpError:
+        """Build a PatchOpError from an op and exception."""
+        detail = PatchErrorDetail(
+            op_index=index,
+            op=op.op,
+            sheet=op.sheet,
+            cell=op.cell,
+            message=str(exc),
+        )
+        return cls(detail)

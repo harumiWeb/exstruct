@@ -307,6 +307,7 @@ def _register_tools(
         out_dir: str | None = None,
         out_name: str | None = None,
         on_conflict: OnConflictPolicy | None = None,
+        auto_formula: bool = False,
     ) -> PatchToolOutput:
         """Handle the ExStruct patch tool call.
 
@@ -326,6 +327,7 @@ def _register_tools(
             out_dir=out_dir,
             out_name=out_name,
             on_conflict=on_conflict,
+            auto_formula=auto_formula,
         )
         effective_on_conflict = on_conflict or patch_default_on_conflict
         work = functools.partial(
