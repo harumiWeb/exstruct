@@ -208,3 +208,109 @@
 - `exstruct_patch` で `on_conflict` 指定時にツール引数が優先されること
 - 未作成 `out_dir` 指定で保存成功すること
 - `.xls` + COM不可時に期待どおり `ValueError` となること（メッセージ確認を含む）
+
+---
+
+## 12. 次フェーズ仕様（便利機能 1〜5）
+
+### 12.1 対象機能
+
+- `dry_run`（非破壊プレビュー）
+- `undo` 用逆パッチ生成
+- 範囲操作（値一括設定 / 数式フィル）
+- 条件付き更新（CAS）
+- 数式ヘルスチェック
+
+### 12.2 ツールI/F拡張
+
+`exstruct_patch` の Input に以下を追加:
+
+- `dry_run: bool = false`
+- `return_inverse_ops: bool = false`
+- `preflight_formula_check: bool = false`
+
+`exstruct_patch` の Output に以下を追加:
+
+- `inverse_ops: list[PatchOp]`（default: `[]`）
+- `formula_issues: list[FormulaIssue]`（default: `[]`）
+
+`FormulaIssue`:
+
+- `sheet: str`
+- `cell: str`
+- `level: "warning" | "error"`
+- `code: "invalid_token" | "ref_error" | "name_error" | "div0_error" | "value_error" | "na_error" | "circular_ref_suspected"`
+- `message: str`
+
+### 12.3 操作種別拡張（PatchOp）
+
+#### set_range_values
+
+- `op: "set_range_values"`
+- `sheet: str`
+- `range: str`（A1範囲形式、例: `B2:D4`）
+- `values: list[list[str | int | float | None]]`
+- `shape(values)` と `range` サイズが一致しない場合は `ValueError`
+
+#### fill_formula
+
+- `op: "fill_formula"`
+- `sheet: str`
+- `range: str`（縦または横の連続範囲）
+- `base_cell: str`
+- `formula: str`（`=` 始まり）
+- `formula` を `base_cell` に置いたときの相対参照を、`range` 内に展開する
+
+#### set_value_if
+
+- `op: "set_value_if"`
+- `sheet: str`
+- `cell: str`
+- `expected: str | int | float | None`
+- `value: str | int | float | None`
+- 現在値が `expected` と一致した場合のみ更新
+- 不一致時は `PatchDiffItem.status="skipped"` とし、`warnings` に理由を追加
+
+#### set_formula_if
+
+- `op: "set_formula_if"`
+- `sheet: str`
+- `cell: str`
+- `expected: str | int | float | None`
+- `formula: str`（`=` 始まり）
+- 条件判定は `set_value_if` と同様
+
+### 12.4 実行セマンティクス（追加）
+
+- `dry_run=true` の場合:
+  - 保存しない
+  - `patch_diff` / `warnings` / `formula_issues` / `inverse_ops` のみ返す
+  - `out_path` は保存予定パスを返す
+- `return_inverse_ops=true` の場合:
+  - `applied` な変更のみ逆操作を生成する
+  - 逆操作順は「適用順の逆順」とする
+- `preflight_formula_check=true` の場合:
+  - 適用後ワークブックを走査し `formula_issues` を返す
+  - `level=error` がある場合の扱い:
+    - `dry_run=false`: 変更は保存せず `error` を返す
+    - `dry_run=true`: 保存なしのため `error` は返さず、問題一覧のみ返す
+
+### 12.5 バリデーション規則（追加）
+
+- `range` は A1 範囲形式（例: `A1:C3`）必須
+- `fill_formula.range` は単一行または単一列のみ（MVP制約）
+- 条件付き更新の `expected` 比較は「内部正規化後の値一致」で判定
+- `set_value_if` で `value` が `=` 始まりかつ `auto_formula=false` の場合は既存 `set_value` と同様に拒否
+
+### 12.6 後方互換性
+
+- 既存 `set_value` / `set_formula` / `add_sheet` の仕様は変更しない
+- 新規フィールドは optional 追加のみで、既存クライアントを破壊しない
+
+### 12.7 受け入れ基準
+
+- `dry_run=true` でファイル更新時刻が変化しない
+- `return_inverse_ops=true` で、逆パッチ適用により元状態へ戻せる
+- `set_range_values` がサイズ不一致を検知できる
+- `set_value_if` / `set_formula_if` が不一致時に `skipped` を返せる
+- `preflight_formula_check=true` で `#REF!` 等を検出して `formula_issues` に反映できる
