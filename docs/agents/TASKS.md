@@ -10,3 +10,14 @@
 - [x] openpyxlベースの適用処理を実装
 - [x] COM利用時の分岐（可能なら）とwarning出力
 - [x] ユニットテスト（非COM）を追加
+
+## レビュー対応タスク（MVP修正）
+
+- [ ] `mcp/server.py`: `exstruct_patch` の `on_conflict` 解決で固定 `rename` を廃止し、サーバー既定値（`default_on_conflict`）を利用する
+- [ ] `mcp/patch_runner.py`: 保存前に出力先ディレクトリ作成処理を追加する（未作成 `out_dir` 対応）
+- [ ] `mcp/patch_runner.py`: `.xls` + COM不可時のエラーメッセージを「COM必須」が明確な文言に調整する
+- [ ] `docs/agents/FEATURE_SPEC.md`: 拡張子要件を「`.xls` はCOM利用可能環境のみ」に更新する（本文整合）
+- [ ] `tests/mcp/test_server.py`: patch ツールの `on_conflict` 既定値伝播を検証するテストを追加/更新する
+- [ ] `tests/mcp/test_patch_runner.py`: 未作成 `out_dir` 保存成功ケースを追加する
+- [ ] `tests/mcp/test_patch_runner.py`: `.xls` + COM不可エラーの期待値（型・文言）を追加する
+- [ ] `ruff check .` / `mypy src/exstruct --strict` / 関連pytest を実行し、結果を記録する

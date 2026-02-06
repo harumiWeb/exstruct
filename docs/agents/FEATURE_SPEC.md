@@ -170,3 +170,41 @@
   ]
 }
 ```
+
+---
+
+## 11. レビュー対応仕様（MVP修正）
+
+### 11.1 `on_conflict` 既定値の統一
+
+- サーバーCLI引数 `--on-conflict` の既定値・指定値は、`exstruct_extract` と `exstruct_patch` の双方に同一に適用する
+- `exstruct_patch` で固定値 `rename` を持たない
+- ツール呼び出しで `on_conflict` が未指定の場合:
+  - サーバー起動時の `--on-conflict` を適用
+- ツール呼び出しで `on_conflict` が指定された場合:
+  - ツール引数を最優先する
+
+### 11.2 出力ディレクトリ生成の明確化
+
+- `exstruct_patch` は保存前に `out_path.parent.mkdir(parents=True, exist_ok=True)` 相当を実行する
+- `out_dir` が存在しない場合でも保存可能にする
+
+### 11.3 `.xls` サポート条件の明確化
+
+- `.xls` は **COM利用可能環境のみ編集対象** とする
+- COM利用不可時の `.xls` は `ValueError` を返す（メッセージで「COM必須」を明示）
+- バリデーション規則の拡張子記述を次に更新する:
+  - `.xlsx` / `.xlsm`: 常時対象
+  - `.xls`: 条件付き対象（Windows + COM）
+
+### 11.4 後方互換性
+
+- 既存の `PatchOp` / `PatchResult` スキーマは変更しない
+- 変更はデフォルト解決順序・保存前処理・エラーメッセージの明確化に限定する
+
+### 11.5 テスト要件（レビュー対応分）
+
+- `exstruct_patch` で `on_conflict` 未指定時にサーバー既定値が反映されること
+- `exstruct_patch` で `on_conflict` 指定時にツール引数が優先されること
+- 未作成 `out_dir` 指定で保存成功すること
+- `.xls` + COM不可時に期待どおり `ValueError` となること（メッセージ確認を含む）
