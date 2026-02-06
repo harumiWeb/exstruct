@@ -197,7 +197,6 @@ def _register_tools(
         app: FastMCP application instance.
         policy: Path policy for filesystem access.
     """
-    patch_default_on_conflict: OnConflictPolicy = "rename"
 
     async def _extract_tool(  # pylint: disable=redefined-builtin
         xlsx_path: str,
@@ -329,7 +328,7 @@ def _register_tools(
             on_conflict=on_conflict,
             auto_formula=auto_formula,
         )
-        effective_on_conflict = on_conflict or patch_default_on_conflict
+        effective_on_conflict = on_conflict or default_on_conflict
         work = functools.partial(
             run_patch_tool,
             payload,

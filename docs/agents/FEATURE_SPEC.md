@@ -58,7 +58,7 @@
 - `xlsx_path`
   - 存在するファイルであること
   - 許可パス内であること（PathPolicy）
-  - 拡張子は `.xlsx` / `.xlsm` / `.xls`
+  - 拡張子は `.xlsx` / `.xlsm` / `.xls`（`.xls` は COM 利用可能環境のみ）
 - `sheet`
   - 空文字禁止
   - `add_sheet` は既存名と重複禁止
@@ -119,7 +119,7 @@
 
 ## 8. 競合ポリシー
 
-- `on_conflict` 未指定時は **rename** を既定値とする
+- `on_conflict` 未指定時は **サーバー起動時の `--on-conflict` 設定値** を既定値とする
 - `skip` の場合:
   - `patch_diff` は空配列
   - `warnings` にスキップ理由を記載

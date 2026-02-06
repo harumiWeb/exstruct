@@ -252,6 +252,12 @@ def run_patch(
         return PatchResult(out_path=str(output_path), patch_diff=[], warnings=warnings)
 
     com = get_com_availability()
+    if resolved_input.suffix.lower() == ".xls" and not com.available:
+        raise ValueError(
+            ".xls editing requires Windows Excel COM (xlwings) in this environment."
+        )
+
+    _ensure_output_dir(output_path)
     if com.available:
         try:
             diff = _apply_ops_xlwings(
@@ -391,6 +397,11 @@ def _normalize_output_name(input_path: Path, out_name: str | None) -> str:
             else f"{candidate.name}{input_path.suffix}"
         )
     return f"{input_path.stem}_patched{input_path.suffix}"
+
+
+def _ensure_output_dir(path: Path) -> None:
+    """Ensure the output directory exists before writing."""
+    path.parent.mkdir(parents=True, exist_ok=True)
 
 
 def _apply_conflict_policy(

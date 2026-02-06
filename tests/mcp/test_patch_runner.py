@@ -211,3 +211,35 @@ def test_run_patch_atomicity(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     result = run_patch(request, policy=PathPolicy(root=tmp_path))
     assert result.error is not None
     assert not output_path.exists()
+
+
+def test_run_patch_creates_out_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    out_dir = tmp_path / "nested" / "output"
+    ops = [PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="x")]
+    request = PatchRequest(
+        xlsx_path=input_path,
+        ops=ops,
+        out_dir=out_dir,
+        on_conflict="rename",
+    )
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    out_path = Path(result.out_path)
+    assert out_path.exists()
+    assert out_path.parent == out_dir
+
+
+def test_run_patch_xls_requires_com(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xls"
+    input_path.write_text("dummy", encoding="utf-8")
+    ops = [PatchOp(op="add_sheet", sheet="Sheet2")]
+    request = PatchRequest(xlsx_path=input_path, ops=ops, on_conflict="rename")
+    with pytest.raises(ValueError, match=r"requires Windows Excel COM"):
+        run_patch(request, policy=PathPolicy(root=tmp_path))
