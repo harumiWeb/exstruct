@@ -175,6 +175,12 @@ def test_register_tools_uses_default_on_conflict(
     chunk_call = cast(tuple[ReadJsonChunkToolInput, PathPolicy], calls["chunk"])
     assert chunk_call[0].filter is not None
     assert calls["patch"][2] == "rename"
+    patch_call = cast(
+        tuple[PatchToolInput, PathPolicy, OnConflictPolicy], calls["patch"]
+    )
+    assert patch_call[0].dry_run is False
+    assert patch_call[0].return_inverse_ops is False
+    assert patch_call[0].preflight_formula_check is False
 
 
 def test_register_tools_passes_patch_default_on_conflict(
@@ -235,6 +241,76 @@ def test_register_tools_passes_patch_default_on_conflict(
     )
 
     assert calls["patch"][2] == "overwrite"
+
+
+def test_register_tools_passes_patch_extended_flags(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    app = DummyApp()
+    policy = PathPolicy(root=tmp_path)
+    calls: dict[str, tuple[object, ...]] = {}
+
+    def fake_run_extract_tool(
+        payload: ExtractToolInput,
+        *,
+        policy: PathPolicy,
+        on_conflict: OnConflictPolicy,
+    ) -> ExtractToolOutput:
+        return ExtractToolOutput(out_path="out.json")
+
+    def fake_run_read_json_chunk_tool(
+        payload: ReadJsonChunkToolInput,
+        *,
+        policy: PathPolicy,
+    ) -> ReadJsonChunkToolOutput:
+        return ReadJsonChunkToolOutput(chunk="{}")
+
+    def fake_run_validate_input_tool(
+        payload: ValidateInputToolInput,
+        *,
+        policy: PathPolicy,
+    ) -> ValidateInputToolOutput:
+        return ValidateInputToolOutput(is_readable=True)
+
+    def fake_run_patch_tool(
+        payload: PatchToolInput,
+        *,
+        policy: PathPolicy,
+        on_conflict: OnConflictPolicy,
+    ) -> PatchToolOutput:
+        calls["patch"] = (payload, policy, on_conflict)
+        return PatchToolOutput(out_path="out.xlsx", patch_diff=[])
+
+    async def fake_run_sync(func: Callable[[], object]) -> object:
+        return func()
+
+    monkeypatch.setattr(server, "run_extract_tool", fake_run_extract_tool)
+    monkeypatch.setattr(
+        server, "run_read_json_chunk_tool", fake_run_read_json_chunk_tool
+    )
+    monkeypatch.setattr(server, "run_validate_input_tool", fake_run_validate_input_tool)
+    monkeypatch.setattr(server, "run_patch_tool", fake_run_patch_tool)
+    monkeypatch.setattr(anyio.to_thread, "run_sync", fake_run_sync)
+
+    server._register_tools(app, policy, default_on_conflict="overwrite")
+    patch_tool = cast(Callable[..., Awaitable[object]], app.tools["exstruct_patch"])
+    anyio.run(
+        _call_async,
+        patch_tool,
+        {
+            "xlsx_path": "in.xlsx",
+            "ops": [{"op": "add_sheet", "sheet": "New"}],
+            "dry_run": True,
+            "return_inverse_ops": True,
+            "preflight_formula_check": True,
+        },
+    )
+    patch_call = cast(
+        tuple[PatchToolInput, PathPolicy, OnConflictPolicy], calls["patch"]
+    )
+    assert patch_call[0].dry_run is True
+    assert patch_call[0].return_inverse_ops is True
+    assert patch_call[0].preflight_formula_check is True
 
 
 def test_run_server_sets_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

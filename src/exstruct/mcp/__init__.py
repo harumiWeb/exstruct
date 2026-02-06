@@ -17,6 +17,7 @@ from .extract_runner import (
 )
 from .io import PathPolicy
 from .patch_runner import (
+    FormulaIssue,
     PatchDiffItem,
     PatchErrorDetail,
     PatchOp,
@@ -51,6 +52,7 @@ __all__ = [
     "ExtractOptions",
     "ExtractToolInput",
     "ExtractToolOutput",
+    "FormulaIssue",
     "PatchDiffItem",
     "PatchErrorDetail",
     "PatchOp",

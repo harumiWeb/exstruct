@@ -23,6 +23,7 @@ from .extract_runner import (
 )
 from .io import PathPolicy
 from .patch_runner import (
+    FormulaIssue,
     PatchDiffItem,
     PatchErrorDetail,
     PatchOp,
@@ -99,6 +100,9 @@ class PatchToolInput(BaseModel):
     out_name: str | None = None
     on_conflict: OnConflictPolicy | None = None
     auto_formula: bool = False
+    dry_run: bool = False
+    return_inverse_ops: bool = False
+    preflight_formula_check: bool = False
 
 
 class PatchToolOutput(BaseModel):
@@ -106,6 +110,8 @@ class PatchToolOutput(BaseModel):
 
     out_path: str
     patch_diff: list[PatchDiffItem] = Field(default_factory=list)
+    inverse_ops: list[PatchOp] = Field(default_factory=list)
+    formula_issues: list[FormulaIssue] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     error: PatchErrorDetail | None = None
 
@@ -201,6 +207,9 @@ def run_patch_tool(
         out_name=payload.out_name,
         on_conflict=payload.on_conflict or on_conflict or "rename",
         auto_formula=payload.auto_formula,
+        dry_run=payload.dry_run,
+        return_inverse_ops=payload.return_inverse_ops,
+        preflight_formula_check=payload.preflight_formula_check,
     )
     result = run_patch(request, policy=policy)
     return _to_patch_tool_output(result)
@@ -271,6 +280,8 @@ def _to_patch_tool_output(result: PatchResult) -> PatchToolOutput:
     return PatchToolOutput(
         out_path=result.out_path,
         patch_diff=result.patch_diff,
+        inverse_ops=result.inverse_ops,
+        formula_issues=result.formula_issues,
         warnings=result.warnings,
         error=result.error,
     )

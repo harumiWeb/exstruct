@@ -307,6 +307,9 @@ def _register_tools(
         out_name: str | None = None,
         on_conflict: OnConflictPolicy | None = None,
         auto_formula: bool = False,
+        dry_run: bool = False,
+        return_inverse_ops: bool = False,
+        preflight_formula_check: bool = False,
     ) -> PatchToolOutput:
         """Handle the ExStruct patch tool call.
 
@@ -327,6 +330,9 @@ def _register_tools(
             out_name=out_name,
             on_conflict=on_conflict,
             auto_formula=auto_formula,
+            dry_run=dry_run,
+            return_inverse_ops=return_inverse_ops,
+            preflight_formula_check=preflight_formula_check,
         )
         effective_on_conflict = on_conflict or default_on_conflict
         work = functools.partial(

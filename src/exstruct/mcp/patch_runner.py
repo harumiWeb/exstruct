@@ -14,12 +14,31 @@ from exstruct.cli.availability import get_com_availability
 from .extract_runner import OnConflictPolicy
 from .io import PathPolicy
 
-PatchOpType = Literal["set_value", "set_formula", "add_sheet"]
+PatchOpType = Literal[
+    "set_value",
+    "set_formula",
+    "add_sheet",
+    "set_range_values",
+    "fill_formula",
+    "set_value_if",
+    "set_formula_if",
+]
 PatchStatus = Literal["applied", "skipped"]
 PatchValueKind = Literal["value", "formula", "sheet"]
+FormulaIssueLevel = Literal["warning", "error"]
+FormulaIssueCode = Literal[
+    "invalid_token",
+    "ref_error",
+    "name_error",
+    "div0_error",
+    "value_error",
+    "na_error",
+    "circular_ref_suspected",
+]
 
 _ALLOWED_EXTENSIONS = {".xlsx", ".xlsm", ".xls"}
 _A1_PATTERN = re.compile(r"^[A-Za-z]{1,3}[1-9][0-9]*$")
+_A1_RANGE_PATTERN = re.compile(r"^[A-Za-z]{1,3}[1-9][0-9]*:[A-Za-z]{1,3}[1-9][0-9]*$")
 
 
 @runtime_checkable
@@ -101,7 +120,11 @@ class PatchOp(BaseModel):
     op: PatchOpType
     sheet: str
     cell: str | None = None
+    range: str | None = None
+    base_cell: str | None = None
+    expected: str | int | float | None = None
     value: str | int | float | None = None
+    values: list[list[str | int | float | None]] | None = None
     formula: str | None = None
 
     @field_validator("sheet")
@@ -121,17 +144,53 @@ class PatchOp(BaseModel):
             raise ValueError(f"Invalid cell reference: {value}")
         return candidate.upper()
 
+    @field_validator("base_cell")
+    @classmethod
+    def _validate_base_cell(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        candidate = value.strip()
+        if not _A1_PATTERN.match(candidate):
+            raise ValueError(f"Invalid base_cell reference: {value}")
+        return candidate.upper()
+
+    @field_validator("range")
+    @classmethod
+    def _validate_range(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        candidate = value.strip()
+        if not _A1_RANGE_PATTERN.match(candidate):
+            raise ValueError(f"Invalid range reference: {value}")
+        start, end = candidate.split(":", maxsplit=1)
+        return f"{start.upper()}:{end.upper()}"
+
     @model_validator(mode="after")
     def _validate_op(self) -> PatchOp:
         if self.op == "add_sheet":
             _validate_add_sheet(self)
             return self
-        _validate_cell_required(self)
         if self.op == "set_value":
+            _validate_cell_required(self)
             _validate_set_value(self)
             return self
         if self.op == "set_formula":
+            _validate_cell_required(self)
             _validate_set_formula(self)
+            return self
+        if self.op == "set_range_values":
+            _validate_set_range_values(self)
+            return self
+        if self.op == "fill_formula":
+            _validate_fill_formula(self)
+            return self
+        if self.op == "set_value_if":
+            _validate_cell_required(self)
+            _validate_set_value_if(self)
+            return self
+        if self.op == "set_formula_if":
+            _validate_cell_required(self)
+            _validate_set_formula_if(self)
             return self
         return self
 
@@ -168,6 +227,77 @@ def _validate_set_formula(op: PatchOp) -> None:
         raise ValueError("set_formula requires formula starting with '='.")
 
 
+def _validate_set_range_values(op: PatchOp) -> None:
+    """Validate set_range_values operation."""
+    if op.cell is not None:
+        raise ValueError("set_range_values does not accept cell.")
+    if op.base_cell is not None:
+        raise ValueError("set_range_values does not accept base_cell.")
+    if op.expected is not None:
+        raise ValueError("set_range_values does not accept expected.")
+    if op.formula is not None:
+        raise ValueError("set_range_values does not accept formula.")
+    if op.range is None:
+        raise ValueError("set_range_values requires range.")
+    if op.values is None:
+        raise ValueError("set_range_values requires values.")
+    if not op.values:
+        raise ValueError("set_range_values requires non-empty values.")
+    if not all(op.values):
+        raise ValueError("set_range_values values rows must not be empty.")
+    expected_width = len(op.values[0])
+    if any(len(row) != expected_width for row in op.values):
+        raise ValueError("set_range_values requires rectangular values.")
+
+
+def _validate_fill_formula(op: PatchOp) -> None:
+    """Validate fill_formula operation."""
+    if op.cell is not None:
+        raise ValueError("fill_formula does not accept cell.")
+    if op.expected is not None:
+        raise ValueError("fill_formula does not accept expected.")
+    if op.value is not None:
+        raise ValueError("fill_formula does not accept value.")
+    if op.values is not None:
+        raise ValueError("fill_formula does not accept values.")
+    if op.range is None:
+        raise ValueError("fill_formula requires range.")
+    if op.base_cell is None:
+        raise ValueError("fill_formula requires base_cell.")
+    if op.formula is None:
+        raise ValueError("fill_formula requires formula.")
+    if not op.formula.startswith("="):
+        raise ValueError("fill_formula requires formula starting with '='.")
+
+
+def _validate_set_value_if(op: PatchOp) -> None:
+    """Validate set_value_if operation."""
+    if op.formula is not None:
+        raise ValueError("set_value_if does not accept formula.")
+    if op.range is not None:
+        raise ValueError("set_value_if does not accept range.")
+    if op.values is not None:
+        raise ValueError("set_value_if does not accept values.")
+    if op.base_cell is not None:
+        raise ValueError("set_value_if does not accept base_cell.")
+
+
+def _validate_set_formula_if(op: PatchOp) -> None:
+    """Validate set_formula_if operation."""
+    if op.value is not None:
+        raise ValueError("set_formula_if does not accept value.")
+    if op.range is not None:
+        raise ValueError("set_formula_if does not accept range.")
+    if op.values is not None:
+        raise ValueError("set_formula_if does not accept values.")
+    if op.base_cell is not None:
+        raise ValueError("set_formula_if does not accept base_cell.")
+    if op.formula is None:
+        raise ValueError("set_formula_if requires formula.")
+    if not op.formula.startswith("="):
+        raise ValueError("set_formula_if requires formula starting with '='.")
+
+
 class PatchValue(BaseModel):
     """Normalized before/after value in patch diff."""
 
@@ -197,6 +327,16 @@ class PatchErrorDetail(BaseModel):
     message: str
 
 
+class FormulaIssue(BaseModel):
+    """Formula health-check finding."""
+
+    sheet: str
+    cell: str
+    level: FormulaIssueLevel
+    code: FormulaIssueCode
+    message: str
+
+
 class PatchRequest(BaseModel):
     """Input model for ExStruct MCP patch."""
 
@@ -206,6 +346,9 @@ class PatchRequest(BaseModel):
     out_name: str | None = None
     on_conflict: OnConflictPolicy = "rename"
     auto_formula: bool = False
+    dry_run: bool = False
+    return_inverse_ops: bool = False
+    preflight_formula_check: bool = False
 
 
 class PatchResult(BaseModel):
@@ -213,6 +356,8 @@ class PatchResult(BaseModel):
 
     out_path: str
     patch_diff: list[PatchDiffItem] = Field(default_factory=list)
+    inverse_ops: list[PatchOp] = Field(default_factory=list)
+    formula_issues: list[FormulaIssue] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     error: PatchErrorDetail | None = None
 
@@ -249,7 +394,13 @@ def run_patch(
     if warning:
         warnings.append(warning)
     if skipped:
-        return PatchResult(out_path=str(output_path), patch_diff=[], warnings=warnings)
+        return PatchResult(
+            out_path=str(output_path),
+            patch_diff=[],
+            inverse_ops=[],
+            formula_issues=[],
+            warnings=warnings,
+        )
 
     com = get_com_availability()
     if resolved_input.suffix.lower() == ".xls" and not com.available:
@@ -257,8 +408,12 @@ def run_patch(
             ".xls editing requires Windows Excel COM (xlwings) in this environment."
         )
 
+    use_openpyxl = _requires_openpyxl_backend(request)
+    if use_openpyxl and com.available:
+        warnings.append("Using openpyxl backend for extended patch features.")
+
     _ensure_output_dir(output_path)
-    if com.available:
+    if com.available and not use_openpyxl:
         try:
             diff = _apply_ops_xlwings(
                 resolved_input,
@@ -267,23 +422,28 @@ def run_patch(
                 request.auto_formula,
             )
             return PatchResult(
-                out_path=str(output_path), patch_diff=diff, warnings=warnings
+                out_path=str(output_path),
+                patch_diff=diff,
+                inverse_ops=[],
+                formula_issues=[],
+                warnings=warnings,
             )
         except PatchOpError as exc:
             return PatchResult(
                 out_path=str(output_path),
                 patch_diff=[],
+                inverse_ops=[],
+                formula_issues=[],
                 warnings=warnings,
                 error=exc.detail,
             )
         except Exception as exc:
             fallback = _maybe_fallback_openpyxl(
+                request,
                 resolved_input,
                 output_path,
-                request.ops,
                 warnings,
                 reason=f"COM patch failed; falling back to openpyxl. ({exc!r})",
-                auto_formula=request.auto_formula,
             )
             if fallback is not None:
                 return fallback
@@ -292,29 +452,32 @@ def run_patch(
     if com.reason:
         warnings.append(f"COM unavailable: {com.reason}")
     return _apply_with_openpyxl(
+        request,
         resolved_input,
         output_path,
-        request.ops,
         warnings,
-        auto_formula=request.auto_formula,
     )
 
 
 def _apply_with_openpyxl(
+    request: PatchRequest,
     input_path: Path,
     output_path: Path,
-    ops: list[PatchOp],
     warnings: list[str],
-    *,
-    auto_formula: bool,
 ) -> PatchResult:
     """Apply patch operations using openpyxl."""
     try:
-        diff = _apply_ops_openpyxl(input_path, output_path, ops, auto_formula)
+        diff, inverse_ops, formula_issues = _apply_ops_openpyxl(
+            request,
+            input_path,
+            output_path,
+        )
     except PatchOpError as exc:
         return PatchResult(
             out_path=str(output_path),
             patch_diff=[],
+            inverse_ops=[],
+            formula_issues=[],
             warnings=warnings,
             error=exc.detail,
         )
@@ -328,17 +491,54 @@ def _apply_with_openpyxl(
         raise RuntimeError(f"openpyxl patch failed: {exc}") from exc
 
     warnings.append("openpyxl editing may drop shapes/charts or unsupported elements.")
-    return PatchResult(out_path=str(output_path), patch_diff=diff, warnings=warnings)
+    _append_skip_warnings(warnings, diff)
+    if (
+        not request.dry_run
+        and request.preflight_formula_check
+        and any(issue.level == "error" for issue in formula_issues)
+    ):
+        issue = formula_issues[0]
+        error = PatchErrorDetail(
+            op_index=0,
+            op=request.ops[0].op if request.ops else "set_value",
+            sheet=issue.sheet,
+            cell=issue.cell,
+            message=f"Formula health check failed: {issue.message}",
+        )
+        return PatchResult(
+            out_path=str(output_path),
+            patch_diff=[],
+            inverse_ops=[],
+            formula_issues=formula_issues,
+            warnings=warnings,
+            error=error,
+        )
+    return PatchResult(
+        out_path=str(output_path),
+        patch_diff=diff,
+        inverse_ops=inverse_ops,
+        formula_issues=formula_issues,
+        warnings=warnings,
+    )
+
+
+def _append_skip_warnings(warnings: list[str], diff: list[PatchDiffItem]) -> None:
+    """Append warning messages for skipped conditional operations."""
+    for item in diff:
+        if item.status != "skipped":
+            continue
+        warnings.append(
+            f"Skipped op[{item.op_index}] {item.op} at {item.sheet}!{item.cell} due to condition mismatch."
+        )
 
 
 def _maybe_fallback_openpyxl(
+    request: PatchRequest,
     input_path: Path,
     output_path: Path,
-    ops: list[PatchOp],
     warnings: list[str],
     *,
     reason: str,
-    auto_formula: bool,
 ) -> PatchResult | None:
     """Attempt openpyxl fallback after COM failure."""
     if input_path.suffix.lower() == ".xls":
@@ -346,11 +546,20 @@ def _maybe_fallback_openpyxl(
         return None
     warnings.append(reason)
     return _apply_with_openpyxl(
+        request,
         input_path,
         output_path,
-        ops,
         warnings,
-        auto_formula=auto_formula,
+    )
+
+
+def _requires_openpyxl_backend(request: PatchRequest) -> bool:
+    """Return True if request requires openpyxl backend for extended features."""
+    if request.dry_run or request.return_inverse_ops or request.preflight_formula_check:
+        return True
+    return any(
+        op.op in {"set_range_values", "fill_formula", "set_value_if", "set_formula_if"}
+        for op in request.ops
     )
 
 
@@ -440,11 +649,10 @@ def _next_available_path(path: Path) -> Path:
 
 
 def _apply_ops_openpyxl(
+    request: PatchRequest,
     input_path: Path,
     output_path: Path,
-    ops: list[PatchOp],
-    auto_formula: bool,
-) -> list[PatchDiffItem]:
+) -> tuple[list[PatchDiffItem], list[PatchOp], list[FormulaIssue]]:
     """Apply operations using openpyxl."""
     try:
         from openpyxl import load_workbook
@@ -456,25 +664,51 @@ def _apply_ops_openpyxl(
 
     workbook = load_workbook(input_path)
     try:
-        diff = _apply_ops_to_openpyxl_workbook(workbook, ops, auto_formula)
-        workbook.save(output_path)
+        diff, inverse_ops = _apply_ops_to_openpyxl_workbook(
+            workbook,
+            request.ops,
+            request.auto_formula,
+            return_inverse_ops=request.return_inverse_ops,
+        )
+        formula_issues = (
+            _collect_formula_issues_openpyxl(workbook)
+            if request.preflight_formula_check
+            else []
+        )
+        if not request.dry_run and not (
+            request.preflight_formula_check
+            and any(issue.level == "error" for issue in formula_issues)
+        ):
+            workbook.save(output_path)
     finally:
         workbook.close()
-    return diff
+    return diff, inverse_ops, formula_issues
 
 
 def _apply_ops_to_openpyxl_workbook(
-    workbook: OpenpyxlWorkbookProtocol, ops: list[PatchOp], auto_formula: bool
-) -> list[PatchDiffItem]:
+    workbook: OpenpyxlWorkbookProtocol,
+    ops: list[PatchOp],
+    auto_formula: bool,
+    *,
+    return_inverse_ops: bool,
+) -> tuple[list[PatchDiffItem], list[PatchOp]]:
     """Apply ops to an openpyxl workbook instance."""
     sheets = _openpyxl_sheet_map(workbook)
     diff: list[PatchDiffItem] = []
+    inverse_ops: list[PatchOp] = []
     for index, op in enumerate(ops):
         try:
-            diff.append(_apply_openpyxl_op(workbook, sheets, op, index, auto_formula))
+            item, inverse = _apply_openpyxl_op(
+                workbook, sheets, op, index, auto_formula
+            )
+            diff.append(item)
+            if return_inverse_ops and item.status == "applied" and inverse is not None:
+                inverse_ops.append(inverse)
         except ValueError as exc:
             raise PatchOpError.from_op(index, op, exc) from exc
-    return diff
+    if return_inverse_ops:
+        inverse_ops.reverse()
+    return diff, inverse_ops
 
 
 def _openpyxl_sheet_map(
@@ -493,62 +727,210 @@ def _apply_openpyxl_op(
     op: PatchOp,
     index: int,
     auto_formula: bool,
-) -> PatchDiffItem:
+) -> tuple[PatchDiffItem, PatchOp | None]:
     """Apply a single op to openpyxl workbook."""
     if op.op == "add_sheet":
-        if op.sheet in sheets:
-            raise ValueError(f"Sheet already exists: {op.sheet}")
-        sheet = workbook.create_sheet(title=op.sheet)
-        sheets[op.sheet] = sheet
-        return PatchDiffItem(
+        return _apply_openpyxl_add_sheet(workbook, sheets, op, index)
+
+    existing_sheet = sheets.get(op.sheet)
+    if existing_sheet is None:
+        raise ValueError(f"Sheet not found: {op.sheet}")
+
+    if op.op == "set_range_values":
+        return _apply_openpyxl_set_range_values(existing_sheet, op, index)
+
+    if op.op == "fill_formula":
+        return _apply_openpyxl_fill_formula(existing_sheet, op, index)
+
+    if op.op in {"set_value", "set_formula", "set_value_if", "set_formula_if"}:
+        return _apply_openpyxl_cell_op(existing_sheet, op, index, auto_formula)
+    raise ValueError(f"Unsupported op: {op.op}")
+
+
+def _apply_openpyxl_add_sheet(
+    workbook: OpenpyxlWorkbookProtocol,
+    sheets: dict[str, OpenpyxlWorksheetProtocol],
+    op: PatchOp,
+    index: int,
+) -> tuple[PatchDiffItem, PatchOp | None]:
+    """Apply add_sheet op."""
+    if op.sheet in sheets:
+        raise ValueError(f"Sheet already exists: {op.sheet}")
+    sheet = workbook.create_sheet(title=op.sheet)
+    sheets[op.sheet] = sheet
+    return (
+        PatchDiffItem(
             op_index=index,
             op=op.op,
             sheet=op.sheet,
             cell=None,
             before=None,
             after=PatchValue(kind="sheet", value=op.sheet),
-        )
+        ),
+        None,
+    )
 
-    existing_sheet = sheets.get(op.sheet)
-    if existing_sheet is None:
-        raise ValueError(f"Sheet not found: {op.sheet}")
+
+def _apply_openpyxl_set_range_values(
+    sheet: OpenpyxlWorksheetProtocol,
+    op: PatchOp,
+    index: int,
+) -> tuple[PatchDiffItem, PatchOp | None]:
+    """Apply set_range_values op."""
+    if op.range is None or op.values is None:
+        raise ValueError("set_range_values requires range and values.")
+    coordinates = _expand_range_coordinates(op.range)
+    rows, cols = _shape_of_coordinates(coordinates)
+    if len(op.values) != rows:
+        raise ValueError("set_range_values values height does not match range.")
+    if any(len(row) != cols for row in op.values):
+        raise ValueError("set_range_values values width does not match range.")
+    for r_idx, row in enumerate(coordinates):
+        for c_idx, coord in enumerate(row):
+            sheet[coord].value = op.values[r_idx][c_idx]
+    return (
+        PatchDiffItem(
+            op_index=index,
+            op=op.op,
+            sheet=op.sheet,
+            cell=op.range,
+            before=None,
+            after=PatchValue(kind="value", value=f"{rows}x{cols}"),
+        ),
+        None,
+    )
+
+
+def _apply_openpyxl_fill_formula(
+    sheet: OpenpyxlWorksheetProtocol,
+    op: PatchOp,
+    index: int,
+) -> tuple[PatchDiffItem, PatchOp | None]:
+    """Apply fill_formula op."""
+    if op.range is None or op.formula is None or op.base_cell is None:
+        raise ValueError("fill_formula requires range, base_cell and formula.")
+    coordinates = _expand_range_coordinates(op.range)
+    rows, cols = _shape_of_coordinates(coordinates)
+    if rows != 1 and cols != 1:
+        raise ValueError("fill_formula range must be a single row or a single column.")
+    for row in coordinates:
+        for coord in row:
+            sheet[coord].value = _translate_formula(op.formula, op.base_cell, coord)
+    return (
+        PatchDiffItem(
+            op_index=index,
+            op=op.op,
+            sheet=op.sheet,
+            cell=op.range,
+            before=None,
+            after=PatchValue(kind="formula", value=op.formula),
+        ),
+        None,
+    )
+
+
+def _apply_openpyxl_cell_op(
+    sheet: OpenpyxlWorksheetProtocol,
+    op: PatchOp,
+    index: int,
+    auto_formula: bool,
+) -> tuple[PatchDiffItem, PatchOp | None]:
+    """Apply single-cell operations."""
     cell_ref = op.cell
     if cell_ref is None:
         raise ValueError(f"{op.op} requires cell.")
-    cell = existing_sheet[cell_ref]
+    cell = sheet[cell_ref]
     before = _openpyxl_cell_value(cell)
+
     if op.op == "set_value":
-        if isinstance(op.value, str) and op.value.startswith("="):
-            if not auto_formula:
-                raise ValueError("set_value rejects values starting with '='.")
-            cell.value = op.value
-            after = PatchValue(kind="formula", value=op.value)
-        else:
-            cell.value = op.value
-            after = PatchValue(kind="value", value=op.value)
-        return PatchDiffItem(
-            op_index=index,
-            op=op.op,
-            sheet=op.sheet,
-            cell=cell_ref,
-            before=before,
-            after=after,
-        )
+        after = _set_cell_value(cell, op.value, auto_formula, op_name="set_value")
+        return _build_cell_result(
+            op, index, cell_ref, before, after
+        ), _build_inverse_cell_op(op, cell_ref, before)
     if op.op == "set_formula":
-        formula = op.formula
-        if formula is None:
-            raise ValueError("set_formula requires formula.")
+        formula = _require_formula(op.formula, "set_formula")
         cell.value = formula
         after = PatchValue(kind="formula", value=formula)
-        return PatchDiffItem(
-            op_index=index,
-            op=op.op,
-            sheet=op.sheet,
-            cell=cell_ref,
-            before=before,
-            after=after,
-        )
-    raise ValueError(f"Unsupported op: {op.op}")
+        return _build_cell_result(
+            op, index, cell_ref, before, after
+        ), _build_inverse_cell_op(op, cell_ref, before)
+    if op.op == "set_value_if":
+        if not _values_equal_for_condition(
+            _patch_value_to_primitive(before), op.expected
+        ):
+            return _build_skipped_result(op, index, cell_ref, before), None
+        after = _set_cell_value(cell, op.value, auto_formula, op_name="set_value_if")
+        return _build_cell_result(
+            op, index, cell_ref, before, after
+        ), _build_inverse_cell_op(op, cell_ref, before)
+    formula_if = _require_formula(op.formula, "set_formula_if")
+    if not _values_equal_for_condition(_patch_value_to_primitive(before), op.expected):
+        return _build_skipped_result(op, index, cell_ref, before), None
+    cell.value = formula_if
+    after = PatchValue(kind="formula", value=formula_if)
+    return _build_cell_result(
+        op, index, cell_ref, before, after
+    ), _build_inverse_cell_op(op, cell_ref, before)
+
+
+def _set_cell_value(
+    cell: OpenpyxlCellProtocol,
+    value: str | int | float | None,
+    auto_formula: bool,
+    *,
+    op_name: str,
+) -> PatchValue:
+    """Set cell value with auto_formula handling."""
+    if isinstance(value, str) and value.startswith("="):
+        if not auto_formula:
+            raise ValueError(f"{op_name} rejects values starting with '='.")
+        cell.value = value
+        return PatchValue(kind="formula", value=value)
+    cell.value = value
+    return PatchValue(kind="value", value=value)
+
+
+def _build_cell_result(
+    op: PatchOp,
+    index: int,
+    cell_ref: str,
+    before: PatchValue | None,
+    after: PatchValue | None,
+) -> PatchDiffItem:
+    """Build applied diff item for single-cell op."""
+    return PatchDiffItem(
+        op_index=index,
+        op=op.op,
+        sheet=op.sheet,
+        cell=cell_ref,
+        before=before,
+        after=after,
+    )
+
+
+def _build_skipped_result(
+    op: PatchOp,
+    index: int,
+    cell_ref: str,
+    before: PatchValue | None,
+) -> PatchDiffItem:
+    """Build skipped diff item."""
+    return PatchDiffItem(
+        op_index=index,
+        op=op.op,
+        sheet=op.sheet,
+        cell=cell_ref,
+        before=before,
+        after=before,
+        status="skipped",
+    )
+
+
+def _require_formula(formula: str | None, op_name: str) -> str:
+    """Require a non-null formula string."""
+    if formula is None:
+        raise ValueError(f"{op_name} requires formula.")
+    return formula
 
 
 def _openpyxl_cell_value(cell: OpenpyxlCellProtocol) -> PatchValue | None:
@@ -567,6 +949,123 @@ def _normalize_formula(value: object) -> str:
     """Ensure formula string starts with '='."""
     text = str(value)
     return text if text.startswith("=") else f"={text}"
+
+
+def _expand_range_coordinates(range_ref: str) -> list[list[str]]:
+    """Expand A1 range string into a 2D list of coordinates."""
+    try:
+        from openpyxl.utils.cell import get_column_letter, range_boundaries
+    except ImportError as exc:
+        raise RuntimeError(f"openpyxl is not available: {exc}") from exc
+    min_col, min_row, max_col, max_row = range_boundaries(range_ref)
+    if min_col > max_col or min_row > max_row:
+        raise ValueError(f"Invalid range reference: {range_ref}")
+    rows: list[list[str]] = []
+    for row_idx in range(min_row, max_row + 1):
+        row: list[str] = []
+        for col_idx in range(min_col, max_col + 1):
+            row.append(f"{get_column_letter(col_idx)}{row_idx}")
+        rows.append(row)
+    return rows
+
+
+def _shape_of_coordinates(coordinates: list[list[str]]) -> tuple[int, int]:
+    """Return rows/cols for expanded coordinates."""
+    if not coordinates or not coordinates[0]:
+        raise ValueError("Range expansion resulted in an empty coordinate set.")
+    return len(coordinates), len(coordinates[0])
+
+
+def _translate_formula(formula: str, origin: str, target: str) -> str:
+    """Translate formula with relative references from origin to target."""
+    try:
+        from openpyxl.formula.translate import Translator
+    except ImportError as exc:
+        raise RuntimeError(f"openpyxl is not available: {exc}") from exc
+    translated = Translator(formula, origin=origin).translate_formula(target)
+    return str(translated)
+
+
+def _patch_value_to_primitive(value: PatchValue | None) -> str | int | float | None:
+    """Convert PatchValue into primitive value for condition checks."""
+    if value is None:
+        return None
+    return value.value
+
+
+def _values_equal_for_condition(
+    current: str | int | float | None,
+    expected: str | int | float | None,
+) -> bool:
+    """Compare values for conditional update checks."""
+    return current == expected
+
+
+def _build_inverse_cell_op(
+    op: PatchOp,
+    cell_ref: str,
+    before: PatchValue | None,
+) -> PatchOp | None:
+    """Build inverse operation for single-cell updates."""
+    if op.op not in {"set_value", "set_formula", "set_value_if", "set_formula_if"}:
+        return None
+    if before is None:
+        return PatchOp(op="set_value", sheet=op.sheet, cell=cell_ref, value=None)
+    if before.kind == "formula":
+        return PatchOp(
+            op="set_formula",
+            sheet=op.sheet,
+            cell=cell_ref,
+            formula=str(before.value),
+        )
+    return PatchOp(op="set_value", sheet=op.sheet, cell=cell_ref, value=before.value)
+
+
+def _collect_formula_issues_openpyxl(
+    workbook: OpenpyxlWorkbookProtocol,
+) -> list[FormulaIssue]:
+    """Collect simple formula issues by scanning formula text."""
+    token_map: dict[str, tuple[FormulaIssueCode, FormulaIssueLevel]] = {
+        "#REF!": ("ref_error", "error"),
+        "#NAME?": ("name_error", "error"),
+        "#DIV/0!": ("div0_error", "error"),
+        "#VALUE!": ("value_error", "error"),
+        "#N/A": ("na_error", "warning"),
+    }
+    issues: list[FormulaIssue] = []
+    for sheet_name in workbook.sheetnames:
+        sheet = workbook[sheet_name]
+        iter_rows = getattr(sheet, "iter_rows", None)
+        if iter_rows is None:
+            continue
+        for row in iter_rows():
+            for cell in row:
+                raw = getattr(cell, "value", None)
+                if not isinstance(raw, str) or not raw.startswith("="):
+                    continue
+                normalized = raw.upper()
+                if "==" in normalized:
+                    issues.append(
+                        FormulaIssue(
+                            sheet=sheet_name,
+                            cell=str(getattr(cell, "coordinate", "")),
+                            level="warning",
+                            code="invalid_token",
+                            message="Formula contains duplicated '=' token.",
+                        )
+                    )
+                for token, (code, level) in token_map.items():
+                    if token in normalized:
+                        issues.append(
+                            FormulaIssue(
+                                sheet=sheet_name,
+                                cell=str(getattr(cell, "coordinate", "")),
+                                level=level,
+                                code=code,
+                                message=f"Formula contains error token {token}.",
+                            )
+                        )
+    return issues
 
 
 def _apply_ops_xlwings(

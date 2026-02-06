@@ -109,9 +109,15 @@ def test_run_patch_tool_builds_request(
     payload = tools.PatchToolInput(
         xlsx_path="input.xlsx",
         ops=[{"op": "add_sheet", "sheet": "New"}],
+        dry_run=True,
+        return_inverse_ops=True,
+        preflight_formula_check=True,
     )
     tools.run_patch_tool(payload, on_conflict="rename")
     request = captured["request"]
     assert isinstance(request, PatchRequest)
     assert request.xlsx_path == Path("input.xlsx")
     assert request.on_conflict == "rename"
+    assert request.dry_run is True
+    assert request.return_inverse_ops is True
+    assert request.preflight_formula_check is True

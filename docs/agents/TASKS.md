@@ -24,21 +24,21 @@
 
 ## 次フェーズタスク（便利機能 1〜5）
 
-- [ ] `mcp/patch_runner.py`: `PatchRequest` に `dry_run` / `return_inverse_ops` / `preflight_formula_check` を追加する
-- [ ] `mcp/patch_runner.py`: `PatchResult` に `inverse_ops` / `formula_issues` を追加する
-- [ ] `mcp/patch_runner.py`: `PatchOp` に `set_range_values` / `fill_formula` / `set_value_if` / `set_formula_if` を追加する
-- [ ] `mcp/patch_runner.py`: A1範囲パース・範囲サイズ検証・値行列検証ユーティリティを実装する
-- [ ] `mcp/patch_runner.py`: `set_range_values` の openpyxl 実装を追加する
-- [ ] `mcp/patch_runner.py`: `fill_formula` の相対参照展開ロジックを実装する（単一行/列制約）
-- [ ] `mcp/patch_runner.py`: `set_value_if` / `set_formula_if` の比較・`skipped` 差分出力を実装する
-- [ ] `mcp/patch_runner.py`: 逆パッチ生成ロジック（`applied` のみ、逆順）を実装する
-- [ ] `mcp/patch_runner.py`: `dry_run=true` で非保存実行に分岐する
-- [ ] `mcp/patch_runner.py`: 数式ヘルスチェック（`#REF!` 等）を実装し、`formula_issues` に反映する
-- [ ] `mcp/patch_runner.py`: `preflight_formula_check=true` かつ `level=error` の保存抑止ルールを実装する
-- [ ] `mcp/tools.py`: `PatchToolInput/Output` の新規フィールドをツールI/Fへ公開する
-- [ ] `mcp/server.py`: `exstruct_patch` ツール引数に新規3フラグを追加し、ハンドラへ連携する
-- [ ] `docs/agents/FEATURE_SPEC.md`: 実装差分（命名、エラーコード、制約）を最終反映する
-- [ ] `tests/mcp/test_patch_runner.py`: `dry_run` 非保存・逆パッチ・範囲操作・条件付き更新・数式検査の単体テストを追加する
-- [ ] `tests/mcp/test_tools_handlers.py`: 入出力モデル拡張の受け渡しテストを追加する
-- [ ] `tests/mcp/test_server.py`: 新規ツール引数の受け渡しテストを追加する
-- [ ] `ruff check .` / `mypy src/exstruct --strict` / 関連pytest を実行し、結果を記録する
+- [x] `mcp/patch_runner.py`: `PatchRequest` に `dry_run` / `return_inverse_ops` / `preflight_formula_check` を追加する
+- [x] `mcp/patch_runner.py`: `PatchResult` に `inverse_ops` / `formula_issues` を追加する
+- [x] `mcp/patch_runner.py`: `PatchOp` に `set_range_values` / `fill_formula` / `set_value_if` / `set_formula_if` を追加する
+- [x] `mcp/patch_runner.py`: A1範囲パース・範囲サイズ検証・値行列検証ユーティリティを実装する
+- [x] `mcp/patch_runner.py`: `set_range_values` の openpyxl 実装を追加する
+- [x] `mcp/patch_runner.py`: `fill_formula` の相対参照展開ロジックを実装する（単一行/列制約）
+- [x] `mcp/patch_runner.py`: `set_value_if` / `set_formula_if` の比較・`skipped` 差分出力を実装する
+- [x] `mcp/patch_runner.py`: 逆パッチ生成ロジック（`applied` のみ、逆順）を実装する
+- [x] `mcp/patch_runner.py`: `dry_run=true` で非保存実行に分岐する
+- [x] `mcp/patch_runner.py`: 数式ヘルスチェック（`#REF!` 等）を実装し、`formula_issues` に反映する
+- [x] `mcp/patch_runner.py`: `preflight_formula_check=true` かつ `level=error` の保存抑止ルールを実装する
+- [x] `mcp/tools.py`: `PatchToolInput/Output` の新規フィールドをツールI/Fへ公開する
+- [x] `mcp/server.py`: `exstruct_patch` ツール引数に新規3フラグを追加し、ハンドラへ連携する
+- [x] `docs/agents/FEATURE_SPEC.md`: 実装差分（命名、エラーコード、制約）を最終反映する
+- [x] `tests/mcp/test_patch_runner.py`: `dry_run` 非保存・逆パッチ・範囲操作・条件付き更新・数式検査の単体テストを追加する
+- [x] `tests/mcp/test_tools_handlers.py`: 入出力モデル拡張の受け渡しテストを追加する
+- [x] `tests/mcp/test_server.py`: 新規ツール引数の受け渡しテストを追加する
+- [x] `ruff check .` / `mypy src/exstruct --strict` / 関連pytest を実行し、結果を記録する

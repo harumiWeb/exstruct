@@ -243,3 +243,173 @@ def test_run_patch_xls_requires_com(
     request = PatchRequest(xlsx_path=input_path, ops=ops, on_conflict="rename")
     with pytest.raises(ValueError, match=r"requires Windows Excel COM"):
         run_patch(request, policy=PathPolicy(root=tmp_path))
+
+
+def test_run_patch_dry_run_does_not_write(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    output_path = tmp_path / "book_patched.xlsx"
+    assert not output_path.exists()
+    ops = [PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="x")]
+    request = PatchRequest(
+        xlsx_path=input_path,
+        ops=ops,
+        on_conflict="rename",
+        dry_run=True,
+    )
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.error is None
+    assert not output_path.exists()
+    assert len(result.patch_diff) == 1
+
+
+def test_run_patch_return_inverse_ops(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    ops = [PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="new")]
+    request = PatchRequest(
+        xlsx_path=input_path,
+        ops=ops,
+        on_conflict="rename",
+        return_inverse_ops=True,
+    )
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.error is None
+    assert len(result.inverse_ops) == 1
+    inverse = result.inverse_ops[0]
+    assert inverse.op == "set_value"
+    assert inverse.cell == "A1"
+    assert inverse.value == "old"
+
+
+def test_run_patch_set_range_values(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    ops = [
+        PatchOp(
+            op="set_range_values",
+            sheet="Sheet1",
+            range="A2:B3",
+            values=[["r1c1", "r1c2"], ["r2c1", "r2c2"]],
+        )
+    ]
+    request = PatchRequest(xlsx_path=input_path, ops=ops, on_conflict="rename")
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.error is None
+    workbook = load_workbook(result.out_path)
+    try:
+        sheet = workbook["Sheet1"]
+        assert sheet["A2"].value == "r1c1"
+        assert sheet["B3"].value == "r2c2"
+    finally:
+        workbook.close()
+
+
+def test_run_patch_set_range_values_size_mismatch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    ops = [
+        PatchOp(
+            op="set_range_values",
+            sheet="Sheet1",
+            range="A2:B3",
+            values=[["only_one_column"], ["still_one_column"]],
+        )
+    ]
+    request = PatchRequest(xlsx_path=input_path, ops=ops, on_conflict="rename")
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.error is not None
+    assert "width does not match range" in result.error.message
+
+
+def test_run_patch_set_value_if_skipped(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    ops = [
+        PatchOp(
+            op="set_value_if",
+            sheet="Sheet1",
+            cell="A1",
+            expected="not_old",
+            value="new",
+        )
+    ]
+    request = PatchRequest(xlsx_path=input_path, ops=ops, on_conflict="rename")
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.error is None
+    assert len(result.patch_diff) == 1
+    assert result.patch_diff[0].status == "skipped"
+
+
+def test_run_patch_fill_formula(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    workbook = load_workbook(input_path)
+    try:
+        sheet = workbook["Sheet1"]
+        sheet["A2"] = 1
+        sheet["A3"] = 2
+        sheet["A4"] = 3
+        sheet["B2"] = 10
+        sheet["B3"] = 20
+        sheet["B4"] = 30
+        workbook.save(input_path)
+    finally:
+        workbook.close()
+    ops = [
+        PatchOp(
+            op="fill_formula",
+            sheet="Sheet1",
+            range="C2:C4",
+            base_cell="C2",
+            formula="=A2+B2",
+        )
+    ]
+    request = PatchRequest(xlsx_path=input_path, ops=ops, on_conflict="rename")
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.error is None
+    workbook = load_workbook(result.out_path)
+    try:
+        sheet = workbook["Sheet1"]
+        assert sheet["C2"].value == "=A2+B2"
+        assert sheet["C3"].value == "=A3+B3"
+        assert sheet["C4"].value == "=A4+B4"
+    finally:
+        workbook.close()
+
+
+def test_run_patch_formula_health_check(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    ops = [PatchOp(op="set_formula", sheet="Sheet1", cell="A1", formula="=#REF!+1")]
+    request = PatchRequest(
+        xlsx_path=input_path,
+        ops=ops,
+        on_conflict="rename",
+        preflight_formula_check=True,
+    )
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.error is not None
+    assert result.formula_issues
+    assert result.formula_issues[0].code == "ref_error"
