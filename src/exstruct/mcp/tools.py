@@ -205,7 +205,7 @@ def run_patch_tool(
         ops=payload.ops,
         out_dir=Path(payload.out_dir) if payload.out_dir else None,
         out_name=payload.out_name,
-        on_conflict=payload.on_conflict or on_conflict or "rename",
+        on_conflict=payload.on_conflict or on_conflict or "overwrite",
         auto_formula=payload.auto_formula,
         dry_run=payload.dry_run,
         return_inverse_ops=payload.return_inverse_ops,

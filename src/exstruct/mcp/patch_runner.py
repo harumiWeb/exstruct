@@ -115,17 +115,56 @@ class XlwingsWorkbookProtocol(Protocol):
 
 
 class PatchOp(BaseModel):
-    """Single patch operation for an Excel workbook."""
+    """Single patch operation for an Excel workbook.
 
-    op: PatchOpType
-    sheet: str
-    cell: str | None = None
-    range: str | None = None
-    base_cell: str | None = None
-    expected: str | int | float | None = None
-    value: str | int | float | None = None
-    values: list[list[str | int | float | None]] | None = None
-    formula: str | None = None
+    Operation types and their required fields:
+
+    - ``set_value``: Set a cell value. Requires ``sheet``, ``cell``, ``value``.
+    - ``set_formula``: Set a cell formula. Requires ``sheet``, ``cell``, ``formula`` (must start with ``=``).
+    - ``add_sheet``: Add a new worksheet. Requires ``sheet`` (new sheet name). No ``cell``/``value``/``formula``.
+    - ``set_range_values``: Set values for a rectangular range. Requires ``sheet``, ``range`` (e.g. ``A1:C3``), ``values`` (2D list matching range shape).
+    - ``fill_formula``: Fill a formula across a single row or column. Requires ``sheet``, ``range``, ``base_cell``, ``formula``.
+    - ``set_value_if``: Conditionally set value. Requires ``sheet``, ``cell``, ``expected``, ``value``. Skips if current value != expected.
+    - ``set_formula_if``: Conditionally set formula. Requires ``sheet``, ``cell``, ``expected``, ``formula``. Skips if current value != expected.
+    """
+
+    op: PatchOpType = Field(
+        description=(
+            "Operation type: 'set_value', 'set_formula', 'add_sheet', "
+            "'set_range_values', 'fill_formula', 'set_value_if', or 'set_formula_if'."
+        )
+    )
+    sheet: str = Field(
+        description="Target sheet name. For add_sheet, this is the new sheet name."
+    )
+    cell: str | None = Field(
+        default=None,
+        description="Cell reference in A1 notation (e.g. 'B2'). Required for set_value, set_formula, set_value_if, set_formula_if.",
+    )
+    range: str | None = Field(
+        default=None,
+        description="Range reference in A1 notation (e.g. 'A1:C3'). Required for set_range_values and fill_formula.",
+    )
+    base_cell: str | None = Field(
+        default=None,
+        description="Base cell for formula translation in fill_formula (e.g. 'C2').",
+    )
+    expected: str | int | float | None = Field(
+        default=None,
+        description="Expected current value for conditional ops (set_value_if, set_formula_if). Operation is skipped if mismatch.",
+    )
+    value: str | int | float | None = Field(
+        default=None,
+        description="Value to set. Use null to clear a cell. For set_value and set_value_if.",
+    )
+    values: list[list[str | int | float | None]] | None = Field(
+        default=None,
+        description="2D list of values for set_range_values. Shape must match the range dimensions.",
+    )
+    formula: str | None = Field(
+        default=None,
+        description="Formula string starting with '=' (e.g. '=SUM(A1:A10)'). For set_formula, set_formula_if, fill_formula.",
+    )
 
     @field_validator("sheet")
     @classmethod
@@ -344,7 +383,7 @@ class PatchRequest(BaseModel):
     ops: list[PatchOp]
     out_dir: Path | None = None
     out_name: str | None = None
-    on_conflict: OnConflictPolicy = "rename"
+    on_conflict: OnConflictPolicy = "overwrite"
     auto_formula: bool = False
     dry_run: bool = False
     return_inverse_ops: bool = False

@@ -16,6 +16,7 @@ from exstruct import ExtractionMode
 
 from .extract_runner import OnConflictPolicy
 from .io import PathPolicy
+from .patch_runner import PatchOp
 from .tools import (
     ExtractToolInput,
     ExtractToolOutput,
@@ -302,7 +303,7 @@ def _register_tools(
 
     async def _patch_tool(
         xlsx_path: str,
-        ops: list[dict[str, Any]],
+        ops: list[PatchOp],
         out_dir: str | None = None,
         out_name: str | None = None,
         on_conflict: OnConflictPolicy | None = None,
@@ -311,17 +312,33 @@ def _register_tools(
         return_inverse_ops: bool = False,
         preflight_formula_check: bool = False,
     ) -> PatchToolOutput:
-        """Handle the ExStruct patch tool call.
+        """Edit an Excel workbook by applying patch operations.
+
+        Supports cell value updates, formula updates, and adding new sheets.
+        Operations are applied atomically: all succeed or none are saved.
 
         Args:
-            xlsx_path: Path to the Excel workbook.
-            ops: Patch operations to apply.
-            out_dir: Optional output directory.
-            out_name: Optional output filename.
-            on_conflict: Optional conflict policy override.
+            xlsx_path: Path to the Excel workbook to edit.
+            ops: Patch operations to apply in order. Each op has an 'op' field
+                specifying the type: 'set_value' (set cell value), 'set_formula'
+                (set cell formula starting with '='), 'add_sheet' (create new sheet),
+                'set_range_values' (bulk set rectangular range), 'fill_formula'
+                (fill formula across a row/column), 'set_value_if' (conditional
+                value update), 'set_formula_if' (conditional formula update).
+            out_dir: Output directory. Defaults to same directory as input.
+            out_name: Output filename. Defaults to '{stem}_patched{ext}'.
+            on_conflict: Conflict policy when output file exists:
+                'overwrite' (replace), 'skip' (do nothing), 'rename' (auto-rename).
+                Defaults to server --on-conflict setting.
+            auto_formula: When true, values starting with '=' in set_value ops
+                are treated as formulas instead of being rejected.
+            dry_run: When true, compute diff without saving changes.
+            return_inverse_ops: When true, return inverse (undo) operations.
+            preflight_formula_check: When true, scan formulas for errors
+                like #REF!, #NAME?, #DIV/0! before saving.
 
         Returns:
-            Patch result payload.
+            Patch result with output path, applied diffs, and any warnings.
         """
         payload = PatchToolInput(
             xlsx_path=xlsx_path,
