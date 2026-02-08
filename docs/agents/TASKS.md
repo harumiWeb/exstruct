@@ -42,3 +42,20 @@
 - [x] `tests/mcp/test_tools_handlers.py`: 入出力モデル拡張の受け渡しテストを追加する
 - [x] `tests/mcp/test_server.py`: 新規ツール引数の受け渡しテストを追加する
 - [x] `ruff check .` / `mypy src/exstruct --strict` / 関連pytest を実行し、結果を記録する
+
+## ABC列名キー出力オプション（`alpha_col`）
+
+- [ ] `models/__init__.py`: `col_index_to_alpha()` 変換ユーティリティを追加する
+- [ ] `models/__init__.py`: `convert_row_keys_to_alpha()` / `convert_sheet_keys_to_alpha()` を追加する
+- [ ] `engine.py`: `StructOptions` に `alpha_col: bool = False` を追加する
+- [ ] `engine.py`: `ExStructEngine.extract()` で `alpha_col=True` 時に変換を適用する
+- [ ] `__init__.py`: `extract()` / `process_excel()` に `alpha_col` パラメータを追加する
+- [ ] `cli/main.py`: `--alpha-col` CLI フラグを追加する
+- [ ] `mcp/extract_runner.py`: `ExtractOptions` に `alpha_col` を追加し、`process_excel()` へ連携する
+- [ ] `mcp/server.py`: `exstruct_extract` ツールに `alpha_col` パラメータを追加する
+- [ ] `tests/models/`: `col_index_to_alpha()` の単体テストを追加する
+- [ ] `tests/models/`: `convert_row_keys_to_alpha()` / `convert_sheet_keys_to_alpha()` のテストを追加する
+- [ ] `tests/engine/`: `alpha_col=True` でのエンジン抽出テストを追加する
+- [ ] `tests/cli/`: `--alpha-col` CLI フラグのテストを追加する
+- [ ] `tests/mcp/`: MCP extract の `alpha_col` 連携テストを追加する
+- [ ] `ruff check .` / `mypy src/exstruct --strict` / 関連pytest を実行し、結果を記録する

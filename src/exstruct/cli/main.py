@@ -109,6 +109,11 @@ def build_parser(
         availability if availability is not None else get_com_availability()
     )
     _add_auto_page_breaks_argument(parser, resolved_availability)
+    parser.add_argument(
+        "--alpha-col",
+        action="store_true",
+        help="Output column keys as Excel-style ABC names (A, B, ..., Z, AA, ...) instead of 0-based indices.",
+    )
     return parser
 
 
@@ -143,6 +148,7 @@ def main(argv: list[str] | None = None) -> int:
             sheets_dir=args.sheets_dir,
             print_areas_dir=args.print_areas_dir,
             auto_page_breaks_dir=getattr(args, "auto_page_breaks_dir", None),
+            alpha_col=args.alpha_col,
         )
         return 0
     except Exception as e:

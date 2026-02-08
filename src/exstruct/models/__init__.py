@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Generator
 import json
 from pathlib import Path
-from typing import Literal
+from typing import Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -408,3 +408,133 @@ class PrintAreaView(BaseModel):
             case _:
                 raise ValueError(f"Unsupported export format: {fmt}")
         return dest
+
+
+# ---------------------------------------------------------------------------
+# Column index ↔ Excel alpha-style column name conversion
+# ---------------------------------------------------------------------------
+
+
+def col_index_to_alpha(index: int) -> str:
+    """Convert a 0-based column index to an Excel-style column name.
+
+    Args:
+        index: 0-based column index (0 → A, 25 → Z, 26 → AA, …).
+
+    Returns:
+        Excel column name string.
+
+    Raises:
+        ValueError: If index is negative.
+
+    Examples:
+        >>> col_index_to_alpha(0)
+        'A'
+        >>> col_index_to_alpha(25)
+        'Z'
+        >>> col_index_to_alpha(26)
+        'AA'
+    """
+    if index < 0:
+        raise ValueError(f"Column index must be non-negative, got {index}")
+    result: list[str] = []
+    num = index
+    while True:
+        num, remainder = divmod(num, 26)
+        result.append(chr(65 + remainder))
+        if num == 0:
+            break
+        num -= 1
+    result.reverse()
+    return "".join(result)
+
+
+def convert_row_keys_to_alpha(row: CellRow) -> CellRow:
+    """Return a new CellRow with numeric column keys converted to ABC-style.
+
+    Non-numeric keys are preserved unchanged.
+
+    Args:
+        row: Original CellRow with 0-based numeric string keys.
+
+    Returns:
+        New CellRow with alpha column keys.
+    """
+    new_c = _convert_mapping_keys_to_alpha(row.c, row_index=row.r, field_name="c")
+
+    new_links: dict[str, str] | None = None
+    if row.links:
+        new_links = _convert_mapping_keys_to_alpha(
+            row.links, row_index=row.r, field_name="links"
+        )
+
+    return CellRow(r=row.r, c=new_c, links=new_links)
+
+
+def convert_sheet_keys_to_alpha(sheet: SheetData) -> SheetData:
+    """Return a new SheetData with all CellRow column keys converted to ABC-style.
+
+    Args:
+        sheet: Original SheetData.
+
+    Returns:
+        New SheetData with alpha column keys in every row.
+    """
+    new_rows = [convert_row_keys_to_alpha(row) for row in sheet.rows]
+    return sheet.model_copy(update={"rows": new_rows})
+
+
+def convert_workbook_keys_to_alpha(workbook: WorkbookData) -> WorkbookData:
+    """Return a new WorkbookData with all CellRow column keys converted to ABC-style.
+
+    Args:
+        workbook: Original WorkbookData.
+
+    Returns:
+        New WorkbookData with alpha column keys in every sheet.
+    """
+    new_sheets = {
+        name: convert_sheet_keys_to_alpha(sheet)
+        for name, sheet in workbook.sheets.items()
+    }
+    return workbook.model_copy(update={"sheets": new_sheets})
+
+
+def _alpha_key(key: str) -> str:
+    """Convert a numeric string key to alpha, passing non-numeric keys through."""
+    try:
+        return col_index_to_alpha(int(key))
+    except ValueError:
+        return key
+
+
+MapValue = TypeVar("MapValue")
+
+
+def _convert_mapping_keys_to_alpha(
+    source: dict[str, MapValue], *, row_index: int, field_name: str
+) -> dict[str, MapValue]:
+    """Convert mapping keys to alpha-style and reject collisions.
+
+    Args:
+        source: Original key-value mapping.
+        row_index: 1-based row index for error context.
+        field_name: Field name ("c" or "links") for error context.
+
+    Returns:
+        Converted mapping with alpha-style keys.
+
+    Raises:
+        ValueError: If multiple source keys map to the same alpha key.
+    """
+    converted: dict[str, MapValue] = {}
+    for original_key, value in source.items():
+        alpha_key = _alpha_key(original_key)
+        if alpha_key in converted:
+            raise ValueError(
+                "Column key collision after alpha conversion in "
+                f"row {row_index} ({field_name}): "
+                f"{original_key!r} -> {alpha_key!r}"
+            )
+        converted[alpha_key] = value
+    return converted

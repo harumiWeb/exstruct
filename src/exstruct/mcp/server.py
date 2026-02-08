@@ -216,7 +216,9 @@ def _register_tools(
             format: Output format.
             out_dir: Optional output directory.
             out_name: Optional output filename.
-            options: Additional options (reserved for future use).
+            options: Additional options. Supports: pretty (bool), indent (int),
+                sheets_dir (str), print_areas_dir (str), auto_page_breaks_dir (str),
+                alpha_col (bool – convert column keys to Excel-style ABC names).
 
         Returns:
             Extraction result payload.

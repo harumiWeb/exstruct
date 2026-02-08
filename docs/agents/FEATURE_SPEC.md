@@ -15,9 +15,11 @@
 ## 2. ツールI/F定義（OpenAPI / Pydantic想定）
 
 ### Tool名
+
 - `exstruct_patch`
 
 ### Input
+
 - `xlsx_path: str`
 - `ops: list[PatchOp]`
 - `out_dir: str | None`
@@ -26,6 +28,7 @@
 - `auto_formula: bool`（default: false）
 
 ### Output
+
 - `out_path: str`
 - `patch_diff: list[PatchDiffItem]`
 - `warnings: list[str]`
@@ -36,18 +39,21 @@
 ## 3. 操作種別（PatchOp）
 
 ### set_value
+
 - `op: "set_value"`
 - `sheet: str`
 - `cell: str` （A1形式）
 - `value: str | int | float | None`（nullでクリア）
 
 ### set_formula
+
 - `op: "set_formula"`
 - `sheet: str`
 - `cell: str` （A1形式）
 - `formula: str`（必ず `=` から開始）
 
 ### add_sheet
+
 - `op: "add_sheet"`
 - `sheet: str`（新規シート名）
 
@@ -125,6 +131,7 @@
   - `warnings` にスキップ理由を記載
 
 出力名の既定:
+
 - `out_name` 未指定時は `"{stem}_patched{suffix}"`
 
 ---
@@ -141,32 +148,45 @@
 ## 10. 例
 
 ### set_value
+
 ```json
 {
   "xlsx_path": "book.xlsx",
   "ops": [
-    {"op": "set_value", "sheet": "フォーム", "cell": "B2", "value": "山田太郎"}
+    {
+      "op": "set_value",
+      "sheet": "フォーム",
+      "cell": "B2",
+      "value": "山田太郎"
+    }
   ]
 }
 ```
 
 ### set_formula
+
 ```json
 {
   "xlsx_path": "book.xlsx",
   "ops": [
-    {"op": "set_formula", "sheet": "計算", "cell": "C10", "formula": "=SUM(Sheet1!A:A)"}
+    {
+      "op": "set_formula",
+      "sheet": "計算",
+      "cell": "C10",
+      "formula": "=SUM(Sheet1!A:A)"
+    }
   ]
 }
 ```
 
 ### add_sheet
+
 ```json
 {
   "xlsx_path": "book.xlsx",
   "ops": [
-    {"op": "add_sheet", "sheet": "売上集計"},
-    {"op": "set_value", "sheet": "売上集計", "cell": "A1", "value": "月"}
+    { "op": "add_sheet", "sheet": "売上集計" },
+    { "op": "set_value", "sheet": "売上集計", "cell": "A1", "value": "月" }
   ]
 }
 ```
@@ -314,3 +334,83 @@
 - `set_range_values` がサイズ不一致を検知できる
 - `set_value_if` / `set_formula_if` が不一致時に `skipped` を返せる
 - `preflight_formula_check=true` で `#REF!` 等を検出して `formula_issues` に反映できる
+
+---
+
+## 13. ABC列名キー出力オプション（`alpha_col`）
+
+### 13.1 背景・目的
+
+AIエージェントがExStruct MCPで抽出した結果をもとに `exstruct_patch` でセル編集を行う際、
+`CellRow.c` のキーが 0-based 数値文字列（`"0"`, `"12"`, `"18"` 等）のため、
+Excel上の列名（A, M, S 等）との対応が直感的に取れず、**誤ったセル座標への書き込みが頻発する**。
+
+本機能は、抽出結果の `CellRow.c` キーを Excel 列名形式（A, B, ..., Z, AA, AB, ...）で
+出力するオプションを提供し、AIエージェントの座標理解精度を大幅に改善する。
+
+### 13.2 スコープ
+
+- **対象**: `CellRow.c` のキー、`CellRow.links` のキー
+- **非対象**: `MergedCells.items` / `PrintArea` / `formulas_map` / `colors_map` の列インデックス（整数のまま）
+- **変換方式**: 0-based 数値 → Excel列名（`0` → `A`, `1` → `B`, `25` → `Z`, `26` → `AA`）
+
+### 13.3 I/F
+
+#### 本体 API（`ExStructEngine` / `extract()` / `process_excel()`）
+
+- `StructOptions` に `alpha_col: bool = False` を追加
+- `True` の場合、抽出結果の `CellRow.c` / `CellRow.links` のキーを ABC 形式に変換する
+
+#### CLI
+
+- `--alpha-col` フラグを追加（`action="store_true"`）
+- `process_excel()` に `alpha_col` パラメータを追加
+
+#### MCP ツール（`exstruct_extract`）
+
+- `ExtractOptions` に `alpha_col: bool = False` を追加
+- `ExtractToolInput.options.alpha_col` をエンジンに連携
+
+### 13.4 変換ユーティリティ
+
+- `exstruct.models.col_index_to_alpha(index: int) -> str` を新設
+  - 0-based 整数 → Excel 列名文字列
+  - 例: `0` → `"A"`, `25` → `"Z"`, `26` → `"AA"`, `701` → `"ZZ"`
+- `exstruct.models.convert_row_keys_to_alpha(row: CellRow) -> CellRow` を新設
+  - `CellRow` の `c` / `links` キーを一括変換した新しい `CellRow` を返す
+- `exstruct.models.convert_sheet_keys_to_alpha(sheet: SheetData) -> SheetData` を新設
+  - `SheetData.rows` 内の全 `CellRow` を変換した新しい `SheetData` を返す
+
+### 13.5 変換タイミング
+
+- `extract_workbook()` でデータ抽出が完了した **後**、シリアライズの **前** に変換する
+- パイプライン上の位置: `ExStructEngine.extract()` の返却直前
+
+### 13.6 出力例
+
+#### `alpha_col=False`（デフォルト: 従来通り）
+
+```json
+{ "r": 6, "c": { "0": "氏　名", "12": "生年月日", "18": "年" } }
+```
+
+#### `alpha_col=True`
+
+```json
+{ "r": 6, "c": { "A": "氏　名", "M": "生年月日", "S": "年" } }
+```
+
+### 13.7 後方互換性
+
+- デフォルト `False` のため、既存の出力は一切変更されない
+- `alpha_col=True` は opt-in のみ
+- `_safe_col_index()` 等の下流処理は数値キーを前提としているが、変換はシリアライズ直前のため影響なし
+
+### 13.8 受け入れ基準
+
+- `col_index_to_alpha(0)` → `"A"`, `col_index_to_alpha(25)` → `"Z"`, `col_index_to_alpha(26)` → `"AA"`
+- `alpha_col=True` で抽出した `CellRow.c` のキーがすべて A-Z 形式
+- `alpha_col=True` で `CellRow.links` のキーも同様に変換される
+- `alpha_col=False`（デフォルト）で従来通り数値キー
+- CLI `--alpha-col` フラグが正しく `process_excel()` に伝播する
+- MCP `exstruct_extract` の `options.alpha_col` がエンジンに伝播する
