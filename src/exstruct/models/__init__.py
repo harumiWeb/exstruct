@@ -194,6 +194,13 @@ class SheetData(BaseModel):
     merged_cells: MergedCells | None = Field(
         default=None, description="Merged cell ranges on the sheet."
     )
+    merged_ranges: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Merged ranges in A1 notation (e.g., 'A1:C3'). "
+            "Used in alpha_col-oriented output."
+        ),
+    )
 
     def _as_payload(self) -> dict[str, object]:
         from ..io import dict_without_empty_values
@@ -481,7 +488,13 @@ def convert_sheet_keys_to_alpha(sheet: SheetData) -> SheetData:
         New SheetData with alpha column keys in every row.
     """
     new_rows = [convert_row_keys_to_alpha(row) for row in sheet.rows]
-    return sheet.model_copy(update={"rows": new_rows})
+    updated_fields: dict[str, object] = {"rows": new_rows}
+    if sheet.merged_cells is not None:
+        updated_fields["merged_ranges"] = _merged_items_to_a1_ranges(
+            sheet.merged_cells.items
+        )
+        updated_fields["merged_cells"] = None
+    return sheet.model_copy(update=updated_fields)
 
 
 def convert_workbook_keys_to_alpha(workbook: WorkbookData) -> WorkbookData:
@@ -538,3 +551,15 @@ def _convert_mapping_keys_to_alpha(
             )
         converted[alpha_key] = value
     return converted
+
+
+def _merged_items_to_a1_ranges(
+    items: list[tuple[int, int, int, int, str]],
+) -> list[str]:
+    """Convert merged cell tuples to A1 range strings."""
+    ranges: list[str] = []
+    for r1, c1, r2, c2, _value in items:
+        start = f"{col_index_to_alpha(c1)}{r1}"
+        end = f"{col_index_to_alpha(c2)}{r2}"
+        ranges.append(f"{start}:{end}")
+    return ranges

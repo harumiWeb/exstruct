@@ -45,17 +45,27 @@
 
 ## ABC列名キー出力オプション（`alpha_col`）
 
-- [ ] `models/__init__.py`: `col_index_to_alpha()` 変換ユーティリティを追加する
-- [ ] `models/__init__.py`: `convert_row_keys_to_alpha()` / `convert_sheet_keys_to_alpha()` を追加する
-- [ ] `engine.py`: `StructOptions` に `alpha_col: bool = False` を追加する
-- [ ] `engine.py`: `ExStructEngine.extract()` で `alpha_col=True` 時に変換を適用する
-- [ ] `__init__.py`: `extract()` / `process_excel()` に `alpha_col` パラメータを追加する
-- [ ] `cli/main.py`: `--alpha-col` CLI フラグを追加する
-- [ ] `mcp/extract_runner.py`: `ExtractOptions` に `alpha_col` を追加し、`process_excel()` へ連携する
-- [ ] `mcp/server.py`: `exstruct_extract` ツールに `alpha_col` パラメータを追加する
-- [ ] `tests/models/`: `col_index_to_alpha()` の単体テストを追加する
-- [ ] `tests/models/`: `convert_row_keys_to_alpha()` / `convert_sheet_keys_to_alpha()` のテストを追加する
-- [ ] `tests/engine/`: `alpha_col=True` でのエンジン抽出テストを追加する
-- [ ] `tests/cli/`: `--alpha-col` CLI フラグのテストを追加する
-- [ ] `tests/mcp/`: MCP extract の `alpha_col` 連携テストを追加する
-- [ ] `ruff check .` / `mypy src/exstruct --strict` / 関連pytest を実行し、結果を記録する
+- [x] `models/__init__.py`: `col_index_to_alpha()` 変換ユーティリティを追加する
+- [x] `models/__init__.py`: `convert_row_keys_to_alpha()` / `convert_sheet_keys_to_alpha()` を追加する
+- [x] `engine.py`: `StructOptions` に `alpha_col: bool = False` を追加する
+- [x] `engine.py`: `ExStructEngine.extract()` で `alpha_col=True` 時に変換を適用する
+- [x] `__init__.py`: `extract()` / `process_excel()` に `alpha_col` パラメータを追加する
+- [x] `cli/main.py`: `--alpha-col` CLI フラグを追加する
+- [x] `mcp/extract_runner.py`: `ExtractOptions` に `alpha_col` を追加し、`process_excel()` へ連携する
+- [x] `mcp/server.py`: `exstruct_extract` ツールに `alpha_col` パラメータを追加する
+- [x] `tests/models/`: `col_index_to_alpha()` の単体テストを追加する
+- [x] `tests/models/`: `convert_row_keys_to_alpha()` / `convert_sheet_keys_to_alpha()` のテストを追加する
+- [x] `tests/engine/`: `alpha_col=True` でのエンジン抽出テストを追加する
+- [x] `tests/cli/`: `--alpha-col` CLI フラグのテストを追加する
+- [x] `tests/mcp/`: MCP extract の `alpha_col` 連携テストを追加する
+- [x] `ruff check .` / `mypy src/exstruct --strict` / 関連pytest を実行し、結果を記録する
+
+## `merged_ranges` 出力（`alpha_col`時）
+
+- [x] `docs/agents/FEATURE_SPEC.md`: `merged_ranges` 仕様に更新する
+- [x] `models/__init__.py`: `SheetData` に `merged_ranges` フィールドを追加する
+- [x] `models/__init__.py`: `alpha_col=True` 変換時に `merged_cells.items` から `merged_ranges` を生成する
+- [x] `models/__init__.py`: `alpha_col=True` 変換時に `merged_cells` を非表示化する
+- [x] `tests/models/test_alpha_col.py`: `merged_ranges` 生成と非生成（alpha_col=False相当）を検証する
+- [x] `tests/engine/test_engine_alpha_col.py`: エンジン経由で `merged_ranges` が出力されることを検証する
+- [x] `uv run task precommit-run` を実行し、静的解析・型検査の通過を確認する

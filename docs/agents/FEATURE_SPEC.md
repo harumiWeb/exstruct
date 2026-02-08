@@ -414,3 +414,25 @@ Excel上の列名（A, M, S 等）との対応が直感的に取れず、**誤�
 - `alpha_col=False`（デフォルト）で従来通り数値キー
 - CLI `--alpha-col` フラグが正しく `process_excel()` に伝播する
 - MCP `exstruct_extract` の `options.alpha_col` がエンジンに伝播する
+
+### 13.9 `merged_ranges` 出力（`alpha_col` 時）
+
+#### 背景
+
+`alpha_col=True` 時に `CellRow.c` / `links` は ABC 列名になるため、`merged_cells.items`
+（`(r1, c1, r2, c2, v)` の数値列インデックス）との参照体系が混在する。
+AIエージェントの編集座標推論の一貫性を高めるため、A1形式の `merged_ranges` を別フィールドで出力する。
+
+#### 仕様
+
+- `SheetData` に `merged_ranges: list[str]` を追加する（例: `["A1:C3", "F10:G12"]`）
+- `alpha_col=True` のときのみ `merged_ranges` を生成する
+- `alpha_col=True` では `merged_cells` は出力しない（可読性優先）
+- `alpha_col=False` のときは従来どおり `merged_cells` を出力し、`merged_ranges` は空とする
+
+#### 受け入れ基準（追加）
+
+- `alpha_col=True` かつ `merged_cells` が存在するシートで `merged_ranges` が出力される
+- `merged_ranges` の各要素は `"A1:C3"` 形式で、`items` と同じ範囲を表す
+- `alpha_col=True` では `merged_cells` は出力されない
+- `alpha_col=False` では `merged_ranges` は空（実質非出力）となる

@@ -6,6 +6,7 @@ import pytest
 
 from exstruct.models import (
     CellRow,
+    MergedCells,
     SheetData,
     WorkbookData,
     col_index_to_alpha,
@@ -108,6 +109,25 @@ class TestConvertSheetKeysToAlpha:
         result = convert_sheet_keys_to_alpha(sheet)
         assert result.shapes == []
         assert result.charts == []
+
+    def test_moves_merged_cells_to_merged_ranges(self) -> None:
+        sheet = SheetData(
+            rows=[CellRow(r=1, c={"0": "v"}, links=None)],
+            merged_cells=MergedCells(
+                items=[(1, 0, 3, 2, "merged"), (10, 25, 10, 26, "x")]
+            ),
+        )
+        result = convert_sheet_keys_to_alpha(sheet)
+        assert result.merged_ranges == ["A1:C3", "Z10:AA10"]
+        assert result.merged_cells is None
+
+    def test_no_merged_cells_keeps_none(self) -> None:
+        sheet = SheetData(
+            rows=[CellRow(r=1, c={"0": "v"}, links=None)], merged_cells=None
+        )
+        result = convert_sheet_keys_to_alpha(sheet)
+        assert result.merged_cells is None
+        assert result.merged_ranges == []
 
 
 class TestConvertWorkbookKeysToAlpha:

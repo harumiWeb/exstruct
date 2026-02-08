@@ -317,6 +317,9 @@ class ExStructEngine:
             merged_cells=sheet.merged_cells
             if self.output.filters.include_merged_cells
             else None,
+            merged_ranges=sheet.merged_ranges
+            if self.output.filters.include_merged_cells
+            else [],
         )
 
     def _filter_workbook(

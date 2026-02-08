@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from _pytest.monkeypatch import MonkeyPatch
 
 from exstruct.engine import ExStructEngine, StructOptions
-from exstruct.models import CellRow, SheetData, WorkbookData
+from exstruct.models import CellRow, MergedCells, SheetData, WorkbookData
 
 
 def _fake_workbook(path: Path, **kwargs: object) -> WorkbookData:
@@ -26,7 +27,8 @@ def _fake_workbook(path: Path, **kwargs: object) -> WorkbookData:
             "Sheet1": SheetData(
                 rows=[
                     CellRow(r=1, c={"0": "A1", "1": "B1", "25": "Z1"}, links=None),
-                ]
+                ],
+                merged_cells=MergedCells(items=[(1, 0, 3, 2, "merged")]),
             )
         },
     )
@@ -40,6 +42,7 @@ def test_engine_alpha_col_false(monkeypatch: MonkeyPatch, tmp_path: Path) -> Non
     row = result.sheets["Sheet1"].rows[0]
     assert "0" in row.c
     assert "1" in row.c
+    assert result.sheets["Sheet1"].merged_ranges == []
 
 
 def test_engine_alpha_col_true(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
@@ -49,3 +52,18 @@ def test_engine_alpha_col_true(monkeypatch: MonkeyPatch, tmp_path: Path) -> None
     result = engine.extract(tmp_path / "book.xlsx", mode="light")
     row = result.sheets["Sheet1"].rows[0]
     assert row.c == {"A": "A1", "B": "B1", "Z": "Z1"}
+    assert result.sheets["Sheet1"].merged_ranges == ["A1:C3"]
+    assert result.sheets["Sheet1"].merged_cells is None
+
+
+def test_engine_serialize_alpha_col_includes_merged_ranges(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    """Serialized output should include merged_ranges when alpha_col=True."""
+    monkeypatch.setattr("exstruct.engine.extract_workbook", _fake_workbook)
+    engine = ExStructEngine(options=StructOptions(mode="light", alpha_col=True))
+    result = engine.extract(tmp_path / "book.xlsx", mode="light")
+    payload = json.loads(engine.serialize(result, fmt="json"))
+    sheet = payload["sheets"]["Sheet1"]
+    assert sheet["merged_ranges"] == ["A1:C3"]
+    assert "merged_cells" not in sheet
