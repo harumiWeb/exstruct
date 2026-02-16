@@ -37,6 +37,15 @@ def test_read_json_chunk_raw_too_large(tmp_path: Path) -> None:
         read_json_chunk(request)
 
 
+def test_read_json_chunk_raw_too_large_has_retry_hint(tmp_path: Path) -> None:
+    data = {"book_name": "book", "sheets": {"Sheet1": {"rows": []}}}
+    out = tmp_path / "out.json"
+    _write_json(out, data)
+    request = ReadJsonChunkRequest(out_path=out, max_bytes=10)
+    with pytest.raises(ValueError, match=r"Retry with `sheet` .* or `filter`"):
+        read_json_chunk(request)
+
+
 def test_read_json_chunk_with_filters(tmp_path: Path) -> None:
     data = {
         "book_name": "book",
@@ -75,6 +84,19 @@ def test_read_json_chunk_requires_sheet(tmp_path: Path) -> None:
         filter=ReadJsonChunkFilter(rows=(1, 1)),
     )
     with pytest.raises(ValueError):
+        read_json_chunk(request)
+
+
+def test_read_json_chunk_requires_sheet_lists_available_names(tmp_path: Path) -> None:
+    data = {"book_name": "book", "sheets": {"A": {"rows": []}, "B": {"rows": []}}}
+    out = tmp_path / "out.json"
+    _write_json(out, data)
+    request = ReadJsonChunkRequest(
+        out_path=out,
+        max_bytes=10_000,
+        filter=ReadJsonChunkFilter(rows=(1, 1)),
+    )
+    with pytest.raises(ValueError, match=r"Available sheets: A, B"):
         read_json_chunk(request)
 
 
@@ -186,6 +208,40 @@ def test_read_json_chunk_warns_on_col_filter_inversion(tmp_path: Path) -> None:
     )
     result = read_json_chunk(request)
     assert any("Column filter ignored" in warning for warning in result.warnings)
+
+
+def test_read_json_chunk_with_alpha_col_keys(tmp_path: Path) -> None:
+    data = {
+        "book_name": "book",
+        "sheets": {
+            "Sheet1": {
+                "rows": [
+                    {"r": 1, "c": {"A": "A1", "B": "B1", "AA": "AA1", "ab": "AB1"}},
+                ]
+            }
+        },
+    }
+    out = tmp_path / "out.json"
+    _write_json(out, data)
+    request = ReadJsonChunkRequest(
+        out_path=out,
+        sheet="Sheet1",
+        max_bytes=10_000,
+        filter=ReadJsonChunkFilter(cols=(1, 2)),
+    )
+    result = read_json_chunk(request)
+    payload = json.loads(result.chunk)
+    assert payload["sheet"]["rows"][0]["c"] == {"A": "A1", "B": "B1"}
+
+    request_aa = ReadJsonChunkRequest(
+        out_path=out,
+        sheet="Sheet1",
+        max_bytes=10_000,
+        filter=ReadJsonChunkFilter(cols=(27, 28)),
+    )
+    result_aa = read_json_chunk(request_aa)
+    payload_aa = json.loads(result_aa.chunk)
+    assert payload_aa["sheet"]["rows"][0]["c"] == {"AA": "AA1", "ab": "AB1"}
 
 
 def test_read_json_chunk_warns_on_base_payload_exceeds_max_bytes(

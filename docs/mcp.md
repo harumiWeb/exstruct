@@ -38,15 +38,61 @@ exstruct-mcp --root C:\\data --log-file C:\\logs\\exstruct-mcp.log --on-conflict
 - `exstruct_read_json_chunk`
 - `exstruct_validate_input`
 
-### `exstruct_extract` defaults
+### `exstruct_extract` defaults and mode guide
 
 - `options.alpha_col` defaults to `true` in MCP (column keys become `A`, `B`, ...).
 - Set `options.alpha_col=false` if you need legacy 0-based numeric string keys.
+- `mode` is an extraction detail level (not sheet scope):
+
+| Mode | When to use | Main output characteristics |
+|---|---|---|
+| `light` | Fast, structure-first extraction | cells + table candidates + print areas |
+| `standard` | Default for most agent flows | balanced detail and size |
+| `verbose` | Need the richest metadata | adds links/maps and richer metadata |
+
+## Quick start for agents (recommended)
+
+1. Validate file readability with `exstruct_validate_input`
+2. Run `exstruct_extract` with `mode="standard"`
+3. Read the result with `exstruct_read_json_chunk` using `sheet` and `max_bytes`
+
+Example sequence:
+
+```json
+{ "tool": "exstruct_validate_input", "xlsx_path": "C:\\data\\book.xlsx" }
+{ "tool": "exstruct_extract", "xlsx_path": "C:\\data\\book.xlsx", "mode": "standard", "format": "json" }
+{ "tool": "exstruct_read_json_chunk", "out_path": "C:\\data\\book.json", "sheet": "Sheet1", "max_bytes": 50000 }
+```
 
 ## Basic flow
 
 1. Call `exstruct_extract` to generate the output JSON file
 2. Use `exstruct_read_json_chunk` to read only the parts you need
+
+## Chunking guide
+
+### Key parameters
+
+- `sheet`: target sheet name. Strongly recommended when workbook has multiple sheets.
+- `max_bytes`: chunk size budget in bytes. Start at `50_000`; increase (for example `120_000`) if chunks are too small.
+- `filter.rows`: `[start, end]` (1-based, inclusive).
+- `filter.cols`: `[start, end]` (1-based, inclusive). Works for both numeric keys (`"0"`, `"1"`) and alpha keys (`"A"`, `"B"`).
+- `cursor`: pagination cursor (`next_cursor` from the previous response).
+
+### Retry guide by error/warning
+
+| Message | Meaning | Next action |
+|---|---|---|
+| `Output is too large...` | Whole JSON cannot fit in one response | Retry with `sheet`, or narrow with `filter.rows`/`filter.cols` |
+| `Sheet is required when multiple sheets exist...` | Workbook has multiple sheets and target is ambiguous | Pick one value from `workbook_meta.sheet_names` and set `sheet` |
+| `Base payload exceeds max_bytes...` | Even metadata-only payload is larger than `max_bytes` | Increase `max_bytes` |
+| `max_bytes too small...` | Row payload is too large for the current size | Increase `max_bytes`, or narrow row/col filters |
+
+### Cursor example
+
+1. Call without `cursor`
+2. If response has `next_cursor`, call again with that cursor
+3. Repeat until `next_cursor` is `null`
 
 ## Edit flow (patch)
 

@@ -212,13 +212,16 @@ def _register_tools(
 
         Args:
             xlsx_path: Path to the Excel workbook.
-            mode: Extraction mode.
+            mode: Extraction detail level. Allowed values are:
+                "light" (cells + table candidates + print areas),
+                "standard" (recommended default),
+                "verbose" (adds richer metadata such as links/maps).
             format: Output format.
             out_dir: Optional output directory.
             out_name: Optional output filename.
             options: Additional options. Supports: pretty (bool), indent (int),
                 sheets_dir (str), print_areas_dir (str), auto_page_breaks_dir (str),
-                alpha_col (bool – convert column keys to Excel-style ABC names).
+                alpha_col (bool - convert column keys to Excel-style ABC names).
 
         Returns:
             Extraction result payload.
@@ -256,10 +259,13 @@ def _register_tools(
 
         Args:
             out_path: Path to the JSON output file.
-            sheet: Optional sheet name.
-            max_bytes: Maximum chunk size in bytes.
-            filter: Optional filter payload.
-            cursor: Optional cursor for pagination.
+            sheet: Optional sheet name. Required when multiple sheets exist and
+                no cursor/filter can disambiguate the target.
+            max_bytes: Maximum chunk size in bytes. Start around 50_000 and
+                increase (for example 120_000) when chunks are too small.
+            filter: Optional filter payload with
+                rows=[start,end], cols=[start,end] (1-based inclusive).
+            cursor: Optional cursor for pagination (non-negative integer string).
 
         Returns:
             JSON chunk result payload.

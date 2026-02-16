@@ -81,3 +81,16 @@
 - [x] `tests/mcp/test_server.py`: 不正JSON文字列 `ops` が明確な `ValueError` になることを検証する
 - [x] `ruff check src/exstruct/mcp/server.py tests/mcp/test_server.py` を実行し、静的解析を確認する
 - [x] `pytest tests/mcp/test_server.py` を実行し、回帰がないことを確認する
+
+## MCP モード/チャンク指定ガイド改善
+
+- [x] `docs/agents/FEATURE_SPEC.md`: mode/chunk ガイド改善仕様（目的/スコープ/受け入れ基準）を定義する
+- [x] `docs/mcp.md`: 推奨3ステップ（validate/extract/chunk）と mode 比較表を追加する
+- [x] `docs/mcp.md`: chunk パラメータ説明、エラー別リトライ表、cursor利用手順を追加する
+- [x] `src/exstruct/mcp/server.py`: `exstruct_extract` Docstring に mode の許容値と意図を追記する
+- [x] `src/exstruct/mcp/server.py`: `exstruct_read_json_chunk` Docstring に `filter.rows/cols` と `max_bytes` 指針を追記する
+- [x] `src/exstruct/mcp/chunk_reader.py`: 大容量時エラー文言に再実行ヒントを追加する
+- [x] `src/exstruct/mcp/chunk_reader.py`: 複数シート時エラー文言に利用可能シート名を追加する
+- [x] `src/exstruct/mcp/chunk_reader.py`: `filter.cols` を英字列キー（`A`, `AA`）対応に拡張する
+- [x] `tests/mcp/test_chunk_reader.py`: 英字列キー対応と新エラーメッセージのテストを追加する
+- [x] `uv run task precommit-run` を実行し、静的解析・型検査・テスト通過を確認する

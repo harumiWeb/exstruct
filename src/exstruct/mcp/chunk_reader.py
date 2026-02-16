@@ -145,7 +145,10 @@ def _chunk_raw_text(text: str, max_bytes: int) -> ReadJsonChunkResult:
     payload_bytes = text.encode("utf-8")
     if len(payload_bytes) <= max_bytes:
         return ReadJsonChunkResult(chunk=text, next_cursor=None, warnings=[])
-    raise ValueError("Output is too large. Specify sheet or filter to chunk.")
+    raise ValueError(
+        "Output is too large. Retry with `sheet` (e.g., sheet='Sheet1') "
+        "or `filter` (e.g., filter.rows=[1,200]) to chunk the result."
+    )
 
 
 def _select_sheet(
@@ -173,7 +176,12 @@ def _select_sheet(
     if len(sheets) == 1:
         only_name = next(iter(sheets.keys()))
         return only_name, sheets[only_name]
-    raise ValueError("Sheet is required when multiple sheets exist.")
+    names = ", ".join(str(name) for name in sheets.keys())
+    raise ValueError(
+        "Sheet is required when multiple sheets exist. "
+        f"Available sheets: {names}. "
+        "Retry with `sheet='<name>'`."
+    )
 
 
 def _extract_rows(sheet_data: dict[str, Any]) -> list[dict[str, Any]]:
@@ -281,11 +289,40 @@ def _col_in_range(key: str, start: int, end: int) -> bool:
     Returns:
         True if the column index is within range.
     """
-    try:
-        index = int(key)
-    except (TypeError, ValueError):
+    index = _parse_col_index(key)
+    if index is None:
         return False
     return start <= index <= end
+
+
+def _parse_col_index(key: str) -> int | None:
+    """Parse a column key into a 0-based index.
+
+    Supports both legacy numeric keys ("0", "1", ...) and
+    alpha keys ("A", "B", ..., "AA", ...) emitted by alpha_col mode.
+
+    Args:
+        key: Column key string.
+
+    Returns:
+        0-based column index, or None when parsing fails.
+    """
+    try:
+        return int(key)
+    except (TypeError, ValueError):
+        pass
+
+    normalized = key.strip().upper()
+    if not normalized.isalpha():
+        return None
+
+    acc = 0
+    for ch in normalized:
+        code = ord(ch)
+        if code < ord("A") or code > ord("Z"):
+            return None
+        acc = acc * 26 + (code - ord("A") + 1)
+    return acc - 1
 
 
 def _row_index(row: dict[str, Any]) -> int:

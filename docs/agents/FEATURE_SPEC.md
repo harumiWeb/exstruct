@@ -484,3 +484,70 @@ JSON文字列配列として送信する場合がある。
 - JSON文字列配列入力でも patch が実行できる
 - 不正JSON文字列で `ops[index]` を含む明確なエラーが返る
 - object 以外のJSON型入力で「object必須」エラーが返る
+
+---
+
+## 15. MCP モード/チャンク指定ガイド改善
+
+### 15.1 背景
+
+MCP運用時、次の迷いが発生しやすい。
+
+- `exstruct_extract.mode` に無効値を入れて失敗する
+- `exstruct_read_json_chunk` で `sheet` 未指定のまま再試行して失敗する
+- `max_bytes` の調整方針が不明でリトライ回数が増える
+- `alpha_col=true` 出力時に `filter.cols` が使いにくい
+
+### 15.2 目的
+
+- モード指定とチャンク指定の「最短成功パターン」を文書化する
+- エラー時に次の行動が分かるメッセージへ改善する
+- `alpha_col=true` でも列フィルタを直感的に使えるようにする
+
+### 15.3 スコープ
+
+- `docs/mcp.md` の実運用ガイド追加
+- `src/exstruct/mcp/server.py` のツールDocstring詳細化
+- `src/exstruct/mcp/chunk_reader.py` のエラーメッセージ改善
+- `src/exstruct/mcp/chunk_reader.py` の `filter.cols` を英字列キー対応
+- 関連テスト追加
+
+### 15.4 仕様
+
+#### 15.4.1 ドキュメント強化（`docs/mcp.md`）
+
+- `validate_input -> extract(standard) -> read_json_chunk` の推奨3ステップを追加
+- `mode` の許容値（`light`/`standard`/`verbose`）と用途を表形式で明記
+- `read_json_chunk` の主要引数（`sheet`, `max_bytes`, `filter`, `cursor`）を具体化
+- エラー/警告ごとの再試行手順を表形式で明記
+
+#### 15.4.2 ツール説明の詳細化（`server.py`）
+
+- `exstruct_extract` Docstringに `mode` の意味と許容値を明記
+- `exstruct_read_json_chunk` Docstringに `filter.rows/cols` の
+  1-based inclusive 仕様と `max_bytes` 調整指針を明記
+
+#### 15.4.3 エラーメッセージ改善（`chunk_reader.py`）
+
+- 大きすぎる生JSONに対するエラー文言を、`sheet`/`filter` 指定例付きへ変更
+- 複数シート時の `sheet` 必須エラーに、利用可能シート名と再実行ヒントを追加
+
+#### 15.4.4 `filter.cols` の英字列キー対応（`chunk_reader.py`）
+
+- 列キーが数値文字列（`"0"`）に加え英字列名（`"A"`, `"AA"`）でも判定可能にする
+- `filter.cols` は従来どおり 1-based inclusive の列番号指定を維持する
+- 英字列名は大文字小文字を区別しない
+
+### 15.5 後方互換性
+
+- 既存の `filter.cols` 数値キー挙動は維持する
+- `read_json_chunk` の入出力スキーマは変更しない
+- 変更はガイド追加・メッセージ改善・列キー判定拡張に限定する
+
+### 15.6 受け入れ基準
+
+- `docs/mcp.md` だけで、初回利用者が mode/chunk 再試行を完了できる
+- `Output is too large` エラーに次アクションが含まれる
+- `Sheet is required when multiple sheets exist` エラーにシート候補が含まれる
+- `filter.cols` が数値キー・英字キー双方で機能する
+- 既存テストと追加テストが通過する
