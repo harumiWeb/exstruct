@@ -69,3 +69,15 @@
 - [x] `tests/models/test_alpha_col.py`: `merged_ranges` 生成と非生成（alpha_col=False相当）を検証する
 - [x] `tests/engine/test_engine_alpha_col.py`: エンジン経由で `merged_ranges` が出力されることを検証する
 - [x] `uv run task precommit-run` を実行し、静的解析・型検査の通過を確認する
+
+## `exstruct_patch.ops` 入力スキーマ整合（AIエージェント運用改善）
+
+- [x] `docs/agents/FEATURE_SPEC.md`: `ops` の正式入力（object配列）と互換入力（JSON文字列配列）を定義する
+- [x] `mcp/server.py`: `ops` 正規化ヘルパー（object/string両対応）を追加する
+- [x] `mcp/server.py`: `_patch_tool` で正規化済み `ops` を `PatchToolInput` に渡す
+- [x] `mcp/server.py`: 不正JSON時に `ops[index]` と入力例を含むエラー文言を返す
+- [x] `tests/mcp/test_server.py`: `ops` 正規化ヘルパーの単体テスト（成功/失敗）を追加する
+- [x] `tests/mcp/test_server.py`: `exstruct_patch` が JSON文字列配列 `ops` を受理できることを検証する
+- [x] `tests/mcp/test_server.py`: 不正JSON文字列 `ops` が明確な `ValueError` になることを検証する
+- [x] `ruff check src/exstruct/mcp/server.py tests/mcp/test_server.py` を実行し、静的解析を確認する
+- [x] `pytest tests/mcp/test_server.py` を実行し、回帰がないことを確認する

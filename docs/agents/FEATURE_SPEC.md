@@ -436,3 +436,51 @@ AIエージェントの編集座標推論の一貫性を高めるため、A1形�
 - `merged_ranges` の各要素は `"A1:C3"` 形式で、`items` と同じ範囲を表す
 - `alpha_col=True` では `merged_cells` は出力されない
 - `alpha_col=False` では `merged_ranges` は空（実質非出力）となる
+
+---
+
+## 14. `exstruct_patch.ops` 入力スキーマ整合（AIエージェント運用改善）
+
+### 14.1 背景
+
+一部のMCPクライアントは、`ops` を `PatchOp` オブジェクト配列ではなく、
+JSON文字列配列として送信する場合がある。
+この差異により、AIエージェントがツール定義どおりに呼び出しても
+入力バリデーションで失敗するケースがある。
+
+### 14.2 目的
+
+- `exstruct_patch` の受け口を明確化し、実装とツール入力スキーマの体験差を解消する
+- AIエージェントがクライアント差異を意識せず patch を実行できるようにする
+
+### 14.3 入力仕様
+
+- 正式入力: `ops: list[object]`（各要素は `PatchOp` 相当のJSONオブジェクト）
+- 互換入力: `ops: list[str]`（各要素は `PatchOp` オブジェクトを表すJSON文字列）
+- サーバー内部で次を行う:
+  - object はそのまま採用
+  - string は `json.loads()` で object に変換
+  - 変換後に `PatchToolInput`（`ops: list[PatchOp]`）で厳密検証
+
+### 14.4 エラー仕様
+
+- JSON文字列のパース失敗時:
+  - `ValueError`
+  - メッセージに失敗した `ops[index]` を含める
+  - 「object 形式の推奨入力例」を併記する
+- JSONとして有効でもobjectでない場合（配列/数値など）:
+  - `ValueError`
+  - 「JSON object 必須」を明記する
+
+### 14.5 後方互換性
+
+- 既存の object 配列クライアントは変更不要
+- string 配列クライアントはサーバー側で吸収し、破壊的変更を回避する
+- `PatchOp` 自体のスキーマと patch 実行ロジックは変更しない
+
+### 14.6 受け入れ基準
+
+- object 配列入力で従来どおり patch が実行できる
+- JSON文字列配列入力でも patch が実行できる
+- 不正JSON文字列で `ops[index]` を含む明確なエラーが返る
+- object 以外のJSON型入力で「object必須」エラーが返る

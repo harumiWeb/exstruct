@@ -58,6 +58,8 @@ exstruct-mcp --root C:\\data --log-file C:\\logs\\exstruct-mcp.log --on-conflict
 ### `exstruct_patch` highlights
 
 - Atomic apply: all operations succeed, or no changes are saved
+- `ops` accepts an object list as the canonical form.
+  For compatibility, JSON object strings in `ops` are also accepted and normalized.
 - Supports:
   - `set_value`
   - `set_formula`

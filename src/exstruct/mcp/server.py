@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import functools
 import importlib
+import json
 import logging
 import os
 from pathlib import Path
@@ -16,7 +17,6 @@ from exstruct import ExtractionMode
 
 from .extract_runner import OnConflictPolicy
 from .io import PathPolicy
-from .patch_runner import PatchOp
 from .tools import (
     ExtractToolInput,
     ExtractToolOutput,
@@ -305,7 +305,7 @@ def _register_tools(
 
     async def _patch_tool(
         xlsx_path: str,
-        ops: list[PatchOp],
+        ops: list[dict[str, Any] | str],
         out_dir: str | None = None,
         out_name: str | None = None,
         on_conflict: OnConflictPolicy | None = None,
@@ -321,12 +321,16 @@ def _register_tools(
 
         Args:
             xlsx_path: Path to the Excel workbook to edit.
-            ops: Patch operations to apply in order. Each op has an 'op' field
-                specifying the type: 'set_value' (set cell value), 'set_formula'
-                (set cell formula starting with '='), 'add_sheet' (create new sheet),
-                'set_range_values' (bulk set rectangular range), 'fill_formula'
-                (fill formula across a row/column), 'set_value_if' (conditional
-                value update), 'set_formula_if' (conditional formula update).
+            ops: Patch operations to apply in order. Preferred format is an
+                object list (one object per operation). For compatibility with
+                clients that cannot send object arrays, JSON object strings are
+                also accepted and normalized before validation. Each operation
+                has an 'op' field specifying the type: 'set_value' (set cell
+                value), 'set_formula' (set cell formula starting with '='),
+                'add_sheet' (create new sheet), 'set_range_values' (bulk set
+                rectangular range), 'fill_formula' (fill formula across a
+                row/column), 'set_value_if' (conditional value update),
+                'set_formula_if' (conditional formula update).
             out_dir: Output directory. Defaults to same directory as input.
             out_name: Output filename. Defaults to '{stem}_patched{ext}'.
             on_conflict: Conflict policy when output file exists:
@@ -342,9 +346,10 @@ def _register_tools(
         Returns:
             Patch result with output path, applied diffs, and any warnings.
         """
+        normalized_ops = _coerce_patch_ops(ops)
         payload = PatchToolInput(
             xlsx_path=xlsx_path,
-            ops=ops,
+            ops=normalized_ops,
             out_dir=out_dir,
             out_name=out_name,
             on_conflict=on_conflict,
@@ -379,3 +384,68 @@ def _coerce_filter(filter_data: dict[str, Any] | None) -> dict[str, Any] | None:
     if not filter_data:
         return None
     return dict(filter_data)
+
+
+def _coerce_patch_ops(ops_data: list[dict[str, Any] | str]) -> list[dict[str, Any]]:
+    """Normalize patch operations payload for MCP clients.
+
+    Args:
+        ops_data: Raw operations from MCP tool input.
+
+    Returns:
+        Patch operations as object list.
+
+    Raises:
+        ValueError: If a string op is not valid JSON object.
+    """
+    normalized_ops: list[dict[str, Any]] = []
+    for index, raw_op in enumerate(ops_data):
+        if isinstance(raw_op, dict):
+            normalized_ops.append(dict(raw_op))
+            continue
+        normalized_ops.append(_parse_patch_op_json(raw_op, index))
+    return normalized_ops
+
+
+def _parse_patch_op_json(raw_op: str, index: int) -> dict[str, Any]:
+    """Parse a JSON string patch operation into object form.
+
+    Args:
+        raw_op: Raw JSON string for one patch operation.
+        index: Source index in the ops list.
+
+    Returns:
+        Parsed patch operation object.
+
+    Raises:
+        ValueError: If the string is not valid JSON object.
+    """
+    text = raw_op.strip()
+    if not text:
+        raise ValueError(_build_patch_op_error_message(index, "empty string"))
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ValueError(_build_patch_op_error_message(index, "invalid JSON")) from exc
+    if not isinstance(parsed, dict):
+        raise ValueError(
+            _build_patch_op_error_message(index, "JSON value must be an object")
+        )
+    return cast(dict[str, Any], parsed)
+
+
+def _build_patch_op_error_message(index: int, reason: str) -> str:
+    """Build a consistent validation message for invalid patch ops.
+
+    Args:
+        index: Source index in the ops list.
+        reason: Validation failure reason.
+
+    Returns:
+        Human-readable error message.
+    """
+    example = '{"op":"set_value","sheet":"Sheet1","cell":"A1","value":"sample"}'
+    return (
+        f"Invalid patch operation at ops[{index}]: {reason}. "
+        f"Use object form like {example}."
+    )
