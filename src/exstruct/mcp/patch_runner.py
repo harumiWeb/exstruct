@@ -238,8 +238,16 @@ def _validate_add_sheet(op: PatchOp) -> None:
     """Validate add_sheet operation."""
     if op.cell is not None:
         raise ValueError("add_sheet does not accept cell.")
+    if op.range is not None:
+        raise ValueError("add_sheet does not accept range.")
+    if op.base_cell is not None:
+        raise ValueError("add_sheet does not accept base_cell.")
+    if op.expected is not None:
+        raise ValueError("add_sheet does not accept expected.")
     if op.value is not None:
         raise ValueError("add_sheet does not accept value.")
+    if op.values is not None:
+        raise ValueError("add_sheet does not accept values.")
     if op.formula is not None:
         raise ValueError("add_sheet does not accept formula.")
 
@@ -252,12 +260,28 @@ def _validate_cell_required(op: PatchOp) -> None:
 
 def _validate_set_value(op: PatchOp) -> None:
     """Validate set_value operation."""
+    if op.range is not None:
+        raise ValueError("set_value does not accept range.")
+    if op.base_cell is not None:
+        raise ValueError("set_value does not accept base_cell.")
+    if op.expected is not None:
+        raise ValueError("set_value does not accept expected.")
+    if op.values is not None:
+        raise ValueError("set_value does not accept values.")
     if op.formula is not None:
         raise ValueError("set_value does not accept formula.")
 
 
 def _validate_set_formula(op: PatchOp) -> None:
     """Validate set_formula operation."""
+    if op.range is not None:
+        raise ValueError("set_formula does not accept range.")
+    if op.base_cell is not None:
+        raise ValueError("set_formula does not accept base_cell.")
+    if op.expected is not None:
+        raise ValueError("set_formula does not accept expected.")
+    if op.values is not None:
+        raise ValueError("set_formula does not accept values.")
     if op.value is not None:
         raise ValueError("set_formula does not accept value.")
     if op.formula is None:
@@ -432,13 +456,17 @@ def run_patch(
     warnings: list[str] = []
     if warning:
         warnings.append(warning)
-    if skipped:
+    if skipped and not request.dry_run:
         return PatchResult(
             out_path=str(output_path),
             patch_diff=[],
             inverse_ops=[],
             formula_issues=[],
             warnings=warnings,
+        )
+    if skipped and request.dry_run:
+        warnings.append(
+            "Dry-run mode ignores on_conflict=skip and simulates patch without writing."
         )
 
     com = get_com_availability()
@@ -529,7 +557,10 @@ def _apply_with_openpyxl(
     except Exception as exc:
         raise RuntimeError(f"openpyxl patch failed: {exc}") from exc
 
-    warnings.append("openpyxl editing may drop shapes/charts or unsupported elements.")
+    if not request.dry_run:
+        warnings.append(
+            "openpyxl editing may drop shapes/charts or unsupported elements."
+        )
     _append_skip_warnings(warnings, diff)
     if (
         not request.dry_run
@@ -537,9 +568,10 @@ def _apply_with_openpyxl(
         and any(issue.level == "error" for issue in formula_issues)
     ):
         issue = formula_issues[0]
+        op_index, op_name = _find_preflight_issue_origin(issue, request.ops)
         error = PatchErrorDetail(
-            op_index=0,
-            op=request.ops[0].op if request.ops else "set_value",
+            op_index=op_index,
+            op=op_name,
             sheet=issue.sheet,
             cell=issue.cell,
             message=f"Formula health check failed: {issue.message}",
@@ -569,6 +601,30 @@ def _append_skip_warnings(warnings: list[str], diff: list[PatchDiffItem]) -> Non
         warnings.append(
             f"Skipped op[{item.op_index}] {item.op} at {item.sheet}!{item.cell} due to condition mismatch."
         )
+
+
+def _find_preflight_issue_origin(
+    issue: FormulaIssue, ops: list[PatchOp]
+) -> tuple[int, PatchOpType]:
+    """Find the most likely op index/op name for a preflight formula issue."""
+    for index, op in enumerate(ops):
+        if _op_targets_issue_cell(op, issue.sheet, issue.cell):
+            return index, op.op
+    return -1, "set_value"
+
+
+def _op_targets_issue_cell(op: PatchOp, sheet: str, cell: str) -> bool:
+    """Return True when an op can affect the specified sheet/cell."""
+    if op.sheet != sheet:
+        return False
+    if op.cell is not None:
+        return op.cell == cell
+    if op.range is None:
+        return False
+    for row in _expand_range_coordinates(op.range):
+        if cell in row:
+            return True
+    return False
 
 
 def _maybe_fallback_openpyxl(
@@ -701,7 +757,10 @@ def _apply_ops_openpyxl(
     if input_path.suffix.lower() == ".xls":
         raise ValueError("openpyxl cannot edit .xls files.")
 
-    workbook = load_workbook(input_path)
+    if input_path.suffix.lower() == ".xlsm":
+        workbook = load_workbook(input_path, keep_vba=True)
+    else:
+        workbook = load_workbook(input_path)
     try:
         diff, inverse_ops = _apply_ops_to_openpyxl_workbook(
             workbook,
@@ -1141,6 +1200,10 @@ def _apply_xlwings_op(
     auto_formula: bool,
 ) -> PatchDiffItem:
     """Apply a single op to an xlwings workbook."""
+    # Extended ops are routed to openpyxl by _requires_openpyxl_backend.
+    # Keep this explicit guard to prevent accidental path regressions.
+    if op.op not in {"add_sheet", "set_value", "set_formula"}:
+        raise ValueError(f"Unsupported op: {op.op}")
     if op.op == "add_sheet":
         if op.sheet in sheets:
             raise ValueError(f"Sheet already exists: {op.sheet}")
@@ -1226,7 +1289,10 @@ def _xlwings_workbook(file_path: Path) -> Iterator[XlwingsWorkbookProtocol]:
         try:
             app.quit()
         except Exception:
-            pass
+            try:
+                app.kill()
+            except Exception:
+                pass
 
 
 class PatchOpError(ValueError):

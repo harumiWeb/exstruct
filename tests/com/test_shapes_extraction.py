@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -13,7 +14,7 @@ pytestmark = pytest.mark.com
 
 
 @contextmanager
-def _excel_app() -> xw.App:
+def _excel_app() -> Iterator[xw.App]:
     app = xw.App(add_book=False, visible=False)
     try:
         yield app
@@ -127,6 +128,7 @@ def test_line_direction(tmp_path: Path) -> None:
 
 
 def test_connector_connections(tmp_path: Path) -> None:
+    """Connectorの接続先IDが抽出結果のshape IDに整合することを確認する。"""
     path = tmp_path / "connectors.xlsx"
     _make_workbook_with_shapes(path)
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from _pytest.monkeypatch import MonkeyPatch
+import pytest
 
 from exstruct.engine import ExStructEngine, StructOptions
 from exstruct.models import CellRow, MergedCells, SheetData, WorkbookData
@@ -34,7 +34,9 @@ def _fake_workbook(path: Path, **kwargs: object) -> WorkbookData:
     )
 
 
-def test_engine_alpha_col_false(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+def test_engine_alpha_col_false(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """With alpha_col=False, column keys remain numeric."""
     monkeypatch.setattr("exstruct.engine.extract_workbook", _fake_workbook)
     engine = ExStructEngine(options=StructOptions(mode="light", alpha_col=False))
@@ -45,7 +47,7 @@ def test_engine_alpha_col_false(monkeypatch: MonkeyPatch, tmp_path: Path) -> Non
     assert result.sheets["Sheet1"].merged_ranges == []
 
 
-def test_engine_alpha_col_true(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+def test_engine_alpha_col_true(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """With alpha_col=True, column keys are converted to ABC-style."""
     monkeypatch.setattr("exstruct.engine.extract_workbook", _fake_workbook)
     engine = ExStructEngine(options=StructOptions(mode="light", alpha_col=True))
@@ -57,7 +59,7 @@ def test_engine_alpha_col_true(monkeypatch: MonkeyPatch, tmp_path: Path) -> None
 
 
 def test_engine_serialize_alpha_col_includes_merged_ranges(
-    monkeypatch: MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """Serialized output should include merged_ranges when alpha_col=True."""
     monkeypatch.setattr("exstruct.engine.extract_workbook", _fake_workbook)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -12,7 +13,7 @@ pytestmark = pytest.mark.com
 
 
 @contextmanager
-def _excel_app() -> xw.App:
+def _excel_app() -> Iterator[xw.App]:
     app = xw.App(add_book=False, visible=False)
     try:
         yield app

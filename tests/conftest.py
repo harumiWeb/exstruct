@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 import importlib.util
 import os
+import re
 import sys
 
 import pytest
@@ -13,10 +14,22 @@ FORCE_COM_TESTS = os.getenv("FORCE_COM_TESTS") == "1"
 RUN_RENDER_SMOKE = os.getenv("RUN_RENDER_SMOKE") == "1"
 
 
+def _markexpr_requests_com(markexpr: str) -> bool:
+    """Return True when markexpr explicitly requests the ``com`` marker."""
+    tokens = re.findall(r"[A-Za-z_][A-Za-z0-9_]*", markexpr.lower())
+    for index, token in enumerate(tokens):
+        if token != "com":
+            continue
+        prev = tokens[index - 1] if index > 0 else ""
+        if prev != "not":
+            return True
+    return False
+
+
 def pytest_configure(config: pytest.Config) -> None:
     """Register custom markers to avoid pytest warnings."""
     markexpr = getattr(config.option, "markexpr", "") or ""
-    if "com" in markexpr:
+    if _markexpr_requests_com(markexpr):
         os.environ.pop("SKIP_COM_TESTS", None)
     config.addinivalue_line("markers", "com: requires Excel COM (Windows + Excel).")
     config.addinivalue_line(
@@ -105,7 +118,7 @@ def _skip_com_for_non_com_tests(
     """Disable COM usage for tests that are not marked as COM/render."""
     node_path = str(request.node.path)
     markexpr = getattr(request.config.option, "markexpr", "") or ""
-    if "com" in markexpr:
+    if _markexpr_requests_com(markexpr):
         monkeypatch.delenv("SKIP_COM_TESTS", raising=False)
         return
     if "tests\\com\\" in node_path or "tests/com/" in node_path:

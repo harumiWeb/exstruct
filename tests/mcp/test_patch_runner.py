@@ -179,6 +179,29 @@ def test_run_patch_conflict_skip(
     assert any("skipping" in warning for warning in result.warnings)
 
 
+def test_run_patch_conflict_skip_dry_run_still_simulates(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    default_out = tmp_path / "book_patched.xlsx"
+    default_out.write_text("dummy", encoding="utf-8")
+    ops = [PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="x")]
+    request = PatchRequest(
+        xlsx_path=input_path,
+        ops=ops,
+        on_conflict="skip",
+        dry_run=True,
+    )
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.error is None
+    assert len(result.patch_diff) == 1
+    assert any("ignores on_conflict=skip" in warning for warning in result.warnings)
+    assert not any("may drop shapes/charts" in warning for warning in result.warnings)
+    assert default_out.read_text(encoding="utf-8") == "dummy"
+
+
 def test_run_patch_conflict_overwrite(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -243,6 +266,68 @@ def test_run_patch_xls_requires_com(
     request = PatchRequest(xlsx_path=input_path, ops=ops, on_conflict="rename")
     with pytest.raises(ValueError, match=r"requires Windows Excel COM"):
         run_patch(request, policy=PathPolicy(root=tmp_path))
+
+
+def test_run_patch_xlsm_openpyxl_uses_keep_vba(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsm"
+    input_path.write_bytes(b"dummy")
+    calls: dict[str, object] = {}
+
+    class FakeCell:
+        def __init__(self, value: str | int | float | None) -> None:
+            self.value = value
+            self.data_type: str | None = None
+
+    class FakeSheet:
+        def __init__(self) -> None:
+            self._cells: dict[str, FakeCell] = {"A1": FakeCell("old")}
+
+        def __getitem__(self, key: str) -> FakeCell:
+            if key not in self._cells:
+                self._cells[key] = FakeCell(None)
+            return self._cells[key]
+
+    class FakeWorkbook:
+        def __init__(self) -> None:
+            self._sheets: dict[str, FakeSheet] = {"Sheet1": FakeSheet()}
+            self.sheetnames = ["Sheet1"]
+
+        def __getitem__(self, key: str) -> FakeSheet:
+            return self._sheets[key]
+
+        def create_sheet(self, title: str) -> FakeSheet:
+            sheet = FakeSheet()
+            self._sheets[title] = sheet
+            self.sheetnames.append(title)
+            return sheet
+
+        def save(self, filename: str | Path) -> None:
+            calls["saved"] = str(filename)
+
+        def close(self) -> None:
+            calls["closed"] = True
+
+    fake_workbook = FakeWorkbook()
+
+    def _fake_load_workbook(path: Path, **kwargs: object) -> FakeWorkbook:
+        calls["path"] = str(path)
+        calls["keep_vba"] = kwargs.get("keep_vba", False)
+        return fake_workbook
+
+    monkeypatch.setattr("openpyxl.load_workbook", _fake_load_workbook)
+
+    request = PatchRequest(
+        xlsx_path=input_path,
+        ops=[PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="new")],
+        on_conflict="rename",
+    )
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.error is None
+    assert calls["keep_vba"] is True
+    assert calls["closed"] is True
 
 
 def test_run_patch_dry_run_does_not_write(
@@ -413,3 +498,35 @@ def test_run_patch_formula_health_check(
     assert result.error is not None
     assert result.formula_issues
     assert result.formula_issues[0].code == "ref_error"
+
+
+def test_run_patch_formula_health_check_reports_matching_op(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    ops = [
+        PatchOp(op="set_formula", sheet="Sheet1", cell="B1", formula="=SUM(1,1)"),
+        PatchOp(op="set_formula", sheet="Sheet1", cell="A1", formula="=#REF!+1"),
+    ]
+    request = PatchRequest(
+        xlsx_path=input_path,
+        ops=ops,
+        on_conflict="rename",
+        preflight_formula_check=True,
+    )
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.error is not None
+    assert result.error.op_index == 1
+    assert result.error.op == "set_formula"
+
+
+def test_patch_op_add_sheet_rejects_unrelated_fields() -> None:
+    with pytest.raises(ValidationError, match="add_sheet does not accept range"):
+        PatchOp(op="add_sheet", sheet="NewSheet", range="A1:A1")
+
+
+def test_patch_op_set_value_rejects_expected() -> None:
+    with pytest.raises(ValidationError, match="set_value does not accept expected"):
+        PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="x", expected="old")

@@ -64,7 +64,13 @@ Example sequence:
 
 ```json
 { "tool": "exstruct_validate_input", "xlsx_path": "C:\\data\\book.xlsx" }
+```
+
+```json
 { "tool": "exstruct_extract", "xlsx_path": "C:\\data\\book.xlsx", "mode": "standard", "format": "json" }
+```
+
+```json
 { "tool": "exstruct_read_json_chunk", "out_path": "C:\\data\\book.json", "sheet": "Sheet1", "max_bytes": 50000 }
 ```
 
@@ -97,12 +103,18 @@ Examples:
   "sheet": "Data",
   "range": "A1:G10"
 }
+```
+
+```json
 {
   "tool": "exstruct_read_cells",
   "out_path": "C:\\data\\book.json",
   "sheet": "Data",
   "addresses": ["J98", "J124"]
 }
+```
+
+```json
 {
   "tool": "exstruct_read_formulas",
   "out_path": "C:\\data\\book.json",
