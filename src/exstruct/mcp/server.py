@@ -22,13 +22,22 @@ from .tools import (
     ExtractToolOutput,
     PatchToolInput,
     PatchToolOutput,
+    ReadCellsToolInput,
+    ReadCellsToolOutput,
+    ReadFormulasToolInput,
+    ReadFormulasToolOutput,
     ReadJsonChunkToolInput,
     ReadJsonChunkToolOutput,
+    ReadRangeToolInput,
+    ReadRangeToolOutput,
     ValidateInputToolInput,
     ValidateInputToolOutput,
     run_extract_tool,
     run_patch_tool,
+    run_read_cells_tool,
+    run_read_formulas_tool,
     run_read_json_chunk_tool,
+    run_read_range_tool,
     run_validate_input_tool,
 )
 
@@ -287,6 +296,114 @@ def _register_tools(
 
     chunk_tool = app.tool(name="exstruct_read_json_chunk")
     chunk_tool(_read_json_chunk_tool)
+
+    async def _read_range_tool(  # pylint: disable=redefined-builtin
+        out_path: str,
+        sheet: str | None = None,
+        range: str = "A1",  # noqa: A002
+        include_formulas: bool = False,
+        include_empty: bool = True,
+        max_cells: int = 10_000,
+    ) -> ReadRangeToolOutput:
+        """Read a rectangular cell range from extracted JSON.
+
+        Args:
+            out_path: Path to the extracted JSON file.
+            sheet: Optional sheet name. Required when workbook has multiple sheets.
+            range: A1 range (for example, \"A1:G10\").
+            include_formulas: Include formula text for each returned cell.
+            include_empty: Include empty cells in the range.
+            max_cells: Safety limit for expanded cells.
+
+        Returns:
+            Range read result payload.
+        """
+        payload = ReadRangeToolInput(
+            out_path=out_path,
+            sheet=sheet,
+            range=range,
+            include_formulas=include_formulas,
+            include_empty=include_empty,
+            max_cells=max_cells,
+        )
+        work = functools.partial(
+            run_read_range_tool,
+            payload,
+            policy=policy,
+        )
+        result = cast(ReadRangeToolOutput, await anyio.to_thread.run_sync(work))
+        return result
+
+    read_range_tool = app.tool(name="exstruct_read_range")
+    read_range_tool(_read_range_tool)
+
+    async def _read_cells_tool(
+        out_path: str,
+        addresses: list[str],
+        sheet: str | None = None,
+        include_formulas: bool = True,
+    ) -> ReadCellsToolOutput:
+        """Read specific cells from extracted JSON.
+
+        Args:
+            out_path: Path to the extracted JSON file.
+            addresses: Target A1 addresses (for example, [\"J98\", \"J124\"]).
+            sheet: Optional sheet name. Required when workbook has multiple sheets.
+            include_formulas: Include formula text for each requested cell.
+
+        Returns:
+            Cell read result payload.
+        """
+        payload = ReadCellsToolInput(
+            out_path=out_path,
+            sheet=sheet,
+            addresses=addresses,
+            include_formulas=include_formulas,
+        )
+        work = functools.partial(
+            run_read_cells_tool,
+            payload,
+            policy=policy,
+        )
+        result = cast(ReadCellsToolOutput, await anyio.to_thread.run_sync(work))
+        return result
+
+    read_cells_tool = app.tool(name="exstruct_read_cells")
+    read_cells_tool(_read_cells_tool)
+
+    async def _read_formulas_tool(  # pylint: disable=redefined-builtin
+        out_path: str,
+        sheet: str | None = None,
+        range: str | None = None,  # noqa: A002
+        include_values: bool = False,
+    ) -> ReadFormulasToolOutput:
+        """Read formulas from extracted JSON.
+
+        Args:
+            out_path: Path to the extracted JSON file.
+            sheet: Optional sheet name. Required when workbook has multiple sheets.
+            range: Optional A1 range to limit formula results (for example, \"J2:J201\").
+            include_values: Include stored cell values with formulas.
+
+        Returns:
+            Formula read result payload.
+        """
+        payload = ReadFormulasToolInput(
+            out_path=out_path,
+            sheet=sheet,
+            range=range,
+            include_values=include_values,
+        )
+        work = functools.partial(
+            run_read_formulas_tool,
+            payload,
+            policy=policy,
+        )
+        result = cast(ReadFormulasToolOutput, await anyio.to_thread.run_sync(work))
+        return result
+
+    read_formulas_tool = app.tool(name="exstruct_read_formulas")
+    read_formulas_tool(_read_formulas_tool)
 
     async def _validate_input_tool(xlsx_path: str) -> ValidateInputToolOutput:
         """Handle input validation tool call.

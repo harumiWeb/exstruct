@@ -551,3 +551,147 @@ MCP運用時、次の迷いが発生しやすい。
 - `Sheet is required when multiple sheets exist` エラーにシート候補が含まれる
 - `filter.cols` が数値キー・英字キー双方で機能する
 - 既存テストと追加テストが通過する
+
+---
+
+## 16. 読み取りツール拡張（`read_range` / `read_cells` / `read_formulas`）
+
+### 16.1 背景
+
+`exstruct_read_json_chunk` は汎用性が高い一方、確認作業では以下が冗長になりやすい。
+
+- 範囲取得に `sheet` / `filter` / `cursor` の組み合わせが必要
+- 単発セル確認でもチャンク前提の手順が必要
+- 数式点検で `formulas_map` から座標を手作業で読む必要がある
+
+### 16.2 目的
+
+- `A1:G10` のような直感的指定で値確認できるようにする
+- 指定セル群のピンポイント確認を1コールで完結させる
+- 数式点検を専用ツールで高速化する
+
+### 16.3 スコープ
+
+- 新規MCPツールを3つ追加する
+  - `exstruct_read_range`
+  - `exstruct_read_cells`
+  - `exstruct_read_formulas`
+- 既存の `exstruct_extract` / `exstruct_read_json_chunk` は後方互換を維持し、変更しない
+
+### 16.4 共通方針
+
+- 入力元は `exstruct_extract` で生成された `out_path`（JSON）とする
+- シート選択ルールは `read_json_chunk` と同一
+  - `sheet` 指定あり: そのシートを使用
+  - `sheet` 省略かつ単一シート: 自動選択
+  - `sheet` 省略かつ複数シート: エラー
+- 参照座標はA1形式で統一する
+- `alpha_col=true` 出力（英字キー）と数値キー出力の両方を透過的に扱う
+
+### 16.5 ツールI/F
+
+#### 16.5.1 `exstruct_read_range`
+
+Input:
+
+- `out_path: str`
+- `sheet: str | None = None`
+- `range: str`（A1範囲。例: `A1:G10`）
+- `include_formulas: bool = false`
+- `include_empty: bool = true`
+- `max_cells: int = 10000`
+
+Output:
+
+- `book_name: str | None`
+- `sheet_name: str`
+- `range: str`
+- `cells: list[CellReadItem]`
+- `warnings: list[str]`
+
+`CellReadItem`:
+
+- `cell: str`（A1）
+- `value: str | int | float | bool | None`
+- `formula: str | None`（`include_formulas=true` の場合のみ設定）
+
+#### 16.5.2 `exstruct_read_cells`
+
+Input:
+
+- `out_path: str`
+- `sheet: str | None = None`
+- `addresses: list[str]`（A1セル番地。例: `["J98","J124"]`）
+- `include_formulas: bool = true`
+
+Output:
+
+- `book_name: str | None`
+- `sheet_name: str`
+- `cells: list[CellReadItem]`（入力順を維持）
+- `missing_cells: list[str]`（シート範囲外など）
+- `warnings: list[str]`
+
+#### 16.5.3 `exstruct_read_formulas`
+
+Input:
+
+- `out_path: str`
+- `sheet: str | None = None`
+- `range: str | None = None`（未指定時はシート全体）
+- `include_values: bool = false`
+
+Output:
+
+- `book_name: str | None`
+- `sheet_name: str`
+- `range: str | None`
+- `formulas: list[FormulaReadItem]`
+- `warnings: list[str]`
+
+`FormulaReadItem`:
+
+- `cell: str`（A1）
+- `formula: str`
+- `value: str | int | float | bool | None`（`include_values=true` の場合のみ設定）
+
+### 16.6 バリデーション規則
+
+- `out_path` は存在ファイルかつ許可パス内であること
+- `range` はA1範囲形式であること（`A1:G10`）
+- `addresses` は空配列禁止、各要素がA1セル形式であること
+- `max_cells` は正数で、展開セル数が上限を超えた場合は `ValueError`
+- `exstruct_read_formulas` で `formulas_map` が無い場合:
+  - エラーではなく空結果 + `warnings` で `mode=verbose` 推奨を返す
+
+### 16.7 実行セマンティクス
+
+- 1回の呼び出しでJSONを1回だけ読み込み・パースする
+- セル値参照は `sheet.rows[].c` から取得する
+- 数式参照は `sheet.formulas_map` を主データソースとする
+- 返却順:
+  - `read_range`: 行優先（top-left -> bottom-right）
+  - `read_cells`: 入力順
+  - `read_formulas`: セル番地昇順（row, col）
+
+### 16.8 エラー処理
+
+- A1形式不正: `ValueError`
+- シート不在: `ValueError`
+- 複数シートで `sheet` 未指定: `ValueError`（候補名を含める）
+- JSON構造不正: `ValueError`
+
+### 16.9 後方互換性
+
+- 既存ツールの入出力スキーマは変更しない
+- 新規ツール追加のみ（破壊的変更なし）
+- `read_json_chunk` の既存運用はそのまま利用可能
+
+### 16.10 受け入れ基準
+
+- `exstruct_read_range(range="A1:G10")` で70セルを取得できる
+- `exstruct_read_cells(addresses=["J98","J124"])` で2セルを入力順に取得できる
+- `exstruct_read_formulas(range="J2:J201")` で対象範囲の式一覧を取得できる
+- `alpha_col=true/false` どちらのJSONでも同じ結果を返せる
+- 不正A1指定で明確なエラーが返る
+- `uv run task precommit-run` が通過する

@@ -94,3 +94,20 @@
 - [x] `src/exstruct/mcp/chunk_reader.py`: `filter.cols` を英字列キー（`A`, `AA`）対応に拡張する
 - [x] `tests/mcp/test_chunk_reader.py`: 英字列キー対応と新エラーメッセージのテストを追加する
 - [x] `uv run task precommit-run` を実行し、静的解析・型検査・テスト通過を確認する
+
+## 読み取りツール拡張（`read_range` / `read_cells` / `read_formulas`）
+
+- [x] `docs/agents/FEATURE_SPEC.md`: 新規3ツールのI/F・バリデーション・受け入れ基準を定義する
+- [x] `src/exstruct/mcp/sheet_reader.py`: A1セル/範囲パーサーと共通読み取りロジックを実装する
+- [x] `src/exstruct/mcp/sheet_reader.py`: `read_range`（A1範囲指定）を実装する
+- [x] `src/exstruct/mcp/sheet_reader.py`: `read_cells`（複数セル指定）を実装する
+- [x] `src/exstruct/mcp/sheet_reader.py`: `read_formulas`（数式一覧＋任意で値）を実装する
+- [x] `src/exstruct/mcp/tools.py`: `ReadRangeToolInput/Output`、`ReadCellsToolInput/Output`、`ReadFormulasToolInput/Output` を追加する
+- [x] `src/exstruct/mcp/tools.py`: `run_read_range_tool`、`run_read_cells_tool`、`run_read_formulas_tool` を追加する
+- [x] `src/exstruct/mcp/server.py`: `exstruct_read_range`、`exstruct_read_cells`、`exstruct_read_formulas` を登録する
+- [x] `src/exstruct/mcp/server.py`: Docstringに利用例（`A1:G10`、`[\"J98\",\"J124\"]`）を追加する
+- [x] `tests/mcp/test_sheet_reader.py`: A1パース、範囲上限、alpha_col互換、エラー系テストを追加する
+- [x] `tests/mcp/test_tools_handlers.py`: 新規3ツールの入出力ハンドリングテストを追加する
+- [x] `tests/mcp/test_server.py`: 新規3ツールの登録・引数連携テストを追加する
+- [x] `docs/mcp.md`: 新規3ツールの使用手順と推奨フロー（extract→read_*）を追記する
+- [x] `uv run task precommit-run` を実行し、静的解析・型検査・テスト通過を確認する

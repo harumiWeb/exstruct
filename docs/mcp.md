@@ -8,6 +8,7 @@ so AI agents can call it safely as a tool.
 - Convert Excel into structured JSON (file output)
 - Edit Excel by applying patch operations (cell/sheet updates)
 - Read large JSON outputs in chunks
+- Read A1 ranges / specific cells / formulas directly from extracted JSON
 - Pre-validate input files
 
 ## Installation
@@ -36,6 +37,9 @@ exstruct-mcp --root C:\\data --log-file C:\\logs\\exstruct-mcp.log --on-conflict
 - `exstruct_extract`
 - `exstruct_patch`
 - `exstruct_read_json_chunk`
+- `exstruct_read_range`
+- `exstruct_read_cells`
+- `exstruct_read_formulas`
 - `exstruct_validate_input`
 
 ### `exstruct_extract` defaults and mode guide
@@ -68,6 +72,45 @@ Example sequence:
 
 1. Call `exstruct_extract` to generate the output JSON file
 2. Use `exstruct_read_json_chunk` to read only the parts you need
+
+## Direct read tools (A1-oriented)
+
+Use these tools when you already know the target addresses and want faster,
+less verbose reads than chunk traversal.
+
+- `exstruct_read_range`
+  - Read a rectangular A1 range (example: `A1:G10`)
+  - Optional: `include_formulas`, `include_empty`, `max_cells`
+- `exstruct_read_cells`
+  - Read specific cells in one call (example: `["J98", "J124"]`)
+  - Optional: `include_formulas`
+- `exstruct_read_formulas`
+  - Read formulas only (optionally restricted by A1 range)
+  - Optional: `include_values`
+
+Examples:
+
+```json
+{
+  "tool": "exstruct_read_range",
+  "out_path": "C:\\data\\book.json",
+  "sheet": "Data",
+  "range": "A1:G10"
+}
+{
+  "tool": "exstruct_read_cells",
+  "out_path": "C:\\data\\book.json",
+  "sheet": "Data",
+  "addresses": ["J98", "J124"]
+}
+{
+  "tool": "exstruct_read_formulas",
+  "out_path": "C:\\data\\book.json",
+  "sheet": "Data",
+  "range": "J2:J201",
+  "include_values": true
+}
+```
 
 ## Chunking guide
 

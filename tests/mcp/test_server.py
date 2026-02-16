@@ -16,8 +16,14 @@ from exstruct.mcp.tools import (
     ExtractToolOutput,
     PatchToolInput,
     PatchToolOutput,
+    ReadCellsToolInput,
+    ReadCellsToolOutput,
+    ReadFormulasToolInput,
+    ReadFormulasToolOutput,
     ReadJsonChunkToolInput,
     ReadJsonChunkToolOutput,
+    ReadRangeToolInput,
+    ReadRangeToolOutput,
     ValidateInputToolInput,
     ValidateInputToolOutput,
 )
@@ -209,6 +215,125 @@ def test_register_tools_uses_default_on_conflict(
     assert patch_call[0].dry_run is False
     assert patch_call[0].return_inverse_ops is False
     assert patch_call[0].preflight_formula_check is False
+
+
+def test_register_tools_passes_read_tool_arguments(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    app = DummyApp()
+    policy = PathPolicy(root=tmp_path)
+    calls: dict[str, tuple[object, ...]] = {}
+
+    def fake_run_extract_tool(
+        payload: ExtractToolInput,
+        *,
+        policy: PathPolicy,
+        on_conflict: OnConflictPolicy,
+    ) -> ExtractToolOutput:
+        return ExtractToolOutput(out_path="out.json")
+
+    def fake_run_read_json_chunk_tool(
+        payload: ReadJsonChunkToolInput,
+        *,
+        policy: PathPolicy,
+    ) -> ReadJsonChunkToolOutput:
+        return ReadJsonChunkToolOutput(chunk="{}")
+
+    def fake_run_read_range_tool(
+        payload: ReadRangeToolInput,
+        *,
+        policy: PathPolicy,
+    ) -> ReadRangeToolOutput:
+        calls["range"] = (payload, policy)
+        return ReadRangeToolOutput(
+            book_name="book",
+            sheet_name="Sheet1",
+            range="A1:B2",
+            cells=[],
+        )
+
+    def fake_run_read_cells_tool(
+        payload: ReadCellsToolInput,
+        *,
+        policy: PathPolicy,
+    ) -> ReadCellsToolOutput:
+        calls["cells"] = (payload, policy)
+        return ReadCellsToolOutput(book_name="book", sheet_name="Sheet1", cells=[])
+
+    def fake_run_read_formulas_tool(
+        payload: ReadFormulasToolInput,
+        *,
+        policy: PathPolicy,
+    ) -> ReadFormulasToolOutput:
+        calls["formulas"] = (payload, policy)
+        return ReadFormulasToolOutput(
+            book_name="book", sheet_name="Sheet1", formulas=[]
+        )
+
+    def fake_run_validate_input_tool(
+        payload: ValidateInputToolInput,
+        *,
+        policy: PathPolicy,
+    ) -> ValidateInputToolOutput:
+        return ValidateInputToolOutput(is_readable=True)
+
+    def fake_run_patch_tool(
+        payload: PatchToolInput,
+        *,
+        policy: PathPolicy,
+        on_conflict: OnConflictPolicy,
+    ) -> PatchToolOutput:
+        return PatchToolOutput(out_path="out.xlsx", patch_diff=[])
+
+    async def fake_run_sync(func: Callable[[], object]) -> object:
+        return func()
+
+    monkeypatch.setattr(server, "run_extract_tool", fake_run_extract_tool)
+    monkeypatch.setattr(
+        server, "run_read_json_chunk_tool", fake_run_read_json_chunk_tool
+    )
+    monkeypatch.setattr(server, "run_read_range_tool", fake_run_read_range_tool)
+    monkeypatch.setattr(server, "run_read_cells_tool", fake_run_read_cells_tool)
+    monkeypatch.setattr(server, "run_read_formulas_tool", fake_run_read_formulas_tool)
+    monkeypatch.setattr(server, "run_validate_input_tool", fake_run_validate_input_tool)
+    monkeypatch.setattr(server, "run_patch_tool", fake_run_patch_tool)
+    monkeypatch.setattr(anyio.to_thread, "run_sync", fake_run_sync)
+
+    server._register_tools(app, policy, default_on_conflict="overwrite")
+
+    read_range_tool = cast(
+        Callable[..., Awaitable[object]], app.tools["exstruct_read_range"]
+    )
+    anyio.run(
+        _call_async,
+        read_range_tool,
+        {"out_path": "out.json", "range": "A1:B2", "include_formulas": True},
+    )
+    read_cells_tool = cast(
+        Callable[..., Awaitable[object]], app.tools["exstruct_read_cells"]
+    )
+    anyio.run(
+        _call_async,
+        read_cells_tool,
+        {"out_path": "out.json", "addresses": ["J98", "J124"]},
+    )
+    read_formulas_tool = cast(
+        Callable[..., Awaitable[object]], app.tools["exstruct_read_formulas"]
+    )
+    anyio.run(
+        _call_async,
+        read_formulas_tool,
+        {"out_path": "out.json", "range": "J2:J201", "include_values": True},
+    )
+
+    range_call = cast(tuple[ReadRangeToolInput, PathPolicy], calls["range"])
+    assert range_call[0].range == "A1:B2"
+    assert range_call[0].include_formulas is True
+    cells_call = cast(tuple[ReadCellsToolInput, PathPolicy], calls["cells"])
+    assert cells_call[0].addresses == ["J98", "J124"]
+    formulas_call = cast(tuple[ReadFormulasToolInput, PathPolicy], calls["formulas"])
+    assert formulas_call[0].range == "J2:J201"
+    assert formulas_call[0].include_values is True
 
 
 def test_register_tools_accepts_patch_ops_json_strings(
