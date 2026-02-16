@@ -39,8 +39,8 @@ class ExtractOptions(BaseModel):
         default=None, description="Directory for auto page-break outputs."
     )
     alpha_col: bool = Field(
-        default=False,
-        description="When true, convert CellRow column keys to Excel-style ABC names (A, B, ..., Z, AA, ...) instead of 0-based indices.",
+        default=True,
+        description="When true, convert CellRow column keys to Excel-style ABC names (A, B, ..., Z, AA, ...) instead of 0-based indices. MCP default is true.",
     )
 
 

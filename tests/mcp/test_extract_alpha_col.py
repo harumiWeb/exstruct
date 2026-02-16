@@ -6,9 +6,9 @@ from exstruct.mcp.extract_runner import ExtractOptions
 
 
 def test_extract_options_alpha_col_default() -> None:
-    """alpha_col should default to False."""
+    """alpha_col should default to True in MCP."""
     opts = ExtractOptions()
-    assert opts.alpha_col is False
+    assert opts.alpha_col is True
 
 
 def test_extract_options_alpha_col_true() -> None:
