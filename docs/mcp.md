@@ -13,9 +13,33 @@ so AI agents can call it safely as a tool.
 
 ## Installation
 
+### Option 1: Using uvx (recommended)
+
+No installation required! Run directly with uvx:
+
+```bash
+uvx --from 'exstruct[mcp]' exstruct-mcp --root C:\data
+```
+
+Benefits:
+- No `pip install` needed
+- Automatic dependency management  
+- Environment isolation
+- Easy version pinning: `uvx --from 'exstruct[mcp]==0.4.4' exstruct-mcp`
+
+### Option 2: Traditional pip install
+
 ```bash
 pip install exstruct[mcp]
 ```
+
+### Option 3: Development version from Git
+
+```bash
+uvx --from 'exstruct[mcp] @ git+https://github.com/harumiWeb/exstruct.git@main' exstruct-mcp --root .
+```
+
+**Note:** When using Git URLs, the `[mcp]` extra must be explicitly included in the dependency specification.
 
 ## Start (stdio)
 
@@ -178,7 +202,52 @@ Examples:
 
 ## AI agent configuration examples
 
-### Codex
+### Using uvx (recommended)
+
+#### Claude Desktop / GitHub Copilot
+
+```json
+{
+  "mcpServers": {
+    "exstruct": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "exstruct[mcp]",
+        "exstruct-mcp",
+        "--root",
+        "C:\\data",
+        "--log-file",
+        "C:\\logs\\exstruct-mcp.log",
+        "--on-conflict",
+        "rename"
+      ]
+    }
+  }
+}
+```
+
+#### Codex
+
+```toml
+[mcp_servers.exstruct]
+command = "uvx"
+args = [
+  "--from",
+  "exstruct[mcp]",
+  "exstruct-mcp",
+  "--root",
+  "C:\\data",
+  "--log-file",
+  "C:\\logs\\exstruct-mcp.log",
+  "--on-conflict",
+  "rename"
+]
+```
+
+### Using pip install
+
+#### Codex
 
 `~/.codex/config.toml`
 
@@ -188,7 +257,7 @@ command = "exstruct-mcp"
 args = ["--root", "C:\\data", "--log-file", "C:\\logs\\exstruct-mcp.log", "--on-conflict", "rename"]
 ```
 
-### GitHub Copilot / Claude Desktop / Gemini CLI
+#### GitHub Copilot / Claude Desktop / Gemini CLI
 
 Register an MCP server with a command + args in your MCP settings:
 
