@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 import importlib.util
 import os
+import re
 import sys
 
 import pytest
@@ -13,8 +14,23 @@ FORCE_COM_TESTS = os.getenv("FORCE_COM_TESTS") == "1"
 RUN_RENDER_SMOKE = os.getenv("RUN_RENDER_SMOKE") == "1"
 
 
+def _markexpr_requests_com(markexpr: str) -> bool:
+    """Return True when markexpr explicitly requests the ``com`` marker."""
+    tokens = re.findall(r"[A-Za-z_][A-Za-z0-9_]*", markexpr.lower())
+    for index, token in enumerate(tokens):
+        if token != "com":
+            continue
+        prev = tokens[index - 1] if index > 0 else ""
+        if prev != "not":
+            return True
+    return False
+
+
 def pytest_configure(config: pytest.Config) -> None:
     """Register custom markers to avoid pytest warnings."""
+    markexpr = getattr(config.option, "markexpr", "") or ""
+    if _markexpr_requests_com(markexpr):
+        os.environ.pop("SKIP_COM_TESTS", None)
     config.addinivalue_line("markers", "com: requires Excel COM (Windows + Excel).")
     config.addinivalue_line(
         "markers",
@@ -39,6 +55,12 @@ def _has_excel_com() -> bool:
 def _has_pdfium() -> bool:
     """Return True if pypdfium2 is importable."""
     return importlib.util.find_spec("pypdfium2") is not None
+
+
+@lru_cache(maxsize=1)
+def _has_pillow() -> bool:
+    """Return True if Pillow (PIL) is importable."""
+    return importlib.util.find_spec("PIL") is not None
 
 
 def _com_skip_reason() -> str | None:
@@ -71,6 +93,8 @@ def _render_skip_reason() -> str | None:
         return reason
     if not _has_pdfium():
         return "pypdfium2 is unavailable."
+    if not _has_pillow():
+        return "Pillow (PIL) is unavailable."
     return None
 
 
@@ -85,3 +109,23 @@ def pytest_runtest_setup(item: pytest.Item) -> None:
         reason = _com_skip_reason()
         if reason:
             pytest.skip(reason)
+
+
+@pytest.fixture(autouse=True)  # type: ignore[misc]
+def _skip_com_for_non_com_tests(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Disable COM usage for tests that are not marked as COM/render."""
+    node_path = str(request.node.path)
+    markexpr = getattr(request.config.option, "markexpr", "") or ""
+    if _markexpr_requests_com(markexpr):
+        monkeypatch.delenv("SKIP_COM_TESTS", raising=False)
+        return
+    if "tests\\com\\" in node_path or "tests/com/" in node_path:
+        monkeypatch.delenv("SKIP_COM_TESTS", raising=False)
+        return
+    if request.node.get_closest_marker("render") is not None:
+        return
+    if request.node.get_closest_marker("com") is not None:
+        return
+    monkeypatch.setenv("SKIP_COM_TESTS", "1")

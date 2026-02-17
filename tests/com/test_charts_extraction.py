@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -8,52 +12,54 @@ from exstruct.core.integrate import extract_workbook
 pytestmark = pytest.mark.com
 
 
-def _ensure_excel() -> None:
-    try:
-        app = xw.App(add_book=False, visible=False)
-        app.quit()
-    except Exception:
-        pytest.skip("Excel COM is unavailable; skipping chart extraction tests.")
-
-
-def _make_workbook_with_chart(path: Path) -> None:
+@contextmanager
+def _excel_app() -> Iterator[xw.App]:
     app = xw.App(add_book=False, visible=False)
     try:
-        wb = app.books.add()
-        sht = wb.sheets[0]
-        sht.name = "Sheet1"
-        sht.range("A1").value = ["Month", "Sales"]
-        sht.range("A2").value = [
-            ["Jan", 100],
-            ["Feb", 120],
-            ["Mar", 150],
-            ["Apr", 180],
-        ]
-
-        chart = sht.charts.add(left=200, top=50, width=300, height=200)
-        chart.chart_type = "column_clustered"
-        chart.set_source_data(sht.range("A1:B5"))
-        chart_name = chart.name
-        chart_com = sht.api.ChartObjects(chart_name).Chart
-        chart_com.HasTitle = True
-        chart_com.ChartTitle.Text = "Sales Chart"
-        y_axis = chart_com.Axes(2, 1)
-        y_axis.HasTitle = True
-        y_axis.AxisTitle.Text = "Amount"
-        y_axis.MinimumScale = 0
-        y_axis.MaximumScale = 200
-
-        wb.save(str(path))
-        wb.close()
+        yield app
     finally:
         try:
             app.quit()
         except Exception:
-            pass
+            try:
+                app.kill()
+            except Exception:
+                pass
 
 
-def test_チャートの基本メタ情報が抽出される(tmp_path: Path) -> None:
-    _ensure_excel()
+def _make_workbook_with_chart(path: Path) -> None:
+    with _excel_app() as app:
+        wb = app.books.add()
+        try:
+            sht = wb.sheets[0]
+            sht.name = "Sheet1"
+            sht.range("A1").value = ["Month", "Sales"]
+            sht.range("A2").value = [
+                ["Jan", 100],
+                ["Feb", 120],
+                ["Mar", 150],
+                ["Apr", 180],
+            ]
+
+            chart = sht.charts.add(left=200, top=50, width=300, height=200)
+            chart.chart_type = "column_clustered"
+            chart.set_source_data(sht.range("A1:B5"))
+            chart_name = chart.name
+            chart_com = sht.api.ChartObjects(chart_name).Chart
+            chart_com.HasTitle = True
+            chart_com.ChartTitle.Text = "Sales Chart"
+            y_axis = chart_com.Axes(2, 1)
+            y_axis.HasTitle = True
+            y_axis.AxisTitle.Text = "Amount"
+            y_axis.MinimumScale = 0
+            y_axis.MaximumScale = 200
+
+            wb.save(str(path))
+        finally:
+            wb.close()
+
+
+def test_chart_basic_metadata(tmp_path: Path) -> None:
     path = tmp_path / "chart.xlsx"
     _make_workbook_with_chart(path)
 
@@ -69,8 +75,7 @@ def test_チャートの基本メタ情報が抽出される(tmp_path: Path) -> 
     assert ch.error is None
 
 
-def test_系列情報が参照式として抽出される(tmp_path: Path) -> None:
-    _ensure_excel()
+def test_chart_series_ranges(tmp_path: Path) -> None:
     path = tmp_path / "chart_series.xlsx"
     _make_workbook_with_chart(path)
 
@@ -83,8 +88,7 @@ def test_系列情報が参照式として抽出される(tmp_path: Path) -> Non
     assert s.y_range is None or s.y_range.endswith("Sheet1!$B$2:$B$5")
 
 
-def test_verboseでチャートのサイズが取得される(tmp_path: Path) -> None:
-    _ensure_excel()
+def test_chart_verbose_size(tmp_path: Path) -> None:
     path = tmp_path / "chart_verbose.xlsx"
     _make_workbook_with_chart(path)
 

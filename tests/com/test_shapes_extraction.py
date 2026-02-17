@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -9,61 +13,64 @@ from exstruct.models import Arrow, Shape
 pytestmark = pytest.mark.com
 
 
-def _ensure_excel() -> None:
-    try:
-        app = xw.App(add_book=False, visible=False)
-        app.quit()
-    except Exception:
-        pytest.skip("Excel COM is unavailable; skipping shapes extraction tests.")
-
-
-def _make_workbook_with_shapes(path: Path) -> None:
+@contextmanager
+def _excel_app() -> Iterator[xw.App]:
     app = xw.App(add_book=False, visible=False)
     try:
-        wb = app.books.add()
-        sht = wb.sheets[0]
-        sht.name = "Sheet1"
-
-        rect = sht.api.Shapes.AddShape(1, 50, 50, 120, 60)  # msoShapeRectangle
-        rect.TextFrame2.TextRange.Text = "rect"
-
-        _ = sht.api.Shapes.AddShape(5, 300, 50, 80, 40)  # msoShapeOval (no text)
-
-        line = sht.api.Shapes.AddLine(10, 10, 110, 10)
-        line.Line.EndArrowheadStyle = 3  # msoArrowheadTriangle
-
-        outer = sht.api.Shapes.AddShape(1, 200, 200, 150, 100)
-        inner = sht.api.Shapes.AddShape(1, 230, 230, 80, 40)
-        inner.TextFrame2.TextRange.Text = "inner"
-        sht.api.Shapes.Range([outer.Name, inner.Name]).Group()
-
-        # Add two rectangles and a connector that explicitly connects them
-        # so that ConnectorFormat.BeginConnectedShape / EndConnectedShape
-        # are populated by Excel.
-        src_shape = sht.api.Shapes.AddShape(1, 50, 150, 80, 40)
-        src_shape.TextFrame2.TextRange.Text = "src"
-        dst_shape = sht.api.Shapes.AddShape(1, 200, 150, 80, 40)
-        dst_shape.TextFrame2.TextRange.Text = "dst"
-        connector = sht.api.Shapes.AddConnector(1, 90, 170, 200, 170)
-        connector.Line.EndArrowheadStyle = 3
-        try:
-            connector.ConnectorFormat.BeginConnect(src_shape, 1)
-            connector.ConnectorFormat.EndConnect(dst_shape, 1)
-        except Exception:
-            # In some environments connector wiring may fail; tests will
-            # simply not find connected shapes in that case.
-            pass
-
-        wb.save(str(path))
-        wb.close()
+        yield app
     finally:
         try:
             app.quit()
         except Exception:
-            pass
+            try:
+                app.kill()
+            except Exception:
+                app = None
 
 
-def test_図形の種別とテキストが抽出される(tmp_path: Path) -> None:
+def _make_workbook_with_shapes(path: Path) -> None:
+    with _excel_app() as app:
+        wb = app.books.add()
+        try:
+            sht = wb.sheets[0]
+            sht.name = "Sheet1"
+
+            rect = sht.api.Shapes.AddShape(1, 50, 50, 120, 60)  # msoShapeRectangle
+            rect.TextFrame2.TextRange.Text = "rect"
+
+            _ = sht.api.Shapes.AddShape(5, 300, 50, 80, 40)  # msoShapeOval (no text)
+
+            line = sht.api.Shapes.AddLine(10, 10, 110, 10)
+            line.Line.EndArrowheadStyle = 3  # msoArrowheadTriangle
+
+            outer = sht.api.Shapes.AddShape(1, 200, 200, 150, 100)
+            inner = sht.api.Shapes.AddShape(1, 230, 230, 80, 40)
+            inner.TextFrame2.TextRange.Text = "inner"
+            sht.api.Shapes.Range([outer.Name, inner.Name]).Group()
+
+            # Add two rectangles and a connector that explicitly connects them
+            # so that ConnectorFormat.BeginConnectedShape / EndConnectedShape
+            # are populated by Excel.
+            src_shape = sht.api.Shapes.AddShape(1, 50, 150, 80, 40)
+            src_shape.TextFrame2.TextRange.Text = "src"
+            dst_shape = sht.api.Shapes.AddShape(1, 200, 150, 80, 40)
+            dst_shape.TextFrame2.TextRange.Text = "dst"
+            connector = sht.api.Shapes.AddConnector(1, 90, 170, 200, 170)
+            connector.Line.EndArrowheadStyle = 3
+            try:
+                connector.ConnectorFormat.BeginConnect(src_shape, 1)
+                connector.ConnectorFormat.EndConnect(dst_shape, 1)
+            except Exception:
+                # In some environments connector wiring may fail; tests will
+                # simply not find connected shapes in that case.
+                connector = None
+
+            wb.save(str(path))
+        finally:
+            wb.close()
+
+
+def test_shapes_basic(tmp_path: Path) -> None:
     """
     Verifies extraction of shape types, texts, IDs, and uniqueness from a workbook containing various shapes.
 
@@ -73,7 +80,6 @@ def test_図形の種別とテキストが抽出される(tmp_path: Path) -> Non
     - all emitted shape ids are unique;
     - no AutoShape without text is emitted in standard mode.
     """
-    _ensure_excel()
     path = tmp_path / "shapes.xlsx"
     _make_workbook_with_shapes(path)
 
@@ -100,13 +106,12 @@ def test_図形の種別とテキストが抽出される(tmp_path: Path) -> Non
     )
 
 
-def test_線図形の方向と矢印情報が抽出される(tmp_path: Path) -> None:
+def test_line_direction(tmp_path: Path) -> None:
     """
     Verifies that a line shape's direction and arrow style information is extracted correctly from a workbook.
 
     Creates a workbook containing shapes, extracts shapes from "Sheet1", finds an Arrow with a begin or end arrow style, and asserts its direction is "E".
     """
-    _ensure_excel()
     path = tmp_path / "lines.xlsx"
     _make_workbook_with_shapes(path)
 
@@ -122,8 +127,8 @@ def test_線図形の方向と矢印情報が抽出される(tmp_path: Path) -> 
     assert line.direction == "E"
 
 
-def test_コネクターの接続元と接続先が抽出される(tmp_path: Path) -> None:
-    _ensure_excel()
+def test_connector_connections(tmp_path: Path) -> None:
+    """Verify connector begin/end IDs match emitted shape IDs."""
     path = tmp_path / "connectors.xlsx"
     _make_workbook_with_shapes(path)
 

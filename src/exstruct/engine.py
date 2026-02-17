@@ -17,7 +17,7 @@ from .io import (
     save_sheets,
     serialize_workbook,
 )
-from .models import SheetData, WorkbookData
+from .models import SheetData, WorkbookData, convert_workbook_keys_to_alpha
 from .render import export_pdf, export_sheet_images
 
 ExtractionMode = Literal["light", "standard", "verbose"]
@@ -76,6 +76,8 @@ class StructOptions:
         include_merged_cells: Whether to extract merged cell ranges.
         include_merged_values_in_rows: Whether to keep merged values in rows.
         colors: Color extraction options.
+        alpha_col: When True, convert CellRow column keys to Excel-style
+            ABC names (A, B, ..., Z, AA, ...) instead of 0-based numeric strings.
     """
 
     mode: ExtractionMode = "standard"
@@ -88,6 +90,7 @@ class StructOptions:
     include_merged_cells: bool | None = None  # None -> auto: light=False, others=True
     include_merged_values_in_rows: bool = True
     colors: ColorsOptions = field(default_factory=ColorsOptions)
+    alpha_col: bool = False
 
 
 class FormatOptions(BaseModel):
@@ -314,6 +317,9 @@ class ExStructEngine:
             merged_cells=sheet.merged_cells
             if self.output.filters.include_merged_cells
             else None,
+            merged_ranges=sheet.merged_ranges
+            if self.output.filters.include_merged_cells
+            else [],
         )
 
     def _filter_workbook(
@@ -383,7 +389,7 @@ class ExStructEngine:
         )
         normalized_file_path = self._ensure_path(file_path)
         with self._table_params_scope():
-            return extract_workbook(
+            workbook = extract_workbook(
                 normalized_file_path,
                 mode=chosen_mode,
                 include_cell_links=self.options.include_cell_links,
@@ -396,6 +402,9 @@ class ExStructEngine:
                 include_merged_cells=self.options.include_merged_cells,
                 include_merged_values_in_rows=self.options.include_merged_values_in_rows,
             )
+        if self.options.alpha_col:
+            workbook = convert_workbook_keys_to_alpha(workbook)
+        return workbook
 
     def serialize(
         self,

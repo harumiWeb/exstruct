@@ -41,6 +41,10 @@ from .models import (
     Shape,
     SheetData,
     WorkbookData,
+    col_index_to_alpha,
+    convert_row_keys_to_alpha,
+    convert_sheet_keys_to_alpha,
+    convert_workbook_keys_to_alpha,
 )
 from .render import export_pdf, export_sheet_images
 
@@ -82,19 +86,26 @@ __all__ = [
     "ColorsOptions",
     "serialize_workbook",
     "export_auto_page_breaks",
+    "col_index_to_alpha",
+    "convert_row_keys_to_alpha",
+    "convert_sheet_keys_to_alpha",
+    "convert_workbook_keys_to_alpha",
 ]
 
 
 ExtractionMode = Literal["light", "standard", "verbose"]
 
 
-def extract(file_path: str | Path, mode: ExtractionMode = "standard") -> WorkbookData:
+def extract(
+    file_path: str | Path, mode: ExtractionMode = "standard", *, alpha_col: bool = False
+) -> WorkbookData:
     """
     Extracts an Excel workbook into a WorkbookData structure.
 
     Parameters:
         file_path (str | Path): Path to the workbook file (.xlsx, .xlsm, .xls).
         mode (ExtractionMode): Extraction detail level. "light" includes cells and table detection only (no COM, shapes/charts empty; print areas via openpyxl). "standard" includes texted shapes, arrows, charts (COM if available) and print areas. "verbose" also includes shape/chart sizes, cell link map, colors map, and formulas map.
+        alpha_col: When True, convert CellRow column keys to Excel-style ABC names (A, B, ..., Z, AA, ...) instead of 0-based numeric strings.
 
     Returns:
         WorkbookData: Parsed workbook representation containing sheets, rows, shapes, charts, and print areas.
@@ -108,6 +119,7 @@ def extract(file_path: str | Path, mode: ExtractionMode = "standard") -> Workboo
             include_cell_links=include_links,
             include_colors_map=include_colors_map,
             include_formulas_map=include_formulas_map,
+            alpha_col=alpha_col,
         )
     )
     return engine.extract(file_path, mode=mode)
@@ -317,6 +329,8 @@ def process_excel(
     print_areas_dir: str | Path | None = None,
     auto_page_breaks_dir: str | Path | None = None,
     stream: TextIO | None = None,
+    *,
+    alpha_col: bool = False,
 ) -> None:
     """
     Convenience wrapper: extract -> serialize (file or stdout) -> optional PDF/PNG.
@@ -335,6 +349,8 @@ def process_excel(
         print_areas_dir: Directory to write per-print-area files (string or Path).
         auto_page_breaks_dir: Directory to write per-auto-page-break files (COM only).
         stream: IO override when output_path is None.
+        alpha_col: When True, convert CellRow column keys to Excel-style
+            ABC names (A, B, ...) instead of 0-based numeric strings.
 
     Raises:
         ValueError: If an unsupported format or mode is given.
@@ -353,7 +369,7 @@ def process_excel(
         >>> process_excel(Path("input.xlsx"), output_path=Path("out.json"), pdf=True)  # doctest: +SKIP
     """
     engine = ExStructEngine(
-        options=StructOptions(mode=mode),
+        options=StructOptions(mode=mode, alpha_col=alpha_col),
         output=OutputOptions(
             format=FormatOptions(fmt=out_fmt, pretty=pretty, indent=indent),
             filters=FilterOptions(

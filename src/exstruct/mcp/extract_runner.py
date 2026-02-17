@@ -38,6 +38,10 @@ class ExtractOptions(BaseModel):
     auto_page_breaks_dir: Path | None = Field(
         default=None, description="Directory for auto page-break outputs."
     )
+    alpha_col: bool = Field(
+        default=True,
+        description="When true, convert CellRow column keys to Excel-style ABC names (A, B, ..., Z, AA, ...) instead of 0-based indices. MCP default is true.",
+    )
 
 
 class ExtractRequest(BaseModel):
@@ -118,6 +122,7 @@ def run_extract(
         sheets_dir=sheets_dir,
         print_areas_dir=print_areas_dir,
         auto_page_breaks_dir=auto_page_breaks_dir,
+        alpha_col=options.alpha_col,
     )
     meta, meta_warnings = _try_read_workbook_meta(resolved_input)
     warnings.extend(meta_warnings)

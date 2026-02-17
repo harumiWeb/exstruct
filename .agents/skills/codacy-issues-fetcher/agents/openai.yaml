@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codacy Issues Fetcher"
+  short_description: "Run codacy_issues.py to fetch and triage Codacy findings"
+  default_prompt: "Use $codacy-issues-fetcher to collect Codacy issues for this repository or PR and summarize the highest-priority fixes."

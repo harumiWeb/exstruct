@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 
 class ExstructError(Exception):
@@ -37,7 +37,7 @@ class PrintAreaError(ExstructError, ValueError):
     """Raised when print-area specific processing fails (also a ValueError for compatibility)."""
 
 
-class FallbackReason(str, Enum):
+class FallbackReason(StrEnum):
     """Reason codes for extraction fallbacks."""
 
     LIGHT_MODE = "light_mode"

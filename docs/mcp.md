@@ -6,7 +6,9 @@ so AI agents can call it safely as a tool.
 ## What it provides
 
 - Convert Excel into structured JSON (file output)
+- Edit Excel by applying patch operations (cell/sheet updates)
 - Read large JSON outputs in chunks
+- Read A1 ranges / specific cells / formulas directly from extracted JSON
 - Pre-validate input files
 
 ## Installation
@@ -33,13 +35,146 @@ exstruct-mcp --root C:\\data --log-file C:\\logs\\exstruct-mcp.log --on-conflict
 ## Tools
 
 - `exstruct_extract`
+- `exstruct_patch`
 - `exstruct_read_json_chunk`
+- `exstruct_read_range`
+- `exstruct_read_cells`
+- `exstruct_read_formulas`
 - `exstruct_validate_input`
+
+### `exstruct_extract` defaults and mode guide
+
+- `options.alpha_col` defaults to `true` in MCP (column keys become `A`, `B`, ...).
+- Set `options.alpha_col=false` if you need legacy 0-based numeric string keys.
+- `mode` is an extraction detail level (not sheet scope):
+
+| Mode | When to use | Main output characteristics |
+|---|---|---|
+| `light` | Fast, structure-first extraction | cells + table candidates + print areas |
+| `standard` | Default for most agent flows | balanced detail and size |
+| `verbose` | Need the richest metadata | adds links/maps and richer metadata |
+
+## Quick start for agents (recommended)
+
+1. Validate file readability with `exstruct_validate_input`
+2. Run `exstruct_extract` with `mode="standard"`
+3. Read the result with `exstruct_read_json_chunk` using `sheet` and `max_bytes`
+
+Example sequence:
+
+```json
+{ "tool": "exstruct_validate_input", "xlsx_path": "C:\\data\\book.xlsx" }
+```
+
+```json
+{ "tool": "exstruct_extract", "xlsx_path": "C:\\data\\book.xlsx", "mode": "standard", "format": "json" }
+```
+
+```json
+{ "tool": "exstruct_read_json_chunk", "out_path": "C:\\data\\book.json", "sheet": "Sheet1", "max_bytes": 50000 }
+```
 
 ## Basic flow
 
 1. Call `exstruct_extract` to generate the output JSON file
 2. Use `exstruct_read_json_chunk` to read only the parts you need
+
+## Direct read tools (A1-oriented)
+
+Use these tools when you already know the target addresses and want faster,
+less verbose reads than chunk traversal.
+
+- `exstruct_read_range`
+  - Read a rectangular A1 range (example: `A1:G10`)
+  - Optional: `include_formulas`, `include_empty`, `max_cells`
+- `exstruct_read_cells`
+  - Read specific cells in one call (example: `["J98", "J124"]`)
+  - Optional: `include_formulas`
+- `exstruct_read_formulas`
+  - Read formulas only (optionally restricted by A1 range)
+  - Optional: `include_values`
+
+Examples:
+
+```json
+{
+  "tool": "exstruct_read_range",
+  "out_path": "C:\\data\\book.json",
+  "sheet": "Data",
+  "range": "A1:G10"
+}
+```
+
+```json
+{
+  "tool": "exstruct_read_cells",
+  "out_path": "C:\\data\\book.json",
+  "sheet": "Data",
+  "addresses": ["J98", "J124"]
+}
+```
+
+```json
+{
+  "tool": "exstruct_read_formulas",
+  "out_path": "C:\\data\\book.json",
+  "sheet": "Data",
+  "range": "J2:J201",
+  "include_values": true
+}
+```
+
+## Chunking guide
+
+### Key parameters
+
+- `sheet`: target sheet name. Strongly recommended when workbook has multiple sheets.
+- `max_bytes`: chunk size budget in bytes. Start at `50_000`; increase (for example `120_000`) if chunks are too small.
+- `filter.rows`: `[start, end]` (1-based, inclusive).
+- `filter.cols`: `[start, end]` (1-based, inclusive). Works for both numeric keys (`"0"`, `"1"`) and alpha keys (`"A"`, `"B"`).
+- `cursor`: pagination cursor (`next_cursor` from the previous response).
+
+### Retry guide by error/warning
+
+| Message | Meaning | Next action |
+|---|---|---|
+| `Output is too large...` | Whole JSON cannot fit in one response | Retry with `sheet`, or narrow with `filter.rows`/`filter.cols` |
+| `Sheet is required when multiple sheets exist...` | Workbook has multiple sheets and target is ambiguous | Pick one value from `workbook_meta.sheet_names` and set `sheet` |
+| `Base payload exceeds max_bytes...` | Even metadata-only payload is larger than `max_bytes` | Increase `max_bytes` |
+| `max_bytes too small...` | Row payload is too large for the current size | Increase `max_bytes`, or narrow row/col filters |
+
+### Cursor example
+
+1. Call without `cursor`
+2. If response has `next_cursor`, call again with that cursor
+3. Repeat until `next_cursor` is `null`
+
+## Edit flow (patch)
+
+1. Inspect workbook structure with `exstruct_extract` (and `exstruct_read_json_chunk` if needed)
+2. Build patch operations (`ops`) for target cells/sheets
+3. Call `exstruct_patch` to apply edits
+4. Re-run `exstruct_extract` to verify results if needed
+
+### `exstruct_patch` highlights
+
+- Atomic apply: all operations succeed, or no changes are saved
+- `ops` accepts an object list as the canonical form.
+  For compatibility, JSON object strings in `ops` are also accepted and normalized.
+- Supports:
+  - `set_value`
+  - `set_formula`
+  - `add_sheet`
+  - `set_range_values`
+  - `fill_formula`
+  - `set_value_if`
+  - `set_formula_if`
+- Useful flags:
+  - `dry_run`: compute diff only (no file write)
+  - `return_inverse_ops`: return undo operations
+  - `preflight_formula_check`: detect formula issues before save
+  - `auto_formula`: treat `=...` in `set_value` as formula
+- Conflict handling follows server `--on-conflict` unless overridden per tool call
 
 ## AI agent configuration examples
 

@@ -8,6 +8,21 @@ All notable changes to this project are documented in this file. This changelog 
 
 - _No unreleased changes yet._
 
+## [0.4.4] - 2026-02-16
+
+### Added
+
+- Added an MVP of Excel editing for MCP via `exstruct_patch`, including atomic apply semantics and expanded operations: `set_range_values`, `fill_formula`, `set_value_if`, and `set_formula_if`.
+- Added direct A1-oriented MCP read tools for extracted JSON: `exstruct_read_range`, `exstruct_read_cells`, and `exstruct_read_formulas`.
+- Added patch safety/review options: `dry_run`, `return_inverse_ops`, `preflight_formula_check`, and `auto_formula`.
+
+### Changed
+
+- Improved `exstruct_patch` input compatibility: `ops` now accepts both object lists (recommended) and JSON object strings.
+- Enabled `alpha_col` support more broadly across extraction/read flows, and added `merged_ranges` output support for alpha-column mode.
+- Updated MCP documentation and chunking guidance, including clearer error messages and mode guidance.
+- Changed MCP default conflict policy to `overwrite` for output handling.
+
 ## [0.4.2] - 2026-01-23
 
 ### Changed
