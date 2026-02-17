@@ -25,7 +25,7 @@ def _excel_app() -> Iterator[xw.App]:
             try:
                 app.kill()
             except Exception:
-                pass
+                app = None
 
 
 def _make_workbook_with_shapes(path: Path) -> None:
