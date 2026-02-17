@@ -60,7 +60,23 @@ exstruct input.xlsx --pdf --image          # PDF と PNG（Excel 必須）
 
 ## MCPサーバー (標準入出力)
 
-MCPの拡張機能をインストールし、標準入出力サーバーを実行します。
+### uvx を使ったクイックスタート（推奨）
+
+インストール不要で直接実行できます：
+
+```bash
+uvx --from 'exstruct[mcp]' exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict rename
+```
+
+利点：
+- `pip install` が不要
+- 依存関係の自動管理
+- 環境の分離
+- バージョン指定が簡単: `uvx --from 'exstruct[mcp]==0.4.4' exstruct-mcp`
+
+### 従来のインストール方法
+
+pip でインストールすることもできます：
 
 ```bash
 pip install exstruct[mcp]

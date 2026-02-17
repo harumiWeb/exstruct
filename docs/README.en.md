@@ -63,7 +63,23 @@ Auto page-break exports are available via API and CLI when Excel/COM is availabl
 
 ## MCP Server (stdio)
 
-Install the MCP extras and run the stdio server:
+### Quick Start with uvx (recommended)
+
+Run directly without installation:
+
+```bash
+uvx --from 'exstruct[mcp]' exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict rename
+```
+
+Benefits:
+- No `pip install` required
+- Automatic dependency management
+- Environment isolation
+- Easy version pinning: `uvx --from 'exstruct[mcp]==0.4.4' exstruct-mcp`
+
+### Traditional Installation
+
+Alternatively, install with pip:
 
 ```bash
 pip install exstruct[mcp]
