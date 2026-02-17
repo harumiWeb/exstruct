@@ -124,8 +124,8 @@ class PatchOp(BaseModel):
     - ``add_sheet``: Add a new worksheet. Requires ``sheet`` (new sheet name). No ``cell``/``value``/``formula``.
     - ``set_range_values``: Set values for a rectangular range. Requires ``sheet``, ``range`` (e.g. ``A1:C3``), ``values`` (2D list matching range shape).
     - ``fill_formula``: Fill a formula across a single row or column. Requires ``sheet``, ``range``, ``base_cell``, ``formula``.
-    - ``set_value_if``: Conditionally set value. Requires ``sheet``, ``cell``, ``expected``, ``value``. Skips if current value != expected.
-    - ``set_formula_if``: Conditionally set formula. Requires ``sheet``, ``cell``, ``expected``, ``formula``. Skips if current value != expected.
+    - ``set_value_if``: Conditionally set value. Requires ``sheet``, ``cell``, ``value``. ``expected`` is optional; ``null`` matches an empty cell. Skips if current value != expected.
+    - ``set_formula_if``: Conditionally set formula. Requires ``sheet``, ``cell``, ``formula``. ``expected`` is optional; ``null`` matches an empty cell. Skips if current value != expected.
     """
 
     op: PatchOpType = Field(

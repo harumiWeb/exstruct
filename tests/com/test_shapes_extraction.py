@@ -63,7 +63,7 @@ def _make_workbook_with_shapes(path: Path) -> None:
             except Exception:
                 # In some environments connector wiring may fail; tests will
                 # simply not find connected shapes in that case.
-                pass
+                connector = None
 
             wb.save(str(path))
         finally:
@@ -128,7 +128,7 @@ def test_line_direction(tmp_path: Path) -> None:
 
 
 def test_connector_connections(tmp_path: Path) -> None:
-    """Connectorの接続先IDが抽出結果のshape IDに整合することを確認する。"""
+    """Verify connector begin/end IDs match emitted shape IDs."""
     path = tmp_path / "connectors.xlsx"
     _make_workbook_with_shapes(path)
 
