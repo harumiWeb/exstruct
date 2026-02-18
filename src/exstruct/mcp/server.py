@@ -456,7 +456,10 @@ def _register_tools(
                 'set_formula_if' (conditional formula update),
                 'draw_grid_border' (draw thin black grid border),
                 'set_bold' (apply bold style), 'set_fill_color' (apply solid fill),
-                'set_dimensions' (set row height/column width), and
+                'set_dimensions' (set row height/column width),
+                'merge_cells' (merge a rectangular range),
+                'unmerge_cells' (unmerge ranges intersecting target),
+                'set_alignment' (set horizontal/vertical alignment and wrap_text), and
                 'restore_design_snapshot' (internal inverse restore op).
             out_dir: Output directory. Defaults to same directory as input.
             out_name: Output filename. Defaults to '{stem}_patched{ext}'.

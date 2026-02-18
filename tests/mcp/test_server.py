@@ -407,6 +407,141 @@ def test_register_tools_accepts_patch_ops_json_strings(
     assert patch_call[0].ops[1].cell == "A1"
 
 
+def test_register_tools_accepts_merge_and_alignment_json_strings(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    app = DummyApp()
+    policy = PathPolicy(root=tmp_path)
+    calls: dict[str, tuple[object, ...]] = {}
+
+    def fake_run_extract_tool(
+        payload: ExtractToolInput,
+        *,
+        policy: PathPolicy,
+        on_conflict: OnConflictPolicy,
+    ) -> ExtractToolOutput:
+        return ExtractToolOutput(out_path="out.json")
+
+    def fake_run_read_json_chunk_tool(
+        payload: ReadJsonChunkToolInput,
+        *,
+        policy: PathPolicy,
+    ) -> ReadJsonChunkToolOutput:
+        return ReadJsonChunkToolOutput(chunk="{}")
+
+    def fake_run_validate_input_tool(
+        payload: ValidateInputToolInput,
+        *,
+        policy: PathPolicy,
+    ) -> ValidateInputToolOutput:
+        return ValidateInputToolOutput(is_readable=True)
+
+    def fake_run_patch_tool(
+        payload: PatchToolInput,
+        *,
+        policy: PathPolicy,
+        on_conflict: OnConflictPolicy,
+    ) -> PatchToolOutput:
+        calls["patch"] = (payload, policy, on_conflict)
+        return PatchToolOutput(out_path="out.xlsx", patch_diff=[])
+
+    async def fake_run_sync(func: Callable[[], object]) -> object:
+        return func()
+
+    monkeypatch.setattr(server, "run_extract_tool", fake_run_extract_tool)
+    monkeypatch.setattr(
+        server, "run_read_json_chunk_tool", fake_run_read_json_chunk_tool
+    )
+    monkeypatch.setattr(server, "run_validate_input_tool", fake_run_validate_input_tool)
+    monkeypatch.setattr(server, "run_patch_tool", fake_run_patch_tool)
+    monkeypatch.setattr(anyio.to_thread, "run_sync", fake_run_sync)
+
+    server._register_tools(app, policy, default_on_conflict="overwrite")
+    patch_tool = cast(Callable[..., Awaitable[object]], app.tools["exstruct_patch"])
+    anyio.run(
+        _call_async,
+        patch_tool,
+        {
+            "xlsx_path": "in.xlsx",
+            "ops": [
+                '{"op":"merge_cells","sheet":"Sheet1","range":"A1:B1"}',
+                '{"op":"set_alignment","sheet":"Sheet1","range":"A1:B1","horizontal_align":"center","wrap_text":true}',
+            ],
+        },
+    )
+
+    patch_call = cast(
+        tuple[PatchToolInput, PathPolicy, OnConflictPolicy], calls["patch"]
+    )
+    assert patch_call[0].ops[0].op == "merge_cells"
+    assert patch_call[0].ops[1].op == "set_alignment"
+    assert patch_call[0].ops[1].wrap_text is True
+
+
+def test_register_tools_returns_patch_warnings(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    app = DummyApp()
+    policy = PathPolicy(root=tmp_path)
+
+    def fake_run_extract_tool(
+        payload: ExtractToolInput,
+        *,
+        policy: PathPolicy,
+        on_conflict: OnConflictPolicy,
+    ) -> ExtractToolOutput:
+        return ExtractToolOutput(out_path="out.json")
+
+    def fake_run_read_json_chunk_tool(
+        payload: ReadJsonChunkToolInput,
+        *,
+        policy: PathPolicy,
+    ) -> ReadJsonChunkToolOutput:
+        return ReadJsonChunkToolOutput(chunk="{}")
+
+    def fake_run_validate_input_tool(
+        payload: ValidateInputToolInput,
+        *,
+        policy: PathPolicy,
+    ) -> ValidateInputToolOutput:
+        return ValidateInputToolOutput(is_readable=True)
+
+    def fake_run_patch_tool(
+        payload: PatchToolInput,
+        *,
+        policy: PathPolicy,
+        on_conflict: OnConflictPolicy,
+    ) -> PatchToolOutput:
+        return PatchToolOutput(
+            out_path="out.xlsx",
+            patch_diff=[],
+            warnings=["merge_cells may clear non-top-left values"],
+        )
+
+    async def fake_run_sync(func: Callable[[], object]) -> object:
+        return func()
+
+    monkeypatch.setattr(server, "run_extract_tool", fake_run_extract_tool)
+    monkeypatch.setattr(
+        server, "run_read_json_chunk_tool", fake_run_read_json_chunk_tool
+    )
+    monkeypatch.setattr(server, "run_validate_input_tool", fake_run_validate_input_tool)
+    monkeypatch.setattr(server, "run_patch_tool", fake_run_patch_tool)
+    monkeypatch.setattr(anyio.to_thread, "run_sync", fake_run_sync)
+
+    server._register_tools(app, policy, default_on_conflict="overwrite")
+    patch_tool = cast(Callable[..., Awaitable[object]], app.tools["exstruct_patch"])
+    result = cast(
+        PatchToolOutput,
+        anyio.run(
+            _call_async,
+            patch_tool,
+            {"xlsx_path": "in.xlsx", "ops": [{"op": "add_sheet", "sheet": "New"}]},
+        ),
+    )
+    assert result.warnings == ["merge_cells may clear non-top-left values"]
+
+
 def test_register_tools_rejects_invalid_patch_ops_json_strings(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

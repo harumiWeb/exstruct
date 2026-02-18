@@ -6,7 +6,7 @@ All notable changes to this project are documented in this file. This changelog 
 
 ### Added
 
-- Extended MCP `exstruct_patch` with design editing operations: `draw_grid_border`, `set_bold`, `set_fill_color`, `set_dimensions`, and inverse restore op `restore_design_snapshot`.
+- Extended MCP `exstruct_patch` with design editing operations: `draw_grid_border`, `set_bold`, `set_fill_color`, `set_dimensions`, `merge_cells`, `unmerge_cells`, `set_alignment`, and inverse restore op `restore_design_snapshot`.
 
 ## [0.4.4] - 2026-02-16
 

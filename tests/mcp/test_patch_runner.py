@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Alignment
 from pydantic import ValidationError
 import pytest
 
@@ -669,6 +670,251 @@ def test_run_patch_rejects_design_op_for_xls(
     request = PatchRequest(
         xlsx_path=input_path,
         ops=[PatchOp(op="set_bold", sheet="Sheet1", cell="A1")],
+        on_conflict="rename",
+    )
+    with pytest.raises(
+        ValueError, match=r"Design operations are not supported for \.xls files"
+    ):
+        run_patch(request, policy=PathPolicy(root=tmp_path))
+
+
+def test_patch_op_merge_cells_requires_multi_cell_range() -> None:
+    with pytest.raises(
+        ValidationError, match="merge_cells requires a multi-cell range"
+    ):
+        PatchOp(op="merge_cells", sheet="Sheet1", range="A1:A1")
+
+
+def test_run_patch_merge_cells_and_inverse_restore(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    request = PatchRequest(
+        xlsx_path=input_path,
+        ops=[PatchOp(op="merge_cells", sheet="Sheet1", range="A1:B1")],
+        on_conflict="rename",
+        return_inverse_ops=True,
+    )
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.error is None
+    assert len(result.inverse_ops) == 1
+
+    workbook = load_workbook(result.out_path)
+    try:
+        ranges = [str(item) for item in workbook["Sheet1"].merged_cells.ranges]
+        assert ranges == ["A1:B1"]
+    finally:
+        workbook.close()
+
+    restored = run_patch(
+        PatchRequest(
+            xlsx_path=Path(result.out_path),
+            ops=result.inverse_ops,
+            on_conflict="rename",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    restored_book = load_workbook(restored.out_path)
+    try:
+        assert list(restored_book["Sheet1"].merged_cells.ranges) == []
+    finally:
+        restored_book.close()
+
+
+def test_run_patch_merge_cells_rejects_overlap(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    workbook = load_workbook(input_path)
+    try:
+        workbook["Sheet1"].merge_cells("A1:B1")
+        workbook.save(input_path)
+    finally:
+        workbook.close()
+    result = run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[PatchOp(op="merge_cells", sheet="Sheet1", range="B1:C1")],
+            on_conflict="rename",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert result.error is not None
+    assert "overlaps existing merged ranges" in result.error.message
+
+
+def test_run_patch_merge_cells_warns_on_value_loss(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    workbook = load_workbook(input_path)
+    try:
+        workbook["Sheet1"]["B1"] = "drop-me"
+        workbook.save(input_path)
+    finally:
+        workbook.close()
+    result = run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[PatchOp(op="merge_cells", sheet="Sheet1", range="A1:B1")],
+            on_conflict="rename",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert result.error is None
+    assert any(
+        "may clear non-top-left values" in warning for warning in result.warnings
+    )
+
+
+def test_run_patch_unmerge_cells_for_intersections(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    workbook = load_workbook(input_path)
+    try:
+        sheet = workbook["Sheet1"]
+        sheet["C1"] = "v"
+        sheet["D1"] = "w"
+        sheet.merge_cells("A1:B1")
+        sheet.merge_cells("C1:D1")
+        workbook.save(input_path)
+    finally:
+        workbook.close()
+    result = run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[PatchOp(op="unmerge_cells", sheet="Sheet1", range="B1:C1")],
+            on_conflict="rename",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert result.error is None
+    out_book = load_workbook(result.out_path)
+    try:
+        assert list(out_book["Sheet1"].merged_cells.ranges) == []
+    finally:
+        out_book.close()
+
+
+def test_run_patch_set_alignment_preserves_unspecified_fields(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    workbook = load_workbook(input_path)
+    try:
+        workbook["Sheet1"]["A1"].alignment = Alignment(vertical="top", wrap_text=True)
+        workbook.save(input_path)
+    finally:
+        workbook.close()
+    result = run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[
+                PatchOp(
+                    op="set_alignment",
+                    sheet="Sheet1",
+                    cell="A1",
+                    horizontal_align="center",
+                )
+            ],
+            on_conflict="rename",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert result.error is None
+    out_book = load_workbook(result.out_path)
+    try:
+        alignment = out_book["Sheet1"]["A1"].alignment
+        assert alignment.horizontal == "center"
+        assert alignment.vertical == "top"
+        assert alignment.wrap_text is True
+    finally:
+        out_book.close()
+
+
+def test_run_patch_set_alignment_inverse_restore(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    workbook = load_workbook(input_path)
+    try:
+        workbook["Sheet1"]["A1"].alignment = Alignment(
+            horizontal="left", vertical="bottom", wrap_text=True
+        )
+        workbook.save(input_path)
+    finally:
+        workbook.close()
+    result = run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[
+                PatchOp(
+                    op="set_alignment",
+                    sheet="Sheet1",
+                    range="A1:B1",
+                    horizontal_align="center",
+                    vertical_align="center",
+                    wrap_text=False,
+                )
+            ],
+            on_conflict="rename",
+            return_inverse_ops=True,
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert result.error is None
+    assert len(result.inverse_ops) == 1
+    restored = run_patch(
+        PatchRequest(
+            xlsx_path=Path(result.out_path),
+            ops=result.inverse_ops,
+            on_conflict="rename",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    restored_book = load_workbook(restored.out_path)
+    try:
+        alignment = restored_book["Sheet1"]["A1"].alignment
+        assert alignment.horizontal == "left"
+        assert alignment.vertical == "bottom"
+        assert alignment.wrap_text is True
+    finally:
+        restored_book.close()
+
+
+def test_run_patch_rejects_alignment_design_op_for_xls(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        patch_runner,
+        "get_com_availability",
+        lambda: ComAvailability(available=True, reason=None),
+    )
+    input_path = tmp_path / "book.xls"
+    input_path.write_text("dummy", encoding="utf-8")
+    request = PatchRequest(
+        xlsx_path=input_path,
+        ops=[
+            PatchOp(
+                op="set_alignment",
+                sheet="Sheet1",
+                cell="A1",
+                horizontal_align="center",
+            )
+        ],
         on_conflict="rename",
     )
     with pytest.raises(

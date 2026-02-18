@@ -197,6 +197,9 @@ Examples:
   - `set_bold`
   - `set_fill_color`
   - `set_dimensions`
+  - `merge_cells`
+  - `unmerge_cells`
+  - `set_alignment`
   - `restore_design_snapshot` (internal inverse op)
 - Useful flags:
   - `dry_run`: compute diff only (no file write)

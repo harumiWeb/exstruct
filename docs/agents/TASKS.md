@@ -51,9 +51,37 @@
 - [x] `uv run task precommit-run` を実行する
 - [x] 失敗時は修正して再実行し、全通過を確認する
 
+## Phase 8: Spec拡張（merge/alignment）
+- [x] 新3op仕様と許容値を確定する
+- [x] 警告継続/交差エラー方針を明文化する
+
+## Phase 9: Model/Validation
+- [x] `PatchOpType` と `PatchOp` フィールド追加
+- [x] 新3opバリデーション追加
+
+## Phase 10: Openpyxl適用
+- [x] `merge_cells` / `unmerge_cells` / `set_alignment` 実装
+- [x] `_apply_openpyxl_op` 分岐追加
+
+## Phase 11: Inverse Ops
+- [x] `DesignSnapshot` 拡張（alignment/merge_state）
+- [x] `restore_design_snapshot` 復元拡張
+
+## Phase 12: Warning伝播
+- [x] op単位warning収集導線を追加
+- [x] 結合時の値消失warningを返却
+
+## Phase 13: テスト
+- [x] patch_runner/tool_models/server テスト追加
+- [x] inverse往復・warning検証追加
+
+## Phase 14: ドキュメント/検証
+- [x] `docs/mcp.md`・README・CHANGELOG更新
+- [x] `uv run pytest tests/mcp` と `uv run task precommit-run` 全通過
+
 ## テスト/受け入れ条件
 1. 回帰なし（既存op全維持）。
-2. 新4機能が `exstruct_patch` で一貫利用可能。
+2. 新7機能が `exstruct_patch` で一貫利用可能。
 3. 静的解析・テストが0エラー。
 
 ## 明示的な前提

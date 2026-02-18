@@ -27,6 +27,9 @@ PatchOpType = Literal[
     "set_bold",
     "set_fill_color",
     "set_dimensions",
+    "merge_cells",
+    "unmerge_cells",
+    "set_alignment",
     "restore_design_snapshot",
 ]
 PatchStatus = Literal["applied", "skipped"]
@@ -48,6 +51,18 @@ _A1_RANGE_PATTERN = re.compile(r"^[A-Za-z]{1,3}[1-9][0-9]*:[A-Za-z]{1,3}[1-9][0-
 _HEX_COLOR_PATTERN = re.compile(r"^#(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$")
 _COLUMN_LABEL_PATTERN = re.compile(r"^[A-Za-z]{1,3}$")
 _MAX_STYLE_TARGET_CELLS = 10_000
+
+HorizontalAlignType = Literal[
+    "general",
+    "left",
+    "center",
+    "right",
+    "fill",
+    "justify",
+    "centerContinuous",
+    "distributed",
+]
+VerticalAlignType = Literal["top", "center", "bottom", "justify", "distributed"]
 
 
 class BorderSideSnapshot(BaseModel):
@@ -83,6 +98,22 @@ class FillSnapshot(BaseModel):
     end_color: str | None = None
 
 
+class AlignmentSnapshot(BaseModel):
+    """Serializable alignment state for one cell."""
+
+    cell: str
+    horizontal: str | None = None
+    vertical: str | None = None
+    wrap_text: bool | None = None
+
+
+class MergeStateSnapshot(BaseModel):
+    """Serializable merged-range state for deterministic restoration."""
+
+    scope: str
+    ranges: list[str] = Field(default_factory=list)
+
+
 class RowDimensionSnapshot(BaseModel):
     """Serializable row height state."""
 
@@ -103,6 +134,8 @@ class DesignSnapshot(BaseModel):
     borders: list[BorderSnapshot] = Field(default_factory=list)
     fonts: list[FontSnapshot] = Field(default_factory=list)
     fills: list[FillSnapshot] = Field(default_factory=list)
+    alignments: list[AlignmentSnapshot] = Field(default_factory=list)
+    merge_state: MergeStateSnapshot | None = None
     row_dimensions: list[RowDimensionSnapshot] = Field(default_factory=list)
     column_dimensions: list[ColumnDimensionSnapshot] = Field(default_factory=list)
 
@@ -116,6 +149,7 @@ class OpenpyxlCellProtocol(Protocol):
     font: OpenpyxlFontProtocol
     fill: OpenpyxlFillProtocol
     border: OpenpyxlBorderProtocol
+    alignment: OpenpyxlAlignmentProtocol
 
 
 @runtime_checkable
@@ -160,6 +194,15 @@ class OpenpyxlFillProtocol(Protocol):
 
 
 @runtime_checkable
+class OpenpyxlAlignmentProtocol(Protocol):
+    """Protocol for openpyxl alignment access."""
+
+    horizontal: str | None
+    vertical: str | None
+    wrap_text: bool | None
+
+
+@runtime_checkable
 class OpenpyxlRowDimensionProtocol(Protocol):
     """Protocol for openpyxl row dimension access."""
 
@@ -195,6 +238,10 @@ class OpenpyxlWorksheetProtocol(Protocol):
     column_dimensions: OpenpyxlColumnDimensionsProtocol
 
     def __getitem__(self, key: str) -> OpenpyxlCellProtocol: ...
+
+    def merge_cells(self, range_string: str) -> None: ...
+
+    def unmerge_cells(self, range_string: str) -> None: ...
 
 
 @runtime_checkable
@@ -271,6 +318,9 @@ class PatchOp(BaseModel):
     - ``set_bold``: Set bold style for one cell or one range.
     - ``set_fill_color``: Set solid fill color for one cell or one range.
     - ``set_dimensions``: Set row height and/or column width.
+    - ``merge_cells``: Merge a rectangular range.
+    - ``unmerge_cells``: Unmerge all merged ranges intersecting target range.
+    - ``set_alignment``: Set horizontal/vertical alignment and/or wrap_text.
     - ``restore_design_snapshot``: Restore style/dimension snapshot (internal inverse op).
     """
 
@@ -279,6 +329,7 @@ class PatchOp(BaseModel):
             "Operation type: 'set_value', 'set_formula', 'add_sheet', "
             "'set_range_values', 'fill_formula', 'set_value_if', 'set_formula_if', "
             "'draw_grid_border', 'set_bold', 'set_fill_color', 'set_dimensions', "
+            "'merge_cells', 'unmerge_cells', 'set_alignment', "
             "or 'restore_design_snapshot'."
         )
     )
@@ -344,6 +395,18 @@ class PatchOp(BaseModel):
     column_width: float | None = Field(
         default=None,
         description="Target column width for set_dimensions.",
+    )
+    horizontal_align: HorizontalAlignType | None = Field(
+        default=None,
+        description="Horizontal alignment for set_alignment.",
+    )
+    vertical_align: VerticalAlignType | None = Field(
+        default=None,
+        description="Vertical alignment for set_alignment.",
+    )
+    wrap_text: bool | None = Field(
+        default=None,
+        description="Wrap text flag for set_alignment.",
     )
     design_snapshot: DesignSnapshot | None = Field(
         default=None,
@@ -456,6 +519,9 @@ def _validator_for_op(op_type: PatchOpType) -> Callable[[PatchOp], None] | None:
         "set_bold": _validate_set_bold,
         "set_fill_color": _validate_set_fill_color,
         "set_dimensions": _validate_set_dimensions,
+        "merge_cells": _validate_merge_cells,
+        "unmerge_cells": _validate_unmerge_cells,
+        "set_alignment": _validate_set_alignment,
         "restore_design_snapshot": _validate_restore_design_snapshot,
     }
     return validators.get(op_type)
@@ -608,6 +674,7 @@ def _validate_draw_grid_border(op: PatchOp) -> None:
         raise ValueError("draw_grid_border does not accept row_height or column_width.")
     if op.design_snapshot is not None:
         raise ValueError("draw_grid_border does not accept design_snapshot.")
+    _validate_no_alignment_fields(op, op_name="draw_grid_border")
     if op.base_cell is None:
         raise ValueError("draw_grid_border requires base_cell.")
     if op.row_count is None or op.col_count is None:
@@ -633,6 +700,7 @@ def _validate_set_bold(op: PatchOp) -> None:
         raise ValueError("set_bold does not accept row_height or column_width.")
     if op.design_snapshot is not None:
         raise ValueError("set_bold does not accept design_snapshot.")
+    _validate_no_alignment_fields(op, op_name="set_bold")
     _validate_exactly_one_cell_or_range(op, op_name="set_bold")
     if op.bold is None:
         op.bold = True
@@ -652,6 +720,7 @@ def _validate_set_fill_color(op: PatchOp) -> None:
         raise ValueError("set_fill_color does not accept row_height or column_width.")
     if op.design_snapshot is not None:
         raise ValueError("set_fill_color does not accept design_snapshot.")
+    _validate_no_alignment_fields(op, op_name="set_fill_color")
     _validate_exactly_one_cell_or_range(op, op_name="set_fill_color")
     if op.fill_color is None:
         raise ValueError("set_fill_color requires fill_color.")
@@ -669,6 +738,7 @@ def _validate_set_dimensions(op: PatchOp) -> None:
         raise ValueError("set_dimensions does not accept bold or fill_color.")
     if op.design_snapshot is not None:
         raise ValueError("set_dimensions does not accept design_snapshot.")
+    _validate_no_alignment_fields(op, op_name="set_dimensions")
     has_rows = op.rows is not None
     has_columns = op.columns is not None
     if not has_rows and not has_columns:
@@ -683,6 +753,75 @@ def _validate_set_dimensions(op: PatchOp) -> None:
         raise ValueError("set_dimensions row_height must be > 0.")
     if op.column_width is not None and op.column_width <= 0:
         raise ValueError("set_dimensions column_width must be > 0.")
+
+
+def _validate_merge_cells(op: PatchOp) -> None:
+    """Validate merge_cells operation."""
+    _validate_no_legacy_edit_fields(op, op_name="merge_cells")
+    if op.cell is not None or op.base_cell is not None:
+        raise ValueError("merge_cells does not accept cell or base_cell.")
+    if op.range is None:
+        raise ValueError("merge_cells requires range.")
+    if op.row_count is not None or op.col_count is not None:
+        raise ValueError("merge_cells does not accept row_count or col_count.")
+    if op.bold is not None or op.fill_color is not None:
+        raise ValueError("merge_cells does not accept bold or fill_color.")
+    if op.rows is not None or op.columns is not None:
+        raise ValueError("merge_cells does not accept rows or columns.")
+    if op.row_height is not None or op.column_width is not None:
+        raise ValueError("merge_cells does not accept row_height or column_width.")
+    if op.design_snapshot is not None:
+        raise ValueError("merge_cells does not accept design_snapshot.")
+    _validate_no_alignment_fields(op, op_name="merge_cells")
+    if _range_cell_count(op.range) < 2:
+        raise ValueError("merge_cells requires a multi-cell range.")
+
+
+def _validate_unmerge_cells(op: PatchOp) -> None:
+    """Validate unmerge_cells operation."""
+    _validate_no_legacy_edit_fields(op, op_name="unmerge_cells")
+    if op.cell is not None or op.base_cell is not None:
+        raise ValueError("unmerge_cells does not accept cell or base_cell.")
+    if op.range is None:
+        raise ValueError("unmerge_cells requires range.")
+    if op.row_count is not None or op.col_count is not None:
+        raise ValueError("unmerge_cells does not accept row_count or col_count.")
+    if op.bold is not None or op.fill_color is not None:
+        raise ValueError("unmerge_cells does not accept bold or fill_color.")
+    if op.rows is not None or op.columns is not None:
+        raise ValueError("unmerge_cells does not accept rows or columns.")
+    if op.row_height is not None or op.column_width is not None:
+        raise ValueError("unmerge_cells does not accept row_height or column_width.")
+    if op.design_snapshot is not None:
+        raise ValueError("unmerge_cells does not accept design_snapshot.")
+    _validate_no_alignment_fields(op, op_name="unmerge_cells")
+
+
+def _validate_set_alignment(op: PatchOp) -> None:
+    """Validate set_alignment operation."""
+    _validate_no_legacy_edit_fields(op, op_name="set_alignment")
+    if op.base_cell is not None:
+        raise ValueError("set_alignment does not accept base_cell.")
+    if op.row_count is not None or op.col_count is not None:
+        raise ValueError("set_alignment does not accept row_count or col_count.")
+    if op.bold is not None or op.fill_color is not None:
+        raise ValueError("set_alignment does not accept bold or fill_color.")
+    if op.rows is not None or op.columns is not None:
+        raise ValueError("set_alignment does not accept rows or columns.")
+    if op.row_height is not None or op.column_width is not None:
+        raise ValueError("set_alignment does not accept row_height or column_width.")
+    if op.design_snapshot is not None:
+        raise ValueError("set_alignment does not accept design_snapshot.")
+    _validate_exactly_one_cell_or_range(op, op_name="set_alignment")
+    if (
+        op.horizontal_align is None
+        and op.vertical_align is None
+        and op.wrap_text is None
+    ):
+        raise ValueError(
+            "set_alignment requires at least one of horizontal_align, vertical_align, or wrap_text."
+        )
+    _validate_style_target_size(op, op_name="set_alignment")
 
 
 def _validate_restore_design_snapshot(op: PatchOp) -> None:
@@ -704,6 +843,7 @@ def _validate_restore_design_snapshot(op: PatchOp) -> None:
         raise ValueError(
             "restore_design_snapshot does not accept row_height or column_width."
         )
+    _validate_no_alignment_fields(op, op_name="restore_design_snapshot")
     if op.design_snapshot is None:
         raise ValueError("restore_design_snapshot requires design_snapshot.")
 
@@ -732,8 +872,19 @@ def _validate_no_design_fields(op: PatchOp, *, op_name: str) -> None:
         raise ValueError(f"{op_name} does not accept rows or columns.")
     if op.row_height is not None or op.column_width is not None:
         raise ValueError(f"{op_name} does not accept row_height or column_width.")
+    _validate_no_alignment_fields(op, op_name=op_name)
     if op.design_snapshot is not None:
         raise ValueError(f"{op_name} does not accept design_snapshot.")
+
+
+def _validate_no_alignment_fields(op: PatchOp, *, op_name: str) -> None:
+    """Reject alignment-only fields for unrelated operations."""
+    if op.horizontal_align is not None:
+        raise ValueError(f"{op_name} does not accept horizontal_align.")
+    if op.vertical_align is not None:
+        raise ValueError(f"{op_name} does not accept vertical_align.")
+    if op.wrap_text is not None:
+        raise ValueError(f"{op_name} does not accept wrap_text.")
 
 
 def _validate_exactly_one_cell_or_range(op: PatchOp, *, op_name: str) -> None:
@@ -995,7 +1146,7 @@ def _apply_with_openpyxl(
 ) -> PatchResult:
     """Apply patch operations using openpyxl."""
     try:
-        diff, inverse_ops, formula_issues = _apply_ops_openpyxl(
+        diff, inverse_ops, formula_issues, op_warnings = _apply_ops_openpyxl(
             request,
             input_path,
             output_path,
@@ -1018,6 +1169,7 @@ def _apply_with_openpyxl(
     except Exception as exc:
         raise RuntimeError(f"openpyxl patch failed: {exc}") from exc
 
+    warnings.extend(op_warnings)
     if not request.dry_run:
         warnings.append(
             "openpyxl editing may drop shapes/charts or unsupported elements."
@@ -1124,6 +1276,9 @@ def _requires_openpyxl_backend(request: PatchRequest) -> bool:
             "set_bold",
             "set_fill_color",
             "set_dimensions",
+            "merge_cells",
+            "unmerge_cells",
+            "set_alignment",
             "restore_design_snapshot",
         }
         for op in request.ops
@@ -1137,6 +1292,9 @@ def _contains_design_ops(ops: list[PatchOp]) -> bool:
         "set_bold",
         "set_fill_color",
         "set_dimensions",
+        "merge_cells",
+        "unmerge_cells",
+        "set_alignment",
         "restore_design_snapshot",
     }
     return any(op.op in design_ops for op in ops)
@@ -1231,7 +1389,7 @@ def _apply_ops_openpyxl(
     request: PatchRequest,
     input_path: Path,
     output_path: Path,
-) -> tuple[list[PatchDiffItem], list[PatchOp], list[FormulaIssue]]:
+) -> tuple[list[PatchDiffItem], list[PatchOp], list[FormulaIssue], list[str]]:
     """Apply operations using openpyxl."""
     try:
         from openpyxl import load_workbook
@@ -1246,7 +1404,7 @@ def _apply_ops_openpyxl(
     else:
         workbook = load_workbook(input_path)
     try:
-        diff, inverse_ops = _apply_ops_to_openpyxl_workbook(
+        diff, inverse_ops, op_warnings = _apply_ops_to_openpyxl_workbook(
             workbook,
             request.ops,
             request.auto_formula,
@@ -1264,7 +1422,7 @@ def _apply_ops_openpyxl(
             workbook.save(output_path)
     finally:
         workbook.close()
-    return diff, inverse_ops, formula_issues
+    return diff, inverse_ops, formula_issues, op_warnings
 
 
 def _apply_ops_to_openpyxl_workbook(
@@ -1273,15 +1431,16 @@ def _apply_ops_to_openpyxl_workbook(
     auto_formula: bool,
     *,
     return_inverse_ops: bool,
-) -> tuple[list[PatchDiffItem], list[PatchOp]]:
+) -> tuple[list[PatchDiffItem], list[PatchOp], list[str]]:
     """Apply ops to an openpyxl workbook instance."""
     sheets = _openpyxl_sheet_map(workbook)
     diff: list[PatchDiffItem] = []
     inverse_ops: list[PatchOp] = []
+    op_warnings: list[str] = []
     for index, op in enumerate(ops):
         try:
             item, inverse = _apply_openpyxl_op(
-                workbook, sheets, op, index, auto_formula
+                workbook, sheets, op, index, auto_formula, op_warnings
             )
             diff.append(item)
             if return_inverse_ops and item.status == "applied" and inverse is not None:
@@ -1290,7 +1449,7 @@ def _apply_ops_to_openpyxl_workbook(
             raise PatchOpError.from_op(index, op, exc) from exc
     if return_inverse_ops:
         inverse_ops.reverse()
-    return diff, inverse_ops
+    return diff, inverse_ops, op_warnings
 
 
 def _openpyxl_sheet_map(
@@ -1309,6 +1468,7 @@ def _apply_openpyxl_op(
     op: PatchOp,
     index: int,
     auto_formula: bool,
+    warnings: list[str],
 ) -> tuple[PatchDiffItem, PatchOp | None]:
     """Apply a single op to openpyxl workbook."""
     if op.op == "add_sheet":
@@ -1317,31 +1477,44 @@ def _apply_openpyxl_op(
     existing_sheet = sheets.get(op.sheet)
     if existing_sheet is None:
         raise ValueError(f"Sheet not found: {op.sheet}")
+    return _apply_openpyxl_sheet_op(
+        existing_sheet,
+        op,
+        index,
+        auto_formula=auto_formula,
+        warnings=warnings,
+    )
 
-    if op.op == "set_range_values":
-        return _apply_openpyxl_set_range_values(existing_sheet, op, index)
 
-    if op.op == "fill_formula":
-        return _apply_openpyxl_fill_formula(existing_sheet, op, index)
-
-    if op.op == "draw_grid_border":
-        return _apply_openpyxl_draw_grid_border(existing_sheet, op, index)
-
-    if op.op == "set_bold":
-        return _apply_openpyxl_set_bold(existing_sheet, op, index)
-
-    if op.op == "set_fill_color":
-        return _apply_openpyxl_set_fill_color(existing_sheet, op, index)
-
-    if op.op == "set_dimensions":
-        return _apply_openpyxl_set_dimensions(existing_sheet, op, index)
-
-    if op.op == "restore_design_snapshot":
-        return _apply_openpyxl_restore_design_snapshot(existing_sheet, op, index)
-
+def _apply_openpyxl_sheet_op(
+    sheet: OpenpyxlWorksheetProtocol,
+    op: PatchOp,
+    index: int,
+    *,
+    auto_formula: bool,
+    warnings: list[str],
+) -> tuple[PatchDiffItem, PatchOp | None]:
+    """Apply openpyxl operation that targets an existing sheet."""
     if op.op in {"set_value", "set_formula", "set_value_if", "set_formula_if"}:
-        return _apply_openpyxl_cell_op(existing_sheet, op, index, auto_formula)
-    raise ValueError(f"Unsupported op: {op.op}")
+        return _apply_openpyxl_cell_op(sheet, op, index, auto_formula)
+    handlers: dict[PatchOpType, Callable[[], tuple[PatchDiffItem, PatchOp | None]]] = {
+        "set_range_values": lambda: _apply_openpyxl_set_range_values(sheet, op, index),
+        "fill_formula": lambda: _apply_openpyxl_fill_formula(sheet, op, index),
+        "draw_grid_border": lambda: _apply_openpyxl_draw_grid_border(sheet, op, index),
+        "set_bold": lambda: _apply_openpyxl_set_bold(sheet, op, index),
+        "set_fill_color": lambda: _apply_openpyxl_set_fill_color(sheet, op, index),
+        "set_dimensions": lambda: _apply_openpyxl_set_dimensions(sheet, op, index),
+        "merge_cells": lambda: _apply_openpyxl_merge_cells(sheet, op, index, warnings),
+        "unmerge_cells": lambda: _apply_openpyxl_unmerge_cells(sheet, op, index),
+        "set_alignment": lambda: _apply_openpyxl_set_alignment(sheet, op, index),
+        "restore_design_snapshot": lambda: _apply_openpyxl_restore_design_snapshot(
+            sheet, op, index
+        ),
+    }
+    handler = handlers.get(op.op)
+    if handler is None:
+        raise ValueError(f"Unsupported op: {op.op}")
+    return handler()
 
 
 def _apply_openpyxl_add_sheet(
@@ -1567,6 +1740,108 @@ def _apply_openpyxl_set_dimensions(
     )
 
 
+def _apply_openpyxl_merge_cells(
+    sheet: OpenpyxlWorksheetProtocol,
+    op: PatchOp,
+    index: int,
+    warnings: list[str],
+) -> tuple[PatchDiffItem, PatchOp | None]:
+    """Apply merge_cells op."""
+    if op.range is None:
+        raise ValueError("merge_cells requires range.")
+    overlapped = _intersecting_merged_ranges(sheet, op.range)
+    if overlapped:
+        raise ValueError(
+            "merge_cells range overlaps existing merged ranges: "
+            + ", ".join(overlapped)
+            + "."
+        )
+    merge_warning = _build_merge_value_loss_warning(sheet, op.sheet, op.range)
+    if merge_warning is not None:
+        warnings.append(merge_warning)
+    snapshot = DesignSnapshot(
+        merge_state=MergeStateSnapshot(scope=op.range, ranges=[]),
+    )
+    sheet.merge_cells(op.range)
+    return (
+        PatchDiffItem(
+            op_index=index,
+            op=op.op,
+            sheet=op.sheet,
+            cell=op.range,
+            before=None,
+            after=PatchValue(kind="style", value=f"merged={op.range}"),
+        ),
+        _build_restore_snapshot_op(op.sheet, snapshot),
+    )
+
+
+def _apply_openpyxl_unmerge_cells(
+    sheet: OpenpyxlWorksheetProtocol,
+    op: PatchOp,
+    index: int,
+) -> tuple[PatchDiffItem, PatchOp | None]:
+    """Apply unmerge_cells op."""
+    if op.range is None:
+        raise ValueError("unmerge_cells requires range.")
+    target_ranges = _intersecting_merged_ranges(sheet, op.range)
+    snapshot = DesignSnapshot(
+        merge_state=MergeStateSnapshot(scope=op.range, ranges=target_ranges),
+    )
+    for range_ref in target_ranges:
+        sheet.unmerge_cells(range_ref)
+    return (
+        PatchDiffItem(
+            op_index=index,
+            op=op.op,
+            sheet=op.sheet,
+            cell=op.range,
+            before=None,
+            after=PatchValue(kind="style", value=f"unmerged={len(target_ranges)}"),
+        ),
+        _build_restore_snapshot_op(op.sheet, snapshot),
+    )
+
+
+def _apply_openpyxl_set_alignment(
+    sheet: OpenpyxlWorksheetProtocol,
+    op: PatchOp,
+    index: int,
+) -> tuple[PatchDiffItem, PatchOp | None]:
+    """Apply set_alignment op."""
+    targets = _resolve_style_targets(op)
+    snapshot = DesignSnapshot(
+        alignments=[_snapshot_alignment(sheet[coord], coord) for coord in targets]
+    )
+    for coord in targets:
+        cell = sheet[coord]
+        alignment = copy(cell.alignment)
+        if op.horizontal_align is not None:
+            alignment.horizontal = op.horizontal_align
+        if op.vertical_align is not None:
+            alignment.vertical = op.vertical_align
+        if op.wrap_text is not None:
+            alignment.wrap_text = op.wrap_text
+        cell.alignment = alignment
+    location = op.cell if op.cell is not None else op.range
+    summary = (
+        f"horizontal={op.horizontal_align},"
+        f"vertical={op.vertical_align},"
+        f"wrap_text={op.wrap_text}"
+    )
+    return (
+        PatchDiffItem(
+            op_index=index,
+            op=op.op,
+            sheet=op.sheet,
+            cell=location,
+            before=None,
+            after=PatchValue(kind="style", value=summary),
+        ),
+        _build_restore_snapshot_op(op.sheet, snapshot),
+    )
+
+
 def _apply_openpyxl_restore_design_snapshot(
     sheet: OpenpyxlWorksheetProtocol,
     op: PatchOp,
@@ -1761,6 +2036,81 @@ def _resolve_style_targets(op: PatchOp) -> list[str]:
     return targets
 
 
+def _merged_range_strings(sheet: OpenpyxlWorksheetProtocol) -> list[str]:
+    """Return normalized merged range strings from worksheet."""
+    merged_cells = getattr(sheet, "merged_cells", None)
+    ranges = getattr(merged_cells, "ranges", None)
+    if ranges is None:
+        return []
+    return [str(item) for item in ranges]
+
+
+def _intersecting_merged_ranges(
+    sheet: OpenpyxlWorksheetProtocol, scope_range: str
+) -> list[str]:
+    """Return merged ranges that intersect the scope."""
+    intersections: list[str] = []
+    for merged_range in _merged_range_strings(sheet):
+        if _ranges_overlap(scope_range, merged_range):
+            intersections.append(merged_range)
+    return intersections
+
+
+def _ranges_overlap(left: str, right: str) -> bool:
+    """Return True if two A1 ranges overlap."""
+    left_min_col, left_min_row, left_max_col, left_max_row = _range_bounds(left)
+    right_min_col, right_min_row, right_max_col, right_max_row = _range_bounds(right)
+    return not (
+        left_max_col < right_min_col
+        or right_max_col < left_min_col
+        or left_max_row < right_min_row
+        or right_max_row < left_min_row
+    )
+
+
+def _range_bounds(range_ref: str) -> tuple[int, int, int, int]:
+    """Return range boundaries in (min_col, min_row, max_col, max_row)."""
+    try:
+        from openpyxl.utils.cell import range_boundaries
+    except ImportError as exc:
+        raise RuntimeError(f"openpyxl is not available: {exc}") from exc
+    return cast(tuple[int, int, int, int], range_boundaries(range_ref))
+
+
+def _build_merge_value_loss_warning(
+    sheet: OpenpyxlWorksheetProtocol,
+    sheet_name: str,
+    range_ref: str,
+) -> str | None:
+    """Build warning when merge can clear non-top-left cell values."""
+    coordinates = _expand_range_coordinates(range_ref)
+    top_left = coordinates[0][0]
+    risky_cells: list[str] = []
+    for row in coordinates:
+        for coord in row:
+            if coord == top_left:
+                continue
+            value = sheet[coord].value
+            if _has_non_empty_cell_value(value):
+                risky_cells.append(coord)
+    if not risky_cells:
+        return None
+    joined = ", ".join(risky_cells)
+    return (
+        f"merge_cells may clear non-top-left values at {sheet_name}!{range_ref}: "
+        f"{joined}"
+    )
+
+
+def _has_non_empty_cell_value(value: str | int | float | None) -> bool:
+    """Return True when cell has a non-empty value."""
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return value != ""
+    return True
+
+
 def _normalize_hex_color(fill_color: str) -> str:
     """Normalize #RRGGBB/#AARRGGBB into AARRGGBB."""
     text = fill_color.strip().upper()
@@ -1837,6 +2187,19 @@ def _snapshot_fill(cell: OpenpyxlCellProtocol, coordinate: str) -> FillSnapshot:
     )
 
 
+def _snapshot_alignment(
+    cell: OpenpyxlCellProtocol, coordinate: str
+) -> AlignmentSnapshot:
+    """Capture alignment snapshot for one cell."""
+    alignment = cell.alignment
+    return AlignmentSnapshot(
+        cell=coordinate,
+        horizontal=getattr(alignment, "horizontal", None),
+        vertical=getattr(alignment, "vertical", None),
+        wrap_text=getattr(alignment, "wrap_text", None),
+    )
+
+
 def _extract_openpyxl_color(color: object) -> str | None:
     """Extract RGB-like color text from openpyxl color object."""
     rgb = getattr(color, "rgb", None)
@@ -1852,6 +2215,8 @@ def _build_restore_snapshot_op(sheet: str, snapshot: DesignSnapshot) -> PatchOp 
         not snapshot.borders
         and not snapshot.fonts
         and not snapshot.fills
+        and not snapshot.alignments
+        and snapshot.merge_state is None
         and not snapshot.row_dimensions
         and not snapshot.column_dimensions
     ):
@@ -1864,6 +2229,8 @@ def _restore_design_snapshot(
     snapshot: DesignSnapshot,
 ) -> None:
     """Restore cell style and dimension snapshot."""
+    if snapshot.merge_state is not None:
+        _restore_merge_state(sheet, snapshot.merge_state)
     for border_snapshot in snapshot.borders:
         _restore_border(sheet[border_snapshot.cell], border_snapshot)
     for font_snapshot in snapshot.fonts:
@@ -1873,10 +2240,23 @@ def _restore_design_snapshot(
         cell.font = font
     for fill_snapshot in snapshot.fills:
         _restore_fill(sheet[fill_snapshot.cell], fill_snapshot)
+    for alignment_snapshot in snapshot.alignments:
+        _restore_alignment(sheet[alignment_snapshot.cell], alignment_snapshot)
     for row_snapshot in snapshot.row_dimensions:
         sheet.row_dimensions[row_snapshot.row].height = row_snapshot.height
     for column_snapshot in snapshot.column_dimensions:
         sheet.column_dimensions[column_snapshot.column].width = column_snapshot.width
+
+
+def _restore_merge_state(
+    sheet: OpenpyxlWorksheetProtocol,
+    snapshot: MergeStateSnapshot,
+) -> None:
+    """Restore merged ranges for a scope deterministically."""
+    for range_ref in _intersecting_merged_ranges(sheet, snapshot.scope):
+        sheet.unmerge_cells(range_ref)
+    for range_ref in snapshot.ranges:
+        sheet.merge_cells(range_ref)
 
 
 def _restore_border(cell: OpenpyxlCellProtocol, snapshot: BorderSnapshot) -> None:
@@ -1916,6 +2296,15 @@ def _restore_fill(cell: OpenpyxlCellProtocol, snapshot: FillSnapshot) -> None:
         start_color=snapshot.start_color,
         end_color=snapshot.end_color,
     )
+
+
+def _restore_alignment(cell: OpenpyxlCellProtocol, snapshot: AlignmentSnapshot) -> None:
+    """Restore alignment from snapshot."""
+    alignment = copy(cell.alignment)
+    alignment.horizontal = snapshot.horizontal
+    alignment.vertical = snapshot.vertical
+    alignment.wrap_text = snapshot.wrap_text
+    cell.alignment = alignment
 
 
 def _translate_formula(formula: str, origin: str, target: str) -> str:

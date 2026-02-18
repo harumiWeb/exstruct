@@ -56,6 +56,48 @@ def test_patch_tool_input_accepts_design_ops() -> None:
     assert payload.ops[0].op == "set_dimensions"
 
 
+def test_patch_tool_input_accepts_merge_and_alignment_ops() -> None:
+    payload = PatchToolInput(
+        xlsx_path="input.xlsx",
+        ops=[
+            {"op": "merge_cells", "sheet": "Sheet1", "range": "A1:B1"},
+            {
+                "op": "set_alignment",
+                "sheet": "Sheet1",
+                "range": "A1:B1",
+                "horizontal_align": "center",
+                "vertical_align": "center",
+                "wrap_text": True,
+            },
+        ],
+    )
+    assert payload.ops[0].op == "merge_cells"
+    assert payload.ops[1].op == "set_alignment"
+
+
+def test_patch_tool_input_rejects_invalid_horizontal_align() -> None:
+    with pytest.raises(ValidationError):
+        PatchToolInput(
+            xlsx_path="input.xlsx",
+            ops=[
+                {
+                    "op": "set_alignment",
+                    "sheet": "Sheet1",
+                    "cell": "A1",
+                    "horizontal_align": "middle",
+                }
+            ],
+        )
+
+
+def test_patch_tool_input_rejects_alignment_without_target_fields() -> None:
+    with pytest.raises(ValidationError):
+        PatchToolInput(
+            xlsx_path="input.xlsx",
+            ops=[{"op": "set_alignment", "sheet": "Sheet1", "cell": "A1"}],
+        )
+
+
 def test_read_range_tool_input_defaults() -> None:
     payload = ReadRangeToolInput(out_path="out.json", range="A1:B2")
     assert payload.sheet is None
