@@ -530,3 +530,148 @@ def test_patch_op_add_sheet_rejects_unrelated_fields() -> None:
 def test_patch_op_set_value_rejects_expected() -> None:
     with pytest.raises(ValidationError, match="set_value does not accept expected"):
         PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="x", expected="old")
+
+
+def test_run_patch_draw_grid_border_and_inverse_restore(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    ops = [
+        PatchOp(
+            op="draw_grid_border",
+            sheet="Sheet1",
+            base_cell="A1",
+            row_count=2,
+            col_count=2,
+        )
+    ]
+    request = PatchRequest(
+        xlsx_path=input_path,
+        ops=ops,
+        on_conflict="rename",
+        return_inverse_ops=True,
+    )
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.error is None
+    assert len(result.inverse_ops) == 1
+    workbook = load_workbook(result.out_path)
+    try:
+        assert workbook["Sheet1"]["A1"].border.top.style == "thin"
+    finally:
+        workbook.close()
+
+    restored = run_patch(
+        PatchRequest(
+            xlsx_path=Path(result.out_path),
+            ops=result.inverse_ops,
+            on_conflict="rename",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    restored_book = load_workbook(restored.out_path)
+    try:
+        assert restored_book["Sheet1"]["A1"].border.top.style is None
+    finally:
+        restored_book.close()
+
+
+def test_run_patch_set_bold_and_fill_color(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    ops = [
+        PatchOp(op="set_bold", sheet="Sheet1", range="A1:B1"),
+        PatchOp(op="set_fill_color", sheet="Sheet1", cell="A1", fill_color="#112233"),
+    ]
+    request = PatchRequest(xlsx_path=input_path, ops=ops, on_conflict="rename")
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.error is None
+    workbook = load_workbook(result.out_path)
+    try:
+        cell = workbook["Sheet1"]["A1"]
+        assert cell.font.bold is True
+        assert cell.fill.fill_type == "solid"
+        assert cell.fill.start_color.rgb == "FF112233"
+    finally:
+        workbook.close()
+
+
+def test_run_patch_set_dimensions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    ops = [
+        PatchOp(
+            op="set_dimensions",
+            sheet="Sheet1",
+            rows=[1, 2],
+            row_height=24.5,
+            columns=["A", 2],
+            column_width=18.0,
+        )
+    ]
+    request = PatchRequest(xlsx_path=input_path, ops=ops, on_conflict="rename")
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.error is None
+    workbook = load_workbook(result.out_path)
+    try:
+        sheet = workbook["Sheet1"]
+        assert sheet.row_dimensions[1].height == 24.5
+        assert sheet.column_dimensions["A"].width == 18.0
+        assert sheet.column_dimensions["B"].width == 18.0
+    finally:
+        workbook.close()
+
+
+def test_patch_op_set_bold_rejects_cell_and_range() -> None:
+    with pytest.raises(
+        ValidationError, match="set_bold requires exactly one of cell or range"
+    ):
+        PatchOp(op="set_bold", sheet="Sheet1", cell="A1", range="A1:A1")
+
+
+def test_patch_op_set_fill_color_rejects_invalid_color() -> None:
+    with pytest.raises(
+        ValidationError, match="Invalid fill_color format. Use '#RRGGBB' or '#AARRGGBB'"
+    ):
+        PatchOp(op="set_fill_color", sheet="Sheet1", cell="A1", fill_color="red")
+
+
+def test_patch_op_set_dimensions_requires_dimension_pair() -> None:
+    with pytest.raises(
+        ValidationError,
+        match="set_dimensions requires column_width when columns is provided",
+    ):
+        PatchOp(op="set_dimensions", sheet="Sheet1", columns=["A"])
+
+
+def test_patch_op_style_target_limit() -> None:
+    with pytest.raises(ValidationError, match="target exceeds max cells"):
+        PatchOp(op="set_bold", sheet="Sheet1", range="A1:Z500")
+
+
+def test_run_patch_rejects_design_op_for_xls(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        patch_runner,
+        "get_com_availability",
+        lambda: ComAvailability(available=True, reason=None),
+    )
+    input_path = tmp_path / "book.xls"
+    input_path.write_text("dummy", encoding="utf-8")
+    request = PatchRequest(
+        xlsx_path=input_path,
+        ops=[PatchOp(op="set_bold", sheet="Sheet1", cell="A1")],
+        on_conflict="rename",
+    )
+    with pytest.raises(
+        ValueError, match=r"Design operations are not supported for \.xls files"
+    ):
+        run_patch(request, policy=PathPolicy(root=tmp_path))

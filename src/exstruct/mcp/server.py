@@ -453,7 +453,11 @@ def _register_tools(
                 'add_sheet' (create new sheet), 'set_range_values' (bulk set
                 rectangular range), 'fill_formula' (fill formula across a
                 row/column), 'set_value_if' (conditional value update),
-                'set_formula_if' (conditional formula update).
+                'set_formula_if' (conditional formula update),
+                'draw_grid_border' (draw thin black grid border),
+                'set_bold' (apply bold style), 'set_fill_color' (apply solid fill),
+                'set_dimensions' (set row height/column width), and
+                'restore_design_snapshot' (internal inverse restore op).
             out_dir: Output directory. Defaults to same directory as input.
             out_name: Output filename. Defaults to '{stem}_patched{ext}'.
             on_conflict: Conflict policy when output file exists:

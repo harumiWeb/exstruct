@@ -193,12 +193,18 @@ Examples:
   - `fill_formula`
   - `set_value_if`
   - `set_formula_if`
+  - `draw_grid_border`
+  - `set_bold`
+  - `set_fill_color`
+  - `set_dimensions`
+  - `restore_design_snapshot` (internal inverse op)
 - Useful flags:
   - `dry_run`: compute diff only (no file write)
   - `return_inverse_ops`: return undo operations
   - `preflight_formula_check`: detect formula issues before save
   - `auto_formula`: treat `=...` in `set_value` as formula
 - Conflict handling follows server `--on-conflict` unless overridden per tool call
+- Style/dimension design ops are processed by openpyxl and are not supported for `.xls` input. Convert `.xls` to `.xlsx`/`.xlsm` first.
 
 ## AI agent configuration examples
 

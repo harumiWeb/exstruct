@@ -392,7 +392,10 @@ def test_register_tools_accepts_patch_ops_json_strings(
         patch_tool,
         {
             "xlsx_path": "in.xlsx",
-            "ops": ['{"op":"add_sheet","sheet":"New"}'],
+            "ops": [
+                '{"op":"add_sheet","sheet":"New"}',
+                '{"op":"set_bold","sheet":"New","cell":"A1"}',
+            ],
         },
     )
     patch_call = cast(
@@ -400,6 +403,8 @@ def test_register_tools_accepts_patch_ops_json_strings(
     )
     assert patch_call[0].ops[0].op == "add_sheet"
     assert patch_call[0].ops[0].sheet == "New"
+    assert patch_call[0].ops[1].op == "set_bold"
+    assert patch_call[0].ops[1].cell == "A1"
 
 
 def test_register_tools_rejects_invalid_patch_ops_json_strings(

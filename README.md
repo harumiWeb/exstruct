@@ -94,6 +94,9 @@ Available tools:
 - `exstruct_extract`
 - `exstruct_patch`
 - `exstruct_read_json_chunk`
+- `exstruct_read_range`
+- `exstruct_read_cells`
+- `exstruct_read_formulas`
 - `exstruct_validate_input`
 
 Notes:
@@ -101,6 +104,7 @@ Notes:
 - In MCP, `exstruct_extract` defaults to `options.alpha_col=true` (column keys: `A`, `B`, ...). Set `options.alpha_col=false` for legacy 0-based numeric string keys.
 - Logs go to stderr (and optionally `--log-file`) to avoid contaminating stdio responses.
 - On Windows with Excel, standard/verbose can use COM for richer extraction. On non-Windows, COM is unavailable and extraction uses openpyxl-based fallbacks.
+- `exstruct_patch` supports style/dimension ops (`draw_grid_border`, `set_bold`, `set_fill_color`, `set_dimensions`) and inverse restore ops (`restore_design_snapshot`). Style/dimension ops are openpyxl-only and reject `.xls` inputs.
 
 MCP Setup Guide for Each AI Agent:
 

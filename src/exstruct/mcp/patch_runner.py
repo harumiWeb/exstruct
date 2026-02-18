@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from copy import copy
 from pathlib import Path
 import re
-from typing import Literal, Protocol, runtime_checkable
+from typing import Literal, Protocol, cast, runtime_checkable
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 import xlwings as xw
@@ -22,9 +23,14 @@ PatchOpType = Literal[
     "fill_formula",
     "set_value_if",
     "set_formula_if",
+    "draw_grid_border",
+    "set_bold",
+    "set_fill_color",
+    "set_dimensions",
+    "restore_design_snapshot",
 ]
 PatchStatus = Literal["applied", "skipped"]
-PatchValueKind = Literal["value", "formula", "sheet"]
+PatchValueKind = Literal["value", "formula", "sheet", "style", "dimension"]
 FormulaIssueLevel = Literal["warning", "error"]
 FormulaIssueCode = Literal[
     "invalid_token",
@@ -39,6 +45,66 @@ FormulaIssueCode = Literal[
 _ALLOWED_EXTENSIONS = {".xlsx", ".xlsm", ".xls"}
 _A1_PATTERN = re.compile(r"^[A-Za-z]{1,3}[1-9][0-9]*$")
 _A1_RANGE_PATTERN = re.compile(r"^[A-Za-z]{1,3}[1-9][0-9]*:[A-Za-z]{1,3}[1-9][0-9]*$")
+_HEX_COLOR_PATTERN = re.compile(r"^#(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$")
+_COLUMN_LABEL_PATTERN = re.compile(r"^[A-Za-z]{1,3}$")
+_MAX_STYLE_TARGET_CELLS = 10_000
+
+
+class BorderSideSnapshot(BaseModel):
+    """Serializable border side state for inverse restoration."""
+
+    style: str | None = None
+    color: str | None = None
+
+
+class BorderSnapshot(BaseModel):
+    """Serializable border state for one cell."""
+
+    cell: str
+    top: BorderSideSnapshot = Field(default_factory=BorderSideSnapshot)
+    right: BorderSideSnapshot = Field(default_factory=BorderSideSnapshot)
+    bottom: BorderSideSnapshot = Field(default_factory=BorderSideSnapshot)
+    left: BorderSideSnapshot = Field(default_factory=BorderSideSnapshot)
+
+
+class FontSnapshot(BaseModel):
+    """Serializable font state for one cell."""
+
+    cell: str
+    bold: bool | None = None
+
+
+class FillSnapshot(BaseModel):
+    """Serializable fill state for one cell."""
+
+    cell: str
+    fill_type: str | None = None
+    start_color: str | None = None
+    end_color: str | None = None
+
+
+class RowDimensionSnapshot(BaseModel):
+    """Serializable row height state."""
+
+    row: int
+    height: float | None = None
+
+
+class ColumnDimensionSnapshot(BaseModel):
+    """Serializable column width state."""
+
+    column: str
+    width: float | None = None
+
+
+class DesignSnapshot(BaseModel):
+    """Serializable style/dimension snapshot for inverse restore."""
+
+    borders: list[BorderSnapshot] = Field(default_factory=list)
+    fonts: list[FontSnapshot] = Field(default_factory=list)
+    fills: list[FillSnapshot] = Field(default_factory=list)
+    row_dimensions: list[RowDimensionSnapshot] = Field(default_factory=list)
+    column_dimensions: list[ColumnDimensionSnapshot] = Field(default_factory=list)
 
 
 @runtime_checkable
@@ -47,11 +113,86 @@ class OpenpyxlCellProtocol(Protocol):
 
     value: str | int | float | None
     data_type: str | None
+    font: OpenpyxlFontProtocol
+    fill: OpenpyxlFillProtocol
+    border: OpenpyxlBorderProtocol
+
+
+@runtime_checkable
+class OpenpyxlColorProtocol(Protocol):
+    """Protocol for openpyxl color access."""
+
+    rgb: object | None
+
+
+@runtime_checkable
+class OpenpyxlSideProtocol(Protocol):
+    """Protocol for openpyxl border side access."""
+
+    style: str | None
+    color: OpenpyxlColorProtocol | None
+
+
+@runtime_checkable
+class OpenpyxlBorderProtocol(Protocol):
+    """Protocol for openpyxl border access."""
+
+    top: OpenpyxlSideProtocol
+    right: OpenpyxlSideProtocol
+    bottom: OpenpyxlSideProtocol
+    left: OpenpyxlSideProtocol
+
+
+@runtime_checkable
+class OpenpyxlFontProtocol(Protocol):
+    """Protocol for openpyxl font access."""
+
+    bold: bool | None
+
+
+@runtime_checkable
+class OpenpyxlFillProtocol(Protocol):
+    """Protocol for openpyxl fill access."""
+
+    fill_type: str | None
+    start_color: OpenpyxlColorProtocol | None
+    end_color: OpenpyxlColorProtocol | None
+
+
+@runtime_checkable
+class OpenpyxlRowDimensionProtocol(Protocol):
+    """Protocol for openpyxl row dimension access."""
+
+    height: float | None
+
+
+@runtime_checkable
+class OpenpyxlColumnDimensionProtocol(Protocol):
+    """Protocol for openpyxl column dimension access."""
+
+    width: float | None
+
+
+@runtime_checkable
+class OpenpyxlRowDimensionsProtocol(Protocol):
+    """Protocol for openpyxl row dimensions collection."""
+
+    def __getitem__(self, key: int) -> OpenpyxlRowDimensionProtocol: ...
+
+
+@runtime_checkable
+class OpenpyxlColumnDimensionsProtocol(Protocol):
+    """Protocol for openpyxl column dimensions collection."""
+
+    def __getitem__(self, key: str) -> OpenpyxlColumnDimensionProtocol: ...
 
 
 @runtime_checkable
 class OpenpyxlWorksheetProtocol(Protocol):
     """Protocol for openpyxl worksheet access used by patch runner."""
+
+    row_dimensions: OpenpyxlRowDimensionsProtocol
+    column_dimensions: OpenpyxlColumnDimensionsProtocol
 
     def __getitem__(self, key: str) -> OpenpyxlCellProtocol: ...
 
@@ -126,12 +267,19 @@ class PatchOp(BaseModel):
     - ``fill_formula``: Fill a formula across a single row or column. Requires ``sheet``, ``range``, ``base_cell``, ``formula``.
     - ``set_value_if``: Conditionally set value. Requires ``sheet``, ``cell``, ``value``. ``expected`` is optional; ``null`` matches an empty cell. Skips if current value != expected.
     - ``set_formula_if``: Conditionally set formula. Requires ``sheet``, ``cell``, ``formula``. ``expected`` is optional; ``null`` matches an empty cell. Skips if current value != expected.
+    - ``draw_grid_border``: Draw thin black borders on a target rectangle.
+    - ``set_bold``: Set bold style for one cell or one range.
+    - ``set_fill_color``: Set solid fill color for one cell or one range.
+    - ``set_dimensions``: Set row height and/or column width.
+    - ``restore_design_snapshot``: Restore style/dimension snapshot (internal inverse op).
     """
 
     op: PatchOpType = Field(
         description=(
             "Operation type: 'set_value', 'set_formula', 'add_sheet', "
-            "'set_range_values', 'fill_formula', 'set_value_if', or 'set_formula_if'."
+            "'set_range_values', 'fill_formula', 'set_value_if', 'set_formula_if', "
+            "'draw_grid_border', 'set_bold', 'set_fill_color', 'set_dimensions', "
+            "or 'restore_design_snapshot'."
         )
     )
     sheet: str = Field(
@@ -164,6 +312,42 @@ class PatchOp(BaseModel):
     formula: str | None = Field(
         default=None,
         description="Formula string starting with '=' (e.g. '=SUM(A1:A10)'). For set_formula, set_formula_if, fill_formula.",
+    )
+    row_count: int | None = Field(
+        default=None,
+        description="Row count for draw_grid_border.",
+    )
+    col_count: int | None = Field(
+        default=None,
+        description="Column count for draw_grid_border.",
+    )
+    bold: bool | None = Field(
+        default=None,
+        description="Bold flag for set_bold. Defaults to true.",
+    )
+    fill_color: str | None = Field(
+        default=None,
+        description="Fill color for set_fill_color in #RRGGBB or #AARRGGBB format.",
+    )
+    rows: list[int] | None = Field(
+        default=None,
+        description="Row indexes for set_dimensions.",
+    )
+    columns: list[str | int] | None = Field(
+        default=None,
+        description="Column identifiers for set_dimensions. Accepts letters (A/AA) or positive indexes.",
+    )
+    row_height: float | None = Field(
+        default=None,
+        description="Target row height for set_dimensions.",
+    )
+    column_width: float | None = Field(
+        default=None,
+        description="Target column width for set_dimensions.",
+    )
+    design_snapshot: DesignSnapshot | None = Field(
+        default=None,
+        description="Design snapshot payload for restore_design_snapshot.",
     )
 
     @field_validator("sheet")
@@ -204,38 +388,82 @@ class PatchOp(BaseModel):
         start, end = candidate.split(":", maxsplit=1)
         return f"{start.upper()}:{end.upper()}"
 
+    @field_validator("fill_color")
+    @classmethod
+    def _validate_fill_color(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if not _HEX_COLOR_PATTERN.match(value):
+            raise ValueError("Invalid fill_color format. Use '#RRGGBB' or '#AARRGGBB'.")
+        return value.upper()
+
+    @field_validator("rows")
+    @classmethod
+    def _validate_rows(cls, value: list[int] | None) -> list[int] | None:
+        if value is None:
+            return None
+        if not value:
+            raise ValueError("rows must not be empty.")
+        normalized: list[int] = []
+        for row in value:
+            if row < 1:
+                raise ValueError("rows must contain positive integers.")
+            normalized.append(row)
+        return normalized
+
+    @field_validator("columns")
+    @classmethod
+    def _validate_columns(cls, value: list[str | int] | None) -> list[str | int] | None:
+        if value is None:
+            return None
+        if not value:
+            raise ValueError("columns must not be empty.")
+        normalized: list[str | int] = []
+        for column in value:
+            normalized.append(_normalize_column_identifier(column))
+        return normalized
+
     @model_validator(mode="after")
     def _validate_op(self) -> PatchOp:
-        if self.op == "add_sheet":
-            _validate_add_sheet(self)
+        validator = _validator_for_op(self.op)
+        if validator is None:
             return self
-        if self.op == "set_value":
+        if self.op in _CELL_REQUIRED_OPS:
             _validate_cell_required(self)
-            _validate_set_value(self)
-            return self
-        if self.op == "set_formula":
-            _validate_cell_required(self)
-            _validate_set_formula(self)
-            return self
-        if self.op == "set_range_values":
-            _validate_set_range_values(self)
-            return self
-        if self.op == "fill_formula":
-            _validate_fill_formula(self)
-            return self
-        if self.op == "set_value_if":
-            _validate_cell_required(self)
-            _validate_set_value_if(self)
-            return self
-        if self.op == "set_formula_if":
-            _validate_cell_required(self)
-            _validate_set_formula_if(self)
-            return self
+        validator(self)
         return self
+
+
+_CELL_REQUIRED_OPS: set[PatchOpType] = {
+    "set_value",
+    "set_formula",
+    "set_value_if",
+    "set_formula_if",
+}
+
+
+def _validator_for_op(op_type: PatchOpType) -> Callable[[PatchOp], None] | None:
+    """Return per-op validator function."""
+    validators: dict[PatchOpType, Callable[[PatchOp], None]] = {
+        "add_sheet": _validate_add_sheet,
+        "set_value": _validate_set_value,
+        "set_formula": _validate_set_formula,
+        "set_range_values": _validate_set_range_values,
+        "fill_formula": _validate_fill_formula,
+        "set_value_if": _validate_set_value_if,
+        "set_formula_if": _validate_set_formula_if,
+        "draw_grid_border": _validate_draw_grid_border,
+        "set_bold": _validate_set_bold,
+        "set_fill_color": _validate_set_fill_color,
+        "set_dimensions": _validate_set_dimensions,
+        "restore_design_snapshot": _validate_restore_design_snapshot,
+    }
+    return validators.get(op_type)
 
 
 def _validate_add_sheet(op: PatchOp) -> None:
     """Validate add_sheet operation."""
+    _validate_no_design_fields(op, op_name="add_sheet")
     if op.cell is not None:
         raise ValueError("add_sheet does not accept cell.")
     if op.range is not None:
@@ -260,6 +488,7 @@ def _validate_cell_required(op: PatchOp) -> None:
 
 def _validate_set_value(op: PatchOp) -> None:
     """Validate set_value operation."""
+    _validate_no_design_fields(op, op_name="set_value")
     if op.range is not None:
         raise ValueError("set_value does not accept range.")
     if op.base_cell is not None:
@@ -274,6 +503,7 @@ def _validate_set_value(op: PatchOp) -> None:
 
 def _validate_set_formula(op: PatchOp) -> None:
     """Validate set_formula operation."""
+    _validate_no_design_fields(op, op_name="set_formula")
     if op.range is not None:
         raise ValueError("set_formula does not accept range.")
     if op.base_cell is not None:
@@ -292,6 +522,7 @@ def _validate_set_formula(op: PatchOp) -> None:
 
 def _validate_set_range_values(op: PatchOp) -> None:
     """Validate set_range_values operation."""
+    _validate_no_design_fields(op, op_name="set_range_values")
     if op.cell is not None:
         raise ValueError("set_range_values does not accept cell.")
     if op.base_cell is not None:
@@ -315,6 +546,7 @@ def _validate_set_range_values(op: PatchOp) -> None:
 
 def _validate_fill_formula(op: PatchOp) -> None:
     """Validate fill_formula operation."""
+    _validate_no_design_fields(op, op_name="fill_formula")
     if op.cell is not None:
         raise ValueError("fill_formula does not accept cell.")
     if op.expected is not None:
@@ -335,6 +567,7 @@ def _validate_fill_formula(op: PatchOp) -> None:
 
 def _validate_set_value_if(op: PatchOp) -> None:
     """Validate set_value_if operation."""
+    _validate_no_design_fields(op, op_name="set_value_if")
     if op.formula is not None:
         raise ValueError("set_value_if does not accept formula.")
     if op.range is not None:
@@ -347,6 +580,7 @@ def _validate_set_value_if(op: PatchOp) -> None:
 
 def _validate_set_formula_if(op: PatchOp) -> None:
     """Validate set_formula_if operation."""
+    _validate_no_design_fields(op, op_name="set_formula_if")
     if op.value is not None:
         raise ValueError("set_formula_if does not accept value.")
     if op.range is not None:
@@ -359,6 +593,229 @@ def _validate_set_formula_if(op: PatchOp) -> None:
         raise ValueError("set_formula_if requires formula.")
     if not op.formula.startswith("="):
         raise ValueError("set_formula_if requires formula starting with '='.")
+
+
+def _validate_draw_grid_border(op: PatchOp) -> None:
+    """Validate draw_grid_border operation."""
+    _validate_no_legacy_edit_fields(op, op_name="draw_grid_border")
+    if op.cell is not None or op.range is not None:
+        raise ValueError("draw_grid_border does not accept cell or range.")
+    if op.bold is not None or op.fill_color is not None:
+        raise ValueError("draw_grid_border does not accept bold or fill_color.")
+    if op.rows is not None or op.columns is not None:
+        raise ValueError("draw_grid_border does not accept rows or columns.")
+    if op.row_height is not None or op.column_width is not None:
+        raise ValueError("draw_grid_border does not accept row_height or column_width.")
+    if op.design_snapshot is not None:
+        raise ValueError("draw_grid_border does not accept design_snapshot.")
+    if op.base_cell is None:
+        raise ValueError("draw_grid_border requires base_cell.")
+    if op.row_count is None or op.col_count is None:
+        raise ValueError("draw_grid_border requires row_count and col_count.")
+    if op.row_count < 1 or op.col_count < 1:
+        raise ValueError("draw_grid_border requires row_count >= 1 and col_count >= 1.")
+    if op.row_count * op.col_count > _MAX_STYLE_TARGET_CELLS:
+        raise ValueError(
+            f"draw_grid_border target exceeds max cells: {_MAX_STYLE_TARGET_CELLS}."
+        )
+
+
+def _validate_set_bold(op: PatchOp) -> None:
+    """Validate set_bold operation."""
+    _validate_no_legacy_edit_fields(op, op_name="set_bold")
+    if op.row_count is not None or op.col_count is not None:
+        raise ValueError("set_bold does not accept row_count or col_count.")
+    if op.fill_color is not None:
+        raise ValueError("set_bold does not accept fill_color.")
+    if op.rows is not None or op.columns is not None:
+        raise ValueError("set_bold does not accept rows or columns.")
+    if op.row_height is not None or op.column_width is not None:
+        raise ValueError("set_bold does not accept row_height or column_width.")
+    if op.design_snapshot is not None:
+        raise ValueError("set_bold does not accept design_snapshot.")
+    _validate_exactly_one_cell_or_range(op, op_name="set_bold")
+    if op.bold is None:
+        op.bold = True
+    _validate_style_target_size(op, op_name="set_bold")
+
+
+def _validate_set_fill_color(op: PatchOp) -> None:
+    """Validate set_fill_color operation."""
+    _validate_no_legacy_edit_fields(op, op_name="set_fill_color")
+    if op.row_count is not None or op.col_count is not None:
+        raise ValueError("set_fill_color does not accept row_count or col_count.")
+    if op.bold is not None:
+        raise ValueError("set_fill_color does not accept bold.")
+    if op.rows is not None or op.columns is not None:
+        raise ValueError("set_fill_color does not accept rows or columns.")
+    if op.row_height is not None or op.column_width is not None:
+        raise ValueError("set_fill_color does not accept row_height or column_width.")
+    if op.design_snapshot is not None:
+        raise ValueError("set_fill_color does not accept design_snapshot.")
+    _validate_exactly_one_cell_or_range(op, op_name="set_fill_color")
+    if op.fill_color is None:
+        raise ValueError("set_fill_color requires fill_color.")
+    _validate_style_target_size(op, op_name="set_fill_color")
+
+
+def _validate_set_dimensions(op: PatchOp) -> None:
+    """Validate set_dimensions operation."""
+    _validate_no_legacy_edit_fields(op, op_name="set_dimensions")
+    if op.cell is not None or op.range is not None or op.base_cell is not None:
+        raise ValueError("set_dimensions does not accept cell/range/base_cell.")
+    if op.row_count is not None or op.col_count is not None:
+        raise ValueError("set_dimensions does not accept row_count or col_count.")
+    if op.bold is not None or op.fill_color is not None:
+        raise ValueError("set_dimensions does not accept bold or fill_color.")
+    if op.design_snapshot is not None:
+        raise ValueError("set_dimensions does not accept design_snapshot.")
+    has_rows = op.rows is not None
+    has_columns = op.columns is not None
+    if not has_rows and not has_columns:
+        raise ValueError("set_dimensions requires rows and/or columns.")
+    if has_rows and op.row_height is None:
+        raise ValueError("set_dimensions requires row_height when rows is provided.")
+    if has_columns and op.column_width is None:
+        raise ValueError(
+            "set_dimensions requires column_width when columns is provided."
+        )
+    if op.row_height is not None and op.row_height <= 0:
+        raise ValueError("set_dimensions row_height must be > 0.")
+    if op.column_width is not None and op.column_width <= 0:
+        raise ValueError("set_dimensions column_width must be > 0.")
+
+
+def _validate_restore_design_snapshot(op: PatchOp) -> None:
+    """Validate restore_design_snapshot operation."""
+    _validate_no_legacy_edit_fields(op, op_name="restore_design_snapshot")
+    if op.cell is not None or op.range is not None or op.base_cell is not None:
+        raise ValueError(
+            "restore_design_snapshot does not accept cell/range/base_cell."
+        )
+    if op.row_count is not None or op.col_count is not None:
+        raise ValueError(
+            "restore_design_snapshot does not accept row_count or col_count."
+        )
+    if op.bold is not None or op.fill_color is not None:
+        raise ValueError("restore_design_snapshot does not accept bold or fill_color.")
+    if op.rows is not None or op.columns is not None:
+        raise ValueError("restore_design_snapshot does not accept rows or columns.")
+    if op.row_height is not None or op.column_width is not None:
+        raise ValueError(
+            "restore_design_snapshot does not accept row_height or column_width."
+        )
+    if op.design_snapshot is None:
+        raise ValueError("restore_design_snapshot requires design_snapshot.")
+
+
+def _validate_no_legacy_edit_fields(op: PatchOp, *, op_name: str) -> None:
+    """Reject fields that are unrelated to design operations."""
+    if op.expected is not None:
+        raise ValueError(f"{op_name} does not accept expected.")
+    if op.value is not None:
+        raise ValueError(f"{op_name} does not accept value.")
+    if op.values is not None:
+        raise ValueError(f"{op_name} does not accept values.")
+    if op.formula is not None:
+        raise ValueError(f"{op_name} does not accept formula.")
+
+
+def _validate_no_design_fields(op: PatchOp, *, op_name: str) -> None:
+    """Reject design-only fields for legacy value edit operations."""
+    if op.row_count is not None or op.col_count is not None:
+        raise ValueError(f"{op_name} does not accept row_count or col_count.")
+    if op.bold is not None:
+        raise ValueError(f"{op_name} does not accept bold.")
+    if op.fill_color is not None:
+        raise ValueError(f"{op_name} does not accept fill_color.")
+    if op.rows is not None or op.columns is not None:
+        raise ValueError(f"{op_name} does not accept rows or columns.")
+    if op.row_height is not None or op.column_width is not None:
+        raise ValueError(f"{op_name} does not accept row_height or column_width.")
+    if op.design_snapshot is not None:
+        raise ValueError(f"{op_name} does not accept design_snapshot.")
+
+
+def _validate_exactly_one_cell_or_range(op: PatchOp, *, op_name: str) -> None:
+    """Ensure exactly one of cell/range is provided."""
+    if op.base_cell is not None:
+        raise ValueError(f"{op_name} does not accept base_cell.")
+    has_cell = op.cell is not None
+    has_range = op.range is not None
+    if has_cell == has_range:
+        raise ValueError(f"{op_name} requires exactly one of cell or range.")
+
+
+def _validate_style_target_size(op: PatchOp, *, op_name: str) -> None:
+    """Guard style edits against accidental huge targets."""
+    target_count = 1 if op.cell is not None else _range_cell_count(op.range)
+    if target_count > _MAX_STYLE_TARGET_CELLS:
+        raise ValueError(
+            f"{op_name} target exceeds max cells: {_MAX_STYLE_TARGET_CELLS}."
+        )
+
+
+def _range_cell_count(range_ref: str | None) -> int:
+    """Return the number of cells represented by an A1 range."""
+    if range_ref is None:
+        raise ValueError("range is required.")
+    start, end = range_ref.split(":", maxsplit=1)
+    start_col, start_row = _split_a1(start)
+    end_col, end_row = _split_a1(end)
+    min_col = min(_column_label_to_index(start_col), _column_label_to_index(end_col))
+    max_col = max(_column_label_to_index(start_col), _column_label_to_index(end_col))
+    min_row = min(start_row, end_row)
+    max_row = max(start_row, end_row)
+    return (max_col - min_col + 1) * (max_row - min_row + 1)
+
+
+def _split_a1(value: str) -> tuple[str, int]:
+    """Split A1 notation into normalized (column_label, row_index)."""
+    if not _A1_PATTERN.match(value):
+        raise ValueError(f"Invalid cell reference: {value}")
+    idx = 0
+    for index, char in enumerate(value):
+        if char.isdigit():
+            idx = index
+            break
+    column = value[:idx].upper()
+    row = int(value[idx:])
+    return column, row
+
+
+def _normalize_column_identifier(value: str | int) -> str | int:
+    """Normalize a column identifier preserving letter/index semantics."""
+    if isinstance(value, int):
+        if value < 1:
+            raise ValueError("columns numeric values must be positive.")
+        return value
+    label = value.strip().upper()
+    if not _COLUMN_LABEL_PATTERN.match(label):
+        raise ValueError(f"Invalid column identifier: {value}")
+    return label
+
+
+def _column_label_to_index(label: str) -> int:
+    """Convert Excel-style column label (A/AA) to 1-based index."""
+    if not _COLUMN_LABEL_PATTERN.match(label):
+        raise ValueError(f"Invalid column label: {label}")
+    index = 0
+    for char in label:
+        index = index * 26 + (ord(char) - ord("A") + 1)
+    return index
+
+
+def _column_index_to_label(index: int) -> str:
+    """Convert 1-based column index to Excel-style column label."""
+    if index < 1:
+        raise ValueError("Column index must be positive.")
+    chunks: list[str] = []
+    current = index
+    while current > 0:
+        current -= 1
+        chunks.append(chr(ord("A") + (current % 26)))
+        current //= 26
+    return "".join(reversed(chunks))
 
 
 class PatchValue(BaseModel):
@@ -473,6 +930,10 @@ def run_patch(
     if resolved_input.suffix.lower() == ".xls" and not com.available:
         raise ValueError(
             ".xls editing requires Windows Excel COM (xlwings) in this environment."
+        )
+    if resolved_input.suffix.lower() == ".xls" and _contains_design_ops(request.ops):
+        raise ValueError(
+            "Design operations are not supported for .xls files. Convert to .xlsx/.xlsm first."
         )
 
     use_openpyxl = _requires_openpyxl_backend(request)
@@ -653,9 +1114,32 @@ def _requires_openpyxl_backend(request: PatchRequest) -> bool:
     if request.dry_run or request.return_inverse_ops or request.preflight_formula_check:
         return True
     return any(
-        op.op in {"set_range_values", "fill_formula", "set_value_if", "set_formula_if"}
+        op.op
+        in {
+            "set_range_values",
+            "fill_formula",
+            "set_value_if",
+            "set_formula_if",
+            "draw_grid_border",
+            "set_bold",
+            "set_fill_color",
+            "set_dimensions",
+            "restore_design_snapshot",
+        }
         for op in request.ops
     )
+
+
+def _contains_design_ops(ops: list[PatchOp]) -> bool:
+    """Return True when any style/dimension design operation is present."""
+    design_ops = {
+        "draw_grid_border",
+        "set_bold",
+        "set_fill_color",
+        "set_dimensions",
+        "restore_design_snapshot",
+    }
+    return any(op.op in design_ops for op in ops)
 
 
 def _resolve_input_path(path: Path, *, policy: PathPolicy | None) -> Path:
@@ -840,6 +1324,21 @@ def _apply_openpyxl_op(
     if op.op == "fill_formula":
         return _apply_openpyxl_fill_formula(existing_sheet, op, index)
 
+    if op.op == "draw_grid_border":
+        return _apply_openpyxl_draw_grid_border(existing_sheet, op, index)
+
+    if op.op == "set_bold":
+        return _apply_openpyxl_set_bold(existing_sheet, op, index)
+
+    if op.op == "set_fill_color":
+        return _apply_openpyxl_set_fill_color(existing_sheet, op, index)
+
+    if op.op == "set_dimensions":
+        return _apply_openpyxl_set_dimensions(existing_sheet, op, index)
+
+    if op.op == "restore_design_snapshot":
+        return _apply_openpyxl_restore_design_snapshot(existing_sheet, op, index)
+
     if op.op in {"set_value", "set_formula", "set_value_if", "set_formula_if"}:
         return _apply_openpyxl_cell_op(existing_sheet, op, index, auto_formula)
     raise ValueError(f"Unsupported op: {op.op}")
@@ -922,6 +1421,169 @@ def _apply_openpyxl_fill_formula(
             cell=op.range,
             before=None,
             after=PatchValue(kind="formula", value=op.formula),
+        ),
+        None,
+    )
+
+
+def _apply_openpyxl_draw_grid_border(
+    sheet: OpenpyxlWorksheetProtocol,
+    op: PatchOp,
+    index: int,
+) -> tuple[PatchDiffItem, PatchOp | None]:
+    """Apply draw_grid_border op with thin black border."""
+    if op.base_cell is None or op.row_count is None or op.col_count is None:
+        raise ValueError(
+            "draw_grid_border requires base_cell, row_count and col_count."
+        )
+    coordinates = _expand_rect_coordinates(op.base_cell, op.row_count, op.col_count)
+    snapshot = DesignSnapshot(
+        borders=[_snapshot_border(sheet[coord], coord) for coord in coordinates]
+    )
+    for coord in coordinates:
+        _set_grid_border(sheet[coord])
+    return (
+        PatchDiffItem(
+            op_index=index,
+            op=op.op,
+            sheet=op.sheet,
+            cell=f"{op.base_cell}:{coordinates[-1]}",
+            before=None,
+            after=PatchValue(kind="style", value="grid_border(thin,black)"),
+        ),
+        _build_restore_snapshot_op(op.sheet, snapshot),
+    )
+
+
+def _apply_openpyxl_set_bold(
+    sheet: OpenpyxlWorksheetProtocol,
+    op: PatchOp,
+    index: int,
+) -> tuple[PatchDiffItem, PatchOp | None]:
+    """Apply set_bold op."""
+    targets = _resolve_style_targets(op)
+    target_bold = True if op.bold is None else op.bold
+    snapshot = DesignSnapshot(
+        fonts=[_snapshot_font(sheet[coord], coord) for coord in targets]
+    )
+    for coord in targets:
+        cell = sheet[coord]
+        font = copy(cell.font)
+        font.bold = target_bold
+        cell.font = font
+    location = op.cell if op.cell is not None else op.range
+    return (
+        PatchDiffItem(
+            op_index=index,
+            op=op.op,
+            sheet=op.sheet,
+            cell=location,
+            before=None,
+            after=PatchValue(kind="style", value=f"bold={target_bold}"),
+        ),
+        _build_restore_snapshot_op(op.sheet, snapshot),
+    )
+
+
+def _apply_openpyxl_set_fill_color(
+    sheet: OpenpyxlWorksheetProtocol,
+    op: PatchOp,
+    index: int,
+) -> tuple[PatchDiffItem, PatchOp | None]:
+    """Apply set_fill_color op."""
+    if op.fill_color is None:
+        raise ValueError("set_fill_color requires fill_color.")
+    try:
+        from openpyxl.styles import PatternFill
+    except ImportError as exc:
+        raise RuntimeError(f"openpyxl is not available: {exc}") from exc
+
+    targets = _resolve_style_targets(op)
+    snapshot = DesignSnapshot(
+        fills=[_snapshot_fill(sheet[coord], coord) for coord in targets]
+    )
+    normalized = _normalize_hex_color(op.fill_color)
+    for coord in targets:
+        sheet[coord].fill = PatternFill(
+            fill_type="solid",
+            start_color=normalized,
+            end_color=normalized,
+        )
+    location = op.cell if op.cell is not None else op.range
+    return (
+        PatchDiffItem(
+            op_index=index,
+            op=op.op,
+            sheet=op.sheet,
+            cell=location,
+            before=None,
+            after=PatchValue(kind="style", value=f"fill={normalized}"),
+        ),
+        _build_restore_snapshot_op(op.sheet, snapshot),
+    )
+
+
+def _apply_openpyxl_set_dimensions(
+    sheet: OpenpyxlWorksheetProtocol,
+    op: PatchOp,
+    index: int,
+) -> tuple[PatchDiffItem, PatchOp | None]:
+    """Apply set_dimensions op."""
+    snapshot = DesignSnapshot()
+    parts: list[str] = []
+    if op.rows is not None and op.row_height is not None:
+        for row in op.rows:
+            row_dimension = sheet.row_dimensions[row]
+            snapshot.row_dimensions.append(
+                RowDimensionSnapshot(
+                    row=row,
+                    height=getattr(row_dimension, "height", None),
+                )
+            )
+            row_dimension.height = op.row_height
+        parts.append(f"rows={len(op.rows)}")
+    if op.columns is not None and op.column_width is not None:
+        normalized_columns = _normalize_columns_for_dimensions(op.columns)
+        for column in normalized_columns:
+            column_dimension = sheet.column_dimensions[column]
+            snapshot.column_dimensions.append(
+                ColumnDimensionSnapshot(
+                    column=column,
+                    width=getattr(column_dimension, "width", None),
+                )
+            )
+            column_dimension.width = op.column_width
+        parts.append(f"columns={len(normalized_columns)}")
+    return (
+        PatchDiffItem(
+            op_index=index,
+            op=op.op,
+            sheet=op.sheet,
+            cell=None,
+            before=None,
+            after=PatchValue(kind="dimension", value=", ".join(parts)),
+        ),
+        _build_restore_snapshot_op(op.sheet, snapshot),
+    )
+
+
+def _apply_openpyxl_restore_design_snapshot(
+    sheet: OpenpyxlWorksheetProtocol,
+    op: PatchOp,
+    index: int,
+) -> tuple[PatchDiffItem, PatchOp | None]:
+    """Apply restore_design_snapshot op."""
+    if op.design_snapshot is None:
+        raise ValueError("restore_design_snapshot requires design_snapshot.")
+    _restore_design_snapshot(sheet, op.design_snapshot)
+    return (
+        PatchDiffItem(
+            op_index=index,
+            op=op.op,
+            sheet=op.sheet,
+            cell=None,
+            before=None,
+            after=PatchValue(kind="style", value="design_snapshot_restored"),
         ),
         None,
     )
@@ -1072,6 +1734,188 @@ def _shape_of_coordinates(coordinates: list[list[str]]) -> tuple[int, int]:
     if not coordinates or not coordinates[0]:
         raise ValueError("Range expansion resulted in an empty coordinate set.")
     return len(coordinates), len(coordinates[0])
+
+
+def _expand_rect_coordinates(base_cell: str, rows: int, cols: int) -> list[str]:
+    """Expand base cell + size into a flat coordinate list."""
+    base_column, base_row = _split_a1(base_cell)
+    start_col = _column_label_to_index(base_column)
+    coordinates: list[str] = []
+    for row_offset in range(rows):
+        for col_offset in range(cols):
+            column = _column_index_to_label(start_col + col_offset)
+            coordinates.append(f"{column}{base_row + row_offset}")
+    return coordinates
+
+
+def _resolve_style_targets(op: PatchOp) -> list[str]:
+    """Resolve style operation target coordinates."""
+    if op.cell is not None:
+        return [op.cell]
+    if op.range is None:
+        raise ValueError(f"{op.op} requires cell or range.")
+    coordinates = _expand_range_coordinates(op.range)
+    targets: list[str] = []
+    for row in coordinates:
+        targets.extend(row)
+    return targets
+
+
+def _normalize_hex_color(fill_color: str) -> str:
+    """Normalize #RRGGBB/#AARRGGBB into AARRGGBB."""
+    text = fill_color.strip().upper()
+    if not _HEX_COLOR_PATTERN.match(text):
+        raise ValueError("Invalid fill_color format. Use '#RRGGBB' or '#AARRGGBB'.")
+    raw = text[1:]
+    return raw if len(raw) == 8 else f"FF{raw}"
+
+
+def _normalize_columns_for_dimensions(columns: list[str | int]) -> list[str]:
+    """Normalize columns list to unique Excel-style labels."""
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for raw in columns:
+        label = (
+            _column_index_to_label(raw) if isinstance(raw, int) else raw.strip().upper()
+        )
+        if label in seen:
+            continue
+        seen.add(label)
+        normalized.append(label)
+    return normalized
+
+
+def _set_grid_border(cell: OpenpyxlCellProtocol) -> None:
+    """Set thin black border on all sides."""
+    try:
+        from openpyxl.styles import Side
+    except ImportError as exc:
+        raise RuntimeError(f"openpyxl is not available: {exc}") from exc
+
+    side = Side(style="thin", color="FF000000")
+    border = copy(cell.border)
+    border.top = side
+    border.right = side
+    border.bottom = side
+    border.left = side
+    cell.border = border
+
+
+def _snapshot_border(cell: OpenpyxlCellProtocol, coordinate: str) -> BorderSnapshot:
+    """Capture border snapshot for one cell."""
+    border = cell.border
+    return BorderSnapshot(
+        cell=coordinate,
+        top=_snapshot_border_side(border.top),
+        right=_snapshot_border_side(border.right),
+        bottom=_snapshot_border_side(border.bottom),
+        left=_snapshot_border_side(border.left),
+    )
+
+
+def _snapshot_border_side(side: object) -> BorderSideSnapshot:
+    """Capture one border side state."""
+    style = getattr(side, "style", None)
+    color = _extract_openpyxl_color(getattr(side, "color", None))
+    return BorderSideSnapshot(style=style, color=color)
+
+
+def _snapshot_font(cell: OpenpyxlCellProtocol, coordinate: str) -> FontSnapshot:
+    """Capture font snapshot for one cell."""
+    font = cell.font
+    return FontSnapshot(cell=coordinate, bold=getattr(font, "bold", None))
+
+
+def _snapshot_fill(cell: OpenpyxlCellProtocol, coordinate: str) -> FillSnapshot:
+    """Capture fill snapshot for one cell."""
+    fill = cell.fill
+    return FillSnapshot(
+        cell=coordinate,
+        fill_type=getattr(fill, "fill_type", None),
+        start_color=_extract_openpyxl_color(getattr(fill, "start_color", None)),
+        end_color=_extract_openpyxl_color(getattr(fill, "end_color", None)),
+    )
+
+
+def _extract_openpyxl_color(color: object) -> str | None:
+    """Extract RGB-like color text from openpyxl color object."""
+    rgb = getattr(color, "rgb", None)
+    if rgb is None:
+        return None
+    text = str(rgb).upper()
+    return text if len(text) == 8 else None
+
+
+def _build_restore_snapshot_op(sheet: str, snapshot: DesignSnapshot) -> PatchOp | None:
+    """Build a restore op when snapshot contains data."""
+    if (
+        not snapshot.borders
+        and not snapshot.fonts
+        and not snapshot.fills
+        and not snapshot.row_dimensions
+        and not snapshot.column_dimensions
+    ):
+        return None
+    return PatchOp(op="restore_design_snapshot", sheet=sheet, design_snapshot=snapshot)
+
+
+def _restore_design_snapshot(
+    sheet: OpenpyxlWorksheetProtocol,
+    snapshot: DesignSnapshot,
+) -> None:
+    """Restore cell style and dimension snapshot."""
+    for border_snapshot in snapshot.borders:
+        _restore_border(sheet[border_snapshot.cell], border_snapshot)
+    for font_snapshot in snapshot.fonts:
+        cell = sheet[font_snapshot.cell]
+        font = copy(cell.font)
+        font.bold = font_snapshot.bold
+        cell.font = font
+    for fill_snapshot in snapshot.fills:
+        _restore_fill(sheet[fill_snapshot.cell], fill_snapshot)
+    for row_snapshot in snapshot.row_dimensions:
+        sheet.row_dimensions[row_snapshot.row].height = row_snapshot.height
+    for column_snapshot in snapshot.column_dimensions:
+        sheet.column_dimensions[column_snapshot.column].width = column_snapshot.width
+
+
+def _restore_border(cell: OpenpyxlCellProtocol, snapshot: BorderSnapshot) -> None:
+    """Restore border from snapshot."""
+    border = copy(cell.border)
+    border.top = _build_side_from_snapshot(snapshot.top)
+    border.right = _build_side_from_snapshot(snapshot.right)
+    border.bottom = _build_side_from_snapshot(snapshot.bottom)
+    border.left = _build_side_from_snapshot(snapshot.left)
+    cell.border = border
+
+
+def _build_side_from_snapshot(snapshot: BorderSideSnapshot) -> OpenpyxlSideProtocol:
+    """Build openpyxl Side object from serializable snapshot."""
+    try:
+        from openpyxl.styles import Side
+    except ImportError as exc:
+        raise RuntimeError(f"openpyxl is not available: {exc}") from exc
+
+    kwargs: dict[str, str] = {}
+    if snapshot.style is not None:
+        kwargs["style"] = snapshot.style
+    if snapshot.color is not None:
+        kwargs["color"] = snapshot.color
+    return cast(OpenpyxlSideProtocol, Side(**kwargs))
+
+
+def _restore_fill(cell: OpenpyxlCellProtocol, snapshot: FillSnapshot) -> None:
+    """Restore fill from snapshot."""
+    try:
+        from openpyxl.styles import PatternFill
+    except ImportError as exc:
+        raise RuntimeError(f"openpyxl is not available: {exc}") from exc
+
+    cell.fill = PatternFill(
+        fill_type=snapshot.fill_type,
+        start_color=snapshot.start_color,
+        end_color=snapshot.end_color,
+    )
 
 
 def _translate_formula(formula: str, origin: str, target: str) -> str:

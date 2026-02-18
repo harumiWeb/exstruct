@@ -39,6 +39,23 @@ def test_patch_tool_input_defaults() -> None:
     assert payload.preflight_formula_check is False
 
 
+def test_patch_tool_input_accepts_design_ops() -> None:
+    payload = PatchToolInput(
+        xlsx_path="input.xlsx",
+        ops=[
+            {
+                "op": "set_dimensions",
+                "sheet": "Sheet1",
+                "rows": [1, 2],
+                "row_height": 20,
+                "columns": ["A", 2],
+                "column_width": 18,
+            }
+        ],
+    )
+    assert payload.ops[0].op == "set_dimensions"
+
+
 def test_read_range_tool_input_defaults() -> None:
     payload = ReadRangeToolInput(out_path="out.json", range="A1:B2")
     assert payload.sheet is None
