@@ -21,6 +21,7 @@ exstruct INPUT.xlsx --format toon           # TOON output (needs python-toon)
 | `-o, --output PATH` | Output path. Omit to write to stdout. |
 | `-f, --format {json,yaml,yml,toon}` | Serialization format (default: `json`). |
 | `-m, --mode {light,standard,verbose}` | Extraction detail level.<br>- light: cells + table candidates + print areas (no COM shapes/charts).<br>- standard: shapes with text/arrows + charts + print areas.<br>- verbose: all shapes/charts with size + hyperlinks. |
+| `--alpha-col` | Output column keys as Excel-style names (`A`, `B`, ..., `AA`) instead of 0-based numeric keys (`"0"`, `"1"`, ...). Default: disabled (legacy numeric keys). |
 | `--pretty` | Pretty-print JSON (indent=2). |
 | `--image` | Render per-sheet PNGs (requires Excel + COM + `pypdfium2`). |
 | `--pdf` | Render PDF (requires Excel + COM + `pypdfium2`). |
@@ -59,3 +60,4 @@ exstruct sample.xlsx --pdf --image --dpi 144 -o out.json
 - Optional dependencies are lazy-imported. Missing packages raise a `MissingDependencyError` with install hints.
 - On non-COM environments, shapes/charts are empty and print areas come from openpyxl; commands still succeed.
 - `--sheets-dir` and `--print-areas-dir` accept existing or new directories (created if missing).
+- `--alpha-col` switches row column keys from legacy numeric strings (`"0"`, `"1"`, ...) to Excel-style keys (`"A"`, `"B"`, ...). CLI default is disabled for backward compatibility.
