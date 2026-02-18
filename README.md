@@ -55,11 +55,14 @@ exstruct input.xlsx --format toon          # TOON (needs python-toon)
 exstruct input.xlsx --sheets-dir sheets/   # split per sheet in chosen format
 exstruct input.xlsx --auto-page-breaks-dir auto_areas/  # COM only; option appears when available
 exstruct input.xlsx --print-areas-dir areas/  # split per print area (if any)
+exstruct input.xlsx --alpha-col           # output column keys as A, B, ..., AA
 exstruct input.xlsx --mode light           # cells + table candidates only
 exstruct input.xlsx --pdf --image          # PDF and PNGs (Excel required)
 ```
 
 Auto page-break exports are available via API and CLI when Excel/COM is available; the CLI exposes `--auto-page-breaks-dir` only in COM-capable environments.
+By default, CLI keeps legacy 0-based numeric string column keys (`"0"`, `"1"`, ...). Use `--alpha-col` to emit Excel-style column keys (`"A"`, `"B"`, ...).
+Note: MCP `exstruct_extract` defaults to `options.alpha_col=true`, while CLI defaults to `false` unless `--alpha-col` is specified.
 
 ## MCP Server (stdio)
 

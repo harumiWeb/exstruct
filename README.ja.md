@@ -52,11 +52,14 @@ exstruct input.xlsx --format yaml          # YAML（pyyaml が必要）
 exstruct input.xlsx --format toon          # TOON（python-toon が必要）
 exstruct input.xlsx --sheets-dir sheets/   # シートごとに分割出力
 exstruct input.xlsx --auto-page-breaks-dir auto_areas/  # COM 限定（利用可能な環境のみ表示）
+exstruct input.xlsx --alpha-col           # 列キーを A, B, ..., AA 形式で出力
 exstruct input.xlsx --mode light           # セル＋テーブル候補のみ
 exstruct input.xlsx --pdf --image          # PDF と PNG（Excel 必須）
 ```
 
 自動改ページ範囲の書き出しは API/CLI 両方に対応（Excel/COM が必要）し、CLI は利用可能な環境でのみ `--auto-page-breaks-dir` を表示します。
+CLI の既定では列キーは従来どおり 0 始まりの数値文字列（`"0"`, `"1"`, ...）です。Excel 形式（`"A"`, `"B"`, ...）が必要な場合は `--alpha-col` を指定してください。
+注意: MCP の `exstruct_extract` は `options.alpha_col=true` が既定で、CLI の既定（`false`）とは異なります。
 
 ## MCPサーバー (標準入出力)
 
