@@ -1,0 +1,1350 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://harumiweb.github.io/exstruct/agents/TEST_REQUIREMENTS/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>ExStruct テスト要件仕様書 - ExStruct</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#exstruct" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ExStruct" class="md-header__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ExStruct
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ExStruct テスト要件仕様書
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ExStruct" class="md-nav__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ExStruct
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../generated/models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Models (generated)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JSON Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concept/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept / Why ExStruct?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.4.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.4.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.7/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.7
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.6/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.5/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.5
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.90
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.80/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.80
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.71/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.71
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.70/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.70
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.61/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.61
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.60/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.60
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Read Me
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../README.en/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (EN)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../README.ja/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (JA)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../license-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    License Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="exstruct">ExStruct テスト要件仕様書<a class="headerlink" href="#exstruct" title="Permanent link">&para;</a></h1>
+<p>Version: 0.5
+Status: Required for Release</p>
+<p>ExStruct の全機能について、正式なテスト要件をまとめたドキュメントです。AI エージェント／人間開発者が自動テスト・手動テストを設計するための基盤とします。
+全体のコードカバレッジは <strong>78% 以上</strong> を満たすこと。</p>
+<hr />
+<h1 id="1">1. カバレッジカテゴリ<a class="headerlink" href="#1" title="Permanent link">&para;</a></h1>
+<ol>
+<li>セル抽出</li>
+<li>図形抽出</li>
+<li>矢印・方向推定</li>
+<li>チャート抽出</li>
+<li>レイアウト統合</li>
+<li>Pydantic 検証</li>
+<li>出力（JSON/YAML/TOON）</li>
+<li>CLI</li>
+<li>エラー処理・フェイルセーフ</li>
+<li>回帰</li>
+<li>パフォーマンス・メモリ</li>
+</ol>
+<hr />
+<h1 id="2">2. 機能要件<a class="headerlink" href="#2" title="Permanent link">&para;</a></h1>
+<h2 id="21">2.1 セル抽出<a class="headerlink" href="#21" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[CEL-01] 空セルを除外し、非空セルのみ <code>c</code> に出力する</li>
+<li>[CEL-02] 行番号 <code>r</code> は 0 始まり</li>
+<li>[CEL-03] 列キーは 0 始まりのインデックス "0", "1" …</li>
+<li>[CEL-04] 改行・タブを含むセルも正しく読み取れる</li>
+<li>[CEL-05] Unicode（日本語・絵文字・サロゲート）を保持</li>
+<li>[CEL-06] pandas 読み込みで dtype=string を強制</li>
+<li>[CEL-07] シート全体規模でも性能劣化しない</li>
+<li>[CEL-08] <code>_coerce_numeric_preserve_format</code> が int/float/非数を正しく判定</li>
+<li>[CEL-09] <code>detect_tables_openpyxl</code> が openpyxl Table を検出</li>
+<li>[CEL-10] <code>CellRow.links</code> は mode=verbose または include_cell_links=True で出力</li>
+<li>[CEL-11] detect_tables は .xlsx/.xls の拡張子と openpyxl 有無で経路を切り替える</li>
+</ul>
+<h2 id="211">2.1.1 セル背景色<a class="headerlink" href="#211" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[COL-01] <code>include_colors_map=True</code> のみ <code>colors_map</code> を抽出</li>
+<li>[COL-02] <code>include_default_background=False</code> では <code>FFFFFF</code> を出力しない</li>
+<li>[COL-03] <code>ignore_colors</code> 指定時は対象色を除外（<code>#</code> 付き/大小文字を正規化）</li>
+<li>[COL-04] COM 利用時は <code>DisplayFormat.Interior</code> を参照し条件付き書式を含めて取得</li>
+<li>[COL-05] <code>_normalize_color_key</code> / <code>_normalize_rgb</code> は ARGB/#/auto/theme/indexed を正規化</li>
+</ul>
+<h2 id="212">2.1.2 結合セル<a class="headerlink" href="#212" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[MRG-01] standard/verbose のみ <code>merged_cells</code> を抽出する（light は空）</li>
+<li>[MRG-02] 1-based row / 0-based column の座標で出力する</li>
+<li>[MRG-03] <code>v</code> は結合範囲の左上セル値（None は空文字）</li>
+<li>[MRG-04] 複数範囲がある場合も全件を保持する</li>
+</ul>
+<h2 id="22">2.2 図形抽出<a class="headerlink" href="#22" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[SHP-01] AutoShape の type を正規化</li>
+<li>[SHP-02] TextFrame を正しく取得</li>
+<li>[SHP-02a] <code>type</code> は Shape のみ保持し、Arrow/SmartArt では出力しない</li>
+<li>[SHP-03] サイズ <code>w</code>,<code>h</code> は取得できない場合のみ null</li>
+<li>[SHP-04] グループ図形は展開方針を一貫させる</li>
+<li>[SHP-05] 座標 <code>l</code>,<code>t</code> は整数で取得しズームの影響を受けない</li>
+<li>[SHP-07] 回転角度は Excel と一致</li>
+<li>[SHP-09] begin/end_arrow_style は Excel ENUM と一致</li>
+<li>[SHP-10] direction は 8 方位に正規化</li>
+<li>[SHP-11] テキストなし図形は text=""</li>
+<li>[SHP-12] 複数段落のテキストも取得</li>
+</ul>
+<h2 id="221-smartart">2.2.1 SmartArt 抽出<a class="headerlink" href="#221-smartart" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[SHP-SA-01] SmartArt は <code>layout</code> を必須で出力する</li>
+<li>[SHP-SA-02] SmartArt のノードは <code>nodes</code> にネスト構造で出力する</li>
+<li>[SHP-SA-03] ノードの子は <code>kids</code> で表現する（level は出力しない）</li>
+<li>[SHP-SA-04] SmartArt が存在する場合は <code>kind="smartart"</code> で判別できる</li>
+</ul>
+<h2 id="23">2.3 矢印方向推定<a class="headerlink" href="#23" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[DIR-01] 0° ±22.5° → "E"</li>
+<li>[DIR-02] 45° ±22.5° → "NE"</li>
+<li>[DIR-03] 90° ±22.5° → "N"</li>
+<li>[DIR-04] 135° ±22.5° → "NW"</li>
+<li>[DIR-05] 180° ±22.5° → "W"</li>
+<li>[DIR-06] 225° ±22.5° → "SW"</li>
+<li>[DIR-07] 270° ±22.5° → "S"</li>
+<li>[DIR-08] 315° ±22.5° → "SE"</li>
+<li>[DIR-09] 境界角度は仕様どおり丸める</li>
+</ul>
+<h2 id="24">2.4 チャート抽出<a class="headerlink" href="#24" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[CH-01] ChartType は <code>XL_CHART_TYPE_MAP</code> で正規化</li>
+<li>[CH-02] タイトル取得（なければ null）</li>
+<li>[CH-03] y_axis_title 取得（なければ空文字）</li>
+<li>[CH-04] 軸 min/max は float</li>
+<li>[CH-05] 未設定軸は空リスト</li>
+<li>[CH-06] name_range を参照式で出力（例: <code>=Sheet1!$B$1</code>）</li>
+<li>[CH-06a] 文字列リテラルの series 名は name_literal に格納される</li>
+<li>[CH-07] x_range を参照式で出力</li>
+<li>[CH-08] y_range を参照式で出力</li>
+<li>[CH-09] 主要チャート種別（散布・棒など）を解析</li>
+<li>[CH-10] 失敗時は <code>error</code> にメッセージを残しチャートを維持</li>
+<li>[CH-11] 文化圏差のセミコロン区切りも解析できる</li>
+</ul>
+<h2 id="25">2.5 レイアウト統合<a class="headerlink" href="#25" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[LAY-01] Shape のテキストを属する行に紐づける</li>
+<li>[LAY-02] 列方向の簡易紐づけ（未実装のため skip）</li>
+<li>[LAY-03] 1 行に複数 shape がある場合も順序を保持</li>
+<li>[LAY-04] 図形なしなら空リスト</li>
+</ul>
+<hr />
+<h1 id="3">3. モデル検証要件<a class="headerlink" href="#3" title="Permanent link">&para;</a></h1>
+<ul>
+<li>[MOD-01] すべてのモデルは <code>BaseModel</code> 継承</li>
+<li>[MOD-02] 型が DATA_MODEL.md と完全一致</li>
+<li>[MOD-03] Optional は未指定で None</li>
+<li>[MOD-04] 数値は int/float に正規化</li>
+<li>[MOD-05] direction Literal で不正値は ValidationError</li>
+<li>[MOD-06] rows/shapes/charts/tables はデフォルト空リスト</li>
+<li>[MOD-07] WorkbookData は <code>__getitem__</code> と順序付き iteration を提供</li>
+<li>[MOD-08] PrintArea は row=1-based / column=0-based を満たす</li>
+</ul>
+<hr />
+<h1 id="4-jsonyamltoon">4. 出力要件（JSON/YAML/TOON）<a class="headerlink" href="#4-jsonyamltoon" title="Permanent link">&para;</a></h1>
+<ul>
+<li>[EXP-01] None/空文字/空リスト/空 dict は <code>dict_without_empty_values</code> で除去</li>
+<li>[EXP-02] JSON 出力は UTF-8</li>
+<li>[EXP-03] YAML 出力は sort_keys=False</li>
+<li>[EXP-04] TOON 出力が正しく生成される</li>
+<li>[EXP-05] WorkbookData → JSON → WorkbookData の往復で破壊的変更なし</li>
+<li>[EXP-06] <code>export_sheets</code> がシート単位でファイル出力</li>
+<li>[EXP-07] <code>to_json</code> は pretty/indent に対応</li>
+<li>[EXP-08] <code>save(path)</code> は拡張子で判別し未対応拡張子は ValueError</li>
+<li>[EXP-09] <code>to_yaml</code> / <code>to_toon</code> は依存未導入時に MissingDependencyError</li>
+<li>[EXP-10] OutputOptions の include_* で対象フィールドを除外し空リストは出力しない</li>
+<li>[EXP-11] <code>print_areas_dir</code> / <code>save_print_area_views</code> で印刷範囲ごとのファイル出力（範囲なしなら書き出さない）</li>
+<li>[EXP-12] PrintAreaView は範囲内の行のみ保持し、範囲外のセル/リンクを除外</li>
+<li>[EXP-13] PrintAreaView の table_candidates は範囲内に完全に収まるもののみ</li>
+<li>[EXP-14] normalize=True で行・列インデックスを印刷範囲起点に再基準化</li>
+<li>[EXP-15] include_print_areas=False の場合は print_areas_dir があっても出力しない</li>
+<li>[EXP-16] PrintAreaView は範囲と交差する shapes/charts のみ含め、サイズ不明の図形は点扱い</li>
+<li>[EXP-17] Chart.w/h は verbose で出力し、standard では include_chart_size で制御</li>
+<li>[EXP-18] Shape.w/h は include_shape_size で制御し、デフォルト True は verbose のみ</li>
+<li>[EXP-19] auto_page_breaks_dir 指定時は include_auto_page_breaks=True で auto_print_areas を取得（COM 必須）</li>
+<li>[EXP-20] export_auto_page_breaks は auto_print_areas が空なら例外、存在時のみ書き出し</li>
+<li>[EXP-21] save_auto_page_break_views は auto_print_areas を Sheet1#auto#1 などユニークキーで保存</li>
+<li>[EXP-22] serialize_workbook は未対応フォーマットで SerializationError</li>
+<li>[EXP-23] export/process API は output_path/sheets_dir/print_areas_dir/auto_page_breaks_dir に str/Path を渡しても正しく出力できる</li>
+<li>[EXP-24] fmt="yml" は yaml として扱い、拡張子は .yaml になる</li>
+<li>[EXP-25] OutputOptions の include_merged_cells=False で <code>merged_cells</code> を除外</li>
+</ul>
+<hr />
+<h1 id="5-cli">5. CLI 要件<a class="headerlink" href="#5-cli" title="Permanent link">&para;</a></h1>
+<ul>
+<li>[CLI-01] <code>exstruct extract file.xlsx</code> が成功する</li>
+<li>[CLI-02] <code>--format json/yaml/toon</code> が機能する</li>
+<li>[CLI-03] <code>--image</code> で PNG 出力</li>
+<li>[CLI-04] <code>--pdf</code> で PDF 出力</li>
+<li>[CLI-05] 無効パス入力時も安全に終了（クラッシュしない）</li>
+<li>[CLI-06] エラーメッセージは stdout/stderr に出力</li>
+<li>[CLI-07] <code>--print-areas-dir</code> で印刷範囲ファイルを出力し、include_print_areas=False ならスキップ</li>
+<li>[CLI-08] Windows の cp932 環境（例: PYTHONIOENCODING=cp932）でも stdout 出力が UTF-8 を維持</li>
+</ul>
+<hr />
+<h1 id="6">6. エラー処理要件<a class="headerlink" href="#6" title="Permanent link">&para;</a></h1>
+<ul>
+<li>[ERR-01] xlwings COM エラーでもプロセスが落ちない</li>
+<li>[ERR-02] 図形抽出失敗でも他要素を維持</li>
+<li>[ERR-03] チャート抽出失敗時は Chart.error に記録</li>
+<li>[ERR-04] 壊れた参照範囲は例外にせず null/error を記録</li>
+<li>[ERR-05] Excel ファイルを開けない場合にメッセージを出し終了</li>
+<li>[ERR-06] openpyxl <code>_print_area</code> 設定も抽出漏れしない</li>
+<li>[ERR-07] auto_print_areas が空の場合 export_auto_page_breaks は PrintAreaError（ValueError 互換）を送出</li>
+<li>[ERR-08] YAML/TOON 依存なしの場合 MissingDependencyError でインストール案内</li>
+<li>[ERR-09] 書き込み失敗は OutputError を送出し、例外の <strong>cause</strong> に保持</li>
+</ul>
+<hr />
+<h1 id="7">7. 回帰要件<a class="headerlink" href="#7" title="Permanent link">&para;</a></h1>
+<ul>
+<li>[REG-01] 既存フィクスチャの JSON 構造が過去版と一致</li>
+<li>[REG-02] モデルのキー削除・名称変更を破壊的変更として検知</li>
+<li>[REG-03] 方向推定アルゴリズム変更を検知</li>
+<li>[REG-04] ChartSeries 参照解析が過去結果と一致</li>
+</ul>
+<hr />
+<h1 id="8">8. 非機能要件<a class="headerlink" href="#8" title="Permanent link">&para;</a></h1>
+<ul>
+<li>パフォーマンス・メモリ目標は別途定義時に追記</li>
+</ul>
+<hr />
+<h1 id="9">9. モード/統合要件<a class="headerlink" href="#9" title="Permanent link">&para;</a></h1>
+<ul>
+<li>[MODE-01] CLI <code>--mode</code> / API <code>extract(..., mode=)</code> は light/standard/verbose のみ（デフォルト standard）</li>
+<li>[MODE-02] light: セル+テーブルのみ、shapes/charts 空、COM 不使用</li>
+<li>[MODE-03] standard: 既存挙動（テキスト付き図形・矢印、COM 有効ならチャート）</li>
+<li>[MODE-04] verbose: 全図形（サイズ付き）とチャート（サイズ付き、特定除外を除く）</li>
+<li>[MODE-05] process_excel は PDF/画像オプション併用で mode を伝搬</li>
+<li>[MODE-06] standard で既存フィクスチャに回帰し不要図形が増えない</li>
+<li>[MODE-07] 無効 mode は処理開始前にエラー</li>
+<li>[INT-01] COM オープン失敗時はセル+table_candidates へのフォールバック</li>
+<li>[INT-02] COM フォールバック時も print_areas を保持する</li>
+<li>[IO-05] dict_without_empty_values で None/空リスト/空 dict を除去しネストを保持</li>
+<li>[RENDER-01] Excel+COM+pypdfium2 の PDF/PNG スモークテスト（環境 ON/OFF）</li>
+<li>[MODE-08] light では openpyxl で print_areas 抽出、デフォルト出力は除外（auto 判定）</li>
+</ul>
+<h2 id="26-pipeline">2.6 Pipeline<a class="headerlink" href="#26-pipeline" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[PIPE-01] build<em>pre_com_pipeline は include</em>* と mode に応じて必要なステップのみ含む</li>
+<li>[PIPE-02] build_cells_tables_workbook は print_areas を条件に反映し table_candidates を保持</li>
+<li>[PIPE-03] resolve_extraction_inputs は mode デフォルトで include_* を解決する</li>
+<li>[PIPE-04] run_extraction_pipeline は COM を試行し、失敗時は cells+tables にフォールバックする</li>
+<li>[PIPE-05] colors_map は COM 成功時に COM 結果で上書きし、失敗時のみ openpyxl を使う</li>
+<li>[PIPE-06] print_areas は openpyxl の結果を保持し、COM は不足分のみ補完する</li>
+<li>[PIPE-07] PipelineState は com_attempted/com_succeeded/fallback_reason を保持する</li>
+<li>[PIPE-08] include_auto_page_breaks=False の場合は auto_page_breaks の COM ステップを含めない</li>
+<li>[PIPE-09] include_merged_cells=False の場合は merged_cells の抽出ステップを含めない</li>
+<li>[PIPE-MOD-01] build_workbook_data は raw コンテナから WorkbookData/SheetData を構築する</li>
+<li>[PIPE-MOD-02] collect_sheet_raw_data は抽出済みデータを raw コンテナにまとめる</li>
+</ul>
+<h2 id="27-backend">2.7 Backend<a class="headerlink" href="#27-backend" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[BE-01] OpenpyxlBackend は include_links の有無で cells 抽出経路を切り替える</li>
+<li>[BE-02] OpenpyxlBackend は table 検出失敗時に空リストで継続する</li>
+<li>[BE-03] ComBackend は colors_map 抽出失敗時に None を返す</li>
+<li>[BE-04] OpenpyxlBackend は colors_map 抽出失敗時に None を返す</li>
+<li>[BE-05] ComBackend は print_areas 抽出失敗時に空マップで継続する</li>
+<li>[BE-06] OpenpyxlBackend は merged_cells 抽出失敗時に空マップで継続する</li>
+<li>[BE-07] ComBackend の merged_cells 未実装は NotImplementedError とする</li>
+</ul>
+<h2 id="28-ranges">2.8 Ranges<a class="headerlink" href="#28-ranges" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[RNG-01] parse_range_zero_based は "Sheet1!A1:B2" のようなシート付き範囲を正規化できる</li>
+</ul>
+<h2 id="29-table-detection">2.9 Table Detection<a class="headerlink" href="#29-table-detection" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[TBL-01] 矩形マージは包含関係の矩形を統合しない</li>
+<li>[TBL-02] 値行列からテーブル候補の範囲文字列を生成できる</li>
+</ul>
+<h2 id="210-workbook">2.10 Workbook<a class="headerlink" href="#210-workbook" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[WB-01] openpyxl_workbook は例外の有無に関係なく close を呼び出す</li>
+<li>[WB-02] openpyxl_workbook は既知の openpyxl 警告を抑制するフィルタを設定する</li>
+<li>[WB-03] _find_open_workbook は fullname/resolve 例外を許容し None を返す</li>
+<li>[WB-04] _find_open_workbook の全体例外時は None を返す</li>
+<li>[WB-05] xlwings_workbook は既存ブックが見つかれば App を起動しない</li>
+</ul>
+<h2 id="211-logging">2.11 Logging<a class="headerlink" href="#211-logging" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[LOG-01] log_fallback は理由コードを含む警告ログを出力する</li>
+</ul>
+<h2 id="212-e2e">2.12 統合/E2E<a class="headerlink" href="#212-e2e" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[E2E-01] light 抽出→serialize_workbook→export_sheets の一連が成功する</li>
+<li>[E2E-02] Engine.process は output_path=None のとき stream へ JSON を出力できる</li>
+</ul>
+<hr />
+<h1 id="10-com">10. COM テスト運用（ローカル手動）<a class="headerlink" href="#10-com" title="Permanent link">&para;</a></h1>
+<p>CI では Excel COM を実行できないため、COM テストはローカル手動で実行する。
+Codecov では unit と com を分離し、com は carryforward で維持する。</p>
+<h2 id="101">10.1 ローカル実行手順<a class="headerlink" href="#101" title="Permanent link">&para;</a></h2>
+<ul>
+<li>unit（CI 相当）: <code>task test-unit</code></li>
+<li>COM: <code>task test-com</code></li>
+</ul>
+<h2 id="102-codecov">10.2 Codecov 手動アップロード（任意）<a class="headerlink" href="#102-codecov" title="Permanent link">&para;</a></h2>
+<p>手動アップロード時は <code>CODECOV_TOKEN</code> と <code>CODECOV_SHA</code> を設定する。</p>
+<ul>
+<li>unit 送信: <code>codecov-cli upload-process -f coverage.xml -F unit -C %CODECOV_SHA% -t %CODECOV_TOKEN%</code></li>
+<li>COM 送信: <code>codecov-cli upload-process -f coverage.xml -F com -C %CODECOV_SHA% -t %CODECOV_TOKEN%</code></li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

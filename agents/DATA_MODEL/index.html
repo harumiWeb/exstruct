@@ -1,0 +1,1293 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://harumiweb.github.io/exstruct/agents/DATA_MODEL/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>ExStruct データモデル仕様 - ExStruct</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#exstruct" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ExStruct" class="md-header__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ExStruct
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ExStruct データモデル仕様
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ExStruct" class="md-nav__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ExStruct
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../generated/models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Models (generated)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JSON Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concept/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept / Why ExStruct?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.4.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.4.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.7/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.7
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.6/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.5/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.5
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.90
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.80/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.80
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.71/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.71
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.70/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.70
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.61/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.61
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.60/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.60
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Read Me
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../README.en/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (EN)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../README.ja/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (JA)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../license-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    License Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="exstruct">ExStruct データモデル仕様<a class="headerlink" href="#exstruct" title="Permanent link">&para;</a></h1>
+<p><strong>Version</strong>: 0.16
+<strong>Status</strong>: Authoritative</p>
+<p>本ドキュメントは ExStruct が返す全モデルの唯一の正準ソースです。
+core / io / integrate はこの仕様に従うこと。モデルは <strong>pydantic v2</strong> で実装します。</p>
+<hr />
+<h1 id="1-overview">1. Overview<a class="headerlink" href="#1-overview" title="Permanent link">&para;</a></h1>
+<p>ExStruct は Excel ワークブックを LLM が扱いやすい <strong>意味構造</strong> として JSON 化します。
+特記がない限り、以下のモデルはすべて Pydantic の <code>BaseModel</code> です。</p>
+<hr />
+<h1 id="2-shape-arrow-smartart-model">2. Shape / Arrow / SmartArt Model<a class="headerlink" href="#2-shape-arrow-smartart-model" title="Permanent link">&para;</a></h1>
+<p>出力の <code>shapes</code> は下記 3 モデルのユニオンです。<code>kind</code> で判別します。</p>
+<pre><code class="language-jsonc">BaseShape {
+  id: int | null   // sheet 連番 id（矢印は null の場合あり）
+  text: str
+  l: int           // left (px)
+  t: int           // top  (px)
+  w: int | null    // width (px)
+  h: int | null    // height (px)
+  rotation: float | null
+}
+
+Shape extends BaseShape {
+  kind: &quot;shape&quot;
+  type: str | null // MSO 図形タイプラベル
+}
+
+Arrow extends BaseShape {
+  kind: &quot;arrow&quot;
+  begin_arrow_style: int | null
+  end_arrow_style: int | null
+  begin_id: int | null // コネクタ始点の接続 Shape.id
+  end_id: int | null   // コネクタ終点の接続 Shape.id
+  direction: &quot;E&quot;|&quot;SE&quot;|&quot;S&quot;|&quot;SW&quot;|&quot;W&quot;|&quot;NW&quot;|&quot;N&quot;|&quot;NE&quot; | null
+}
+
+SmartArtNode {
+  text: str
+  kids: [SmartArtNode]
+}
+
+SmartArt extends BaseShape {
+  kind: &quot;smartart&quot;
+  layout: str
+  nodes: [SmartArtNode]
+}
+</code></pre>
+<p>補足:</p>
+<ul>
+<li><code>direction</code> は線や矢印の向きを 8 方位に正規化</li>
+<li>矢印スタイルは Excel の enum に対応</li>
+<li><code>begin_id</code> / <code>end_id</code> はコネクタが接続している図形の <code>id</code></li>
+<li><code>SmartArtNode</code> はネスト構造で表現し、<code>nodes</code> がツリーの根</li>
+</ul>
+<hr />
+<h1 id="3-cellrow-model">3. CellRow Model<a class="headerlink" href="#3-cellrow-model" title="Permanent link">&para;</a></h1>
+<pre><code class="language-jsonc">CellRow {
+  r: int                                  // 行番号 (1-based)
+  c: { [colIndex: str]: str | int | float } // 非空セルのみ、キーは列インデックス文字列
+  links: { [colIndex: str]: url } | null    // ハイパーリンク有効化時のみ
+}
+</code></pre>
+<hr />
+<h1 id="4-chartseries-model">4. ChartSeries Model<a class="headerlink" href="#4-chartseries-model" title="Permanent link">&para;</a></h1>
+<pre><code class="language-jsonc">ChartSeries {
+  name: str
+  name_range: str | null
+  x_range: str | null
+  y_range: str | null
+}
+</code></pre>
+<p>シリーズは値ではなく参照を保持し、ペイロードを削減します。</p>
+<hr />
+<h1 id="5-chart-model">5. Chart Model<a class="headerlink" href="#5-chart-model" title="Permanent link">&para;</a></h1>
+<pre><code class="language-jsonc">Chart {
+  name: str
+  chart_type: str              // XL_CHART_TYPE_MAP のラベル
+  title: str | null
+  y_axis_title: str
+  y_axis_range: [float]        // [min, max]、空の可能性あり
+  w: int | null
+  h: int | null
+  series: [ChartSeries]
+  l: int                       // left (px)
+  t: int                       // top  (px)
+  error: str | null            // 解析失敗時のみセット
+}
+</code></pre>
+<hr />
+<h1 id="6-printarea-model">6. PrintArea Model<a class="headerlink" href="#6-printarea-model" title="Permanent link">&para;</a></h1>
+<pre><code class="language-jsonc">PrintArea {
+  r1: int  // 開始行 (1-based, inclusive)
+  c1: int  // 開始列 (0-based, inclusive)
+  r2: int  // 終了行 (1-based, inclusive)
+  c2: int  // 終了列 (0-based, inclusive)
+}
+</code></pre>
+<p>補足:</p>
+<ul>
+<li>シートごとに複数保持可能</li>
+<li><code>standard</code> / <code>verbose</code> で取得できる場合に含まれる</li>
+</ul>
+<hr />
+<h1 id="7-printareaview-model">7. PrintAreaView Model<a class="headerlink" href="#7-printareaview-model" title="Permanent link">&para;</a></h1>
+<pre><code class="language-jsonc">PrintAreaView {
+  book_name: str
+  sheet_name: str
+  area: PrintArea
+  shapes: [Shape | Arrow | SmartArt]
+  charts: [Chart]
+  rows: [CellRow]          // 範囲に交差する行のみ、空列は落とす
+  table_candidates: [str]  // 範囲内に収まるテーブル候補
+}
+</code></pre>
+<p>補足:</p>
+<ul>
+<li>座標はデフォルトでシート基準。<code>normalize</code> 指定時は範囲左上を原点に再基準化</li>
+</ul>
+<hr />
+<h1 id="8-mergedcells-model">8. MergedCells Model<a class="headerlink" href="#8-mergedcells-model" title="Permanent link">&para;</a></h1>
+<pre><code class="language-jsonc">MergedCells {
+  schema: [&quot;r1&quot;, &quot;c1&quot;, &quot;r2&quot;, &quot;c2&quot;, &quot;v&quot;]
+  items: [[int, int, int, int, str]]
+}
+</code></pre>
+<ul>
+<li><code>items</code> は <code>(r1, c1, r2, c2, v)</code> の配列</li>
+<li>row は 1-based、col は 0-based</li>
+<li><code>v</code> は結合セルの代表値。値がない場合でも <code>" "</code> を出力する</li>
+</ul>
+<hr />
+<h1 id="9-sheetdata-model">9. SheetData Model<a class="headerlink" href="#9-sheetdata-model" title="Permanent link">&para;</a></h1>
+<pre><code class="language-jsonc">SheetData {
+  rows: [CellRow]
+  shapes: [Shape | Arrow | SmartArt]
+  charts: [Chart]
+  table_candidates: [str]
+  print_areas: [PrintArea]
+  auto_print_areas: [PrintArea] // 自動改ページ矩形 (COM 前提、デフォルト無効)
+  formulas_map: {[formula: str]: [[int, int]]} // (row=1-based, col=0-based)
+  colors_map: {[colorHex: str]: [[int, int]]} // (row=1-based, col=0-based)
+  merged_cells: MergedCells | null
+}
+</code></pre>
+<p>補足:</p>
+<ul>
+<li><code>table_candidates</code> はテーブル検知結果</li>
+<li><code>print_areas</code> は定義済み印刷範囲</li>
+<li><code>auto_print_areas</code> は Excel COM の自動改ページから取得</li>
+<li><code>rows</code> の結合セル値の出力は <code>include_merged_values_in_rows</code> フラグで制御（既定: <code>True</code>）</li>
+</ul>
+<hr />
+<h1 id="10-workbookdata-model">10. WorkbookData Model (トップレベル)<a class="headerlink" href="#10-workbookdata-model" title="Permanent link">&para;</a></h1>
+<pre><code class="language-jsonc">WorkbookData {
+  book_name: str
+  sheets: { [sheetName: str]: SheetData }
+}
+</code></pre>
+<p>補足:</p>
+<ul>
+<li>シート名は Excel の Unicode 名をそのまま保持</li>
+</ul>
+<hr />
+<h1 id="11-export-helpers-sheetdata-workbookdata">11. Export Helpers (SheetData / WorkbookData)<a class="headerlink" href="#11-export-helpers-sheetdata-workbookdata" title="Permanent link">&para;</a></h1>
+<p>共通:</p>
+<ul>
+<li><code>to_json(pretty=False, indent=None)</code></li>
+<li><code>to_yaml()</code> (<code>pyyaml</code> 必須)</li>
+<li><code>to_toon()</code> (<code>python-toon</code> 必須)</li>
+<li><code>save(path, pretty=False, indent=None)</code></li>
+<li>拡張子 <code>.json</code> / <code>.yaml</code> / <code>.yml</code> / <code>.toon</code> を自動判別</li>
+<li>非対応拡張子は <code>ValueError</code></li>
+<li><code>model_dump(exclude_none=True)</code> 後に <code>dict_without_empty_values</code> で空値を除去</li>
+</ul>
+<p><code>SheetData</code>:</p>
+<ul>
+<li>シリアライズ時に <code>book_name</code> は含まない（シート単体）</li>
+</ul>
+<p><code>WorkbookData</code>:</p>
+<ul>
+<li>ペイロードに <code>book_name</code> と <code>sheets</code> を含む</li>
+<li><code>__getitem__(sheet_name)</code> で SheetData を取得</li>
+<li><code>__iter__()</code> で <code>(sheet_name, SheetData)</code> を順に返す</li>
+</ul>
+<hr />
+<h1 id="12-versioning-principles">12. Versioning Principles<a class="headerlink" href="#12-versioning-principles" title="Permanent link">&para;</a></h1>
+<ul>
+<li>モデル変更時は本ファイルを先に更新する</li>
+<li>モデルは純粋なデータコンテナとし、副作用を持たせない</li>
+<li>core / io / integrate は本仕様に忠実なモデルのみを返し、独自フィールドを追加しない</li>
+</ul>
+<hr />
+<h1 id="13-changelog">13. Changelog<a class="headerlink" href="#13-changelog" title="Permanent link">&para;</a></h1>
+<ul>
+<li>0.3: serialize/save ヘルパー追加、<code>WorkbookData</code> に <code>__iter__</code> / <code>__getitem__</code> を定義</li>
+<li>0.4: <code>CellRow.links</code> を追加（ハイパーリンクは opt-in）</li>
+<li>0.5: <code>PrintArea</code> を追加し、<code>SheetData.print_areas</code> で保持</li>
+<li>0.6: PrintArea をデフォルト抽出。テーブル検知は従来通り</li>
+<li>0.7: Chart にサイズ <code>w</code> / <code>h</code> を追加</li>
+<li>0.8: <code>SheetData.auto_print_areas</code> を追加（COM 自動改ページ矩形、デフォルト無効）</li>
+<li>0.9: Shape に <code>name</code> / <code>begin_connected_shape</code> / <code>end_connected_shape</code> を追加し、後に <code>begin_id</code> / <code>end_id</code> に変更</li>
+<li>0.10: Shape に <code>id</code> を追加し、<code>name</code> を削除</li>
+<li>0.11: コネクタのフィールド名を <code>begin_id</code> / <code>end_id</code> に統一</li>
+<li>0.12: <code>SheetData.colors_map</code> を追加</li>
+<li>0.13: Shape を <code>Shape</code> / <code>Arrow</code> / <code>SmartArt</code> に分割し、<code>SmartArtNode</code> のネスト構造を追加</li>
+<li>0.14: <code>MergedCell</code> / <code>SheetData.merged_cells</code> を追加</li>
+<li>0.15: <code>MergedCells</code> を schema + items 形式に変更し圧縮形式を導入</li>
+<li>0.16: <code>SheetData.formulas_map</code> を追加</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,1768 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://harumiweb.github.io/exstruct/concept/">
+      
+      
+        <link rel="prev" href="../mcp/">
+      
+      
+        <link rel="next" href="../release-notes/v0.4.0/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Concept / Why ExStruct? - ExStruct</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#concept-why-exstruct" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ExStruct" class="md-header__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ExStruct
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Concept / Why ExStruct?
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ExStruct" class="md-nav__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ExStruct
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generated/models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Models (generated)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JSON Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept / Why ExStruct?
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept / Why ExStruct?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-problem-does-exstruct-solve" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What problem does ExStruct solve?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-invisible-structure-problem-of-excel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The “Invisible Structure” Problem of Excel
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The “Invisible Structure” Problem of Excel">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-cells-alone-do-not-capture-the-real-meaning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Cells alone do not capture the real meaning
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-llms-and-rag-systems-struggle-with-excels-format-variability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. LLMs and RAG systems struggle with Excel’s “format variability”
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-without-excel-installed-high-fidelity-extraction-is-nearly-impossible" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Without Excel installed, high-fidelity extraction is nearly impossible
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exstruct-concept" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ExStruct Concept
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-exstruct" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why ExStruct?
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Why ExStruct?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#excel-is-one-of-the-largest-semantic-black-boxes-in-enterprise-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✔ Excel is one of the largest “semantic black boxes” in enterprise systems
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-exstruct-provides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What ExStruct Provides
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What ExStruct Provides">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-a-structured-llm-friendly-json-representation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. A structured, LLM-friendly JSON representation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-a-programmatically-analyzable-view-of-excel-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. A programmatically analyzable view of Excel documents
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-a-ready-to-use-foundation-for-rag-systems-and-document-automation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. A ready-to-use foundation for RAG systems and document automation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#use-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Use Cases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Use Cases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rag-for-excel-manuals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✔ RAG for Excel manuals
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#automated-extraction-of-inspectionoperation-checklists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✔ Automated extraction of inspection/operation checklists
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#structural-extraction-of-qc-diagrams-fishbone-charts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✔ Structural extraction of QC diagrams / fishbone charts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#displaying-excel-files-in-web-applications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✔ Displaying Excel files in web applications
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#automated-reporting-and-analytics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✔ Automated reporting and analytics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.4.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.4.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.3.7/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.7
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.3.6/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.3.5/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.5
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.3.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.3.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.3.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.2.90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.90
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.2.80/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.80
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.2.71/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.71
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.2.70/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.70
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.2.61/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.61
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.2.60/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.60
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Read Me
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../README.en/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (EN)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../README.ja/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (JA)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../license-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    License Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-problem-does-exstruct-solve" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What problem does ExStruct solve?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-invisible-structure-problem-of-excel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The “Invisible Structure” Problem of Excel
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The “Invisible Structure” Problem of Excel">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-cells-alone-do-not-capture-the-real-meaning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Cells alone do not capture the real meaning
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-llms-and-rag-systems-struggle-with-excels-format-variability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. LLMs and RAG systems struggle with Excel’s “format variability”
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-without-excel-installed-high-fidelity-extraction-is-nearly-impossible" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Without Excel installed, high-fidelity extraction is nearly impossible
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exstruct-concept" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ExStruct Concept
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-exstruct" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why ExStruct?
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Why ExStruct?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#excel-is-one-of-the-largest-semantic-black-boxes-in-enterprise-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✔ Excel is one of the largest “semantic black boxes” in enterprise systems
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-exstruct-provides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What ExStruct Provides
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What ExStruct Provides">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-a-structured-llm-friendly-json-representation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. A structured, LLM-friendly JSON representation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-a-programmatically-analyzable-view-of-excel-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. A programmatically analyzable view of Excel documents
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-a-ready-to-use-foundation-for-rag-systems-and-document-automation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. A ready-to-use foundation for RAG systems and document automation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#use-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Use Cases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Use Cases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rag-for-excel-manuals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✔ RAG for Excel manuals
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#automated-extraction-of-inspectionoperation-checklists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✔ Automated extraction of inspection/operation checklists
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#structural-extraction-of-qc-diagrams-fishbone-charts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✔ Structural extraction of QC diagrams / fishbone charts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#displaying-excel-files-in-web-applications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✔ Displaying Excel files in web applications
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#automated-reporting-and-analytics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✔ Automated reporting and analytics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="concept-why-exstruct">Concept / Why ExStruct?<a class="headerlink" href="#concept-why-exstruct" title="Permanent link">&para;</a></h1>
+<h2 id="what-problem-does-exstruct-solve">What problem does ExStruct solve?<a class="headerlink" href="#what-problem-does-exstruct-solve" title="Permanent link">&para;</a></h2>
+<p>Real-world Excel files contain much more than cell values:</p>
+<ul>
+<li>visually-crafted tables made with borders</li>
+<li>shapes, callouts, grouped objects</li>
+<li>charts with their series, axes, labels, and data ranges</li>
+<li>merged cells and layout structures</li>
+<li>spatial relationships that carry semantic meaning</li>
+</ul>
+<p>All of this is essential for understanding the actual information encoded in an Excel workbook.
+However, most Python libraries (openpyxl, pandas, etc.) can only access a small portion of this data.</p>
+<p>This leads to several common issues in automation, documentation processing, and RAG pipelines.</p>
+<hr />
+<h2 id="the-invisible-structure-problem-of-excel">The “Invisible Structure” Problem of Excel<a class="headerlink" href="#the-invisible-structure-problem-of-excel" title="Permanent link">&para;</a></h2>
+<h3 id="1-cells-alone-do-not-capture-the-real-meaning">1. Cells alone do not capture the real meaning<a class="headerlink" href="#1-cells-alone-do-not-capture-the-real-meaning" title="Permanent link">&para;</a></h3>
+<p>Typical libraries can read cells, but not the richer objects that make Excel documents highly expressive.</p>
+<table>
+<thead>
+<tr>
+<th>Element</th>
+<th>Available in typical libraries?</th>
+<th>Available in ExStruct?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cell values</td>
+<td>○</td>
+<td>○</td>
+</tr>
+<tr>
+<td>Shapes (text, position, type)</td>
+<td>×</td>
+<td>◎</td>
+</tr>
+<tr>
+<td>Grouped shapes</td>
+<td>×</td>
+<td>◎</td>
+</tr>
+<tr>
+<td>Chart series / labels / axis ranges</td>
+<td>×〜△</td>
+<td>◎</td>
+</tr>
+<tr>
+<td>Heuristic table detection</td>
+<td>×</td>
+<td>◎</td>
+</tr>
+</tbody>
+</table>
+<p>Most business documents rely on these structures to convey meaning.
+Without them, AI systems miss critical context.</p>
+<hr />
+<h3 id="2-llms-and-rag-systems-struggle-with-excels-format-variability">2. LLMs and RAG systems struggle with Excel’s “format variability”<a class="headerlink" href="#2-llms-and-rag-systems-struggle-with-excels-format-variability" title="Permanent link">&para;</a></h3>
+<p>Excel files often contain structural irregularities:</p>
+<ul>
+<li>tables made only with borders (not actual Table objects)</li>
+<li>inconsistent row/column spacing</li>
+<li>explanatory shapes placed near cells</li>
+<li>charts referencing off-sheet ranges</li>
+<li>camera-tool snapshots showing visualized cell values</li>
+</ul>
+<p>When given raw cell data or text-only extraction, LLMs lose the relational and contextual meaning.</p>
+<p>ExStruct exists to systematically expose these hidden relationships.</p>
+<hr />
+<h3 id="3-without-excel-installed-high-fidelity-extraction-is-nearly-impossible">3. Without Excel installed, high-fidelity extraction is nearly impossible<a class="headerlink" href="#3-without-excel-installed-high-fidelity-extraction-is-nearly-impossible" title="Permanent link">&para;</a></h3>
+<p>OpenXML parsing alone cannot reliably retrieve:</p>
+<ul>
+<li>shape positions or grouping</li>
+<li>chart metadata and axis structures</li>
+<li>camera-tool references</li>
+<li>layout-level semantics</li>
+</ul>
+<p>In practice, many enterprise environments do have Windows + Excel installed.
+ExStruct embraces this environment to provide maximum information extraction while still offering a fallback mode for non-Excel environments.</p>
+<hr />
+<h2 id="exstruct-concept">ExStruct Concept<a class="headerlink" href="#exstruct-concept" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p>“<strong>Convert Excel workbooks into structured, machine-readable JSON that preserves their semantic meaning.</strong>”</p>
+</blockquote>
+<p>ExStruct is designed specifically for extracting structural information for AI systems, automation pipelines, and document analysis.</p>
+<p>Key Features</p>
+<ol>
+<li>Full extraction of shapes, groups, arrows, callouts, and positions</li>
+<li>Chart metadata: series, values, labels, axis titles, ranges</li>
+<li>Automatic detection of “visual tables” from borders and density</li>
+<li>Maximum fidelity when Excel is available; functional fallback when not</li>
+<li>Optimized output modes (light / standard / verbose) for RAG usage</li>
+<li>Multiple export formats: JSON, YAML, TOON</li>
+</ol>
+<hr />
+<h2 id="why-exstruct">Why ExStruct?<a class="headerlink" href="#why-exstruct" title="Permanent link">&para;</a></h2>
+<h3 id="excel-is-one-of-the-largest-semantic-black-boxes-in-enterprise-systems">✔ Excel is one of the largest “semantic black boxes” in enterprise systems<a class="headerlink" href="#excel-is-one-of-the-largest-semantic-black-boxes-in-enterprise-systems" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Business-critical documents are frequently Excel-based:</li>
+<li>inspection checklists</li>
+<li>QC diagrams and cause–effect charts</li>
+<li>SOP manuals</li>
+<li>analysis sheets</li>
+<li>reports with charts</li>
+<li>specification documents with annotations</li>
+</ul>
+<p>These files combine <strong>text + layout + shapes + charts</strong>, forming a rich structure that typical parsers cannot represent.</p>
+<p>For RAG and AI systems, this missing structure becomes a major bottleneck.</p>
+<hr />
+<h2 id="what-exstruct-provides">What ExStruct Provides<a class="headerlink" href="#what-exstruct-provides" title="Permanent link">&para;</a></h2>
+<h3 id="1-a-structured-llm-friendly-json-representation">1. A structured, LLM-friendly JSON representation<a class="headerlink" href="#1-a-structured-llm-friendly-json-representation" title="Permanent link">&para;</a></h3>
+<p>ExStruct outputs a unified structure containing:</p>
+<ul>
+<li>cells, rows, and sheets</li>
+<li>shapes, arrows, and SmartArt nodes (nested)</li>
+<li>chart series and metadata</li>
+<li>automatically detected table candidates</li>
+<li>layout geometry (positions, sizes)</li>
+</ul>
+<p>LLMs can reason over this representation far more effectively than raw text.</p>
+<hr />
+<h3 id="2-a-programmatically-analyzable-view-of-excel-documents">2. A programmatically analyzable view of Excel documents<a class="headerlink" href="#2-a-programmatically-analyzable-view-of-excel-documents" title="Permanent link">&para;</a></h3>
+<p>By converting layout and object information to JSON, ExStruct unlocks new workflows:</p>
+<ul>
+<li>load tables into pandas</li>
+<li>reconstruct diagrams or charts outside Excel</li>
+<li>build searchable document repositories</li>
+<li>display Excel content in web UIs</li>
+<li>convert Excel documents to Markdown or other formats</li>
+</ul>
+<h3 id="3-a-ready-to-use-foundation-for-rag-systems-and-document-automation">3. A ready-to-use foundation for RAG systems and document automation<a class="headerlink" href="#3-a-ready-to-use-foundation-for-rag-systems-and-document-automation" title="Permanent link">&para;</a></h3>
+<p>Once extracted, the workflow becomes:</p>
+<pre><code class="language-md">Excel → ExStruct → JSON → Vector DB → RAG → Answer Generation
+</code></pre>
+<p>Previously, teams needed to build custom extraction logic for each document type.
+ExStruct provides a general solution that handles both standard Excel features and complex layouts.</p>
+<hr />
+<h2 id="use-cases">Use Cases<a class="headerlink" href="#use-cases" title="Permanent link">&para;</a></h2>
+<h3 id="rag-for-excel-manuals">✔ RAG for Excel manuals<a class="headerlink" href="#rag-for-excel-manuals" title="Permanent link">&para;</a></h3>
+<p>LLMs can reference both text and shape-based information (flows, diagrams, callouts).</p>
+<h3 id="automated-extraction-of-inspectionoperation-checklists">✔ Automated extraction of inspection/operation checklists<a class="headerlink" href="#automated-extraction-of-inspectionoperation-checklists" title="Permanent link">&para;</a></h3>
+<p>Visual tables become machine-readable through ExStruct’s detection logic.</p>
+<h3 id="structural-extraction-of-qc-diagrams-fishbone-charts">✔ Structural extraction of QC diagrams / fishbone charts<a class="headerlink" href="#structural-extraction-of-qc-diagrams-fishbone-charts" title="Permanent link">&para;</a></h3>
+<p>Positions + text allow downstream tools or AI to reconstruct the logic.</p>
+<h3 id="displaying-excel-files-in-web-applications">✔ Displaying Excel files in web applications<a class="headerlink" href="#displaying-excel-files-in-web-applications" title="Permanent link">&para;</a></h3>
+<p>JSON-based layout makes frontend rendering feasible without Excel.</p>
+<h3 id="automated-reporting-and-analytics">✔ Automated reporting and analytics<a class="headerlink" href="#automated-reporting-and-analytics" title="Permanent link">&para;</a></h3>
+<p>Chart series can be re-plotted or transformed into dashboards.</p>
+<hr />
+<h2 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">&para;</a></h2>
+<p>ExStruct is built to:</p>
+<ul>
+<li>reveal the hidden structural elements in Excel files</li>
+<li>expose them through a consistent JSON representation</li>
+<li>enable AI and automation systems to understand Excel documents qualitatively</li>
+<li>support both maximum-fidelity (Excel-installed) and fallback (pure Python) extraction</li>
+<li>facilitate RAG pipelines, document analysis, and enterprise automation</li>
+</ul>
+<p>It is not just an Excel parser—
+<strong>it is a semantic extraction engine for the most commonly used business document format in the world.</strong></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

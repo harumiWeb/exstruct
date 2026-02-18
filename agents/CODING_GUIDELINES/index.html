@@ -1,0 +1,1253 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://harumiweb.github.io/exstruct/agents/CODING_GUIDELINES/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>ExStruct Coding Guidelines - ExStruct</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#exstruct-coding-guidelines" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ExStruct" class="md-header__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ExStruct
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ExStruct Coding Guidelines
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ExStruct" class="md-nav__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ExStruct
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../generated/models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Models (generated)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JSON Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concept/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept / Why ExStruct?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.4.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.4.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.7/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.7
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.6/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.5/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.5
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.90
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.80/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.80
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.71/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.71
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.70/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.70
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.61/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.61
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.60/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.60
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Read Me
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../README.en/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (EN)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../README.ja/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (JA)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../license-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    License Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="exstruct-coding-guidelines">ExStruct Coding Guidelines<a class="headerlink" href="#exstruct-coding-guidelines" title="Permanent link">&para;</a></h1>
+<p><strong>AI（Codex）と人間が協調して長期的に保守できるコードベース</strong> を実現するための、<br />
+ExStruct 独自のコーディング規約です。</p>
+<p>以下の規約は、Codex にコードを生成させる場合にも適用します。<br />
+AI 生成コードの品質安定化・保守性向上・Ruff / mypy / Pydantic との整合性を目的とします。</p>
+<hr />
+<h1 id="1">1. 基本方針（最重要）<a class="headerlink" href="#1" title="Permanent link">&para;</a></h1>
+<h2 id="11">1.1 型ヒントは必須<a class="headerlink" href="#11" title="Permanent link">&para;</a></h2>
+<p>すべての関数・メソッド・クラスに完全な型ヒントを付けること。</p>
+<p><strong>良い例</strong></p>
+<pre><code class="language-python">def extract_shapes(sheet: xw.Sheet) -&gt; list[Shape]:
+    ...
+</code></pre>
+<p><strong>悪い例</strong></p>
+<pre><code class="language-python">def extract_shapes(sheet):
+    ...
+</code></pre>
+<hr />
+<h2 id="12-1">1.2 関数は「1 責務」だけを持つ<a class="headerlink" href="#12-1" title="Permanent link">&para;</a></h2>
+<p>複雑な Excel 処理は関数が肥大化しやすいため、
+<strong>1 関数 = 1 ロジック</strong> を徹底する。</p>
+<p><strong>良い例</strong></p>
+<ul>
+<li><code>extract_raw_shapes</code></li>
+<li><code>normalize_shape</code></li>
+<li><code>detect_shape_direction</code></li>
+</ul>
+<hr />
+<h2 id="13-basemodel-dataclass">1.3 境界は BaseModel、内部は dataclass を主なデータ構造にする<a class="headerlink" href="#13-basemodel-dataclass" title="Permanent link">&para;</a></h2>
+<p>Raw*Data (e.g., SheetRawData/WorkbookRawData) は内部専用で公開APIに出さない。
+Do not expose them via public APIs or re-export from package <strong>init</strong>.</p>
+<p>辞書やタプルではなく、<strong>必ず Pydantic BaseModel か dataclass を返す</strong>。</p>
+<p>メリット：</p>
+<ul>
+<li>AI が誤解しにくい</li>
+<li>IDE での開発が容易</li>
+<li>JSON 化との相性がよい</li>
+</ul>
+<hr />
+<h1 id="2">2. 命名規則<a class="headerlink" href="#2" title="Permanent link">&para;</a></h1>
+<h2 id="21-snake_case">2.1 snake_case（関数・変数）<a class="headerlink" href="#21-snake_case" title="Permanent link">&para;</a></h2>
+<p>例：<code>parse_chart_labels</code>, <code>shape_items</code></p>
+<h2 id="22-pascalcase">2.2 PascalCase（クラス）<a class="headerlink" href="#22-pascalcase" title="Permanent link">&para;</a></h2>
+<p>例：<code>WorkbookParser</code>, <code>ChartSeries</code></p>
+<h2 id="23">2.3 モジュール名は短く責務を示す<a class="headerlink" href="#23" title="Permanent link">&para;</a></h2>
+<p>例：<code>shape_parser.py</code>, <code>chart_reader.py</code></p>
+<hr />
+<h1 id="3">3. インポート規則<a class="headerlink" href="#3" title="Permanent link">&para;</a></h1>
+<p>Ruff の isort ルールに従う。</p>
+<p>順序：</p>
+<ol>
+<li>標準ライブラリ</li>
+<li>サードパーティ</li>
+<li>自前ライブラリ（exstruct）</li>
+</ol>
+<p><strong>例</strong></p>
+<pre><code class="language-python">import json
+from typing import Any
+
+import xlwings as xw
+from pydantic import BaseModel
+
+from exstruct.models import Shape
+</code></pre>
+<hr />
+<h1 id="4-docstring">4. Docstring 規約<a class="headerlink" href="#4-docstring" title="Permanent link">&para;</a></h1>
+<p>Google スタイルを採用し、下記を必ず明記：</p>
+<ul>
+<li>Args</li>
+<li>Returns</li>
+<li>Raises（例外を投げる場合）</li>
+</ul>
+<p><strong>例</strong></p>
+<pre><code class="language-python">def detect_shape_direction(shape: Shape) -&gt; str | None:
+    &quot;&quot;&quot;Detect arrow direction from shape coordinates and rotation.
+
+    Args:
+        shape: Parsed shape model.
+
+    Returns:
+        Direction code (&quot;E&quot;, &quot;NE&quot;, etc.) or None if no arrow is detected.
+    &quot;&quot;&quot;
+</code></pre>
+<hr />
+<h1 id="5">5. 例外処理のルール<a class="headerlink" href="#5" title="Permanent link">&para;</a></h1>
+<h2 id="51-valueerror-runtimeerror">5.1 ValueError / RuntimeError を中心に使用<a class="headerlink" href="#51-valueerror-runtimeerror" title="Permanent link">&para;</a></h2>
+<pre><code class="language-python">if not cell:
+    raise ValueError(&quot;cell must not be empty.&quot;)
+</code></pre>
+<h2 id="52-com">5.2 COM 例外はラップする<a class="headerlink" href="#52-com" title="Permanent link">&para;</a></h2>
+<pre><code class="language-python">try:
+    text = shape.text_frame.characters.text
+except Exception as e:
+    raise RuntimeError(f&quot;Failed to read shape text: {e}&quot;) from e
+</code></pre>
+<hr />
+<h1 id="6">6. 複雑度のコントロール<a class="headerlink" href="#6" title="Permanent link">&para;</a></h1>
+<p>Ruff の <code>C90</code>（mccabe）に従い、
+<strong>max-complexity = 12</strong> を超えないように関数を分割する。</p>
+<hr />
+<h1 id="7-codexai">7. Codex（AI）を使うときのガイドライン<a class="headerlink" href="#7-codexai" title="Permanent link">&para;</a></h1>
+<h2 id="71-codex">7.1 Codex に守らせるルール<a class="headerlink" href="#71-codex" title="Permanent link">&para;</a></h2>
+<p>Codex を利用する場合、以下を事前にプロンプトに記載する：</p>
+<ul>
+<li>型ヒントは必須</li>
+<li>1 関数 = 1 責務</li>
+<li>境界は BaseModel、内部は dataclass モデルを返す</li>
+<li>Docstring を Google スタイルで書く</li>
+<li>import は正しい順序で書く</li>
+<li>エラーハンドリングは簡潔に</li>
+<li>複雑度が高くなる場合は関数を分割する</li>
+</ul>
+<hr />
+<h2 id="72-codex">7.2 Codex にアウトプットさせるための推奨プロンプト<a class="headerlink" href="#72-codex" title="Permanent link">&para;</a></h2>
+<p>以下を貼るだけで安定したコードを生成できる：</p>
+<pre><code>あなたは熟練 Python エンジニアであり、ExStruct ライブラリの標準に従ってコードを書きます。
+
+必ず以下を守ってください：
+- 型ヒントは全ての引数と戻り値に付ける
+- １関数 = １責務
+- 境界は BaseModel、内部は dataclass を返す
+- import を正しい順序で並べる
+- docstring（Google スタイル）を書く
+- 複雑になりすぎないよう関数を分割する
+- JSON や辞書ではなく Pydantic モデルを返す
+
+出力は Python のコードのみ。
+</code></pre>
+<hr />
+<h1 id="8-ai">8. AI 生成コードのレビュー項目（チェックリスト）<a class="headerlink" href="#8-ai" title="Permanent link">&para;</a></h1>
+<p>AI が生成したコードをレビューする際は、以下の順に確認する：</p>
+<ol>
+<li>型ヒントが完全か</li>
+<li>docstring があるか</li>
+<li>import の順序が正しいか</li>
+<li>境界は BaseModel、内部は dataclass モデルを返しているか</li>
+<li>関数が単一責務か</li>
+<li>例外処理が適切か</li>
+<li>複雑度が max 12 を超えていないか</li>
+<li>Ruff でエラーが出ないか</li>
+</ol>
+<hr />
+<h1 id="9-ai">9. 禁止事項（AI 生成コードで特に注意）<a class="headerlink" href="#9-ai" title="Permanent link">&para;</a></h1>
+<p>以下は Codex に絶対させない：</p>
+<ul>
+<li>複雑すぎる if/else ネスト</li>
+<li>多数の責務を持つ「神クラス」</li>
+<li>大きな辞書やタプルを返す</li>
+<li>コメントが一切ないコード</li>
+<li>無名のマジックナンバー</li>
+</ul>
+<hr />
+<h1 id="10-exstruct">10. ExStruct の設計原則まとめ<a class="headerlink" href="#10-exstruct" title="Permanent link">&para;</a></h1>
+<ul>
+<li>型安全性（type safety）</li>
+<li>データ構造の明確化（境界は BaseModel、内部は dataclass）</li>
+<li>モジュールの疎結合化</li>
+<li>関数責務の最小化</li>
+<li>AI と人間の共存を前提にしたコード規律</li>
+</ul>
+<p>これらは <strong>Ruff / mypy / CI とも高い互換性</strong>を持つよう設計されている。</p>
+<hr />
+<h1 id="appendix">Appendix: 今後追加が推奨されるルール<a class="headerlink" href="#appendix" title="Permanent link">&para;</a></h1>
+<ul>
+<li>mypy の厳格化</li>
+<li>pydantic のフィールド制約統一</li>
+<li>public API の docstring 強制</li>
+<li>internal API の _prefix 命名</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
