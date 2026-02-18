@@ -1,90 +1,66 @@
-﻿# Task List
+# Task List
 
 未完了 [ ], 完了 [x]
 
 ## Phase 0: Spec固定
-- [x] `PatchOp` の新opと新規フィールド定義を確定する
-- [x] 各opの必須/禁止フィールド仕様を確定する
-- [x] `.xls` 制約とopenpyxl強制方針を確定する
+- [ ] `backend` / `engine` のI/F仕様を確定する
+- [ ] backend選択ルール（auto/com/openpyxl）を確定する
+- [ ] COM失敗時フォールバック条件を確定する
 
-## Phase 1: Model/Validation実装
-- [x] `PatchOpType` に新opを追加する
-- [x] `PatchOp` にデザイン編集用フィールドを追加する
-- [x] 新op用バリデーション関数を追加する
-- [x] 列指定正規化（記号/数値両対応）ヘルパーを実装する
-- [x] 色コード正規化ヘルパーを実装する
+## Phase 1: Model/Server I/F
+- [ ] `PatchRequest` に `backend` を追加する
+- [ ] `PatchResult` に `engine` を追加する
+- [ ] `PatchToolInput` に `backend` を追加する
+- [ ] `PatchToolOutput` に `engine` を追加する
+- [ ] `server.py` の `exstruct_patch` docstring を更新する
 
-## Phase 2: Openpyxl適用ロジック実装
-- [x] `draw_grid_border` 適用関数を実装する
-- [x] `set_bold` 適用関数を実装する
-- [x] `set_fill_color` 適用関数を実装する
-- [x] `set_dimensions` 適用関数を実装する
-- [x] `_apply_openpyxl_op` に新op分岐を追加する
-- [x] `_requires_openpyxl_backend` に新opを追加する
+## Phase 2: バックエンドルーティング
+- [ ] `run_patch` を `backend` 指定対応に更新する
+- [ ] `auto` / `com` / `openpyxl` の分岐を実装する
+- [ ] `backend=com` の制約違反エラーを実装する
+- [ ] COM失敗時の `auto` 限定フォールバックを実装する
+- [ ] warning文言を整理し互換性を確認する
 
-## Phase 3: Inverse Ops対応
-- [x] スタイル・寸法のスナップショットモデルを追加する
-- [x] 逆操作生成ロジックを実装する
-- [x] `restore_design_snapshot` 適用ロジックを実装する
-- [x] `return_inverse_ops` で新opの逆操作返却を有効化する
+## Phase 3: COM実装拡張（既存op）
+- [ ] `set_range_values` / `fill_formula` を COM 経路で対応する
+- [ ] `set_value_if` / `set_formula_if` を COM 経路で対応する
+- [ ] `draw_grid_border` / `set_bold` / `set_fill_color` を COM 経路で対応する
+- [ ] `set_dimensions` / `merge_cells` / `unmerge_cells` / `set_alignment` を COM 経路で対応する
+- [ ] `patch_diff` 出力形式が既存互換であることを確認する
+- [ ] `restore_design_snapshot` は openpyxl専用のまま維持する
 
-## Phase 4: サーバー/ツールI/F更新
-- [x] `server.py` の `exstruct_patch` docstringに新op説明を追加する
-- [x] 必要に応じて `tools.py` 型定義説明を更新する
-- [x] エラーメッセージをAIが理解しやすい文言に統一する
+## Phase 4: テスト
+- [ ] backend選択ユニットテストを追加する
+- [ ] `engine` 返却値のテストを追加する
+- [ ] COM不可環境での異常系テストを追加する
+- [ ] `backend=com` + `dry_run` 等の矛盾指定テストを追加する
+- [ ] COM失敗→openpyxlフォールバック（`auto`のみ）テストを追加する
+- [ ] 既存op回帰テストを更新する
 
-## Phase 5: テスト追加
-- [x] `tests/mcp/test_patch_runner.py` に新op正常系テストを追加する
-- [x] `tests/mcp/test_patch_runner.py` に新op異常系テストを追加する
-- [x] inverse往復テストを追加する
-- [x] `tests/mcp/test_server.py` に新op JSON文字列ops受理テストを追加する
-- [x] 必要なら `tests/mcp/test_tool_models.py` を更新する
+## Phase 5: ドキュメント
+- [ ] `docs/mcp.md` に `backend` 仕様を追記する
+- [ ] `README.md` に patch backend 方針を追記する
+- [ ] `README.ja.md` に patch backend 方針を追記する
+- [ ] `CHANGELOG.md` を更新する
+- [ ] `docs/agents/FEATURE_SPEC.md` と本タスクリストを同期する
 
-## Phase 6: ドキュメント更新
-- [x] `docs/mcp.md` に新op仕様と利用例を追記する
-- [x] `README.md` / `README.ja.md` に機能追加を追記する
-- [x] `CHANGELOG.md` と release note を更新する
-- [x] `docs/agents/FEATURE_SPEC.md` と `docs/agents/TASKS.md` を最終同期する
-
-## Phase 7: 検証
-- [x] `uv run pytest tests/mcp` を実行する
-- [x] `uv run task precommit-run` を実行する
-- [x] 失敗時は修正して再実行し、全通過を確認する
-
-## Phase 8: Spec拡張（merge/alignment）
-- [x] 新3op仕様と許容値を確定する
-- [x] 警告継続/交差エラー方針を明文化する
-
-## Phase 9: Model/Validation
-- [x] `PatchOpType` と `PatchOp` フィールド追加
-- [x] 新3opバリデーション追加
-
-## Phase 10: Openpyxl適用
-- [x] `merge_cells` / `unmerge_cells` / `set_alignment` 実装
-- [x] `_apply_openpyxl_op` 分岐追加
-
-## Phase 11: Inverse Ops
-- [x] `DesignSnapshot` 拡張（alignment/merge_state）
-- [x] `restore_design_snapshot` 復元拡張
-
-## Phase 12: Warning伝播
-- [x] op単位warning収集導線を追加
-- [x] 結合時の値消失warningを返却
-
-## Phase 13: テスト
-- [x] patch_runner/tool_models/server テスト追加
-- [x] inverse往復・warning検証追加
-
-## Phase 14: ドキュメント/検証
-- [x] `docs/mcp.md`・README・CHANGELOG更新
-- [x] `uv run pytest tests/mcp` と `uv run task precommit-run` 全通過
+## Phase 6: 検証
+- [ ] `uv run pytest tests/mcp` を実行する
+- [ ] `uv run task precommit-run` を実行する
+- [ ] 全通過を確認する
 
 ## テスト/受け入れ条件
-1. 回帰なし（既存op全維持）。
-2. 新7機能が `exstruct_patch` で一貫利用可能。
-3. 静的解析・テストが0エラー。
+1. `backend=auto` + COM available -> `engine="com"`
+2. `backend=auto` + COM unavailable -> `engine="openpyxl"`
+3. `backend=com` + COM unavailable -> エラー
+4. `backend=openpyxl` + `.xls` -> エラー
+5. `backend=com` + `dry_run=True` -> エラー
+6. COM例外注入時、`backend=auto` + `.xlsx` -> openpyxlフォールバック + warning
+7. `patch_diff` 構造が既存互換
+8. 既存warning挙動の互換性維持
 
 ## 明示的な前提
-1. 更新対象は `docs/agents/FEATURE_SPEC.md` と `docs/agents/TASKS.md`。
-2. MVPは使いやすさ優先で入力自由度を絞る。
-3. 実装着手時にこの定義を基準仕様として扱う。
+1. 図形/グラフ編集opの追加は今回対象外。
+2. `mcp` サブフォルダ再編は今回対象外。
+3. `return_inverse_ops` / `dry_run` / `preflight_formula_check` は当面 openpyxl 優先方針を維持する。
+4. 更新対象は `docs/agents/FEATURE_SPEC.md` と `docs/agents/TASKS.md` のみ。
