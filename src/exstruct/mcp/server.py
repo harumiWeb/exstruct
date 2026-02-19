@@ -20,6 +20,8 @@ from .io import PathPolicy
 from .tools import (
     ExtractToolInput,
     ExtractToolOutput,
+    MakeToolInput,
+    MakeToolOutput,
     PatchToolInput,
     PatchToolOutput,
     ReadCellsToolInput,
@@ -33,6 +35,7 @@ from .tools import (
     ValidateInputToolInput,
     ValidateInputToolOutput,
     run_extract_tool,
+    run_make_tool,
     run_patch_tool,
     run_read_cells_tool,
     run_read_formulas_tool,
@@ -511,6 +514,62 @@ def _register_tools(
 
     patch_tool = app.tool(name="exstruct_patch")
     patch_tool(_patch_tool)
+
+    async def _make_tool(
+        out_path: str,
+        ops: list[dict[str, Any] | str] | None = None,
+        on_conflict: OnConflictPolicy | None = None,
+        auto_formula: bool = False,
+        dry_run: bool = False,
+        return_inverse_ops: bool = False,
+        preflight_formula_check: bool = False,
+        backend: Literal["auto", "com", "openpyxl"] = "auto",
+    ) -> MakeToolOutput:
+        """Create a new Excel workbook and apply patch operations.
+
+        Args:
+            out_path: Output workbook path (.xlsx/.xlsm/.xls).
+            ops: Optional patch operations. Accepts object list or JSON object strings.
+            on_conflict: Conflict policy when output file exists:
+                'overwrite' (replace), 'skip' (do nothing), 'rename' (auto-rename).
+                Defaults to server --on-conflict setting.
+            auto_formula: When true, values starting with '=' in set_value ops
+                are treated as formulas instead of being rejected.
+            dry_run: When true, compute diff without saving changes.
+            return_inverse_ops: When true, return inverse (undo) operations.
+            preflight_formula_check: When true, scan formulas for errors
+                like #REF!, #NAME?, #DIV/0! before saving.
+            backend: Patch execution backend.
+                - "auto" (default): prefer COM when available; otherwise openpyxl.
+                - "com": force COM path (requires Excel COM).
+                - "openpyxl": force openpyxl path (.xls is not supported).
+
+        Returns:
+            Patch-compatible result with output path, diff, and warnings.
+        """
+        normalized_ops = _coerce_patch_ops(ops or [])
+        payload = MakeToolInput(
+            out_path=out_path,
+            ops=normalized_ops,
+            on_conflict=on_conflict,
+            auto_formula=auto_formula,
+            dry_run=dry_run,
+            return_inverse_ops=return_inverse_ops,
+            preflight_formula_check=preflight_formula_check,
+            backend=backend,
+        )
+        effective_on_conflict = on_conflict or default_on_conflict
+        work = functools.partial(
+            run_make_tool,
+            payload,
+            policy=policy,
+            on_conflict=effective_on_conflict,
+        )
+        result = cast(MakeToolOutput, await anyio.to_thread.run_sync(work))
+        return result
+
+    make_tool = app.tool(name="exstruct_make")
+    make_tool(_make_tool)
 
 
 def _coerce_filter(filter_data: dict[str, Any] | None) -> dict[str, Any] | None:

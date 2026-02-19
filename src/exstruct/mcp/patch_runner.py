@@ -6,6 +6,7 @@ from copy import copy
 from pathlib import Path
 import re
 from typing import Literal, Protocol, cast, runtime_checkable
+from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 import xlwings as xw
@@ -1182,6 +1183,34 @@ class PatchRequest(BaseModel):
         return self
 
 
+class MakeRequest(BaseModel):
+    """Input model for ExStruct MCP workbook creation."""
+
+    out_path: Path
+    ops: list[PatchOp] = Field(default_factory=list)
+    on_conflict: OnConflictPolicy = "overwrite"
+    auto_formula: bool = False
+    dry_run: bool = False
+    return_inverse_ops: bool = False
+    preflight_formula_check: bool = False
+    backend: PatchBackend = "auto"
+
+    @model_validator(mode="after")
+    def _validate_backend_constraints(self) -> MakeRequest:
+        if self.backend != "com":
+            return self
+        if self.dry_run or self.return_inverse_ops or self.preflight_formula_check:
+            raise ValueError(
+                "backend='com' does not support dry_run, return_inverse_ops, "
+                "or preflight_formula_check."
+            )
+        if any(op.op == "restore_design_snapshot" for op in self.ops):
+            raise ValueError(
+                "backend='com' does not support restore_design_snapshot operation."
+            )
+        return self
+
+
 class PatchResult(BaseModel):
     """Output model for ExStruct MCP patch."""
 
@@ -1192,6 +1221,44 @@ class PatchResult(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     error: PatchErrorDetail | None = None
     engine: PatchEngine
+
+
+def run_make(request: MakeRequest, *, policy: PathPolicy | None = None) -> PatchResult:
+    """Create a new workbook and apply patch operations in one call.
+
+    Args:
+        request: Workbook creation request payload.
+        policy: Optional path policy for access control.
+
+    Returns:
+        Patch-compatible result with output path and diff.
+
+    Raises:
+        ValueError: If request validation fails.
+        RuntimeError: If backend operations fail.
+    """
+    resolved_output = _resolve_make_output_path(request.out_path, policy=policy)
+    _ensure_supported_extension(resolved_output)
+    _validate_make_request_constraints(request, resolved_output)
+    seed_path = _build_make_seed_path(resolved_output)
+    try:
+        _create_seed_workbook(seed_path, resolved_output.suffix.lower())
+        patch_request = PatchRequest(
+            xlsx_path=seed_path,
+            ops=request.ops,
+            out_dir=resolved_output.parent,
+            out_name=resolved_output.name,
+            on_conflict=request.on_conflict,
+            auto_formula=request.auto_formula,
+            dry_run=request.dry_run,
+            return_inverse_ops=request.return_inverse_ops,
+            preflight_formula_check=request.preflight_formula_check,
+            backend=request.backend,
+        )
+        return run_patch(patch_request, policy=policy)
+    finally:
+        if seed_path.exists():
+            seed_path.unlink()
 
 
 def run_patch(
@@ -1494,6 +1561,94 @@ def _resolve_output_path(
     if policy is not None:
         output_path = policy.ensure_allowed(output_path)
     return output_path
+
+
+def _resolve_make_output_path(path: Path, *, policy: PathPolicy | None) -> Path:
+    """Resolve and validate output path for workbook creation."""
+    resolved = policy.ensure_allowed(path) if policy else path.resolve()
+    if resolved.exists() and resolved.is_dir():
+        raise ValueError(f"Output path is a directory: {resolved}")
+    return resolved
+
+
+def _validate_make_request_constraints(request: MakeRequest, output_path: Path) -> None:
+    """Validate make-specific constraints by output extension."""
+    if output_path.suffix.lower() != ".xls":
+        return
+    if request.backend == "openpyxl":
+        raise ValueError("backend='openpyxl' cannot edit .xls files.")
+    if request.dry_run or request.return_inverse_ops or request.preflight_formula_check:
+        raise ValueError(
+            ".xls creation does not support dry_run, return_inverse_ops, "
+            "or preflight_formula_check."
+        )
+    com = get_com_availability()
+    if not com.available:
+        raise ValueError(
+            ".xls editing requires Windows Excel COM (xlwings) in this environment."
+        )
+
+
+def _build_make_seed_path(output_path: Path) -> Path:
+    """Return a temporary seed path in the target output directory."""
+    seed_name = f".exstruct_make_seed_{uuid4().hex}{output_path.suffix.lower()}"
+    return output_path.parent / seed_name
+
+
+def _create_seed_workbook(seed_path: Path, extension: str) -> None:
+    """Create an empty workbook seed and normalize first sheet to Sheet1."""
+    _ensure_output_dir(seed_path)
+    if extension == ".xls":
+        _create_xls_seed_with_com(seed_path)
+        return
+    _create_openpyxl_seed(seed_path)
+
+
+def _create_openpyxl_seed(seed_path: Path) -> None:
+    """Create an empty workbook via openpyxl."""
+    try:
+        from openpyxl import Workbook
+    except ImportError as exc:
+        raise RuntimeError(f"openpyxl is not available: {exc}") from exc
+    workbook = Workbook()
+    try:
+        active_sheet = workbook.active
+        if active_sheet is None:
+            raise RuntimeError("Failed to create default worksheet.")
+        active_sheet.title = "Sheet1"
+        workbook.save(seed_path)
+    finally:
+        workbook.close()
+
+
+def _create_xls_seed_with_com(seed_path: Path) -> None:
+    """Create an empty .xls workbook via Excel COM."""
+    com = get_com_availability()
+    if not com.available:
+        raise ValueError(
+            ".xls editing requires Windows Excel COM (xlwings) in this environment."
+        )
+    app = xw.App(add_book=False, visible=False)
+    app.display_alerts = False
+    app.screen_updating = False
+    workbook = app.books.add()
+    try:
+        workbook.sheets[0].name = "Sheet1"
+        workbook.save(str(seed_path))
+    except Exception as exc:
+        raise RuntimeError(f"COM workbook creation failed: {exc}") from exc
+    finally:
+        try:
+            workbook.close()
+        except Exception:
+            pass
+        try:
+            app.quit()
+        except Exception:
+            try:
+                app.kill()
+            except Exception:
+                pass
 
 
 def _normalize_output_name(input_path: Path, out_name: str | None) -> str:

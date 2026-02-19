@@ -92,8 +92,12 @@ exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict re
 Available tools:
 
 - `exstruct_extract`
+- `exstruct_make`
 - `exstruct_patch`
 - `exstruct_read_json_chunk`
+- `exstruct_read_range`
+- `exstruct_read_cells`
+- `exstruct_read_formulas`
 - `exstruct_validate_input`
 
 Notes:
@@ -101,6 +105,10 @@ Notes:
 - In MCP, `exstruct_extract` defaults to `options.alpha_col=true` (column keys: `A`, `B`, ...). Set `options.alpha_col=false` for legacy 0-based numeric string keys.
 - Logs go to stderr (and optionally `--log-file`) to avoid contaminating stdio responses.
 - On Windows with Excel, standard/verbose can use COM for richer extraction. On non-Windows, COM is unavailable and extraction uses openpyxl-based fallbacks.
+- `exstruct_make` creates a new workbook and applies `ops` in one call (`out_path` required, `ops` optional).
+  - Supports `.xlsx` / `.xlsm` / `.xls`
+  - Initial sheet is normalized to `Sheet1`
+  - `.xls` requires COM and rejects `backend=openpyxl`
 
 MCP Setup Guide for Each AI Agent:
 

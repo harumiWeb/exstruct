@@ -18,12 +18,14 @@ from .extract_runner import (
 from .io import PathPolicy
 from .patch_runner import (
     FormulaIssue,
+    MakeRequest,
     PatchDiffItem,
     PatchErrorDetail,
     PatchOp,
     PatchRequest,
     PatchResult,
     PatchValue,
+    run_make,
     run_patch,
 )
 from .sheet_reader import (
@@ -42,6 +44,8 @@ from .sheet_reader import (
 from .tools import (
     ExtractToolInput,
     ExtractToolOutput,
+    MakeToolInput,
+    MakeToolOutput,
     PatchToolInput,
     PatchToolOutput,
     ReadCellsToolInput,
@@ -55,6 +59,7 @@ from .tools import (
     ValidateInputToolInput,
     ValidateInputToolOutput,
     run_extract_tool,
+    run_make_tool,
     run_patch_tool,
     run_read_cells_tool,
     run_read_formulas_tool,
@@ -76,6 +81,9 @@ __all__ = [
     "ExtractToolOutput",
     "FormulaIssue",
     "FormulaReadItem",
+    "MakeRequest",
+    "MakeToolInput",
+    "MakeToolOutput",
     "PatchDiffItem",
     "PatchErrorDetail",
     "PatchOp",
@@ -112,6 +120,8 @@ __all__ = [
     "validate_input",
     "run_extract",
     "run_extract_tool",
+    "run_make",
+    "run_make_tool",
     "run_patch",
     "run_patch_tool",
     "read_cells",

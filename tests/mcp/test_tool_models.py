@@ -5,6 +5,7 @@ import pytest
 
 from exstruct.mcp.tools import (
     ExtractToolInput,
+    MakeToolInput,
     PatchToolInput,
     ReadCellsToolInput,
     ReadFormulasToolInput,
@@ -33,6 +34,16 @@ def test_patch_tool_input_defaults() -> None:
     )
     assert payload.out_dir is None
     assert payload.out_name is None
+    assert payload.on_conflict is None
+    assert payload.dry_run is False
+    assert payload.return_inverse_ops is False
+    assert payload.preflight_formula_check is False
+    assert payload.backend == "auto"
+
+
+def test_make_tool_input_defaults() -> None:
+    payload = MakeToolInput(out_path="output.xlsx")
+    assert payload.ops == []
     assert payload.on_conflict is None
     assert payload.dry_run is False
     assert payload.return_inverse_ops is False

@@ -14,6 +14,8 @@ from exstruct.mcp.io import PathPolicy
 from exstruct.mcp.tools import (
     ExtractToolInput,
     ExtractToolOutput,
+    MakeToolInput,
+    MakeToolOutput,
     PatchToolInput,
     PatchToolOutput,
     ReadCellsToolInput,
@@ -171,6 +173,15 @@ def test_register_tools_uses_default_on_conflict(
         calls["patch"] = (payload, policy, on_conflict)
         return PatchToolOutput(out_path="out.xlsx", patch_diff=[], engine="openpyxl")
 
+    def fake_run_make_tool(
+        payload: MakeToolInput,
+        *,
+        policy: PathPolicy,
+        on_conflict: OnConflictPolicy,
+    ) -> MakeToolOutput:
+        calls["make"] = (payload, policy, on_conflict)
+        return MakeToolOutput(out_path="out.xlsx", patch_diff=[], engine="openpyxl")
+
     async def fake_run_sync(func: Callable[[], object]) -> object:
         return func()
 
@@ -180,6 +191,7 @@ def test_register_tools_uses_default_on_conflict(
     )
     monkeypatch.setattr(server, "run_validate_input_tool", fake_run_validate_input_tool)
     monkeypatch.setattr(server, "run_patch_tool", fake_run_patch_tool)
+    monkeypatch.setattr(server, "run_make_tool", fake_run_make_tool)
     monkeypatch.setattr(anyio.to_thread, "run_sync", fake_run_sync)
 
     server._register_tools(app, policy, default_on_conflict="rename")
@@ -204,6 +216,12 @@ def test_register_tools_uses_default_on_conflict(
         patch_tool,
         {"xlsx_path": "in.xlsx", "ops": [{"op": "add_sheet", "sheet": "New"}]},
     )
+    make_tool = cast(Callable[..., Awaitable[object]], app.tools["exstruct_make"])
+    anyio.run(
+        _call_async,
+        make_tool,
+        {"out_path": "out.xlsx", "ops": [{"op": "add_sheet", "sheet": "New"}]},
+    )
 
     assert calls["extract"][2] == "rename"
     chunk_call = cast(tuple[ReadJsonChunkToolInput, PathPolicy], calls["chunk"])
@@ -216,6 +234,9 @@ def test_register_tools_uses_default_on_conflict(
     assert patch_call[0].return_inverse_ops is False
     assert patch_call[0].preflight_formula_check is False
     assert patch_call[0].backend == "auto"
+    assert calls["make"][2] == "rename"
+    make_call = cast(tuple[MakeToolInput, PathPolicy, OnConflictPolicy], calls["make"])
+    assert make_call[0].ops[0].op == "add_sheet"
 
 
 def test_register_tools_passes_read_tool_arguments(
@@ -406,6 +427,83 @@ def test_register_tools_accepts_patch_ops_json_strings(
     assert patch_call[0].ops[0].sheet == "New"
     assert patch_call[0].ops[1].op == "set_bold"
     assert patch_call[0].ops[1].cell == "A1"
+
+
+def test_register_tools_accepts_make_ops_json_strings(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    app = DummyApp()
+    policy = PathPolicy(root=tmp_path)
+    calls: dict[str, tuple[object, ...]] = {}
+
+    def fake_run_extract_tool(
+        payload: ExtractToolInput,
+        *,
+        policy: PathPolicy,
+        on_conflict: OnConflictPolicy,
+    ) -> ExtractToolOutput:
+        return ExtractToolOutput(out_path="out.json")
+
+    def fake_run_read_json_chunk_tool(
+        payload: ReadJsonChunkToolInput,
+        *,
+        policy: PathPolicy,
+    ) -> ReadJsonChunkToolOutput:
+        return ReadJsonChunkToolOutput(chunk="{}")
+
+    def fake_run_validate_input_tool(
+        payload: ValidateInputToolInput,
+        *,
+        policy: PathPolicy,
+    ) -> ValidateInputToolOutput:
+        return ValidateInputToolOutput(is_readable=True)
+
+    def fake_run_patch_tool(
+        payload: PatchToolInput,
+        *,
+        policy: PathPolicy,
+        on_conflict: OnConflictPolicy,
+    ) -> PatchToolOutput:
+        return PatchToolOutput(out_path="out.xlsx", patch_diff=[], engine="openpyxl")
+
+    def fake_run_make_tool(
+        payload: MakeToolInput,
+        *,
+        policy: PathPolicy,
+        on_conflict: OnConflictPolicy,
+    ) -> MakeToolOutput:
+        calls["make"] = (payload, policy, on_conflict)
+        return MakeToolOutput(out_path="out.xlsx", patch_diff=[], engine="openpyxl")
+
+    async def fake_run_sync(func: Callable[[], object]) -> object:
+        return func()
+
+    monkeypatch.setattr(server, "run_extract_tool", fake_run_extract_tool)
+    monkeypatch.setattr(
+        server, "run_read_json_chunk_tool", fake_run_read_json_chunk_tool
+    )
+    monkeypatch.setattr(server, "run_validate_input_tool", fake_run_validate_input_tool)
+    monkeypatch.setattr(server, "run_patch_tool", fake_run_patch_tool)
+    monkeypatch.setattr(server, "run_make_tool", fake_run_make_tool)
+    monkeypatch.setattr(anyio.to_thread, "run_sync", fake_run_sync)
+
+    server._register_tools(app, policy, default_on_conflict="overwrite")
+    make_tool = cast(Callable[..., Awaitable[object]], app.tools["exstruct_make"])
+    anyio.run(
+        _call_async,
+        make_tool,
+        {
+            "out_path": "out.xlsx",
+            "ops": [
+                '{"op":"add_sheet","sheet":"New"}',
+                '{"op":"set_value","sheet":"New","cell":"A1","value":"x"}',
+            ],
+        },
+    )
+    make_call = cast(tuple[MakeToolInput, PathPolicy, OnConflictPolicy], calls["make"])
+    assert make_call[0].ops[0].op == "add_sheet"
+    assert make_call[0].ops[1].op == "set_value"
+    assert make_call[0].ops[1].value == "x"
 
 
 def test_register_tools_accepts_merge_and_alignment_json_strings(

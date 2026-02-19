@@ -92,6 +92,7 @@ exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict re
 Available tools:
 
 - `exstruct_extract`
+- `exstruct_make`
 - `exstruct_patch`
 - `exstruct_read_json_chunk`
 - `exstruct_read_range`
@@ -109,6 +110,10 @@ Notes:
   - `com`: force COM (rejects `dry_run` / `return_inverse_ops` / `preflight_formula_check`)
   - `openpyxl`: force openpyxl (`.xls` is not supported)
 - `exstruct_patch` response includes `engine` (`com` or `openpyxl`) to show the actual backend used. `restore_design_snapshot` remains openpyxl-only.
+- `exstruct_make` creates a new workbook and applies `ops` in one call (`out_path` required, `ops` optional).
+  - Supports `.xlsx` / `.xlsm` / `.xls`
+  - Initial sheet is normalized to `Sheet1`
+  - `.xls` requires COM and rejects `backend=openpyxl`
 
 MCP Setup Guide for Each AI Agent:
 

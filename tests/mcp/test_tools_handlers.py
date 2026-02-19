@@ -11,7 +11,7 @@ from exstruct.mcp.chunk_reader import (
     ReadJsonChunkResult,
 )
 from exstruct.mcp.extract_runner import ExtractRequest, ExtractResult
-from exstruct.mcp.patch_runner import PatchRequest, PatchResult
+from exstruct.mcp.patch_runner import MakeRequest, PatchRequest, PatchResult
 from exstruct.mcp.sheet_reader import (
     ReadCellsRequest,
     ReadCellsResult,
@@ -190,6 +190,36 @@ def test_run_patch_tool_builds_request(
     request = captured["request"]
     assert isinstance(request, PatchRequest)
     assert request.xlsx_path == Path("input.xlsx")
+    assert request.on_conflict == "rename"
+    assert request.dry_run is True
+    assert request.return_inverse_ops is True
+    assert request.preflight_formula_check is True
+    assert request.backend == "auto"
+
+
+def test_run_make_tool_builds_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    def _fake_run_make(
+        request: MakeRequest, *, policy: object | None = None
+    ) -> PatchResult:
+        captured["request"] = request
+        return PatchResult(out_path="out.xlsx", patch_diff=[], engine="openpyxl")
+
+    monkeypatch.setattr(tools, "run_make", _fake_run_make)
+    payload = tools.MakeToolInput(
+        out_path="output.xlsx",
+        ops=[{"op": "add_sheet", "sheet": "New"}],
+        dry_run=True,
+        return_inverse_ops=True,
+        preflight_formula_check=True,
+    )
+    tools.run_make_tool(payload, on_conflict="rename")
+    request = captured["request"]
+    assert isinstance(request, MakeRequest)
+    assert request.out_path == Path("output.xlsx")
     assert request.on_conflict == "rename"
     assert request.dry_run is True
     assert request.return_inverse_ops is True

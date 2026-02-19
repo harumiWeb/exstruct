@@ -6,6 +6,7 @@ so AI agents can call it safely as a tool.
 ## What it provides
 
 - Convert Excel into structured JSON (file output)
+- Create a new workbook and apply initial ops in one call
 - Edit Excel by applying patch operations (cell/sheet updates)
 - Read large JSON outputs in chunks
 - Read A1 ranges / specific cells / formulas directly from extracted JSON
@@ -59,6 +60,7 @@ exstruct-mcp --root C:\\data --log-file C:\\logs\\exstruct-mcp.log --on-conflict
 ## Tools
 
 - `exstruct_extract`
+- `exstruct_make`
 - `exstruct_patch`
 - `exstruct_read_json_chunk`
 - `exstruct_read_range`
@@ -172,6 +174,46 @@ Examples:
 1. Call without `cursor`
 2. If response has `next_cursor`, call again with that cursor
 3. Repeat until `next_cursor` is `null`
+
+## Edit flow (make/patch)
+
+### New workbook flow (`exstruct_make`)
+
+1. Build patch operations (`ops`) for initial sheets/cells
+2. Call `exstruct_make` with `out_path`
+3. Re-run `exstruct_extract` to verify results if needed
+
+### `exstruct_make` highlights
+
+- Creates a new workbook and applies `ops` in one call
+- `out_path` is required
+- `ops` is optional (empty list is allowed)
+- Supported output extensions: `.xlsx`, `.xlsm`, `.xls`
+- Initial sheet is normalized to `Sheet1`
+- Reuses patch pipeline, so `patch_diff`/`error` shape is compatible with `exstruct_patch`
+- Supports the same extended flags as `exstruct_patch`:
+  - `dry_run`
+  - `return_inverse_ops`
+  - `preflight_formula_check`
+  - `auto_formula`
+  - `backend`
+- `.xls` constraints:
+  - requires Windows Excel COM
+  - rejects `backend="openpyxl"`
+  - rejects `dry_run`/`return_inverse_ops`/`preflight_formula_check`
+
+Example:
+
+```json
+{
+  "tool": "exstruct_make",
+  "out_path": "C:\\data\\new_book.xlsx",
+  "ops": [
+    { "op": "add_sheet", "sheet": "Data" },
+    { "op": "set_value", "sheet": "Data", "cell": "A1", "value": "hello" }
+  ]
+}
+```
 
 ## Edit flow (patch)
 

@@ -89,6 +89,8 @@ exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict re
 利用可能なツール:
 
 - `exstruct_extract`
+- `exstruct_make`
+- `exstruct_patch`
 - `exstruct_read_json_chunk`
 - `exstruct_validate_input`
 
@@ -101,6 +103,10 @@ exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict re
   - `com`: COM を強制（`dry_run` / `return_inverse_ops` / `preflight_formula_check` は指定不可）
   - `openpyxl`: openpyxl を強制（`.xls` は非対応）
 - `exstruct_patch` の応答には実際に使われたバックエンドを示す `engine`（`com` / `openpyxl`）が含まれます。`restore_design_snapshot` は引き続き openpyxl 専用です。
+- `exstruct_make` は新規ブック作成と `ops` 適用を1回で実行します（`out_path` 必須、`ops` は任意）。
+  - 対応拡張子: `.xlsx` / `.xlsm` / `.xls`
+  - 初期シート名は `Sheet1` に正規化されます
+  - `.xls` は COM 必須で、`backend=openpyxl` は指定できません
 
 各AIエージェントでのMCP設定ガイド:
 

@@ -24,11 +24,13 @@ from .extract_runner import (
 from .io import PathPolicy
 from .patch_runner import (
     FormulaIssue,
+    MakeRequest,
     PatchDiffItem,
     PatchErrorDetail,
     PatchOp,
     PatchRequest,
     PatchResult,
+    run_make,
     run_patch,
 )
 from .sheet_reader import (
@@ -178,8 +180,33 @@ class PatchToolInput(BaseModel):
     backend: Literal["auto", "com", "openpyxl"] = "auto"
 
 
+class MakeToolInput(BaseModel):
+    """MCP tool input for creating and patching new Excel files."""
+
+    out_path: str
+    ops: list[PatchOp] = Field(default_factory=list)
+    on_conflict: OnConflictPolicy | None = None
+    auto_formula: bool = False
+    dry_run: bool = False
+    return_inverse_ops: bool = False
+    preflight_formula_check: bool = False
+    backend: Literal["auto", "com", "openpyxl"] = "auto"
+
+
 class PatchToolOutput(BaseModel):
     """MCP tool output for patching Excel files."""
+
+    out_path: str
+    patch_diff: list[PatchDiffItem] = Field(default_factory=list)
+    inverse_ops: list[PatchOp] = Field(default_factory=list)
+    formula_issues: list[FormulaIssue] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    error: PatchErrorDetail | None = None
+    engine: Literal["com", "openpyxl"]
+
+
+class MakeToolOutput(BaseModel):
+    """MCP tool output for workbook creation and patching."""
 
     out_path: str
     patch_diff: list[PatchDiffItem] = Field(default_factory=list)
@@ -358,6 +385,36 @@ def run_patch_tool(
     return _to_patch_tool_output(result)
 
 
+def run_make_tool(
+    payload: MakeToolInput,
+    *,
+    policy: PathPolicy | None = None,
+    on_conflict: OnConflictPolicy | None = None,
+) -> MakeToolOutput:
+    """Run the make tool handler.
+
+    Args:
+        payload: Tool input payload.
+        policy: Optional path policy for access control.
+        on_conflict: Optional conflict policy override.
+
+    Returns:
+        Tool output payload.
+    """
+    request = MakeRequest(
+        out_path=Path(payload.out_path),
+        ops=payload.ops,
+        on_conflict=payload.on_conflict or on_conflict or "overwrite",
+        auto_formula=payload.auto_formula,
+        dry_run=payload.dry_run,
+        return_inverse_ops=payload.return_inverse_ops,
+        preflight_formula_check=payload.preflight_formula_check,
+        backend=payload.backend,
+    )
+    result = run_make(request, policy=policy)
+    return _to_make_tool_output(result)
+
+
 def _to_tool_output(result: ExtractResult) -> ExtractToolOutput:
     """Convert internal result to tool output model.
 
@@ -477,6 +534,26 @@ def _to_patch_tool_output(result: PatchResult) -> PatchToolOutput:
         Tool output payload.
     """
     return PatchToolOutput(
+        out_path=result.out_path,
+        patch_diff=result.patch_diff,
+        inverse_ops=result.inverse_ops,
+        formula_issues=result.formula_issues,
+        warnings=result.warnings,
+        error=result.error,
+        engine=result.engine,
+    )
+
+
+def _to_make_tool_output(result: PatchResult) -> MakeToolOutput:
+    """Convert internal result to make tool output.
+
+    Args:
+        result: Internal make result.
+
+    Returns:
+        Tool output payload.
+    """
+    return MakeToolOutput(
         out_path=result.out_path,
         patch_diff=result.patch_diff,
         inverse_ops=result.inverse_ops,

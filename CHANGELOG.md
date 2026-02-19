@@ -8,10 +8,12 @@ All notable changes to this project are documented in this file. This changelog 
 
 - Extended MCP `exstruct_patch` with design editing operations: `draw_grid_border`, `set_bold`, `set_fill_color`, `set_dimensions`, `merge_cells`, `unmerge_cells`, `set_alignment`, and inverse restore op `restore_design_snapshot`.
 - Added patch backend controls for MCP `exstruct_patch`: `backend` input (`auto`/`com`/`openpyxl`) and `engine` output (`com`/`openpyxl`).
+- Added MCP `exstruct_make` for one-call workbook creation plus `ops` apply (`out_path` required, `ops` optional), including `.xlsx`/`.xlsm`/`.xls` support and `.xls` COM constraints.
 
 ### Changed
 
 - Updated patch backend policy: `auto` now prefers COM when available, with controlled fallback to openpyxl for `.xlsx`/`.xlsm` when COM execution fails.
+- Updated MCP docs/README pages to include `exstruct_make` behavior and constraints.
 
 ## [0.4.4] - 2026-02-16
 

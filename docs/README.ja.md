@@ -73,6 +73,7 @@ exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict re
 利用可能なツール:
 
 - `exstruct_extract`
+- `exstruct_make`
 - `exstruct_patch`
 - `exstruct_read_json_chunk`
 - `exstruct_read_range`
@@ -82,6 +83,10 @@ exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict re
 
 - `exstruct_read_range` / `exstruct_read_cells` / `exstruct_read_formulas` は v0.4.4 で追加され、MCPサーバー実装とテストに登録済みです。
 - MCPでは `exstruct_extract` の `options.alpha_col=true` が既定です（列キーは `A`, `B`, ...）。従来の0始まり数値キーが必要な場合は `options.alpha_col=false` を指定してください。
+- `exstruct_make` は新規ブック作成と `ops` 適用を1回で実行します（`out_path` 必須、`ops` は任意）。
+  - 対応拡張子: `.xlsx` / `.xlsm` / `.xls`
+  - 初期シート名は `Sheet1` に正規化されます
+  - `.xls` は COM 必須で、`backend=openpyxl` は指定できません
 
 注意点:
 
