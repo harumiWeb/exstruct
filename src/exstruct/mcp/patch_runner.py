@@ -25,6 +25,7 @@ PatchOpType = Literal[
     "set_formula_if",
     "draw_grid_border",
     "set_bold",
+    "set_font_size",
     "set_fill_color",
     "set_dimensions",
     "merge_cells",
@@ -107,6 +108,7 @@ class FontSnapshot(BaseModel):
 
     cell: str
     bold: bool | None = None
+    size: float | None = None
 
 
 class FillSnapshot(BaseModel):
@@ -202,6 +204,7 @@ class OpenpyxlFontProtocol(Protocol):
     """Protocol for openpyxl font access."""
 
     bold: bool | None
+    size: float | None
 
 
 @runtime_checkable
@@ -329,6 +332,7 @@ class XlwingsFontApiProtocol(Protocol):
     """Protocol for xlwings COM font API."""
 
     Bold: bool
+    Size: float
 
 
 @runtime_checkable
@@ -409,6 +413,7 @@ class PatchOp(BaseModel):
     - ``set_formula_if``: Conditionally set formula. Requires ``sheet``, ``cell``, ``formula``. ``expected`` is optional; ``null`` matches an empty cell. Skips if current value != expected.
     - ``draw_grid_border``: Draw thin black borders on a target rectangle.
     - ``set_bold``: Set bold style for one cell or one range.
+    - ``set_font_size``: Set font size for one cell or one range.
     - ``set_fill_color``: Set solid fill color for one cell or one range.
     - ``set_dimensions``: Set row height and/or column width.
     - ``merge_cells``: Merge a rectangular range.
@@ -421,7 +426,8 @@ class PatchOp(BaseModel):
         description=(
             "Operation type: 'set_value', 'set_formula', 'add_sheet', "
             "'set_range_values', 'fill_formula', 'set_value_if', 'set_formula_if', "
-            "'draw_grid_border', 'set_bold', 'set_fill_color', 'set_dimensions', "
+            "'draw_grid_border', 'set_bold', 'set_font_size', 'set_fill_color', "
+            "'set_dimensions', "
             "'merge_cells', 'unmerge_cells', 'set_alignment', "
             "or 'restore_design_snapshot'."
         )
@@ -468,6 +474,10 @@ class PatchOp(BaseModel):
     bold: bool | None = Field(
         default=None,
         description="Bold flag for set_bold. Defaults to true.",
+    )
+    font_size: float | None = Field(
+        default=None,
+        description="Font size for set_font_size. Must be > 0.",
     )
     fill_color: str | None = Field(
         default=None,
@@ -610,6 +620,7 @@ def _validator_for_op(op_type: PatchOpType) -> Callable[[PatchOp], None] | None:
         "set_formula_if": _validate_set_formula_if,
         "draw_grid_border": _validate_draw_grid_border,
         "set_bold": _validate_set_bold,
+        "set_font_size": _validate_set_font_size,
         "set_fill_color": _validate_set_fill_color,
         "set_dimensions": _validate_set_dimensions,
         "merge_cells": _validate_merge_cells,
@@ -761,6 +772,8 @@ def _validate_draw_grid_border(op: PatchOp) -> None:
         raise ValueError("draw_grid_border does not accept cell or range.")
     if op.bold is not None or op.fill_color is not None:
         raise ValueError("draw_grid_border does not accept bold or fill_color.")
+    if op.font_size is not None:
+        raise ValueError("draw_grid_border does not accept font_size.")
     if op.rows is not None or op.columns is not None:
         raise ValueError("draw_grid_border does not accept rows or columns.")
     if op.row_height is not None or op.column_width is not None:
@@ -787,6 +800,8 @@ def _validate_set_bold(op: PatchOp) -> None:
         raise ValueError("set_bold does not accept row_count or col_count.")
     if op.fill_color is not None:
         raise ValueError("set_bold does not accept fill_color.")
+    if op.font_size is not None:
+        raise ValueError("set_bold does not accept font_size.")
     if op.rows is not None or op.columns is not None:
         raise ValueError("set_bold does not accept rows or columns.")
     if op.row_height is not None or op.column_width is not None:
@@ -800,6 +815,28 @@ def _validate_set_bold(op: PatchOp) -> None:
     _validate_style_target_size(op, op_name="set_bold")
 
 
+def _validate_set_font_size(op: PatchOp) -> None:
+    """Validate set_font_size operation."""
+    _validate_no_legacy_edit_fields(op, op_name="set_font_size")
+    if op.row_count is not None or op.col_count is not None:
+        raise ValueError("set_font_size does not accept row_count or col_count.")
+    if op.bold is not None or op.fill_color is not None:
+        raise ValueError("set_font_size does not accept bold or fill_color.")
+    if op.rows is not None or op.columns is not None:
+        raise ValueError("set_font_size does not accept rows or columns.")
+    if op.row_height is not None or op.column_width is not None:
+        raise ValueError("set_font_size does not accept row_height or column_width.")
+    if op.design_snapshot is not None:
+        raise ValueError("set_font_size does not accept design_snapshot.")
+    _validate_no_alignment_fields(op, op_name="set_font_size")
+    _validate_exactly_one_cell_or_range(op, op_name="set_font_size")
+    if op.font_size is None:
+        raise ValueError("set_font_size requires font_size.")
+    if op.font_size <= 0:
+        raise ValueError("set_font_size font_size must be > 0.")
+    _validate_style_target_size(op, op_name="set_font_size")
+
+
 def _validate_set_fill_color(op: PatchOp) -> None:
     """Validate set_fill_color operation."""
     _validate_no_legacy_edit_fields(op, op_name="set_fill_color")
@@ -807,6 +844,8 @@ def _validate_set_fill_color(op: PatchOp) -> None:
         raise ValueError("set_fill_color does not accept row_count or col_count.")
     if op.bold is not None:
         raise ValueError("set_fill_color does not accept bold.")
+    if op.font_size is not None:
+        raise ValueError("set_fill_color does not accept font_size.")
     if op.rows is not None or op.columns is not None:
         raise ValueError("set_fill_color does not accept rows or columns.")
     if op.row_height is not None or op.column_width is not None:
@@ -829,6 +868,8 @@ def _validate_set_dimensions(op: PatchOp) -> None:
         raise ValueError("set_dimensions does not accept row_count or col_count.")
     if op.bold is not None or op.fill_color is not None:
         raise ValueError("set_dimensions does not accept bold or fill_color.")
+    if op.font_size is not None:
+        raise ValueError("set_dimensions does not accept font_size.")
     if op.design_snapshot is not None:
         raise ValueError("set_dimensions does not accept design_snapshot.")
     _validate_no_alignment_fields(op, op_name="set_dimensions")
@@ -859,6 +900,8 @@ def _validate_merge_cells(op: PatchOp) -> None:
         raise ValueError("merge_cells does not accept row_count or col_count.")
     if op.bold is not None or op.fill_color is not None:
         raise ValueError("merge_cells does not accept bold or fill_color.")
+    if op.font_size is not None:
+        raise ValueError("merge_cells does not accept font_size.")
     if op.rows is not None or op.columns is not None:
         raise ValueError("merge_cells does not accept rows or columns.")
     if op.row_height is not None or op.column_width is not None:
@@ -881,6 +924,8 @@ def _validate_unmerge_cells(op: PatchOp) -> None:
         raise ValueError("unmerge_cells does not accept row_count or col_count.")
     if op.bold is not None or op.fill_color is not None:
         raise ValueError("unmerge_cells does not accept bold or fill_color.")
+    if op.font_size is not None:
+        raise ValueError("unmerge_cells does not accept font_size.")
     if op.rows is not None or op.columns is not None:
         raise ValueError("unmerge_cells does not accept rows or columns.")
     if op.row_height is not None or op.column_width is not None:
@@ -899,6 +944,8 @@ def _validate_set_alignment(op: PatchOp) -> None:
         raise ValueError("set_alignment does not accept row_count or col_count.")
     if op.bold is not None or op.fill_color is not None:
         raise ValueError("set_alignment does not accept bold or fill_color.")
+    if op.font_size is not None:
+        raise ValueError("set_alignment does not accept font_size.")
     if op.rows is not None or op.columns is not None:
         raise ValueError("set_alignment does not accept rows or columns.")
     if op.row_height is not None or op.column_width is not None:
@@ -930,6 +977,8 @@ def _validate_restore_design_snapshot(op: PatchOp) -> None:
         )
     if op.bold is not None or op.fill_color is not None:
         raise ValueError("restore_design_snapshot does not accept bold or fill_color.")
+    if op.font_size is not None:
+        raise ValueError("restore_design_snapshot does not accept font_size.")
     if op.rows is not None or op.columns is not None:
         raise ValueError("restore_design_snapshot does not accept rows or columns.")
     if op.row_height is not None or op.column_width is not None:
@@ -959,6 +1008,8 @@ def _validate_no_design_fields(op: PatchOp, *, op_name: str) -> None:
         raise ValueError(f"{op_name} does not accept row_count or col_count.")
     if op.bold is not None:
         raise ValueError(f"{op_name} does not accept bold.")
+    if op.font_size is not None:
+        raise ValueError(f"{op_name} does not accept font_size.")
     if op.fill_color is not None:
         raise ValueError(f"{op_name} does not accept fill_color.")
     if op.rows is not None or op.columns is not None:
@@ -1401,6 +1452,7 @@ def _contains_design_ops(ops: list[PatchOp]) -> bool:
     design_ops = {
         "draw_grid_border",
         "set_bold",
+        "set_font_size",
         "set_fill_color",
         "set_dimensions",
         "merge_cells",
@@ -1613,6 +1665,7 @@ def _apply_openpyxl_sheet_op(
         "fill_formula": lambda: _apply_openpyxl_fill_formula(sheet, op, index),
         "draw_grid_border": lambda: _apply_openpyxl_draw_grid_border(sheet, op, index),
         "set_bold": lambda: _apply_openpyxl_set_bold(sheet, op, index),
+        "set_font_size": lambda: _apply_openpyxl_set_font_size(sheet, op, index),
         "set_fill_color": lambda: _apply_openpyxl_set_fill_color(sheet, op, index),
         "set_dimensions": lambda: _apply_openpyxl_set_dimensions(sheet, op, index),
         "merge_cells": lambda: _apply_openpyxl_merge_cells(sheet, op, index, warnings),
@@ -1764,6 +1817,37 @@ def _apply_openpyxl_set_bold(
             cell=location,
             before=None,
             after=PatchValue(kind="style", value=f"bold={target_bold}"),
+        ),
+        _build_restore_snapshot_op(op.sheet, snapshot),
+    )
+
+
+def _apply_openpyxl_set_font_size(
+    sheet: OpenpyxlWorksheetProtocol,
+    op: PatchOp,
+    index: int,
+) -> tuple[PatchDiffItem, PatchOp | None]:
+    """Apply set_font_size op."""
+    if op.font_size is None:
+        raise ValueError("set_font_size requires font_size.")
+    targets = _resolve_style_targets(op)
+    snapshot = DesignSnapshot(
+        fonts=[_snapshot_font(sheet[coord], coord) for coord in targets]
+    )
+    for coord in targets:
+        cell = sheet[coord]
+        font = copy(cell.font)
+        font.size = op.font_size
+        cell.font = font
+    location = op.cell if op.cell is not None else op.range
+    return (
+        PatchDiffItem(
+            op_index=index,
+            op=op.op,
+            sheet=op.sheet,
+            cell=location,
+            before=None,
+            after=PatchValue(kind="style", value=f"font_size={op.font_size}"),
         ),
         _build_restore_snapshot_op(op.sheet, snapshot),
     )
@@ -2284,7 +2368,11 @@ def _snapshot_border_side(side: object) -> BorderSideSnapshot:
 def _snapshot_font(cell: OpenpyxlCellProtocol, coordinate: str) -> FontSnapshot:
     """Capture font snapshot for one cell."""
     font = cell.font
-    return FontSnapshot(cell=coordinate, bold=getattr(font, "bold", None))
+    return FontSnapshot(
+        cell=coordinate,
+        bold=getattr(font, "bold", None),
+        size=getattr(font, "size", None),
+    )
 
 
 def _snapshot_fill(cell: OpenpyxlCellProtocol, coordinate: str) -> FillSnapshot:
@@ -2348,6 +2436,7 @@ def _restore_design_snapshot(
         cell = sheet[font_snapshot.cell]
         font = copy(cell.font)
         font.bold = font_snapshot.bold
+        font.size = font_snapshot.size
         cell.font = font
     for fill_snapshot in snapshot.fills:
         _restore_fill(sheet[fill_snapshot.cell], fill_snapshot)
@@ -2578,6 +2667,7 @@ def _apply_xlwings_extended_op(
         "fill_formula": lambda: _apply_xlwings_fill_formula(sheet, op, index),
         "draw_grid_border": lambda: _apply_xlwings_draw_grid_border(sheet, op, index),
         "set_bold": lambda: _apply_xlwings_set_bold(sheet, op, index),
+        "set_font_size": lambda: _apply_xlwings_set_font_size(sheet, op, index),
         "set_fill_color": lambda: _apply_xlwings_set_fill_color(sheet, op, index),
         "set_dimensions": lambda: _apply_xlwings_set_dimensions(sheet, op, index),
         "merge_cells": lambda: _apply_xlwings_merge_cells(sheet, op, index),
@@ -2674,6 +2764,25 @@ def _apply_xlwings_set_bold(
         cell=target_range_ref,
         before=None,
         after=PatchValue(kind="style", value=f"bold={target_bold}"),
+    )
+
+
+def _apply_xlwings_set_font_size(
+    sheet: XlwingsSheetProtocol, op: PatchOp, index: int
+) -> PatchDiffItem:
+    """Apply set_font_size with xlwings."""
+    if op.font_size is None:
+        raise ValueError("set_font_size requires font_size.")
+    target_range_ref = _xlwings_target_range_ref(op)
+    target_api = _xlwings_range_api(sheet.range(target_range_ref))
+    target_api.Font.Size = op.font_size
+    return PatchDiffItem(
+        op_index=index,
+        op=op.op,
+        sheet=op.sheet,
+        cell=target_range_ref,
+        before=None,
+        after=PatchValue(kind="style", value=f"font_size={op.font_size}"),
     )
 
 

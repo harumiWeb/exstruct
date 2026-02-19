@@ -195,6 +195,7 @@ Examples:
   - `set_formula_if`
   - `draw_grid_border`
   - `set_bold`
+  - `set_font_size`
   - `set_fill_color`
   - `set_dimensions`
   - `merge_cells`

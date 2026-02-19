@@ -3,41 +3,41 @@
 未完了 [ ], 完了 [x]
 
 ## Phase 0: Spec固定
-- [ ] `set_font_size` のI/F仕様（対象・制約）を確定する
-- [ ] バリデーション方針（`cell`/`range`, `font_size > 0`）を確定する
-- [ ] openpyxl/COM の実装方針を確定する
+- [x] `set_font_size` のI/F仕様（対象・制約）を確定する
+- [x] バリデーション方針（`cell`/`range`, `font_size > 0`）を確定する
+- [x] openpyxl/COM の実装方針を確定する
 
 ## Phase 1: Model/Server I/F
-- [ ] `PatchOp` の `op` 許可一覧に `set_font_size` を追加する
-- [ ] `PatchOp` に `font_size` フィールドを追加する
-- [ ] `set_font_size` 用バリデーション関数を追加する
-- [ ] `server.py` の `exstruct_patch` docstring に `set_font_size` を追記する
+- [x] `PatchOp` の `op` 許可一覧に `set_font_size` を追加する
+- [x] `PatchOp` に `font_size` フィールドを追加する
+- [x] `set_font_size` 用バリデーション関数を追加する
+- [x] `server.py` の `exstruct_patch` docstring に `set_font_size` を追記する
 
 ## Phase 2: Patch Runner実装
-- [ ] openpyxl経路に `set_font_size` 適用処理を追加する
-- [ ] COM経路に `set_font_size` 適用処理を追加する
-- [ ] `patch_diff` の出力形式を既存スタイルop互換で実装する
-- [ ] 既存スタイルop共通処理への統合可否を確認する
+- [x] openpyxl経路に `set_font_size` 適用処理を追加する
+- [x] COM経路に `set_font_size` 適用処理を追加する
+- [x] `patch_diff` の出力形式を既存スタイルop互換で実装する
+- [x] 既存スタイルop共通処理への統合可否を確認する
 
 ## Phase 3: テスト
-- [ ] `set_font_size` 正常系（cell）テストを追加する
-- [ ] `set_font_size` 正常系（range）テストを追加する
-- [ ] `font_size <= 0` 異常系テストを追加する
-- [ ] `cell`/`range` 同時指定・未指定の異常系テストを追加する
-- [ ] openpyxlで既存フォント属性保持テストを追加する
-- [ ] COM経路テスト（実行可能範囲）を追加する
-- [ ] 既存回帰テストが通ることを確認する
+- [x] `set_font_size` 正常系（cell）テストを追加する
+- [x] `set_font_size` 正常系（range）テストを追加する
+- [x] `font_size <= 0` 異常系テストを追加する
+- [x] `cell`/`range` 同時指定・未指定の異常系テストを追加する
+- [x] openpyxlで既存フォント属性保持テストを追加する
+- [x] COM経路テスト（実行可能範囲）を追加する
+- [x] 既存回帰テストが通ることを確認する
 
 ## Phase 4: ドキュメント
-- [ ] `docs/mcp.md` に `set_font_size` を追記する
+- [x] `docs/mcp.md` に `set_font_size` を追記する
 - [ ] 必要に応じて `README.md` / `README.ja.md` を更新する
 - [ ] `CHANGELOG.md` を更新する
-- [ ] `docs/agents/FEATURE_SPEC.md` と本タスクリストを同期する
+- [x] `docs/agents/FEATURE_SPEC.md` と本タスクリストを同期する
 
 ## Phase 5: 検証
-- [ ] `uv run pytest tests/mcp` を実行する
-- [ ] `uv run task precommit-run` を実行する
-- [ ] 全通過を確認する
+- [x] `uv run pytest tests/mcp` を実行する
+- [x] `uv run task precommit-run` を実行する
+- [x] 全通過を確認する
 
 ## テスト/受け入れ条件
 1. `set_font_size` で対象セルのサイズが変更される

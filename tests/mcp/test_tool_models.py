@@ -76,6 +76,21 @@ def test_patch_tool_input_accepts_merge_and_alignment_ops() -> None:
     assert payload.ops[1].op == "set_alignment"
 
 
+def test_patch_tool_input_accepts_set_font_size_op() -> None:
+    payload = PatchToolInput(
+        xlsx_path="input.xlsx",
+        ops=[
+            {
+                "op": "set_font_size",
+                "sheet": "Sheet1",
+                "cell": "A1",
+                "font_size": 14,
+            }
+        ],
+    )
+    assert payload.ops[0].op == "set_font_size"
+
+
 def test_patch_tool_input_rejects_invalid_horizontal_align() -> None:
     with pytest.raises(ValidationError):
         PatchToolInput(

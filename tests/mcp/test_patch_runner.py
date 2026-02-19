@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
-from openpyxl.styles import Alignment
+from openpyxl.styles import Alignment, Font
 from pydantic import ValidationError
 import pytest
 
@@ -792,6 +792,65 @@ def test_run_patch_set_bold_and_fill_color(
         workbook.close()
 
 
+def test_run_patch_set_font_size_cell_and_range(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    ops = [
+        PatchOp(op="set_font_size", sheet="Sheet1", cell="A1", font_size=14.5),
+        PatchOp(op="set_font_size", sheet="Sheet1", range="A1:B1", font_size=16.0),
+    ]
+    request = PatchRequest(xlsx_path=input_path, ops=ops, on_conflict="rename")
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.error is None
+    workbook = load_workbook(result.out_path)
+    try:
+        sheet = workbook["Sheet1"]
+        assert sheet["A1"].font.size == 16.0
+        assert sheet["B1"].font.size == 16.0
+    finally:
+        workbook.close()
+
+
+def test_run_patch_set_font_size_preserves_other_font_fields(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    workbook = load_workbook(input_path)
+    try:
+        workbook["Sheet1"]["A1"].font = Font(
+            name="Calibri", bold=True, italic=True, size=11.0
+        )
+        workbook.save(input_path)
+    finally:
+        workbook.close()
+
+    result = run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[
+                PatchOp(op="set_font_size", sheet="Sheet1", cell="A1", font_size=18.0)
+            ],
+            on_conflict="rename",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert result.error is None
+    out_book = load_workbook(result.out_path)
+    try:
+        font = out_book["Sheet1"]["A1"].font
+        assert font.name == "Calibri"
+        assert font.bold is True
+        assert font.italic is True
+        assert font.size == 18.0
+    finally:
+        out_book.close()
+
+
 def test_run_patch_set_dimensions(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -833,6 +892,71 @@ def test_patch_op_set_fill_color_rejects_invalid_color() -> None:
         ValidationError, match="Invalid fill_color format. Use '#RRGGBB' or '#AARRGGBB'"
     ):
         PatchOp(op="set_fill_color", sheet="Sheet1", cell="A1", fill_color="red")
+
+
+def test_patch_op_set_font_size_rejects_non_positive() -> None:
+    with pytest.raises(ValidationError, match="set_font_size font_size must be > 0"):
+        PatchOp(op="set_font_size", sheet="Sheet1", cell="A1", font_size=0)
+
+
+def test_patch_op_set_font_size_rejects_cell_and_range() -> None:
+    with pytest.raises(
+        ValidationError, match="set_font_size requires exactly one of cell or range"
+    ):
+        PatchOp(
+            op="set_font_size",
+            sheet="Sheet1",
+            cell="A1",
+            range="A1:A1",
+            font_size=12,
+        )
+
+
+def test_patch_op_set_font_size_requires_target() -> None:
+    with pytest.raises(
+        ValidationError, match="set_font_size requires exactly one of cell or range"
+    ):
+        PatchOp(op="set_font_size", sheet="Sheet1", font_size=12)
+
+
+def test_apply_xlwings_set_font_size() -> None:
+    class _FakeFontApi:
+        Size: float = 0.0
+
+    class _FakeRangeApi:
+        Font: _FakeFontApi
+
+        def __init__(self) -> None:
+            self.Font = _FakeFontApi()
+
+    class _FakeRange:
+        value: object | None = None
+        formula: str | None = None
+        api: object
+
+        def __init__(self, api: _FakeRangeApi) -> None:
+            self.api = api
+
+    class _FakeSheet:
+        name = "Sheet1"
+        api = object()
+
+        def __init__(self) -> None:
+            self.range_api = _FakeRangeApi()
+            self.last_ref = ""
+
+        def range(self, cell: str) -> patch_runner.XlwingsRangeProtocol:
+            self.last_ref = cell
+            return _FakeRange(self.range_api)
+
+    sheet = _FakeSheet()
+    op = PatchOp(op="set_font_size", sheet="Sheet1", range="A1:B2", font_size=13.0)
+    diff = patch_runner._apply_xlwings_set_font_size(sheet, op, index=0)
+
+    assert sheet.last_ref == "A1:B2"
+    assert sheet.range_api.Font.Size == 13.0
+    assert diff.after is not None
+    assert diff.after.value == "font_size=13.0"
 
 
 def test_patch_op_set_dimensions_requires_dimension_pair() -> None:
