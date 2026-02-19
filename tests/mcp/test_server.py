@@ -169,7 +169,7 @@ def test_register_tools_uses_default_on_conflict(
         on_conflict: OnConflictPolicy,
     ) -> PatchToolOutput:
         calls["patch"] = (payload, policy, on_conflict)
-        return PatchToolOutput(out_path="out.xlsx", patch_diff=[])
+        return PatchToolOutput(out_path="out.xlsx", patch_diff=[], engine="openpyxl")
 
     async def fake_run_sync(func: Callable[[], object]) -> object:
         return func()
@@ -215,6 +215,7 @@ def test_register_tools_uses_default_on_conflict(
     assert patch_call[0].dry_run is False
     assert patch_call[0].return_inverse_ops is False
     assert patch_call[0].preflight_formula_check is False
+    assert patch_call[0].backend == "auto"
 
 
 def test_register_tools_passes_read_tool_arguments(
@@ -283,7 +284,7 @@ def test_register_tools_passes_read_tool_arguments(
         policy: PathPolicy,
         on_conflict: OnConflictPolicy,
     ) -> PatchToolOutput:
-        return PatchToolOutput(out_path="out.xlsx", patch_diff=[])
+        return PatchToolOutput(out_path="out.xlsx", patch_diff=[], engine="openpyxl")
 
     async def fake_run_sync(func: Callable[[], object]) -> object:
         return func()
@@ -372,7 +373,7 @@ def test_register_tools_accepts_patch_ops_json_strings(
         on_conflict: OnConflictPolicy,
     ) -> PatchToolOutput:
         calls["patch"] = (payload, policy, on_conflict)
-        return PatchToolOutput(out_path="out.xlsx", patch_diff=[])
+        return PatchToolOutput(out_path="out.xlsx", patch_diff=[], engine="openpyxl")
 
     async def fake_run_sync(func: Callable[[], object]) -> object:
         return func()
@@ -443,7 +444,7 @@ def test_register_tools_accepts_merge_and_alignment_json_strings(
         on_conflict: OnConflictPolicy,
     ) -> PatchToolOutput:
         calls["patch"] = (payload, policy, on_conflict)
-        return PatchToolOutput(out_path="out.xlsx", patch_diff=[])
+        return PatchToolOutput(out_path="out.xlsx", patch_diff=[], engine="openpyxl")
 
     async def fake_run_sync(func: Callable[[], object]) -> object:
         return func()
@@ -516,6 +517,7 @@ def test_register_tools_returns_patch_warnings(
             out_path="out.xlsx",
             patch_diff=[],
             warnings=["merge_cells may clear non-top-left values"],
+            engine="openpyxl",
         )
 
     async def fake_run_sync(func: Callable[[], object]) -> object:
@@ -576,7 +578,7 @@ def test_register_tools_rejects_invalid_patch_ops_json_strings(
         policy: PathPolicy,
         on_conflict: OnConflictPolicy,
     ) -> PatchToolOutput:
-        return PatchToolOutput(out_path="out.xlsx", patch_diff=[])
+        return PatchToolOutput(out_path="out.xlsx", patch_diff=[], engine="openpyxl")
 
     async def fake_run_sync(func: Callable[[], object]) -> object:
         return func()
@@ -638,7 +640,7 @@ def test_register_tools_passes_patch_default_on_conflict(
         on_conflict: OnConflictPolicy,
     ) -> PatchToolOutput:
         calls["patch"] = (payload, policy, on_conflict)
-        return PatchToolOutput(out_path="out.xlsx", patch_diff=[])
+        return PatchToolOutput(out_path="out.xlsx", patch_diff=[], engine="openpyxl")
 
     async def fake_run_sync(func: Callable[[], object]) -> object:
         return func()
@@ -698,7 +700,7 @@ def test_register_tools_passes_patch_extended_flags(
         on_conflict: OnConflictPolicy,
     ) -> PatchToolOutput:
         calls["patch"] = (payload, policy, on_conflict)
-        return PatchToolOutput(out_path="out.xlsx", patch_diff=[])
+        return PatchToolOutput(out_path="out.xlsx", patch_diff=[], engine="openpyxl")
 
     async def fake_run_sync(func: Callable[[], object]) -> object:
         return func()
@@ -722,6 +724,7 @@ def test_register_tools_passes_patch_extended_flags(
             "dry_run": True,
             "return_inverse_ops": True,
             "preflight_formula_check": True,
+            "backend": "openpyxl",
         },
     )
     patch_call = cast(
@@ -730,6 +733,7 @@ def test_register_tools_passes_patch_extended_flags(
     assert patch_call[0].dry_run is True
     assert patch_call[0].return_inverse_ops is True
     assert patch_call[0].preflight_formula_check is True
+    assert patch_call[0].backend == "openpyxl"
 
 
 def test_run_server_sets_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

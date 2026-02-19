@@ -56,6 +56,197 @@ def test_run_patch_set_value_and_formula(
         workbook.close()
     assert len(result.patch_diff) == 2
     assert result.patch_diff[0].after is not None
+    assert result.engine == "openpyxl"
+
+
+def test_run_patch_backend_auto_prefers_com(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    calls: dict[str, bool] = {}
+
+    monkeypatch.setattr(
+        patch_runner,
+        "get_com_availability",
+        lambda: ComAvailability(available=True, reason=None),
+    )
+
+    def _fake_apply_ops_xlwings(
+        input_path: Path,
+        output_path: Path,
+        ops: list[PatchOp],
+        auto_formula: bool,
+    ) -> list[patch_runner.PatchDiffItem]:
+        calls["com"] = True
+        return []
+
+    monkeypatch.setattr(patch_runner, "_apply_ops_xlwings", _fake_apply_ops_xlwings)
+    result = run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="new")],
+            on_conflict="rename",
+            backend="auto",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert result.error is None
+    assert result.engine == "com"
+    assert calls["com"] is True
+
+
+def test_run_patch_backend_auto_uses_openpyxl_when_com_unavailable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    result = run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="new")],
+            on_conflict="rename",
+            backend="auto",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert result.error is None
+    assert result.engine == "openpyxl"
+
+
+def test_run_patch_backend_com_requires_com_available(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    with pytest.raises(ValueError, match=r"backend='com' requires"):
+        run_patch(
+            PatchRequest(
+                xlsx_path=input_path,
+                ops=[PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="new")],
+                on_conflict="rename",
+                backend="com",
+            ),
+            policy=PathPolicy(root=tmp_path),
+        )
+
+
+def test_run_patch_backend_openpyxl_rejects_xls(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        patch_runner,
+        "get_com_availability",
+        lambda: ComAvailability(available=True, reason=None),
+    )
+    input_path = tmp_path / "book.xls"
+    input_path.write_text("dummy", encoding="utf-8")
+    with pytest.raises(ValueError, match=r"backend='openpyxl' cannot edit \.xls"):
+        run_patch(
+            PatchRequest(
+                xlsx_path=input_path,
+                ops=[PatchOp(op="add_sheet", sheet="Sheet2")],
+                on_conflict="rename",
+                backend="openpyxl",
+            ),
+            policy=PathPolicy(root=tmp_path),
+        )
+
+
+def test_patch_request_backend_com_rejects_dry_run() -> None:
+    with pytest.raises(ValidationError, match=r"backend='com' does not support"):
+        PatchRequest(
+            xlsx_path=Path("book.xlsx"),
+            ops=[PatchOp(op="add_sheet", sheet="S2")],
+            dry_run=True,
+            backend="com",
+        )
+
+
+def test_patch_request_backend_com_rejects_restore_design_snapshot() -> None:
+    with pytest.raises(
+        ValidationError,
+        match=r"backend='com' does not support restore_design_snapshot operation",
+    ):
+        PatchRequest(
+            xlsx_path=Path("book.xlsx"),
+            ops=[
+                PatchOp(
+                    op="restore_design_snapshot",
+                    sheet="Sheet1",
+                    design_snapshot=patch_runner.DesignSnapshot(),
+                )
+            ],
+            backend="com",
+        )
+
+
+def test_run_patch_backend_auto_fallbacks_to_openpyxl_on_com_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    monkeypatch.setattr(
+        patch_runner,
+        "get_com_availability",
+        lambda: ComAvailability(available=True, reason=None),
+    )
+
+    def _raise_com_error(
+        input_path: Path,
+        output_path: Path,
+        ops: list[PatchOp],
+        auto_formula: bool,
+    ) -> list[patch_runner.PatchDiffItem]:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(patch_runner, "_apply_ops_xlwings", _raise_com_error)
+    result = run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="new")],
+            on_conflict="rename",
+            backend="auto",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert result.error is None
+    assert result.engine == "openpyxl"
+    assert any("falling back to openpyxl" in warning for warning in result.warnings)
+
+
+def test_run_patch_backend_com_does_not_fallback_on_com_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    monkeypatch.setattr(
+        patch_runner,
+        "get_com_availability",
+        lambda: ComAvailability(available=True, reason=None),
+    )
+
+    def _raise_com_error(
+        input_path: Path,
+        output_path: Path,
+        ops: list[PatchOp],
+        auto_formula: bool,
+    ) -> list[patch_runner.PatchDiffItem]:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(patch_runner, "_apply_ops_xlwings", _raise_com_error)
+    with pytest.raises(RuntimeError, match=r"COM patch failed"):
+        run_patch(
+            PatchRequest(
+                xlsx_path=input_path,
+                ops=[PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="new")],
+                on_conflict="rename",
+                backend="com",
+            ),
+            policy=PathPolicy(root=tmp_path),
+        )
 
 
 def test_run_patch_add_sheet_and_set_value(

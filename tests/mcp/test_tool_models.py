@@ -37,6 +37,7 @@ def test_patch_tool_input_defaults() -> None:
     assert payload.dry_run is False
     assert payload.return_inverse_ops is False
     assert payload.preflight_formula_check is False
+    assert payload.backend == "auto"
 
 
 def test_patch_tool_input_accepts_design_ops() -> None:

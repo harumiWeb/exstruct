@@ -436,6 +436,7 @@ def _register_tools(
         dry_run: bool = False,
         return_inverse_ops: bool = False,
         preflight_formula_check: bool = False,
+        backend: Literal["auto", "com", "openpyxl"] = "auto",
     ) -> PatchToolOutput:
         """Edit an Excel workbook by applying patch operations.
 
@@ -472,6 +473,13 @@ def _register_tools(
             return_inverse_ops: When true, return inverse (undo) operations.
             preflight_formula_check: When true, scan formulas for errors
                 like #REF!, #NAME?, #DIV/0! before saving.
+            backend: Patch execution backend.
+                - "auto" (default): prefer COM when available; otherwise openpyxl.
+                  Uses openpyxl when dry_run/return_inverse_ops/preflight_formula_check
+                  is enabled.
+                - "com": force COM path (requires Excel COM and disallows
+                  dry_run/return_inverse_ops/preflight_formula_check).
+                - "openpyxl": force openpyxl path (.xls is not supported).
 
         Returns:
             Patch result with output path, applied diffs, and any warnings.
@@ -487,6 +495,7 @@ def _register_tools(
             dry_run=dry_run,
             return_inverse_ops=return_inverse_ops,
             preflight_formula_check=preflight_formula_check,
+            backend=backend,
         )
         effective_on_conflict = on_conflict or default_on_conflict
         work = functools.partial(

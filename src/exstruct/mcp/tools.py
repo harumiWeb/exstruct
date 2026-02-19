@@ -175,6 +175,7 @@ class PatchToolInput(BaseModel):
     dry_run: bool = False
     return_inverse_ops: bool = False
     preflight_formula_check: bool = False
+    backend: Literal["auto", "com", "openpyxl"] = "auto"
 
 
 class PatchToolOutput(BaseModel):
@@ -186,6 +187,7 @@ class PatchToolOutput(BaseModel):
     formula_issues: list[FormulaIssue] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     error: PatchErrorDetail | None = None
+    engine: Literal["com", "openpyxl"]
 
 
 def run_extract_tool(
@@ -350,6 +352,7 @@ def run_patch_tool(
         dry_run=payload.dry_run,
         return_inverse_ops=payload.return_inverse_ops,
         preflight_formula_check=payload.preflight_formula_check,
+        backend=payload.backend,
     )
     result = run_patch(request, policy=policy)
     return _to_patch_tool_output(result)
@@ -480,4 +483,5 @@ def _to_patch_tool_output(result: PatchResult) -> PatchToolOutput:
         formula_issues=result.formula_issues,
         warnings=result.warnings,
         error=result.error,
+        engine=result.engine,
     )

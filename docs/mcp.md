@@ -206,8 +206,15 @@ Examples:
   - `return_inverse_ops`: return undo operations
   - `preflight_formula_check`: detect formula issues before save
   - `auto_formula`: treat `=...` in `set_value` as formula
+- Backend selection:
+  - `backend="auto"` (default): prefers COM when available; otherwise openpyxl.
+    Also uses openpyxl when `dry_run`/`return_inverse_ops`/`preflight_formula_check` is enabled.
+  - `backend="com"`: forces COM. Requires Excel COM and rejects
+    `dry_run`/`return_inverse_ops`/`preflight_formula_check`.
+  - `backend="openpyxl"`: forces openpyxl (`.xls` is not supported).
+- Output includes `engine` (`"com"` or `"openpyxl"`) to show which backend was actually used.
 - Conflict handling follows server `--on-conflict` unless overridden per tool call
-- Style/dimension design ops are processed by openpyxl and are not supported for `.xls` input. Convert `.xls` to `.xlsx`/`.xlsm` first.
+- `restore_design_snapshot` remains openpyxl-only.
 
 ## AI agent configuration examples
 

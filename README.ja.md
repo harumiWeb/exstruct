@@ -96,7 +96,11 @@ exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict re
 
 - 標準入出力の応答を汚染しないよう、ログは標準エラー出力（およびオプションで`--log-file`で指定したファイル）に出力されます。
 - WindowsのExcel環境では、標準/詳細モードでCOMを利用して、よりリッチな抽出が可能です。Windows以外ではCOMは利用できず、抽出はopenpyxlベースのフォールバック機能を使用します。
-- `exstruct_patch` はデザイン編集op（`draw_grid_border` / `set_bold` / `set_fill_color` / `set_dimensions` / `merge_cells` / `unmerge_cells` / `set_alignment`）と、逆操作用の `restore_design_snapshot` をサポートします。デザイン編集opはopenpyxl経路で処理されるため、`.xls` 入力ではエラーになります（`.xlsx`/`.xlsm` に変換して利用してください）。
+- `exstruct_patch` は `backend` 指定をサポートします。
+  - `auto`（既定）: COM が使える場合は COM を優先し、不可なら openpyxl
+  - `com`: COM を強制（`dry_run` / `return_inverse_ops` / `preflight_formula_check` は指定不可）
+  - `openpyxl`: openpyxl を強制（`.xls` は非対応）
+- `exstruct_patch` の応答には実際に使われたバックエンドを示す `engine`（`com` / `openpyxl`）が含まれます。`restore_design_snapshot` は引き続き openpyxl 専用です。
 
 各AIエージェントでのMCP設定ガイド:
 

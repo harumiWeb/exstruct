@@ -176,7 +176,7 @@ def test_run_patch_tool_builds_request(
         request: PatchRequest, *, policy: object | None = None
     ) -> PatchResult:
         captured["request"] = request
-        return PatchResult(out_path="out.xlsx", patch_diff=[])
+        return PatchResult(out_path="out.xlsx", patch_diff=[], engine="openpyxl")
 
     monkeypatch.setattr(tools, "run_patch", _fake_run_patch)
     payload = tools.PatchToolInput(
@@ -194,3 +194,4 @@ def test_run_patch_tool_builds_request(
     assert request.dry_run is True
     assert request.return_inverse_ops is True
     assert request.preflight_formula_check is True
+    assert request.backend == "auto"

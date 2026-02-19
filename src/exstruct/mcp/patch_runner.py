@@ -34,6 +34,8 @@ PatchOpType = Literal[
 ]
 PatchStatus = Literal["applied", "skipped"]
 PatchValueKind = Literal["value", "formula", "sheet", "style", "dimension"]
+PatchBackend = Literal["auto", "com", "openpyxl"]
+PatchEngine = Literal["com", "openpyxl"]
 FormulaIssueLevel = Literal["warning", "error"]
 FormulaIssueCode = Literal[
     "invalid_token",
@@ -63,6 +65,24 @@ HorizontalAlignType = Literal[
     "distributed",
 ]
 VerticalAlignType = Literal["top", "center", "bottom", "justify", "distributed"]
+
+_XLWINGS_HORIZONTAL_ALIGN_MAP: dict[HorizontalAlignType, int] = {
+    "general": -4105,
+    "left": -4131,
+    "center": -4108,
+    "right": -4152,
+    "fill": 5,
+    "justify": -4130,
+    "centerContinuous": 7,
+    "distributed": -4117,
+}
+_XLWINGS_VERTICAL_ALIGN_MAP: dict[VerticalAlignType, int] = {
+    "top": -4160,
+    "center": -4108,
+    "bottom": -4107,
+    "justify": -4130,
+    "distributed": -4117,
+}
 
 
 class BorderSideSnapshot(BaseModel):
@@ -263,8 +283,9 @@ class OpenpyxlWorkbookProtocol(Protocol):
 class XlwingsRangeProtocol(Protocol):
     """Protocol for xlwings range access used by patch runner."""
 
-    value: str | int | float | None
+    value: object | None
     formula: str | None
+    api: object
 
 
 @runtime_checkable
@@ -272,6 +293,7 @@ class XlwingsSheetProtocol(Protocol):
     """Protocol for xlwings sheet access used by patch runner."""
 
     name: str
+    api: object
 
     def range(self, cell: str) -> XlwingsRangeProtocol: ...
 
@@ -300,6 +322,77 @@ class XlwingsWorkbookProtocol(Protocol):
     def save(self, filename: str) -> None: ...
 
     def close(self) -> None: ...
+
+
+@runtime_checkable
+class XlwingsFontApiProtocol(Protocol):
+    """Protocol for xlwings COM font API."""
+
+    Bold: bool
+
+
+@runtime_checkable
+class XlwingsInteriorApiProtocol(Protocol):
+    """Protocol for xlwings COM interior API."""
+
+    Color: int
+
+
+@runtime_checkable
+class XlwingsBorderApiProtocol(Protocol):
+    """Protocol for xlwings COM border API."""
+
+    LineStyle: int
+    Color: int
+
+
+@runtime_checkable
+class XlwingsMergeAreaApiProtocol(Protocol):
+    """Protocol for xlwings COM merged-area API."""
+
+    def Address(self, row_absolute: bool, column_absolute: bool) -> str: ...  # noqa: N802
+
+
+@runtime_checkable
+class XlwingsRangeApiProtocol(Protocol):
+    """Protocol for xlwings COM range API."""
+
+    Font: XlwingsFontApiProtocol
+    Interior: XlwingsInteriorApiProtocol
+    MergeCells: bool
+    MergeArea: XlwingsMergeAreaApiProtocol
+    HorizontalAlignment: int
+    VerticalAlignment: int
+    WrapText: bool
+
+    def Borders(self, edge: int) -> XlwingsBorderApiProtocol: ...  # noqa: N802
+
+    def Merge(self) -> None: ...  # noqa: N802
+
+    def UnMerge(self) -> None: ...  # noqa: N802
+
+
+@runtime_checkable
+class XlwingsRowApiProtocol(Protocol):
+    """Protocol for xlwings COM row API."""
+
+    RowHeight: float
+
+
+@runtime_checkable
+class XlwingsColumnApiProtocol(Protocol):
+    """Protocol for xlwings COM column API."""
+
+    ColumnWidth: float
+
+
+@runtime_checkable
+class XlwingsSheetApiProtocol(Protocol):
+    """Protocol for xlwings COM sheet API."""
+
+    def Rows(self, index: int) -> XlwingsRowApiProtocol: ...  # noqa: N802
+
+    def Columns(self, key: str) -> XlwingsColumnApiProtocol: ...  # noqa: N802
 
 
 class PatchOp(BaseModel):
@@ -1020,6 +1113,22 @@ class PatchRequest(BaseModel):
     dry_run: bool = False
     return_inverse_ops: bool = False
     preflight_formula_check: bool = False
+    backend: PatchBackend = "auto"
+
+    @model_validator(mode="after")
+    def _validate_backend_constraints(self) -> PatchRequest:
+        if self.backend != "com":
+            return self
+        if self.dry_run or self.return_inverse_ops or self.preflight_formula_check:
+            raise ValueError(
+                "backend='com' does not support dry_run, return_inverse_ops, "
+                "or preflight_formula_check."
+            )
+        if any(op.op == "restore_design_snapshot" for op in self.ops):
+            raise ValueError(
+                "backend='com' does not support restore_design_snapshot operation."
+            )
+        return self
 
 
 class PatchResult(BaseModel):
@@ -1031,6 +1140,7 @@ class PatchResult(BaseModel):
     formula_issues: list[FormulaIssue] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     error: PatchErrorDetail | None = None
+    engine: PatchEngine
 
 
 def run_patch(
@@ -1058,6 +1168,12 @@ def run_patch(
         out_name=request.out_name,
         policy=policy,
     )
+    com = get_com_availability()
+    selected_engine = _select_patch_engine(
+        request=request,
+        input_path=resolved_input,
+        com_available=com.available,
+    )
     output_path, warning, skipped = _apply_conflict_policy(
         output_path, request.on_conflict
     )
@@ -1071,28 +1187,24 @@ def run_patch(
             inverse_ops=[],
             formula_issues=[],
             warnings=warnings,
+            engine=selected_engine,
         )
     if skipped and request.dry_run:
         warnings.append(
             "Dry-run mode ignores on_conflict=skip and simulates patch without writing."
         )
 
-    com = get_com_availability()
-    if resolved_input.suffix.lower() == ".xls" and not com.available:
-        raise ValueError(
-            ".xls editing requires Windows Excel COM (xlwings) in this environment."
-        )
     if resolved_input.suffix.lower() == ".xls" and _contains_design_ops(request.ops):
         raise ValueError(
             "Design operations are not supported for .xls files. Convert to .xlsx/.xlsm first."
         )
-
-    use_openpyxl = _requires_openpyxl_backend(request)
-    if use_openpyxl and com.available:
-        warnings.append("Using openpyxl backend for extended patch features.")
+    if selected_engine == "openpyxl" and com.reason and request.backend == "auto":
+        warnings.append(f"COM unavailable: {com.reason}")
+    if selected_engine == "openpyxl" and _requires_openpyxl_backend(request):
+        warnings.append("Using openpyxl backend due to patch request constraints.")
 
     _ensure_output_dir(output_path)
-    if com.available and not use_openpyxl:
+    if selected_engine == "com":
         try:
             diff = _apply_ops_xlwings(
                 resolved_input,
@@ -1106,6 +1218,7 @@ def run_patch(
                 inverse_ops=[],
                 formula_issues=[],
                 warnings=warnings,
+                engine="com",
             )
         except PatchOpError as exc:
             return PatchResult(
@@ -1115,21 +1228,21 @@ def run_patch(
                 formula_issues=[],
                 warnings=warnings,
                 error=exc.detail,
+                engine="com",
             )
         except Exception as exc:
-            fallback = _maybe_fallback_openpyxl(
-                request,
-                resolved_input,
-                output_path,
-                warnings,
-                reason=f"COM patch failed; falling back to openpyxl. ({exc!r})",
-            )
-            if fallback is not None:
-                return fallback
+            if _allow_auto_openpyxl_fallback(request, resolved_input):
+                warnings.append(
+                    f"COM patch failed; falling back to openpyxl. ({exc!r})"
+                )
+                return _apply_with_openpyxl(
+                    request,
+                    resolved_input,
+                    output_path,
+                    warnings,
+                )
             raise RuntimeError(f"COM patch failed: {exc}") from exc
 
-    if com.reason:
-        warnings.append(f"COM unavailable: {com.reason}")
     return _apply_with_openpyxl(
         request,
         resolved_input,
@@ -1159,6 +1272,7 @@ def _apply_with_openpyxl(
             formula_issues=[],
             warnings=warnings,
             error=exc.detail,
+            engine="openpyxl",
         )
     except ValueError:
         raise
@@ -1196,6 +1310,7 @@ def _apply_with_openpyxl(
             formula_issues=formula_issues,
             warnings=warnings,
             error=error,
+            engine="openpyxl",
         )
     return PatchResult(
         out_path=str(output_path),
@@ -1203,6 +1318,7 @@ def _apply_with_openpyxl(
         inverse_ops=inverse_ops,
         formula_issues=formula_issues,
         warnings=warnings,
+        engine="openpyxl",
     )
 
 
@@ -1240,49 +1356,44 @@ def _op_targets_issue_cell(op: PatchOp, sheet: str, cell: str) -> bool:
     return False
 
 
-def _maybe_fallback_openpyxl(
-    request: PatchRequest,
-    input_path: Path,
-    output_path: Path,
-    warnings: list[str],
-    *,
-    reason: str,
-) -> PatchResult | None:
-    """Attempt openpyxl fallback after COM failure."""
-    if input_path.suffix.lower() == ".xls":
-        warnings.append(reason)
-        return None
-    warnings.append(reason)
-    return _apply_with_openpyxl(
-        request,
-        input_path,
-        output_path,
-        warnings,
-    )
+def _allow_auto_openpyxl_fallback(request: PatchRequest, input_path: Path) -> bool:
+    """Return True when COM failure can fallback to openpyxl."""
+    if request.backend != "auto":
+        return False
+    return input_path.suffix.lower() in {".xlsx", ".xlsm"}
 
 
 def _requires_openpyxl_backend(request: PatchRequest) -> bool:
     """Return True if request requires openpyxl backend for extended features."""
     if request.dry_run or request.return_inverse_ops or request.preflight_formula_check:
         return True
-    return any(
-        op.op
-        in {
-            "set_range_values",
-            "fill_formula",
-            "set_value_if",
-            "set_formula_if",
-            "draw_grid_border",
-            "set_bold",
-            "set_fill_color",
-            "set_dimensions",
-            "merge_cells",
-            "unmerge_cells",
-            "set_alignment",
-            "restore_design_snapshot",
-        }
-        for op in request.ops
-    )
+    return any(op.op == "restore_design_snapshot" for op in request.ops)
+
+
+def _select_patch_engine(
+    *, request: PatchRequest, input_path: Path, com_available: bool
+) -> PatchEngine:
+    """Select concrete patch engine based on request and environment."""
+    extension = input_path.suffix.lower()
+    if request.backend == "openpyxl":
+        if extension == ".xls":
+            raise ValueError("backend='openpyxl' cannot edit .xls files.")
+        return "openpyxl"
+    if request.backend == "com":
+        if not com_available:
+            raise ValueError("backend='com' requires Windows Excel COM availability.")
+        return "com"
+    if extension == ".xls":
+        if not com_available:
+            raise ValueError(
+                ".xls editing requires Windows Excel COM (xlwings) in this environment."
+            )
+        return "com"
+    if _requires_openpyxl_backend(request):
+        return "openpyxl"
+    if com_available:
+        return "com"
+    return "openpyxl"
 
 
 def _contains_design_ops(ops: list[PatchOp]) -> bool:
@@ -2433,10 +2544,6 @@ def _apply_xlwings_op(
     auto_formula: bool,
 ) -> PatchDiffItem:
     """Apply a single op to an xlwings workbook."""
-    # Extended ops are routed to openpyxl by _requires_openpyxl_backend.
-    # Keep this explicit guard to prevent accidental path regressions.
-    if op.op not in {"add_sheet", "set_value", "set_formula"}:
-        raise ValueError(f"Unsupported op: {op.op}")
     if op.op == "add_sheet":
         if op.sheet in sheets:
             raise ValueError(f"Sheet already exists: {op.sheet}")
@@ -2455,43 +2562,359 @@ def _apply_xlwings_op(
     existing_sheet = sheets.get(op.sheet)
     if existing_sheet is None:
         raise ValueError(f"Sheet not found: {op.sheet}")
+    if op.op in {"set_value", "set_formula", "set_value_if", "set_formula_if"}:
+        return _apply_xlwings_cell_op(existing_sheet, op, index, auto_formula)
+    return _apply_xlwings_extended_op(existing_sheet, op, index)
+
+
+def _apply_xlwings_extended_op(
+    sheet: XlwingsSheetProtocol,
+    op: PatchOp,
+    index: int,
+) -> PatchDiffItem:
+    """Apply non-cell operations on xlwings sheets."""
+    handlers: dict[PatchOpType, Callable[[], PatchDiffItem]] = {
+        "set_range_values": lambda: _apply_xlwings_set_range_values(sheet, op, index),
+        "fill_formula": lambda: _apply_xlwings_fill_formula(sheet, op, index),
+        "draw_grid_border": lambda: _apply_xlwings_draw_grid_border(sheet, op, index),
+        "set_bold": lambda: _apply_xlwings_set_bold(sheet, op, index),
+        "set_fill_color": lambda: _apply_xlwings_set_fill_color(sheet, op, index),
+        "set_dimensions": lambda: _apply_xlwings_set_dimensions(sheet, op, index),
+        "merge_cells": lambda: _apply_xlwings_merge_cells(sheet, op, index),
+        "unmerge_cells": lambda: _apply_xlwings_unmerge_cells(sheet, op, index),
+        "set_alignment": lambda: _apply_xlwings_set_alignment(sheet, op, index),
+        "restore_design_snapshot": lambda: _apply_xlwings_restore_design_snapshot(op),
+    }
+    handler = handlers.get(op.op)
+    if handler is None:
+        raise ValueError(f"Unsupported op: {op.op}")
+    return handler()
+
+
+def _apply_xlwings_set_range_values(
+    sheet: XlwingsSheetProtocol, op: PatchOp, index: int
+) -> PatchDiffItem:
+    """Apply set_range_values with xlwings."""
+    if op.range is None or op.values is None:
+        raise ValueError("set_range_values requires range and values.")
+    coordinates_2d = _expand_range_coordinates(op.range)
+    row_count, col_count = _shape_of_coordinates(coordinates_2d)
+    if len(op.values) != row_count:
+        raise ValueError("set_range_values values height does not match range.")
+    if any(len(value_row) != col_count for value_row in op.values):
+        raise ValueError("set_range_values values width does not match range.")
+    sheet.range(op.range).value = op.values
+    return PatchDiffItem(
+        op_index=index,
+        op=op.op,
+        sheet=op.sheet,
+        cell=op.range,
+        before=None,
+        after=PatchValue(kind="value", value=f"{row_count}x{col_count}"),
+    )
+
+
+def _apply_xlwings_fill_formula(
+    sheet: XlwingsSheetProtocol, op: PatchOp, index: int
+) -> PatchDiffItem:
+    """Apply fill_formula with xlwings."""
+    if op.range is None or op.formula is None or op.base_cell is None:
+        raise ValueError("fill_formula requires range, base_cell and formula.")
+    coordinates_2d = _expand_range_coordinates(op.range)
+    row_count, col_count = _shape_of_coordinates(coordinates_2d)
+    if row_count != 1 and col_count != 1:
+        raise ValueError("fill_formula range must be a single row or a single column.")
+    for coord_row in coordinates_2d:
+        for coord in coord_row:
+            translated = _translate_formula(op.formula, op.base_cell, coord)
+            sheet.range(coord).formula = translated
+    return PatchDiffItem(
+        op_index=index,
+        op=op.op,
+        sheet=op.sheet,
+        cell=op.range,
+        before=None,
+        after=PatchValue(kind="formula", value=op.formula),
+    )
+
+
+def _apply_xlwings_draw_grid_border(
+    sheet: XlwingsSheetProtocol, op: PatchOp, index: int
+) -> PatchDiffItem:
+    """Apply draw_grid_border with xlwings."""
+    if op.base_cell is None or op.row_count is None or op.col_count is None:
+        raise ValueError(
+            "draw_grid_border requires base_cell, row_count and col_count."
+        )
+    coordinates = _expand_rect_coordinates(op.base_cell, op.row_count, op.col_count)
+    for coord in coordinates:
+        _set_xlwings_grid_border(sheet.range(coord))
+    return PatchDiffItem(
+        op_index=index,
+        op=op.op,
+        sheet=op.sheet,
+        cell=f"{op.base_cell}:{coordinates[-1]}",
+        before=None,
+        after=PatchValue(kind="style", value="grid_border(thin,black)"),
+    )
+
+
+def _apply_xlwings_set_bold(
+    sheet: XlwingsSheetProtocol, op: PatchOp, index: int
+) -> PatchDiffItem:
+    """Apply set_bold with xlwings."""
+    target_range_ref = _xlwings_target_range_ref(op)
+    target_bold = True if op.bold is None else op.bold
+    target_api = _xlwings_range_api(sheet.range(target_range_ref))
+    target_api.Font.Bold = target_bold
+    return PatchDiffItem(
+        op_index=index,
+        op=op.op,
+        sheet=op.sheet,
+        cell=target_range_ref,
+        before=None,
+        after=PatchValue(kind="style", value=f"bold={target_bold}"),
+    )
+
+
+def _apply_xlwings_set_fill_color(
+    sheet: XlwingsSheetProtocol, op: PatchOp, index: int
+) -> PatchDiffItem:
+    """Apply set_fill_color with xlwings."""
+    if op.fill_color is None:
+        raise ValueError("set_fill_color requires fill_color.")
+    target_range_ref = _xlwings_target_range_ref(op)
+    target_api = _xlwings_range_api(sheet.range(target_range_ref))
+    target_api.Interior.Color = _hex_color_to_excel_rgb(op.fill_color)
+    return PatchDiffItem(
+        op_index=index,
+        op=op.op,
+        sheet=op.sheet,
+        cell=target_range_ref,
+        before=None,
+        after=PatchValue(
+            kind="style", value=f"fill={_normalize_hex_color(op.fill_color)}"
+        ),
+    )
+
+
+def _apply_xlwings_set_dimensions(
+    sheet: XlwingsSheetProtocol, op: PatchOp, index: int
+) -> PatchDiffItem:
+    """Apply set_dimensions with xlwings."""
+    parts: list[str] = []
+    sheet_api = _xlwings_sheet_api(sheet)
+    if op.rows is not None and op.row_height is not None:
+        for row_index in op.rows:
+            sheet_api.Rows(row_index).RowHeight = op.row_height
+        parts.append(f"rows={len(op.rows)}")
+    if op.columns is not None and op.column_width is not None:
+        normalized_columns = _normalize_columns_for_dimensions(op.columns)
+        for column in normalized_columns:
+            sheet_api.Columns(column).ColumnWidth = op.column_width
+        parts.append(f"columns={len(normalized_columns)}")
+    return PatchDiffItem(
+        op_index=index,
+        op=op.op,
+        sheet=op.sheet,
+        cell=None,
+        before=None,
+        after=PatchValue(kind="dimension", value=", ".join(parts)),
+    )
+
+
+def _apply_xlwings_merge_cells(
+    sheet: XlwingsSheetProtocol, op: PatchOp, index: int
+) -> PatchDiffItem:
+    """Apply merge_cells with xlwings."""
+    if op.range is None:
+        raise ValueError("merge_cells requires range.")
+    _xlwings_range_api(sheet.range(op.range)).Merge()
+    return PatchDiffItem(
+        op_index=index,
+        op=op.op,
+        sheet=op.sheet,
+        cell=op.range,
+        before=None,
+        after=PatchValue(kind="style", value=f"merged={op.range}"),
+    )
+
+
+def _apply_xlwings_unmerge_cells(
+    sheet: XlwingsSheetProtocol, op: PatchOp, index: int
+) -> PatchDiffItem:
+    """Apply unmerge_cells with xlwings."""
+    if op.range is None:
+        raise ValueError("unmerge_cells requires range.")
+    merged_areas = _collect_xlwings_merged_areas(sheet, op.range)
+    for area in merged_areas:
+        _xlwings_range_api(sheet.range(area)).UnMerge()
+    return PatchDiffItem(
+        op_index=index,
+        op=op.op,
+        sheet=op.sheet,
+        cell=op.range,
+        before=None,
+        after=PatchValue(kind="style", value=f"unmerged={len(merged_areas)}"),
+    )
+
+
+def _apply_xlwings_set_alignment(
+    sheet: XlwingsSheetProtocol, op: PatchOp, index: int
+) -> PatchDiffItem:
+    """Apply set_alignment with xlwings."""
+    target_range_ref = _xlwings_target_range_ref(op)
+    target_api = _xlwings_range_api(sheet.range(target_range_ref))
+    if op.horizontal_align is not None:
+        target_api.HorizontalAlignment = _XLWINGS_HORIZONTAL_ALIGN_MAP[
+            op.horizontal_align
+        ]
+    if op.vertical_align is not None:
+        target_api.VerticalAlignment = _XLWINGS_VERTICAL_ALIGN_MAP[op.vertical_align]
+    if op.wrap_text is not None:
+        target_api.WrapText = op.wrap_text
+    summary = (
+        f"horizontal={op.horizontal_align},"
+        f"vertical={op.vertical_align},"
+        f"wrap_text={op.wrap_text}"
+    )
+    return PatchDiffItem(
+        op_index=index,
+        op=op.op,
+        sheet=op.sheet,
+        cell=target_range_ref,
+        before=None,
+        after=PatchValue(kind="style", value=summary),
+    )
+
+
+def _apply_xlwings_restore_design_snapshot(op: PatchOp) -> PatchDiffItem:
+    """Reject restore_design_snapshot on COM backend."""
+    raise ValueError("restore_design_snapshot is supported only on openpyxl backend.")
+
+
+def _apply_xlwings_cell_op(
+    sheet: XlwingsSheetProtocol,
+    op: PatchOp,
+    index: int,
+    auto_formula: bool,
+) -> PatchDiffItem:
+    """Apply single-cell operations on xlwings sheets."""
     cell_ref = op.cell
     if cell_ref is None:
         raise ValueError(f"{op.op} requires cell.")
-    rng = existing_sheet.range(cell_ref)
+    rng = sheet.range(cell_ref)
     before = _xlwings_cell_value(rng)
     if op.op == "set_value":
-        if isinstance(op.value, str) and op.value.startswith("="):
-            if not auto_formula:
-                raise ValueError("set_value rejects values starting with '='.")
-            rng.formula = op.value
-            after = PatchValue(kind="formula", value=op.value)
-        else:
-            rng.value = op.value
-            after = PatchValue(kind="value", value=op.value)
-        return PatchDiffItem(
-            op_index=index,
-            op=op.op,
-            sheet=op.sheet,
-            cell=cell_ref,
-            before=before,
-            after=after,
+        after = _set_xlwings_cell_value(
+            rng, op.value, auto_formula, op_name="set_value"
         )
+        return _build_cell_result(op, index, cell_ref, before, after)
     if op.op == "set_formula":
-        formula = op.formula
-        if formula is None:
-            raise ValueError("set_formula requires formula.")
+        formula = _require_formula(op.formula, "set_formula")
         rng.formula = formula
-        after = PatchValue(kind="formula", value=formula)
-        return PatchDiffItem(
-            op_index=index,
-            op=op.op,
-            sheet=op.sheet,
-            cell=cell_ref,
-            before=before,
-            after=after,
+        return _build_cell_result(
+            op,
+            index,
+            cell_ref,
+            before,
+            PatchValue(kind="formula", value=formula),
         )
-    raise ValueError(f"Unsupported op: {op.op}")
+    if op.op == "set_value_if":
+        if not _values_equal_for_condition(
+            _patch_value_to_primitive(before), op.expected
+        ):
+            return _build_skipped_result(op, index, cell_ref, before)
+        after = _set_xlwings_cell_value(
+            rng,
+            op.value,
+            auto_formula,
+            op_name="set_value_if",
+        )
+        return _build_cell_result(op, index, cell_ref, before, after)
+    formula_if = _require_formula(op.formula, "set_formula_if")
+    if not _values_equal_for_condition(_patch_value_to_primitive(before), op.expected):
+        return _build_skipped_result(op, index, cell_ref, before)
+    rng.formula = formula_if
+    return _build_cell_result(
+        op,
+        index,
+        cell_ref,
+        before,
+        PatchValue(kind="formula", value=formula_if),
+    )
+
+
+def _set_xlwings_cell_value(
+    cell: XlwingsRangeProtocol,
+    value: str | int | float | None,
+    auto_formula: bool,
+    *,
+    op_name: str,
+) -> PatchValue:
+    """Set xlwings cell value with auto_formula handling."""
+    if isinstance(value, str) and value.startswith("="):
+        if not auto_formula:
+            raise ValueError(f"{op_name} rejects values starting with '='.")
+        cell.formula = value
+        return PatchValue(kind="formula", value=value)
+    cell.value = value
+    return PatchValue(kind="value", value=value)
+
+
+def _xlwings_range_api(target: XlwingsRangeProtocol) -> XlwingsRangeApiProtocol:
+    """Return COM range API object from xlwings wrapper."""
+    return cast(XlwingsRangeApiProtocol, target.api)
+
+
+def _xlwings_sheet_api(target: XlwingsSheetProtocol) -> XlwingsSheetApiProtocol:
+    """Return COM sheet API object from xlwings wrapper."""
+    return cast(XlwingsSheetApiProtocol, target.api)
+
+
+def _xlwings_target_range_ref(op: PatchOp) -> str:
+    """Return target range reference from a style operation payload."""
+    if op.cell is not None:
+        return op.cell
+    if op.range is not None:
+        return op.range
+    raise ValueError(f"{op.op} requires cell or range.")
+
+
+def _set_xlwings_grid_border(cell: XlwingsRangeProtocol) -> None:
+    """Set thin black border on all four sides via Excel COM."""
+    cell_api = _xlwings_range_api(cell)
+    for edge in (7, 8, 9, 10):
+        border = cell_api.Borders(edge)
+        border.LineStyle = 1
+        border.Color = 0
+
+
+def _hex_color_to_excel_rgb(fill_color: str) -> int:
+    """Convert hex color to Excel COM RGB integer."""
+    argb = _normalize_hex_color(fill_color)
+    rgb = argb[2:]
+    red = int(rgb[0:2], 16)
+    green = int(rgb[2:4], 16)
+    blue = int(rgb[4:6], 16)
+    return red + green * 256 + blue * 65_536
+
+
+def _collect_xlwings_merged_areas(
+    sheet: XlwingsSheetProtocol,
+    target_range: str,
+) -> list[str]:
+    """Collect unique merged range addresses intersecting target range."""
+    merged_areas: set[str] = set()
+    for coord_row in _expand_range_coordinates(target_range):
+        for coord in coord_row:
+            cell_api = _xlwings_range_api(sheet.range(coord))
+            if not bool(cell_api.MergeCells):
+                continue
+            merge_area = cell_api.MergeArea
+            raw_address = str(merge_area.Address(False, False))
+            merged_areas.add(raw_address.replace("$", ""))
+    return sorted(merged_areas)
 
 
 def _xlwings_cell_value(cell: XlwingsRangeProtocol) -> PatchValue | None:
