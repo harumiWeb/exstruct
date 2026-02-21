@@ -78,7 +78,6 @@
 - [ ] `docs/mcp.md` に `set_style` を追記（最小例、制約、エラー例）
 - [ ] `docs/mcp.md` に `apply_table_style` を追記（最小例、制約）
 - [ ] `docs/mcp.md` に `mirror_artifact` / `mirrored_out_path` を追記
-- [ ] `docs/mcp.md` に `exstruct_patch_plan` / `exstruct_patch_apply_chunks` を追記
 - [ ] `docs/mcp.md` に `exstruct_list_ops` / `exstruct_describe_op` を追記
 - [ ] 失敗例→正解例（引数名ミス）カタログを追記
 
@@ -107,8 +106,6 @@
 - [x] `set_style` の単セル/範囲/属性未指定エラー
 - [x] `apply_table_style` の正常系/重複テーブルエラー
 - [x] `mirror_artifact` の正常コピー/bridge未設定/コピー失敗warning
-- [ ] `patch_plan` のchunk生成妥当性
-- [ ] `patch_apply_chunks` の成功時コミット、失敗時ロールバック
 - [ ] `exstruct_list_ops` の一覧妥当性
 - [ ] `exstruct_describe_op` の required/optional/example 妥当性
 - [ ] `exstruct_patch` ツール定義に `op` 別スキーマ情報が含まれること

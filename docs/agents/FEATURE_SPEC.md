@@ -187,8 +187,6 @@ Excelテーブルスタイルを1opで適用できるようにする。
 2. `set_style` の単セル/範囲/属性未指定エラー
 3. `apply_table_style` の正常系/重複テーブルエラー
 4. `mirror_artifact` の正常コピー/bridge未設定/コピー失敗warning
-5. `patch_plan` のchunk生成妥当性
-6. `patch_apply_chunks` の成功時コミット、失敗時ロールバック
 7. `exstruct_list_ops` の一覧妥当性
 8. `exstruct_describe_op` の required/optional/example 妥当性
 9. `exstruct_patch` ツール定義に `op` 別スキーマ情報が含まれること
