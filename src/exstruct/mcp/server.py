@@ -18,9 +18,13 @@ from exstruct import ExtractionMode
 
 from .extract_runner import OnConflictPolicy
 from .io import PathPolicy
+from .op_schema import build_patch_tool_mini_schema
 from .tools import (
+    DescribeOpToolInput,
+    DescribeOpToolOutput,
     ExtractToolInput,
     ExtractToolOutput,
+    ListOpsToolOutput,
     MakeToolInput,
     MakeToolOutput,
     PatchToolInput,
@@ -36,7 +40,9 @@ from .tools import (
     RuntimeInfoToolOutput,
     ValidateInputToolInput,
     ValidateInputToolOutput,
+    run_describe_op_tool,
     run_extract_tool,
+    run_list_ops_tool,
     run_make_tool,
     run_patch_tool,
     run_read_cells_tool,
@@ -479,6 +485,8 @@ def _register_tools(
     runtime_info_tool = app.tool(name="exstruct_get_runtime_info")
     runtime_info_tool(_runtime_info_tool)
 
+    _register_op_schema_tools(app)
+
     async def _patch_tool(
         xlsx_path: str,
         ops: list[dict[str, Any] | str],
@@ -578,6 +586,8 @@ def _register_tools(
         result = cast(PatchToolOutput, await anyio.to_thread.run_sync(work))
         return result
 
+    _patch_tool.__doc__ = _build_patch_tool_description()
+
     patch_tool = app.tool(name="exstruct_patch")
     patch_tool(_patch_tool)
 
@@ -649,6 +659,68 @@ def _register_tools(
 
     make_tool = app.tool(name="exstruct_make")
     make_tool(_make_tool)
+
+
+def _build_patch_tool_description() -> str:
+    """Build exstruct_patch tool description with op mini schema."""
+    base_description = """
+Edit an Excel workbook by applying patch operations.
+
+Supports cell value updates, formula updates, and adding new sheets.
+Operations are applied atomically: all succeed or none are saved.
+
+Args:
+    xlsx_path: Path to the Excel workbook to edit.
+    ops: Patch operations to apply in order. Preferred format is an
+        object list (one object per operation). For compatibility with
+        clients that cannot send object arrays, JSON object strings are
+        also accepted and normalized before validation.
+    out_dir: Output directory. Defaults to same directory as input.
+    out_name: Output filename. Defaults to '{stem}_patched{ext}'.
+    on_conflict: Conflict policy when output file exists:
+        'overwrite' (replace), 'skip' (do nothing), 'rename' (auto-rename).
+        Defaults to server --on-conflict setting.
+    auto_formula: When true, values starting with '=' in set_value ops
+        are treated as formulas instead of being rejected.
+    dry_run: When true, compute diff without saving changes.
+    return_inverse_ops: When true, return inverse (undo) operations.
+    preflight_formula_check: When true, scan formulas for errors
+        like #REF!, #NAME?, #DIV/0! before saving.
+    backend: Patch execution backend.
+        - "auto" (default): prefer COM when available; otherwise openpyxl.
+          Uses openpyxl when dry_run/return_inverse_ops/preflight_formula_check
+          is enabled.
+        - "com": force COM path (requires Excel COM and disallows
+          dry_run/return_inverse_ops/preflight_formula_check).
+        - "openpyxl": force openpyxl path (.xls is not supported).
+    mirror_artifact: When true, mirror output workbook to
+        --artifact-bridge-dir after successful patch.
+
+Returns:
+    Patch result with output path, applied diffs, and any warnings.
+"""
+    return f"{base_description.strip()}\n\n{build_patch_tool_mini_schema()}"
+
+
+def _register_op_schema_tools(app: FastMCP) -> None:
+    """Register schema discovery tools."""
+
+    async def _list_ops_tool() -> ListOpsToolOutput:
+        """List all patch op names with short descriptions."""
+        return run_list_ops_tool()
+
+    async def _describe_op_tool(op: str) -> DescribeOpToolOutput:
+        """Describe one patch op.
+
+        Returns required/optional fields, constraints, example, and aliases.
+        """
+        payload = DescribeOpToolInput(op=op)
+        return run_describe_op_tool(payload)
+
+    list_ops_tool = app.tool(name="exstruct_list_ops")
+    list_ops_tool(_list_ops_tool)
+    describe_op_tool = app.tool(name="exstruct_describe_op")
+    describe_op_tool(_describe_op_tool)
 
 
 def _coerce_filter(filter_data: dict[str, Any] | None) -> dict[str, Any] | None:

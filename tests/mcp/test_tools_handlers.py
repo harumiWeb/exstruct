@@ -294,3 +294,24 @@ def test_run_make_tool_builds_request(
     assert request.return_inverse_ops is True
     assert request.preflight_formula_check is True
     assert request.backend == "auto"
+
+
+def test_run_list_ops_tool_returns_known_ops() -> None:
+    result = tools.run_list_ops_tool()
+    op_names = [item.op for item in result.ops]
+    assert "set_value" in op_names
+    assert "set_style" in op_names
+    assert "apply_table_style" in op_names
+
+
+def test_run_describe_op_tool_returns_schema_details() -> None:
+    result = tools.run_describe_op_tool(tools.DescribeOpToolInput(op="set_fill_color"))
+    assert result.required == ["sheet", "fill_color"]
+    assert "cell" in result.optional
+    assert result.aliases == {"color": "fill_color"}
+    assert result.example["op"] == "set_fill_color"
+
+
+def test_run_describe_op_tool_rejects_unknown_op() -> None:
+    with pytest.raises(ValueError, match="Unknown op"):
+        tools.run_describe_op_tool(tools.DescribeOpToolInput(op="unknown_op"))

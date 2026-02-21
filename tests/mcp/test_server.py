@@ -12,8 +12,10 @@ from exstruct.mcp import server
 from exstruct.mcp.extract_runner import OnConflictPolicy
 from exstruct.mcp.io import PathPolicy
 from exstruct.mcp.tools import (
+    DescribeOpToolOutput,
     ExtractToolInput,
     ExtractToolOutput,
+    ListOpsToolOutput,
     MakeToolInput,
     MakeToolOutput,
     PatchToolInput,
@@ -367,6 +369,57 @@ def test_register_tools_returns_runtime_info(tmp_path: Path) -> None:
     assert Path(result.path_examples.absolute) == (
         tmp_path.resolve() / "outputs" / "book.xlsx"
     )
+
+
+def test_register_tools_returns_ops_schema_tools(tmp_path: Path) -> None:
+    app = DummyApp()
+    policy = PathPolicy(root=tmp_path)
+    server._register_tools(app, policy, default_on_conflict="overwrite")
+
+    list_tool = cast(Callable[..., Awaitable[object]], app.tools["exstruct_list_ops"])
+    list_result = cast(ListOpsToolOutput, anyio.run(_call_async, list_tool, {}))
+    listed_ops = [item.op for item in list_result.ops]
+    assert "set_value" in listed_ops
+    assert "set_style" in listed_ops
+    assert "apply_table_style" in listed_ops
+
+    describe_tool = cast(
+        Callable[..., Awaitable[object]],
+        app.tools["exstruct_describe_op"],
+    )
+    describe_result = cast(
+        DescribeOpToolOutput,
+        anyio.run(_call_async, describe_tool, {"op": "set_fill_color"}),
+    )
+    assert describe_result.required == ["sheet", "fill_color"]
+    assert describe_result.aliases == {"color": "fill_color"}
+
+
+def test_register_tools_describe_op_rejects_unknown_op(tmp_path: Path) -> None:
+    app = DummyApp()
+    policy = PathPolicy(root=tmp_path)
+    server._register_tools(app, policy, default_on_conflict="overwrite")
+
+    describe_tool = cast(
+        Callable[..., Awaitable[object]],
+        app.tools["exstruct_describe_op"],
+    )
+    with pytest.raises(ValueError, match="Unknown op"):
+        anyio.run(_call_async, describe_tool, {"op": "unknown_op"})
+
+
+def test_patch_tool_doc_includes_op_mini_schema(tmp_path: Path) -> None:
+    app = DummyApp()
+    policy = PathPolicy(root=tmp_path)
+    server._register_tools(app, policy, default_on_conflict="overwrite")
+
+    patch_tool = app.tools["exstruct_patch"]
+    patch_doc = patch_tool.__doc__
+    assert patch_doc is not None
+    assert "Mini op schema" in patch_doc
+    assert "set_fill_color" in patch_doc
+    assert "required: sheet, fill_color" in patch_doc
+    assert "aliases: color -> fill_color" in patch_doc
 
 
 def test_register_tools_passes_read_tool_arguments(

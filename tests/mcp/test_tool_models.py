@@ -4,7 +4,10 @@ from pydantic import ValidationError
 import pytest
 
 from exstruct.mcp.tools import (
+    DescribeOpToolInput,
+    DescribeOpToolOutput,
     ExtractToolInput,
+    ListOpsToolOutput,
     MakeToolInput,
     MakeToolOutput,
     PatchToolInput,
@@ -227,3 +230,22 @@ def test_runtime_info_tool_output_model() -> None:
         },
     )
     assert payload.path_examples.relative == "outputs/book.xlsx"
+
+
+def test_describe_op_tool_input_accepts_op_name() -> None:
+    payload = DescribeOpToolInput(op="set_fill_color")
+    assert payload.op == "set_fill_color"
+
+
+def test_list_ops_tool_output_defaults() -> None:
+    payload = ListOpsToolOutput()
+    assert payload.ops == []
+
+
+def test_describe_op_tool_output_defaults() -> None:
+    payload = DescribeOpToolOutput(op="set_value")
+    assert payload.required == []
+    assert payload.optional == []
+    assert payload.constraints == []
+    assert payload.example == {}
+    assert payload.aliases == {}

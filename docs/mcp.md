@@ -55,6 +55,7 @@ exstruct-mcp --root C:\\data --log-file C:\\logs\\exstruct-mcp.log --on-conflict
 - `--log-level`: `DEBUG` / `INFO` / `WARNING` / `ERROR`
 - `--log-file`: Log file path (stderr is still used by default)
 - `--on-conflict`: Output conflict policy (`overwrite` / `skip` / `rename`)
+- `--artifact-bridge-dir`: Directory used by `mirror_artifact=true` to copy output files
 - `--warmup`: Preload heavy imports to reduce first-call latency
 
 ## Tools
@@ -62,6 +63,8 @@ exstruct-mcp --root C:\\data --log-file C:\\logs\\exstruct-mcp.log --on-conflict
 - `exstruct_extract`
 - `exstruct_make`
 - `exstruct_patch`
+- `exstruct_list_ops`
+- `exstruct_describe_op`
 - `exstruct_read_json_chunk`
 - `exstruct_read_range`
 - `exstruct_read_cells`
@@ -251,12 +254,15 @@ Example:
   - `merge_cells`
   - `unmerge_cells`
   - `set_alignment`
+  - `set_style`
+  - `apply_table_style`
   - `restore_design_snapshot` (internal inverse op)
 - Useful flags:
   - `dry_run`: compute diff only (no file write)
   - `return_inverse_ops`: return undo operations
   - `preflight_formula_check`: detect formula issues before save
   - `auto_formula`: treat `=...` in `set_value` as formula
+  - `mirror_artifact`: copy output workbook to `--artifact-bridge-dir` on success
 - Backend selection:
   - `backend="auto"` (default): prefers COM when available; otherwise openpyxl.
     Also uses openpyxl when `dry_run`/`return_inverse_ops`/`preflight_formula_check` is enabled.
@@ -264,8 +270,64 @@ Example:
     `dry_run`/`return_inverse_ops`/`preflight_formula_check`.
   - `backend="openpyxl"`: forces openpyxl (`.xls` is not supported).
 - Output includes `engine` (`"com"` or `"openpyxl"`) to show which backend was actually used.
+- Output includes `mirrored_out_path` when mirroring is requested and succeeds.
 - Conflict handling follows server `--on-conflict` unless overridden per tool call
 - `restore_design_snapshot` remains openpyxl-only.
+- `apply_table_style` on `backend="com"` returns a warning and falls back to openpyxl.
+
+### `set_style` quick guide
+
+- Purpose: apply multiple style fields in one op.
+- Target: exactly one of `cell` or `range`.
+- Need at least one style field: `bold`, `font_size`, `color`, `fill_color`,
+  `horizontal_align`, `vertical_align`, `wrap_text`.
+
+Example:
+
+```json
+{
+  "tool": "exstruct_patch",
+  "xlsx_path": "C:\\data\\book.xlsx",
+  "ops": [
+    {
+      "op": "set_style",
+      "sheet": "Sheet1",
+      "range": "A1:D1",
+      "bold": true,
+      "color": "#FFFFFF",
+      "fill_color": "#1F3864",
+      "horizontal_align": "center",
+      "vertical_align": "center",
+      "wrap_text": true
+    }
+  ]
+}
+```
+
+### `apply_table_style` quick guide
+
+- Purpose: create a table and apply an Excel table style in one op.
+- Required: `sheet`, `range`, `style`.
+- Optional: `table_name`.
+- Fails when range intersects an existing table, or table name duplicates.
+
+Example:
+
+```json
+{
+  "tool": "exstruct_patch",
+  "xlsx_path": "C:\\data\\book.xlsx",
+  "ops": [
+    {
+      "op": "apply_table_style",
+      "sheet": "Sheet1",
+      "range": "A1:D11",
+      "style": "TableStyleMedium9",
+      "table_name": "SalesTable"
+    }
+  ]
+}
+```
 
 ### Color fields (`color` / `fill_color`)
 
@@ -301,7 +363,53 @@ Examples:
   - `width` -> `column_width`
 - `draw_grid_border`: `range` shorthand is accepted and normalized to
   `base_cell` + `row_count` + `col_count`
+- `set_alignment`:
+  - `horizontal` -> `horizontal_align`
+  - `vertical` -> `vertical_align`
+- `set_fill_color`:
+  - `color` -> `fill_color`
 - Relative `out_path` for `exstruct_make` is resolved from MCP `--root`.
+
+### Mirror artifact handoff
+
+- `exstruct_patch` / `exstruct_make` input:
+  - `mirror_artifact` (default: `false`)
+- Output:
+  - `mirrored_out_path` (`null` when not mirrored)
+- Behavior:
+  - Mirroring runs only on success.
+  - If `--artifact-bridge-dir` is not set, process still succeeds and warning is returned.
+  - If copy fails, process still succeeds and warning is returned.
+
+## Op schema discovery tools
+
+- `exstruct_list_ops`
+  - Returns available op names and short descriptions.
+- `exstruct_describe_op`
+  - Input: `op`
+  - Output: `required`, `optional`, `constraints`, `example`, `aliases`
+
+Examples:
+
+```json
+{ "tool": "exstruct_list_ops" }
+```
+
+```json
+{ "tool": "exstruct_describe_op", "op": "set_fill_color" }
+```
+
+## Mistake catalog (error -> fix)
+
+- Wrong:
+  - `{"op":"set_fill_color","sheet":"Sheet1","cell":"A1","color":"#D9E1F2"}`
+- Correct:
+  - `{"op":"set_fill_color","sheet":"Sheet1","cell":"A1","fill_color":"#D9E1F2"}`
+
+- Wrong:
+  - `{"op":"set_alignment","sheet":"Sheet1","cell":"A1","horizontal":"center","vertical":"center"}`
+- Correct:
+  - `{"op":"set_alignment","sheet":"Sheet1","cell":"A1","horizontal_align":"center","vertical_align":"center"}`
 
 ### Runtime info tool
 

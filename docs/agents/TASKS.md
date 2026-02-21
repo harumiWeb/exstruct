@@ -62,27 +62,27 @@
 
 ### 6. 入力スキーマ可視化（FS-06）
 
-- [ ] `exstruct_patch` ツール定義に `op` 別ミニスキーマ（required/optional/constraints/example）を追加
-- [ ] `op` 別ミニスキーマに alias 対応を明記
-- [ ] スキーマ記述の生成元を共通メタデータ化し、定義ドリフトを防止
-- [ ] `exstruct_list_ops` の入出力モデルとサーバー登録を追加
-- [ ] `exstruct_describe_op` の入出力モデルとサーバー登録を追加
-- [ ] `exstruct_describe_op` に `required` / `optional` / `constraints` / `example` / `aliases` を実装
-- [ ] テスト追加（一覧妥当性、describe内容、未知opエラー、tool定義文言）
+- [x] `exstruct_patch` ツール定義に `op` 別ミニスキーマ（required/optional/constraints/example）を追加
+- [x] `op` 別ミニスキーマに alias 対応を明記
+- [x] スキーマ記述の生成元を共通メタデータ化し、定義ドリフトを防止
+- [x] `exstruct_list_ops` の入出力モデルとサーバー登録を追加
+- [x] `exstruct_describe_op` の入出力モデルとサーバー登録を追加
+- [x] `exstruct_describe_op` に `required` / `optional` / `constraints` / `example` / `aliases` を実装
+- [x] テスト追加（一覧妥当性、describe内容、未知opエラー、tool定義文言）
 
 完了条件:
-- [ ] 実行前に主要 `op` の入力仕様と動作例を確認できる
+- [x] 実行前に主要 `op` の入力仕様と動作例を確認できる
 
 ### 7. ドキュメント整備
 
-- [ ] `docs/mcp.md` に `set_style` を追記（最小例、制約、エラー例）
-- [ ] `docs/mcp.md` に `apply_table_style` を追記（最小例、制約）
-- [ ] `docs/mcp.md` に `mirror_artifact` / `mirrored_out_path` を追記
-- [ ] `docs/mcp.md` に `exstruct_list_ops` / `exstruct_describe_op` を追記
-- [ ] 失敗例→正解例（引数名ミス）カタログを追記
+- [x] `docs/mcp.md` に `set_style` を追記（最小例、制約、エラー例）
+- [x] `docs/mcp.md` に `apply_table_style` を追記（最小例、制約）
+- [x] `docs/mcp.md` に `mirror_artifact` / `mirrored_out_path` を追記
+- [x] `docs/mcp.md` に `exstruct_list_ops` / `exstruct_describe_op` を追記
+- [x] 失敗例→正解例（引数名ミス）カタログを追記
 
 完了条件:
-- [ ] レビューで指摘された試行錯誤パターンをドキュメントで回避できる
+- [x] レビューで指摘された試行錯誤パターンをドキュメントで回避できる
 
 ### 8. 検証・受け入れ
 
@@ -106,6 +106,6 @@
 - [x] `set_style` の単セル/範囲/属性未指定エラー
 - [x] `apply_table_style` の正常系/重複テーブルエラー
 - [x] `mirror_artifact` の正常コピー/bridge未設定/コピー失敗warning
-- [ ] `exstruct_list_ops` の一覧妥当性
-- [ ] `exstruct_describe_op` の required/optional/example 妥当性
-- [ ] `exstruct_patch` ツール定義に `op` 別スキーマ情報が含まれること
+- [x] `exstruct_list_ops` の一覧妥当性
+- [x] `exstruct_describe_op` の required/optional/example 妥当性
+- [x] `exstruct_patch` ツール定義に `op` 別スキーマ情報が含まれること

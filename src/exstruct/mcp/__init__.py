@@ -42,8 +42,11 @@ from .sheet_reader import (
     read_range,
 )
 from .tools import (
+    DescribeOpToolInput,
+    DescribeOpToolOutput,
     ExtractToolInput,
     ExtractToolOutput,
+    ListOpsToolOutput,
     MakeToolInput,
     MakeToolOutput,
     PatchToolInput,
@@ -58,7 +61,9 @@ from .tools import (
     ReadRangeToolOutput,
     ValidateInputToolInput,
     ValidateInputToolOutput,
+    run_describe_op_tool,
     run_extract_tool,
+    run_list_ops_tool,
     run_make_tool,
     run_patch_tool,
     run_read_cells_tool,
@@ -74,6 +79,8 @@ from .validate_input import (
 )
 
 __all__ = [
+    "DescribeOpToolInput",
+    "DescribeOpToolOutput",
     "ExtractRequest",
     "ExtractResult",
     "ExtractOptions",
@@ -81,6 +88,7 @@ __all__ = [
     "ExtractToolOutput",
     "FormulaIssue",
     "FormulaReadItem",
+    "ListOpsToolOutput",
     "MakeRequest",
     "MakeToolInput",
     "MakeToolOutput",
@@ -119,7 +127,9 @@ __all__ = [
     "read_json_chunk",
     "validate_input",
     "run_extract",
+    "run_describe_op_tool",
     "run_extract_tool",
+    "run_list_ops_tool",
     "run_make",
     "run_make_tool",
     "run_patch",

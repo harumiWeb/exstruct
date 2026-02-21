@@ -24,6 +24,7 @@ from .extract_runner import (
     run_extract,
 )
 from .io import PathPolicy
+from .op_schema import get_patch_op_schema, list_patch_op_schemas
 from .patch_runner import (
     FormulaIssue,
     MakeRequest,
@@ -181,6 +182,36 @@ class RuntimeInfoToolOutput(BaseModel):
     cwd: str
     platform: str
     path_examples: RuntimePathExamples
+
+
+class OpSummary(BaseModel):
+    """Short op metadata for list output."""
+
+    op: str
+    description: str
+
+
+class ListOpsToolOutput(BaseModel):
+    """MCP tool output for listing supported patch operations."""
+
+    ops: list[OpSummary] = Field(default_factory=list)
+
+
+class DescribeOpToolInput(BaseModel):
+    """MCP tool input for describing one patch op."""
+
+    op: str
+
+
+class DescribeOpToolOutput(BaseModel):
+    """MCP tool output for patch op schema details."""
+
+    op: str
+    required: list[str] = Field(default_factory=list)
+    optional: list[str] = Field(default_factory=list)
+    constraints: list[str] = Field(default_factory=list)
+    example: dict[str, object] = Field(default_factory=dict)
+    aliases: dict[str, str] = Field(default_factory=dict)
 
 
 class PatchToolInput(BaseModel):
@@ -559,6 +590,43 @@ def _to_validate_input_output(
         is_readable=result.is_readable,
         warnings=result.warnings,
         errors=result.errors,
+    )
+
+
+def run_list_ops_tool() -> ListOpsToolOutput:
+    """Return available patch operations and their short descriptions."""
+    return ListOpsToolOutput(
+        ops=[
+            OpSummary(op=schema.op, description=schema.description)
+            for schema in list_patch_op_schemas()
+        ]
+    )
+
+
+def run_describe_op_tool(payload: DescribeOpToolInput) -> DescribeOpToolOutput:
+    """Return schema details for one patch operation.
+
+    Args:
+        payload: Tool input payload.
+
+    Returns:
+        Detailed op schema output.
+
+    Raises:
+        ValueError: If op name is unknown.
+    """
+    schema = get_patch_op_schema(payload.op)
+    if schema is None:
+        raise ValueError(
+            f"Unknown op '{payload.op}'. Use exstruct_list_ops to inspect available ops."
+        )
+    return DescribeOpToolOutput(
+        op=schema.op,
+        required=schema.required,
+        optional=schema.optional,
+        constraints=schema.constraints,
+        example=dict(schema.example),
+        aliases=dict(schema.aliases),
     )
 
 
