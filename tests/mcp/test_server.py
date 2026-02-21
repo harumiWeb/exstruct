@@ -132,6 +132,75 @@ def test_coerce_patch_ops_rejects_non_object_json_value() -> None:
         server._coerce_patch_ops(['["not","object"]'])
 
 
+def test_coerce_patch_ops_normalizes_aliases() -> None:
+    result = server._coerce_patch_ops(
+        [
+            {"op": "add_sheet", "name": "Data"},
+            {
+                "op": "set_dimensions",
+                "sheet": "Data",
+                "col": ["A", 2],
+                "width": 18,
+                "row": [1],
+                "height": 24,
+            },
+        ]
+    )
+    assert result[0] == {"op": "add_sheet", "sheet": "Data"}
+    assert result[1]["columns"] == ["A", 2]
+    assert result[1]["column_width"] == 18
+    assert result[1]["rows"] == [1]
+    assert result[1]["row_height"] == 24
+    assert "col" not in result[1]
+    assert "row" not in result[1]
+    assert "width" not in result[1]
+    assert "height" not in result[1]
+
+
+def test_coerce_patch_ops_rejects_conflicting_aliases() -> None:
+    with pytest.raises(ValueError, match="conflicting fields"):
+        server._coerce_patch_ops(
+            [
+                {
+                    "op": "set_dimensions",
+                    "sheet": "Sheet1",
+                    "columns": ["A"],
+                    "col": ["B"],
+                }
+            ]
+        )
+
+
+def test_coerce_patch_ops_normalizes_draw_grid_border_range() -> None:
+    result = server._coerce_patch_ops(
+        [
+            {
+                "op": "draw_grid_border",
+                "sheet": "Sheet1",
+                "range": "B3:D5",
+            }
+        ]
+    )
+    assert result[0]["base_cell"] == "B3"
+    assert result[0]["row_count"] == 3
+    assert result[0]["col_count"] == 3
+    assert "range" not in result[0]
+
+
+def test_coerce_patch_ops_rejects_mixed_draw_grid_border_inputs() -> None:
+    with pytest.raises(ValueError, match="does not allow mixing 'range'"):
+        server._coerce_patch_ops(
+            [
+                {
+                    "op": "draw_grid_border",
+                    "sheet": "Sheet1",
+                    "range": "A1:C3",
+                    "base_cell": "A1",
+                }
+            ]
+        )
+
+
 def test_register_tools_uses_default_on_conflict(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

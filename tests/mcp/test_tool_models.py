@@ -102,6 +102,22 @@ def test_patch_tool_input_accepts_set_font_size_op() -> None:
     assert payload.ops[0].op == "set_font_size"
 
 
+def test_patch_tool_input_accepts_set_font_color_op() -> None:
+    payload = PatchToolInput(
+        xlsx_path="input.xlsx",
+        ops=[
+            {
+                "op": "set_font_color",
+                "sheet": "Sheet1",
+                "range": "A1:B1",
+                "color": "1f4e79",
+            }
+        ],
+    )
+    assert payload.ops[0].op == "set_font_color"
+    assert payload.ops[0].color == "#1F4E79"
+
+
 def test_patch_tool_input_rejects_invalid_horizontal_align() -> None:
     with pytest.raises(ValidationError):
         PatchToolInput(

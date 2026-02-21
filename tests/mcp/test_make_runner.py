@@ -142,6 +142,23 @@ def test_run_make_rejects_path_outside_root(
         )
 
 
+def test_run_make_resolves_relative_out_path_from_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    root = tmp_path / "root"
+    root.mkdir()
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    result = run_make(
+        MakeRequest(out_path=Path("outputs/book.xlsx")),
+        policy=PathPolicy(root=root),
+    )
+    assert result.error is None
+    assert Path(result.out_path) == (root / "outputs" / "book.xlsx").resolve()
+
+
 def test_run_make_rejects_xls_when_com_unavailable(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

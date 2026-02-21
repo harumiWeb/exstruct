@@ -238,6 +238,7 @@ Example:
   - `draw_grid_border`
   - `set_bold`
   - `set_font_size`
+  - `set_font_color`
   - `set_fill_color`
   - `set_dimensions`
   - `merge_cells`
@@ -258,6 +259,42 @@ Example:
 - Output includes `engine` (`"com"` or `"openpyxl"`) to show which backend was actually used.
 - Conflict handling follows server `--on-conflict` unless overridden per tool call
 - `restore_design_snapshot` remains openpyxl-only.
+
+### Color fields (`color` / `fill_color`)
+
+- `set_font_color` uses `color` (font color only)
+- `set_fill_color` uses `fill_color` (background fill only)
+- Accepted formats for both fields:
+  - `RRGGBB`
+  - `AARRGGBB`
+  - `#RRGGBB`
+  - `#AARRGGBB`
+- Values are normalized internally to uppercase with leading `#`.
+
+Examples:
+
+```json
+{
+  "tool": "exstruct_patch",
+  "xlsx_path": "C:\\data\\book.xlsx",
+  "ops": [
+    { "op": "set_font_color", "sheet": "Sheet1", "cell": "A1", "color": "1f4e79" },
+    { "op": "set_fill_color", "sheet": "Sheet1", "range": "A1:C1", "fill_color": "CC336699" }
+  ]
+}
+```
+
+### Alias and shorthand inputs
+
+- `add_sheet`: `name` is accepted as an alias of `sheet`
+- `set_dimensions`:
+  - `row` -> `rows`
+  - `col` -> `columns`
+  - `height` -> `row_height`
+  - `width` -> `column_width`
+- `draw_grid_border`: `range` shorthand is accepted and normalized to
+  `base_cell` + `row_count` + `col_count`
+- Relative `out_path` for `exstruct_make` is resolved from MCP `--root`.
 
 ## AI agent configuration examples
 

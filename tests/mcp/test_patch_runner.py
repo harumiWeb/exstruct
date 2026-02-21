@@ -889,9 +889,77 @@ def test_patch_op_set_bold_rejects_cell_and_range() -> None:
 
 def test_patch_op_set_fill_color_rejects_invalid_color() -> None:
     with pytest.raises(
-        ValidationError, match="Invalid fill_color format. Use '#RRGGBB' or '#AARRGGBB'"
+        ValidationError,
+        match="Invalid fill_color format. Use 'RRGGBB', 'AARRGGBB', '#RRGGBB', or '#AARRGGBB'",
     ):
         PatchOp(op="set_fill_color", sheet="Sheet1", cell="A1", fill_color="red")
+
+
+def test_patch_op_normalizes_hex_inputs() -> None:
+    fill_op = PatchOp(
+        op="set_fill_color",
+        sheet="Sheet1",
+        cell="A1",
+        fill_color="1f4e79",
+    )
+    font_op = PatchOp(
+        op="set_font_color",
+        sheet="Sheet1",
+        cell="A1",
+        color="cc336699",
+    )
+    assert fill_op.fill_color == "#1F4E79"
+    assert font_op.color == "#CC336699"
+
+
+def test_patch_op_set_font_color_rejects_fill_color() -> None:
+    with pytest.raises(
+        ValidationError, match="set_font_color does not accept fill_color"
+    ):
+        PatchOp(
+            op="set_font_color",
+            sheet="Sheet1",
+            cell="A1",
+            color="#112233",
+            fill_color="#445566",
+        )
+
+
+def test_patch_op_set_fill_color_rejects_color() -> None:
+    with pytest.raises(ValidationError, match="set_fill_color does not accept color"):
+        PatchOp(
+            op="set_fill_color",
+            sheet="Sheet1",
+            cell="A1",
+            fill_color="#112233",
+            color="#445566",
+        )
+
+
+def test_run_patch_set_font_color(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    result = run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[
+                PatchOp(op="set_font_color", sheet="Sheet1", cell="A1", color="112233")
+            ],
+            on_conflict="rename",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert result.error is None
+    out_book = load_workbook(result.out_path)
+    try:
+        color = out_book["Sheet1"]["A1"].font.color
+        assert color is not None
+        assert str(getattr(color, "rgb", "")).upper() == "FF112233"
+    finally:
+        out_book.close()
 
 
 def test_patch_op_set_font_size_rejects_non_positive() -> None:

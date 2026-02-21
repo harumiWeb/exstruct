@@ -17,7 +17,7 @@ def test_path_policy_allows_within_root(tmp_path: Path) -> None:
 def test_path_policy_denies_outside_root(tmp_path: Path) -> None:
     policy = PathPolicy(root=tmp_path)
     outside = tmp_path.parent / "outside.txt"
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="resolved=.*root=.*example_relative"):
         policy.ensure_allowed(outside)
 
 
@@ -28,3 +28,9 @@ def test_path_policy_denies_glob(tmp_path: Path) -> None:
     denied.write_text("x", encoding="utf-8")
     with pytest.raises(ValueError):
         policy.ensure_allowed(denied)
+
+
+def test_path_policy_resolves_relative_from_root(tmp_path: Path) -> None:
+    policy = PathPolicy(root=tmp_path)
+    allowed = policy.ensure_allowed(Path("outputs/book.xlsx"))
+    assert allowed == (tmp_path / "outputs" / "book.xlsx").resolve()
