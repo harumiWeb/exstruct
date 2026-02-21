@@ -27,3 +27,4 @@ coverage.xml
 errors.txt
 htmlcov/
 .tmp_mcp_test/
+sample.md

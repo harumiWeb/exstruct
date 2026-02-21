@@ -2,74 +2,103 @@
 
 未完了 [ ], 完了 [x]
 
-## Phase 0: Spec固定
-- [x] `exstruct_make` を新規作成専用ツールとして定義する
-- [x] `out_path` 必須、`ops` 任意（空許容）を確定する
-- [x] 対応拡張子を `.xlsx/.xlsm/.xls` とし、`.xls` はCOM必須で確定する
-- [x] 初期シート名 `Sheet1` 正規化を確定する
-- [x] `dry_run` 等の拡張フラグを `exstruct_patch` 同等で維持する方針を確定する
+## Epic: MCP UX Hardening
 
-## Phase 1: Model / Tool I/F
-- [ ] `patch_runner.py` に `MakeRequest` を追加する
-- [ ] `patch_runner.py` に `run_make` を追加する
-- [ ] `tools.py` に `MakeToolInput` / `MakeToolOutput` を追加する
-- [ ] `tools.py` に `run_make_tool` を追加する
-- [ ] `__init__.py` の公開シンボルに `make` 系を追加する
+### 0. 事前準備
 
-## Phase 2: Runner実装
-- [ ] `out_path` の拡張子・PathPolicy検証を実装する
-- [ ] 空Workbook seed作成（`.xlsx/.xlsm` は openpyxl）を実装する
-- [ ] 空Workbook seed作成（`.xls` は COM）を実装する
-- [ ] seed初期シートを `Sheet1` に正規化する
-- [ ] `run_patch` 再利用で `ops` 適用を実装する
-- [ ] 一時seedファイルの確実なクリーンアップを実装する
+- [ ] `sample.md` の失敗ケースをテストケース化する方針を確定する
+- [ ] 既存の `tests/mcp/` で再利用可能な fixture を確認する
 
-## Phase 3: Server公開
-- [ ] `server.py` に `exstruct_make` ツール登録を追加する
-- [ ] `exstruct_make` docstring を追加する
-- [ ] `ops` の object/JSON文字列正規化を `patch` と同等に適用する
-- [ ] `default_on_conflict` 伝播を `make` にも適用する
+### 1. 入力正規化（FS-01）
 
-## Phase 4: バリデーション / エラーハンドリング
-- [ ] `.xls` + `backend=openpyxl` を拒否する
-- [ ] `.xls` + COMなし を拒否する
-- [ ] `.xls` + `dry_run/return_inverse_ops/preflight_formula_check` を拒否する
-- [ ] エラーメッセージを既存 `patch` 系の表現に揃える
+- [ ] `src/exstruct/mcp/server.py` の `_coerce_patch_ops` を拡張し、`name -> sheet` を追加
+- [ ] `src/exstruct/mcp/server.py` の `_coerce_patch_ops` を拡張し、`col/row -> columns/rows` を追加
+- [ ] `src/exstruct/mcp/server.py` の `_coerce_patch_ops` を拡張し、`width/height -> column_width/row_height` を追加
+- [ ] 正式フィールドとエイリアスが矛盾する場合のエラー仕様を実装
+- [ ] `color -> fill_color` 自動変換を無効化し、仕様として禁止
+- [ ] 上記変換の単体テストを追加（正常系/矛盾系）
 
-## Phase 5: テスト
-- [ ] `tests/mcp/test_make_runner.py` を追加する
-- [ ] 空作成（opsなし）正常系テストを追加する
-- [ ] ops適用正常系テストを追加する
-- [ ] `on_conflict` 挙動テストを追加する
-- [ ] `.xls` 制約テスト（COM依存・backend制約・拡張フラグ制約）を追加する
-- [ ] PathPolicy制約テストを追加する
-- [ ] JSON文字列ops受理テストを追加する
-- [ ] `tests/mcp/test_server.py` にツール登録・既定値伝播テストを追加する
-- [ ] `tests/mcp/test_tools_handlers.py` / `test_tool_models.py` を更新する
-- [ ] 既存 `exstruct_patch` 回帰がないことを確認する
+完了条件:
+- [ ] `name` / `col` / `width` 入力が `PatchOp` 検証前に正規化される
+- [ ] `color` と `fill_color` が混同されない
 
-## Phase 6: ドキュメント
-- [ ] `docs/mcp.md` に `exstruct_make` を追加する
-- [ ] `README.md` / `README.ja.md` / `docs/README.en.md` / `docs/README.ja.md` を更新する
-- [ ] 必要に応じて `CHANGELOG.md` を更新する
-- [ ] `FEATURE_SPEC.md` と本タスクリストの同期を確認する
+### 2. HEX自由指定（FS-02）
 
-## Phase 7: 検証
-- [ ] `uv run pytest tests/mcp/test_make_runner.py tests/mcp/test_tools_handlers.py tests/mcp/test_tool_models.py tests/mcp/test_server.py` を実行する
-- [ ] `uv run pytest tests/mcp` を実行する
-- [ ] `uv run task precommit-run` を実行する
-- [ ] 全通過を確認する
+- [ ] `src/exstruct/mcp/patch_runner.py` の色バリデータを拡張し、`color`/`fill_color` ともに `#` なし 6/8 桁を許容
+- [ ] 内部正規化（`#` 補完 + 大文字化）を実装
+- [ ] 不正桁数・不正文字のエラーを維持
+- [ ] テスト追加（6桁/8桁/`#`あり/`#`なし/不正値）
 
-## テスト/受け入れ条件
-1. `exstruct_make` で新規ブック作成ができる
-2. `ops` 適用結果が `patch_diff` に反映される
-3. `.xls` 制約エラーが仕様通りに発生する
-4. `on_conflict` 挙動が仕様通りに動作する
-5. 既存 `exstruct_patch` に回帰がない
+完了条件:
+- [ ] 任意HEX指定が成功する
+- [ ] 不正入力は明確なエラーになる
 
-## 明示的な前提
-1. 新規作成起点は空Workbookのみとする
-2. `out_path` は必須とする
-3. `ops` は任意（空許容）とする
-4. `.xls` はCOM必須で対応する
-5. 初期シート名は `Sheet1` に正規化する
+### 3. 文字色 `set_font_color` 追加（FS-03）
+
+- [ ] `src/exstruct/mcp/patch_runner.py` の `PatchOpType` に `set_font_color` を追加
+- [ ] `PatchOp` に `color` フィールドを追加
+- [ ] `set_font_color` 専用バリデーションを追加（`sheet` + `color` + exactly one of `cell`/`range`）
+- [ ] `set_font_color` 実処理を openpyxl/com 両方に追加
+- [ ] `set_font_color` で `fill_color` 指定時にエラー化
+- [ ] テスト追加（単セル/範囲/エラーケース）
+
+完了条件:
+- [ ] `color` は文字色として適用される
+- [ ] `fill_color` とは独立して動作する
+
+### 4. draw_grid_border shorthand（FS-04）
+
+- [ ] `src/exstruct/mcp/server.py` または `src/exstruct/mcp/patch_runner.py` で `range` から `base_cell/row_count/col_count` へ正規化
+- [ ] `range` と `base_cell/row_count/col_count` の併用エラーを実装
+- [ ] 最大セル数制限の既存チェックが有効なことを確認
+- [ ] テスト追加（正常系/併用エラー/上限制約）
+
+完了条件:
+- [ ] `draw_grid_border + range` が成功する
+- [ ] 併用ケースで明確なエラーになる
+
+### 5. パス UX 改善（FS-05）
+
+- [ ] 相対 `out_path` 解決ルールを root 基準で統一
+- [ ] `Path is outside root` エラー文言に root と有効例を追加
+- [ ] テスト追加（相対成功/絶対失敗/診断メッセージ）
+
+完了条件:
+- [ ] 相対 `out_path` が環境依存せず安定
+- [ ] root 外エラーの自己修復性が上がる
+
+### 6. ランタイム情報ツール（FS-06, optional）
+
+- [ ] `src/exstruct/mcp/server.py` に `exstruct_get_runtime_info` を追加
+- [ ] `src/exstruct/mcp/tools.py` に対応入出力モデルを追加
+- [ ] テスト追加（root/cwd/platform/path_examples の整合性）
+- [ ] `docs/mcp.md` に利用例を追加
+
+完了条件:
+- [ ] エージェントが root/cwd を1コールで取得できる
+
+### 7. ドキュメント整備
+
+- [ ] `docs/mcp.md` に「色指定の仕様（color / fill_color）」節を追加
+- [ ] `docs/mcp.md` に `set_font_color` / `set_fill_color` の最小例を追加
+- [ ] `docs/mcp.md` に `set_dimensions` / `draw_grid_border` の最小例を追加
+- [ ] `docs/README.ja.md` の MCP 節に注意点を反映
+
+完了条件:
+- [ ] 同種ミスの再発を抑制できるドキュメントになっている
+
+### 8. 検証・リリース
+
+- [ ] `uv run task precommit-run` を実行し、mypy / Ruff / pytest を通す
+- [ ] 変更点を `docs/release-notes/` に追加
+- [ ] PR テンプレートに受け入れ条件のチェックを記載
+
+完了条件:
+- [ ] CI グリーン
+- [ ] Feature Spec の AC-01〜AC-06 を満たす
+
+## 優先順位
+
+1. P0: 1, 2, 3, 4, 5
+2. P1: 7
+3. P2: 6, 8
