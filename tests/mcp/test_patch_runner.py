@@ -23,6 +23,21 @@ def _create_workbook(path: Path) -> None:
     workbook.close()
 
 
+def _seed_table_source(path: Path) -> None:
+    workbook = load_workbook(path)
+    try:
+        sheet = workbook["Sheet1"]
+        sheet["A1"] = "Name"
+        sheet["B1"] = "Amount"
+        sheet["A2"] = "A"
+        sheet["B2"] = 100
+        sheet["A3"] = "B"
+        sheet["B3"] = 200
+        workbook.save(path)
+    finally:
+        workbook.close()
+
+
 def _disable_com(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         patch_runner,
@@ -247,6 +262,51 @@ def test_run_patch_backend_com_does_not_fallback_on_com_error(
             ),
             policy=PathPolicy(root=tmp_path),
         )
+
+
+def test_run_patch_backend_com_fallbacks_for_apply_table_style(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    _seed_table_source(input_path)
+    monkeypatch.setattr(
+        patch_runner,
+        "get_com_availability",
+        lambda: ComAvailability(available=True, reason=None),
+    )
+
+    def _fail_if_called(
+        input_path: Path,
+        output_path: Path,
+        ops: list[PatchOp],
+        auto_formula: bool,
+    ) -> list[patch_runner.PatchDiffItem]:
+        raise AssertionError("COM backend should not be called for apply_table_style")
+
+    monkeypatch.setattr(patch_runner, "_apply_ops_xlwings", _fail_if_called)
+    result = run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[
+                PatchOp(
+                    op="apply_table_style",
+                    sheet="Sheet1",
+                    range="A1:B3",
+                    style="TableStyleMedium2",
+                    table_name="SalesTable",
+                )
+            ],
+            on_conflict="rename",
+            backend="com",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert result.error is None
+    assert result.engine == "openpyxl"
+    assert any(
+        "does not support apply_table_style" in warning for warning in result.warnings
+    )
 
 
 def test_run_patch_add_sheet_and_set_value(
@@ -954,6 +1014,24 @@ def test_patch_op_set_style_rejects_cell_and_range() -> None:
         )
 
 
+def test_patch_op_apply_table_style_requires_style() -> None:
+    with pytest.raises(ValidationError, match="apply_table_style requires style"):
+        PatchOp(op="apply_table_style", sheet="Sheet1", range="A1:B3")
+
+
+def test_patch_op_apply_table_style_rejects_cell() -> None:
+    with pytest.raises(
+        ValidationError, match="apply_table_style does not accept cell or base_cell"
+    ):
+        PatchOp(
+            op="apply_table_style",
+            sheet="Sheet1",
+            cell="A1",
+            range="A1:B3",
+            style="TableStyleMedium2",
+        )
+
+
 def test_run_patch_set_font_color(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1360,6 +1438,120 @@ def test_run_patch_set_style_and_inverse_restore(
         assert restored_cell.alignment.horizontal == "left"
     finally:
         restored_book.close()
+
+
+def test_run_patch_apply_table_style(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    _seed_table_source(input_path)
+    result = run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[
+                PatchOp(
+                    op="apply_table_style",
+                    sheet="Sheet1",
+                    range="A1:B3",
+                    style="TableStyleMedium2",
+                    table_name="SalesTable",
+                )
+            ],
+            on_conflict="rename",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert result.error is None
+    out_book = load_workbook(result.out_path)
+    try:
+        sheet = out_book["Sheet1"]
+        table = sheet.tables["SalesTable"]
+        assert table.ref == "A1:B3"
+        style_info = table.tableStyleInfo
+        assert style_info is not None
+        assert style_info.name == "TableStyleMedium2"
+    finally:
+        out_book.close()
+
+
+def test_run_patch_apply_table_style_rejects_duplicate_table_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    _seed_table_source(input_path)
+    result = run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[
+                PatchOp(
+                    op="apply_table_style",
+                    sheet="Sheet1",
+                    range="A1:B3",
+                    style="TableStyleMedium2",
+                    table_name="SalesTable",
+                ),
+                PatchOp(
+                    op="apply_table_style",
+                    sheet="Sheet1",
+                    range="D1:E3",
+                    style="TableStyleMedium2",
+                    table_name="SalesTable",
+                ),
+            ],
+            on_conflict="rename",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert result.error is not None
+    assert "Table name already exists" in result.error.message
+
+
+def test_run_patch_apply_table_style_rejects_intersection(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    _seed_table_source(input_path)
+    first = run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[
+                PatchOp(
+                    op="apply_table_style",
+                    sheet="Sheet1",
+                    range="A1:B3",
+                    style="TableStyleMedium2",
+                    table_name="SalesTable",
+                )
+            ],
+            on_conflict="rename",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert first.error is None
+    second = run_patch(
+        PatchRequest(
+            xlsx_path=Path(first.out_path),
+            ops=[
+                PatchOp(
+                    op="apply_table_style",
+                    sheet="Sheet1",
+                    range="B2:C4",
+                    style="TableStyleMedium2",
+                    table_name="SalesTable2",
+                )
+            ],
+            on_conflict="rename",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert second.error is not None
+    assert "intersects existing table" in second.error.message
 
 
 def test_run_patch_error_includes_hint_for_known_set_fill_color_mistake(

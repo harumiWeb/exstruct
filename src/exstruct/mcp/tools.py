@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+import shutil
 from typing import Literal
+from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
@@ -194,6 +196,7 @@ class PatchToolInput(BaseModel):
     return_inverse_ops: bool = False
     preflight_formula_check: bool = False
     backend: Literal["auto", "com", "openpyxl"] = "auto"
+    mirror_artifact: bool = False
 
 
 class MakeToolInput(BaseModel):
@@ -207,6 +210,7 @@ class MakeToolInput(BaseModel):
     return_inverse_ops: bool = False
     preflight_formula_check: bool = False
     backend: Literal["auto", "com", "openpyxl"] = "auto"
+    mirror_artifact: bool = False
 
 
 class PatchToolOutput(BaseModel):
@@ -217,6 +221,7 @@ class PatchToolOutput(BaseModel):
     inverse_ops: list[PatchOp] = Field(default_factory=list)
     formula_issues: list[FormulaIssue] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    mirrored_out_path: str | None = None
     error: PatchErrorDetail | None = None
     engine: Literal["com", "openpyxl"]
 
@@ -229,6 +234,7 @@ class MakeToolOutput(BaseModel):
     inverse_ops: list[PatchOp] = Field(default_factory=list)
     formula_issues: list[FormulaIssue] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    mirrored_out_path: str | None = None
     error: PatchErrorDetail | None = None
     engine: Literal["com", "openpyxl"]
 
@@ -374,6 +380,7 @@ def run_patch_tool(
     *,
     policy: PathPolicy | None = None,
     on_conflict: OnConflictPolicy | None = None,
+    artifact_bridge_dir: Path | None = None,
 ) -> PatchToolOutput:
     """Run the patch tool handler.
 
@@ -398,7 +405,14 @@ def run_patch_tool(
         backend=payload.backend,
     )
     result = run_patch(request, policy=policy)
-    return _to_patch_tool_output(result)
+    output = _to_patch_tool_output(result)
+    _apply_artifact_mirroring(
+        output,
+        out_path=result.out_path,
+        mirror_artifact=payload.mirror_artifact,
+        artifact_bridge_dir=artifact_bridge_dir,
+    )
+    return output
 
 
 def run_make_tool(
@@ -406,6 +420,7 @@ def run_make_tool(
     *,
     policy: PathPolicy | None = None,
     on_conflict: OnConflictPolicy | None = None,
+    artifact_bridge_dir: Path | None = None,
 ) -> MakeToolOutput:
     """Run the make tool handler.
 
@@ -428,7 +443,14 @@ def run_make_tool(
         backend=payload.backend,
     )
     result = run_make(request, policy=policy)
-    return _to_make_tool_output(result)
+    output = _to_make_tool_output(result)
+    _apply_artifact_mirroring(
+        output,
+        out_path=result.out_path,
+        mirror_artifact=payload.mirror_artifact,
+        artifact_bridge_dir=artifact_bridge_dir,
+    )
+    return output
 
 
 def _to_tool_output(result: ExtractResult) -> ExtractToolOutput:
@@ -575,6 +597,54 @@ def _to_make_tool_output(result: PatchResult) -> MakeToolOutput:
         inverse_ops=result.inverse_ops,
         formula_issues=result.formula_issues,
         warnings=result.warnings,
+        mirrored_out_path=None,
         error=result.error,
         engine=result.engine,
     )
+
+
+def _apply_artifact_mirroring(
+    output: PatchToolOutput | MakeToolOutput,
+    *,
+    out_path: str,
+    mirror_artifact: bool,
+    artifact_bridge_dir: Path | None,
+) -> None:
+    """Apply optional artifact mirroring and append warnings when needed."""
+    output.mirrored_out_path = None
+    if not mirror_artifact or output.error is not None:
+        return
+    mirrored_path, warning = _mirror_artifact(
+        source_path=Path(out_path),
+        artifact_bridge_dir=artifact_bridge_dir,
+    )
+    output.mirrored_out_path = mirrored_path
+    if warning is not None:
+        output.warnings.append(warning)
+
+
+def _mirror_artifact(
+    *, source_path: Path, artifact_bridge_dir: Path | None
+) -> tuple[str | None, str | None]:
+    """Mirror output artifact to bridge directory."""
+    if artifact_bridge_dir is None:
+        return None, "mirror_artifact=true but --artifact-bridge-dir is not configured."
+    if not source_path.exists() or not source_path.is_file():
+        return (
+            None,
+            f"mirror_artifact requested, but output file was not found: {source_path}",
+        )
+    try:
+        artifact_bridge_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        return None, f"Failed to prepare artifact bridge directory: {exc}"
+    target = artifact_bridge_dir / source_path.name
+    if target.exists():
+        target = artifact_bridge_dir / (
+            f"{source_path.stem}_{uuid4().hex[:8]}{source_path.suffix}"
+        )
+    try:
+        shutil.copy2(source_path, target)
+    except OSError as exc:
+        return None, f"Failed to mirror artifact: {exc}"
+    return str(target), None

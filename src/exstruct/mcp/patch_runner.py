@@ -34,6 +34,7 @@ PatchOpType = Literal[
     "unmerge_cells",
     "set_alignment",
     "set_style",
+    "apply_table_style",
     "restore_design_snapshot",
 ]
 PatchStatus = Literal["applied", "skipped"]
@@ -273,6 +274,13 @@ class OpenpyxlWorksheetProtocol(Protocol):
 
 
 @runtime_checkable
+class OpenpyxlTablesProtocol(Protocol):
+    """Protocol for openpyxl worksheet tables collection."""
+
+    def items(self) -> Iterator[tuple[object, object]]: ...
+
+
+@runtime_checkable
 class OpenpyxlWorkbookProtocol(Protocol):
     """Protocol for openpyxl workbook access used by patch runner."""
 
@@ -427,6 +435,7 @@ class PatchOp(BaseModel):
     - ``unmerge_cells``: Unmerge all merged ranges intersecting target range.
     - ``set_alignment``: Set horizontal/vertical alignment and/or wrap_text.
     - ``set_style``: Set multiple style attributes in one operation.
+    - ``apply_table_style``: Create an Excel table and apply table style.
     - ``restore_design_snapshot``: Restore style/dimension snapshot (internal inverse op).
     """
 
@@ -438,6 +447,7 @@ class PatchOp(BaseModel):
             "'set_fill_color', "
             "'set_dimensions', "
             "'merge_cells', 'unmerge_cells', 'set_alignment', 'set_style', "
+            "'apply_table_style', "
             "or 'restore_design_snapshot'."
         )
     )
@@ -524,6 +534,14 @@ class PatchOp(BaseModel):
         default=None,
         description="Wrap text flag for set_alignment/set_style.",
     )
+    style: str | None = Field(
+        default=None,
+        description="Table style name for apply_table_style.",
+    )
+    table_name: str | None = Field(
+        default=None,
+        description="Optional table name for apply_table_style.",
+    )
     design_snapshot: DesignSnapshot | None = Field(
         default=None,
         description="Design snapshot payload for restore_design_snapshot.",
@@ -607,6 +625,16 @@ class PatchOp(BaseModel):
             normalized.append(_normalize_column_identifier(column))
         return normalized
 
+    @field_validator("style", "table_name")
+    @classmethod
+    def _validate_non_empty_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        candidate = value.strip()
+        if not candidate:
+            raise ValueError("style/table_name must not be empty when provided.")
+        return candidate
+
     @model_validator(mode="after")
     def _validate_op(self) -> PatchOp:
         validator = _validator_for_op(self.op)
@@ -646,6 +674,7 @@ def _validator_for_op(op_type: PatchOpType) -> Callable[[PatchOp], None] | None:
         "unmerge_cells": _validate_unmerge_cells,
         "set_alignment": _validate_set_alignment,
         "set_style": _validate_set_style,
+        "apply_table_style": _validate_apply_table_style,
         "restore_design_snapshot": _validate_restore_design_snapshot,
     }
     return validators.get(op_type)
@@ -1042,6 +1071,39 @@ def _validate_set_style(op: PatchOp) -> None:
     _validate_style_target_size(op, op_name="set_style")
 
 
+def _validate_apply_table_style(op: PatchOp) -> None:
+    """Validate apply_table_style operation."""
+    _validate_no_legacy_edit_fields(
+        op, op_name="apply_table_style", allow_table_fields=True
+    )
+    if op.cell is not None or op.base_cell is not None:
+        raise ValueError("apply_table_style does not accept cell or base_cell.")
+    if op.range is None:
+        raise ValueError("apply_table_style requires range.")
+    if op.row_count is not None or op.col_count is not None:
+        raise ValueError("apply_table_style does not accept row_count or col_count.")
+    if (
+        op.bold is not None
+        or op.color is not None
+        or op.fill_color is not None
+        or op.font_size is not None
+    ):
+        raise ValueError(
+            "apply_table_style does not accept bold, color, fill_color, or font_size."
+        )
+    if op.rows is not None or op.columns is not None:
+        raise ValueError("apply_table_style does not accept rows or columns.")
+    if op.row_height is not None or op.column_width is not None:
+        raise ValueError(
+            "apply_table_style does not accept row_height or column_width."
+        )
+    _validate_no_alignment_fields(op, op_name="apply_table_style")
+    if op.design_snapshot is not None:
+        raise ValueError("apply_table_style does not accept design_snapshot.")
+    if op.style is None:
+        raise ValueError("apply_table_style requires style.")
+
+
 def _validate_restore_design_snapshot(op: PatchOp) -> None:
     """Validate restore_design_snapshot operation."""
     _validate_no_legacy_edit_fields(op, op_name="restore_design_snapshot")
@@ -1070,7 +1132,9 @@ def _validate_restore_design_snapshot(op: PatchOp) -> None:
         raise ValueError("restore_design_snapshot requires design_snapshot.")
 
 
-def _validate_no_legacy_edit_fields(op: PatchOp, *, op_name: str) -> None:
+def _validate_no_legacy_edit_fields(
+    op: PatchOp, *, op_name: str, allow_table_fields: bool = False
+) -> None:
     """Reject fields that are unrelated to design operations."""
     if op.expected is not None:
         raise ValueError(f"{op_name} does not accept expected.")
@@ -1080,6 +1144,11 @@ def _validate_no_legacy_edit_fields(op: PatchOp, *, op_name: str) -> None:
         raise ValueError(f"{op_name} does not accept values.")
     if op.formula is not None:
         raise ValueError(f"{op_name} does not accept formula.")
+    if not allow_table_fields:
+        if op.style is not None:
+            raise ValueError(f"{op_name} does not accept style.")
+        if op.table_name is not None:
+            raise ValueError(f"{op_name} does not accept table_name.")
 
 
 def _validate_no_design_fields(op: PatchOp, *, op_name: str) -> None:
@@ -1098,6 +1167,10 @@ def _validate_no_design_fields(op: PatchOp, *, op_name: str) -> None:
         raise ValueError(f"{op_name} does not accept rows or columns.")
     if op.row_height is not None or op.column_width is not None:
         raise ValueError(f"{op_name} does not accept row_height or column_width.")
+    if op.style is not None:
+        raise ValueError(f"{op_name} does not accept style.")
+    if op.table_name is not None:
+        raise ValueError(f"{op_name} does not accept table_name.")
     _validate_no_alignment_fields(op, op_name=op_name)
     if op.design_snapshot is not None:
         raise ValueError(f"{op_name} does not accept design_snapshot.")
@@ -1370,19 +1443,25 @@ def run_patch(
         out_name=request.out_name,
         policy=policy,
     )
+    warnings: list[str] = []
+    effective_request = request
+    if request.backend == "com" and _contains_apply_table_style_op(request.ops):
+        warnings.append(
+            "backend='com' does not support apply_table_style; falling back to openpyxl."
+        )
+        effective_request = request.model_copy(update={"backend": "openpyxl"})
     com = get_com_availability()
     selected_engine = _select_patch_engine(
-        request=request,
+        request=effective_request,
         input_path=resolved_input,
         com_available=com.available,
     )
     output_path, warning, skipped = _apply_conflict_policy(
-        output_path, request.on_conflict
+        output_path, effective_request.on_conflict
     )
-    warnings: list[str] = []
     if warning:
         warnings.append(warning)
-    if skipped and not request.dry_run:
+    if skipped and not effective_request.dry_run:
         return PatchResult(
             out_path=str(output_path),
             patch_diff=[],
@@ -1391,18 +1470,24 @@ def run_patch(
             warnings=warnings,
             engine=selected_engine,
         )
-    if skipped and request.dry_run:
+    if skipped and effective_request.dry_run:
         warnings.append(
             "Dry-run mode ignores on_conflict=skip and simulates patch without writing."
         )
 
-    if resolved_input.suffix.lower() == ".xls" and _contains_design_ops(request.ops):
+    if resolved_input.suffix.lower() == ".xls" and _contains_design_ops(
+        effective_request.ops
+    ):
         raise ValueError(
             "Design operations are not supported for .xls files. Convert to .xlsx/.xlsm first."
         )
-    if selected_engine == "openpyxl" and com.reason and request.backend == "auto":
+    if (
+        selected_engine == "openpyxl"
+        and com.reason
+        and effective_request.backend == "auto"
+    ):
         warnings.append(f"COM unavailable: {com.reason}")
-    if selected_engine == "openpyxl" and _requires_openpyxl_backend(request):
+    if selected_engine == "openpyxl" and _requires_openpyxl_backend(effective_request):
         warnings.append("Using openpyxl backend due to patch request constraints.")
 
     _ensure_output_dir(output_path)
@@ -1411,8 +1496,8 @@ def run_patch(
             diff = _apply_ops_xlwings(
                 resolved_input,
                 output_path,
-                request.ops,
-                request.auto_formula,
+                effective_request.ops,
+                effective_request.auto_formula,
             )
             return PatchResult(
                 out_path=str(output_path),
@@ -1433,12 +1518,12 @@ def run_patch(
                 engine="com",
             )
         except Exception as exc:
-            if _allow_auto_openpyxl_fallback(request, resolved_input):
+            if _allow_auto_openpyxl_fallback(effective_request, resolved_input):
                 warnings.append(
                     f"COM patch failed; falling back to openpyxl. ({exc!r})"
                 )
                 return _apply_with_openpyxl(
-                    request,
+                    effective_request,
                     resolved_input,
                     output_path,
                     warnings,
@@ -1446,7 +1531,7 @@ def run_patch(
             raise RuntimeError(f"COM patch failed: {exc}") from exc
 
     return _apply_with_openpyxl(
-        request,
+        effective_request,
         resolved_input,
         output_path,
         warnings,
@@ -1614,9 +1699,15 @@ def _contains_design_ops(ops: list[PatchOp]) -> bool:
         "unmerge_cells",
         "set_alignment",
         "set_style",
+        "apply_table_style",
         "restore_design_snapshot",
     }
     return any(op.op in design_ops for op in ops)
+
+
+def _contains_apply_table_style_op(ops: list[PatchOp]) -> bool:
+    """Return True when apply_table_style is present."""
+    return any(op.op == "apply_table_style" for op in ops)
 
 
 def _resolve_input_path(path: Path, *, policy: PathPolicy | None) -> Path:
@@ -1917,6 +2008,9 @@ def _apply_openpyxl_sheet_op(
         "unmerge_cells": lambda: _apply_openpyxl_unmerge_cells(sheet, op, index),
         "set_alignment": lambda: _apply_openpyxl_set_alignment(sheet, op, index),
         "set_style": lambda: _apply_openpyxl_set_style(sheet, op, index),
+        "apply_table_style": lambda: _apply_openpyxl_apply_table_style(
+            sheet, op, index
+        ),
         "restore_design_snapshot": lambda: _apply_openpyxl_restore_design_snapshot(
             sheet, op, index
         ),
@@ -2382,6 +2476,49 @@ def _apply_openpyxl_set_style(
     )
 
 
+def _apply_openpyxl_apply_table_style(
+    sheet: OpenpyxlWorksheetProtocol,
+    op: PatchOp,
+    index: int,
+) -> tuple[PatchDiffItem, PatchOp | None]:
+    """Apply apply_table_style op."""
+    if op.range is None or op.style is None:
+        raise ValueError("apply_table_style requires range and style.")
+    try:
+        from openpyxl.worksheet.table import Table, TableStyleInfo
+    except ImportError as exc:
+        raise RuntimeError(f"openpyxl is not available: {exc}") from exc
+    _ensure_range_not_intersects_existing_tables(sheet, op.range)
+    table_name = op.table_name or _next_openpyxl_table_name(sheet)
+    _ensure_table_name_available(sheet, table_name)
+    table = Table(displayName=table_name, ref=op.range)
+    table.tableStyleInfo = TableStyleInfo(
+        name=op.style,
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False,
+    )
+    add_table = getattr(sheet, "add_table", None)
+    if not callable(add_table):
+        raise ValueError("apply_table_style requires worksheet.add_table support.")
+    add_table(table)
+    return (
+        PatchDiffItem(
+            op_index=index,
+            op=op.op,
+            sheet=op.sheet,
+            cell=op.range,
+            before=None,
+            after=PatchValue(
+                kind="style",
+                value=f"table={table_name};table_style={op.style}",
+            ),
+        ),
+        None,
+    )
+
+
 def _apply_openpyxl_restore_design_snapshot(
     sheet: OpenpyxlWorksheetProtocol,
     op: PatchOp,
@@ -2521,6 +2658,56 @@ def _build_set_style_summary_parts(op: PatchOp) -> list[str]:
     if op.wrap_text is not None:
         parts.append(f"wrap_text={op.wrap_text}")
     return parts
+
+
+def _ensure_range_not_intersects_existing_tables(
+    sheet: OpenpyxlWorksheetProtocol, range_ref: str
+) -> None:
+    """Raise ValueError if range intersects with existing table ranges."""
+    for table_name, existing_ref in _collect_openpyxl_table_ranges(sheet):
+        if _ranges_overlap(range_ref, existing_ref):
+            raise ValueError(
+                "apply_table_style range intersects existing table "
+                f"'{table_name}' ({existing_ref})."
+            )
+
+
+def _ensure_table_name_available(
+    sheet: OpenpyxlWorksheetProtocol, table_name: str
+) -> None:
+    """Raise ValueError when table name already exists in sheet."""
+    existing_names = {name for name, _ in _collect_openpyxl_table_ranges(sheet)}
+    if table_name in existing_names:
+        raise ValueError(f"Table name already exists: {table_name}")
+
+
+def _next_openpyxl_table_name(sheet: OpenpyxlWorksheetProtocol) -> str:
+    """Generate next available table name like Table1, Table2, ..."""
+    existing_names = {name for name, _ in _collect_openpyxl_table_ranges(sheet)}
+    for index in range(1, 10_000):
+        candidate = f"Table{index}"
+        if candidate not in existing_names:
+            return candidate
+    raise RuntimeError("Failed to generate unique table name.")
+
+
+def _collect_openpyxl_table_ranges(
+    sheet: OpenpyxlWorksheetProtocol,
+) -> list[tuple[str, str]]:
+    """Collect (table_name, range_ref) pairs from worksheet tables."""
+    tables = getattr(sheet, "tables", None)
+    if tables is None or not isinstance(tables, OpenpyxlTablesProtocol):
+        return []
+    pairs: list[tuple[str, str]] = []
+    for key, value in tables.items():
+        table_name = str(getattr(value, "displayName", key))
+        ref_raw = getattr(value, "ref", None)
+        if isinstance(ref_raw, str):
+            pairs.append((table_name, ref_raw))
+            continue
+        if isinstance(value, str):
+            pairs.append((str(key), value))
+    return pairs
 
 
 def _require_formula(formula: str | None, op_name: str) -> str:
@@ -3064,6 +3251,7 @@ def _apply_xlwings_extended_op(
         "unmerge_cells": lambda: _apply_xlwings_unmerge_cells(sheet, op, index),
         "set_alignment": lambda: _apply_xlwings_set_alignment(sheet, op, index),
         "set_style": lambda: _apply_xlwings_set_style(sheet, op, index),
+        "apply_table_style": lambda: _apply_xlwings_apply_table_style(op),
         "restore_design_snapshot": lambda: _apply_xlwings_restore_design_snapshot(op),
     }
     handler = handlers.get(op.op)
@@ -3341,6 +3529,11 @@ def _apply_xlwings_set_style(
             kind="style", value=";".join(_build_set_style_summary_parts(op))
         ),
     )
+
+
+def _apply_xlwings_apply_table_style(op: PatchOp) -> PatchDiffItem:
+    """Reject apply_table_style on COM backend."""
+    raise ValueError("apply_table_style is supported only on openpyxl backend.")
 
 
 def _apply_xlwings_restore_design_snapshot(op: PatchOp) -> PatchDiffItem:

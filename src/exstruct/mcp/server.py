@@ -62,6 +62,10 @@ class ServerConfig(BaseModel):
     on_conflict: OnConflictPolicy = Field(
         default="overwrite", description="Output conflict policy."
     )
+    artifact_bridge_dir: Path | None = Field(
+        default=None,
+        description="Optional bridge directory for mirrored artifacts.",
+    )
     warmup: bool = Field(default=False, description="Warm up heavy imports on start.")
 
 
@@ -100,7 +104,11 @@ def run_server(config: ServerConfig) -> None:
     logger.info("MCP root: %s", policy.normalize_root())
     if config.warmup:
         _warmup_exstruct()
-    app = _create_app(policy, on_conflict=config.on_conflict)
+    app = _create_app(
+        policy,
+        on_conflict=config.on_conflict,
+        artifact_bridge_dir=config.artifact_bridge_dir,
+    )
     app.run()
 
 
@@ -134,6 +142,11 @@ def _parse_args(argv: list[str] | None) -> ServerConfig:
         help="Output conflict policy (overwrite/skip/rename).",
     )
     parser.add_argument(
+        "--artifact-bridge-dir",
+        type=Path,
+        help="Optional directory to mirror generated artifacts for chat handoff.",
+    )
+    parser.add_argument(
         "--warmup",
         action="store_true",
         help="Warm up heavy imports on startup to reduce tool latency.",
@@ -145,6 +158,7 @@ def _parse_args(argv: list[str] | None) -> ServerConfig:
         log_level=args.log_level,
         log_file=args.log_file,
         on_conflict=args.on_conflict,
+        artifact_bridge_dir=args.artifact_bridge_dir,
         warmup=bool(args.warmup),
     )
 
@@ -187,7 +201,12 @@ def _warmup_exstruct() -> None:
     logger.info("Warmup completed.")
 
 
-def _create_app(policy: PathPolicy, *, on_conflict: OnConflictPolicy) -> FastMCP:
+def _create_app(
+    policy: PathPolicy,
+    *,
+    on_conflict: OnConflictPolicy,
+    artifact_bridge_dir: Path | None = None,
+) -> FastMCP:
     """Create the MCP FastMCP application.
 
     Args:
@@ -199,12 +218,21 @@ def _create_app(policy: PathPolicy, *, on_conflict: OnConflictPolicy) -> FastMCP
     from mcp.server.fastmcp import FastMCP
 
     app = FastMCP("ExStruct MCP", json_response=True)
-    _register_tools(app, policy, default_on_conflict=on_conflict)
+    _register_tools(
+        app,
+        policy,
+        default_on_conflict=on_conflict,
+        artifact_bridge_dir=artifact_bridge_dir,
+    )
     return app
 
 
 def _register_tools(
-    app: FastMCP, policy: PathPolicy, *, default_on_conflict: OnConflictPolicy
+    app: FastMCP,
+    policy: PathPolicy,
+    *,
+    default_on_conflict: OnConflictPolicy,
+    artifact_bridge_dir: Path | None = None,
 ) -> None:
     """Register MCP tools for the server.
 
@@ -462,6 +490,7 @@ def _register_tools(
         return_inverse_ops: bool = False,
         preflight_formula_check: bool = False,
         backend: Literal["auto", "com", "openpyxl"] = "auto",
+        mirror_artifact: bool = False,
     ) -> PatchToolOutput:
         """Edit an Excel workbook by applying patch operations.
 
@@ -490,6 +519,7 @@ def _register_tools(
                 'unmerge_cells' (unmerge ranges intersecting target),
                 'set_alignment' (set horizontal/vertical alignment and wrap_text), and
                 'set_style' (apply multiple style attributes in one op), and
+                'apply_table_style' (create table and apply Excel table style), and
                 'restore_design_snapshot' (internal inverse restore op).
             out_dir: Output directory. Defaults to same directory as input.
             out_name: Output filename. Defaults to '{stem}_patched{ext}'.
@@ -509,6 +539,8 @@ def _register_tools(
                 - "com": force COM path (requires Excel COM and disallows
                   dry_run/return_inverse_ops/preflight_formula_check).
                 - "openpyxl": force openpyxl path (.xls is not supported).
+            mirror_artifact: When true, mirror output workbook to
+                --artifact-bridge-dir after successful patch.
 
         Returns:
             Patch result with output path, applied diffs, and any warnings.
@@ -525,14 +557,24 @@ def _register_tools(
             return_inverse_ops=return_inverse_ops,
             preflight_formula_check=preflight_formula_check,
             backend=backend,
+            mirror_artifact=mirror_artifact,
         )
         effective_on_conflict = on_conflict or default_on_conflict
-        work = functools.partial(
-            run_patch_tool,
-            payload,
-            policy=policy,
-            on_conflict=effective_on_conflict,
-        )
+        if artifact_bridge_dir is None:
+            work = functools.partial(
+                run_patch_tool,
+                payload,
+                policy=policy,
+                on_conflict=effective_on_conflict,
+            )
+        else:
+            work = functools.partial(
+                run_patch_tool,
+                payload,
+                policy=policy,
+                on_conflict=effective_on_conflict,
+                artifact_bridge_dir=artifact_bridge_dir,
+            )
         result = cast(PatchToolOutput, await anyio.to_thread.run_sync(work))
         return result
 
@@ -548,6 +590,7 @@ def _register_tools(
         return_inverse_ops: bool = False,
         preflight_formula_check: bool = False,
         backend: Literal["auto", "com", "openpyxl"] = "auto",
+        mirror_artifact: bool = False,
     ) -> MakeToolOutput:
         """Create a new Excel workbook and apply patch operations.
 
@@ -567,6 +610,8 @@ def _register_tools(
                 - "auto" (default): prefer COM when available; otherwise openpyxl.
                 - "com": force COM path (requires Excel COM).
                 - "openpyxl": force openpyxl path (.xls is not supported).
+            mirror_artifact: When true, mirror output workbook to
+                --artifact-bridge-dir after successful make/patch.
 
         Returns:
             Patch-compatible result with output path, diff, and warnings.
@@ -581,14 +626,24 @@ def _register_tools(
             return_inverse_ops=return_inverse_ops,
             preflight_formula_check=preflight_formula_check,
             backend=backend,
+            mirror_artifact=mirror_artifact,
         )
         effective_on_conflict = on_conflict or default_on_conflict
-        work = functools.partial(
-            run_make_tool,
-            payload,
-            policy=policy,
-            on_conflict=effective_on_conflict,
-        )
+        if artifact_bridge_dir is None:
+            work = functools.partial(
+                run_make_tool,
+                payload,
+                policy=policy,
+                on_conflict=effective_on_conflict,
+            )
+        else:
+            work = functools.partial(
+                run_make_tool,
+                payload,
+                policy=policy,
+                on_conflict=effective_on_conflict,
+                artifact_bridge_dir=artifact_bridge_dir,
+            )
         result = cast(MakeToolOutput, await anyio.to_thread.run_sync(work))
         return result
 

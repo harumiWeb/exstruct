@@ -197,6 +197,75 @@ def test_run_patch_tool_builds_request(
     assert request.backend == "auto"
 
 
+def test_run_patch_tool_mirrors_artifact_when_enabled(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    source = tmp_path / "out.xlsx"
+    source.write_text("dummy", encoding="utf-8")
+
+    def _fake_run_patch(
+        request: PatchRequest, *, policy: object | None = None
+    ) -> PatchResult:
+        return PatchResult(out_path=str(source), patch_diff=[], engine="openpyxl")
+
+    monkeypatch.setattr(tools, "run_patch", _fake_run_patch)
+    bridge_dir = tmp_path / "bridge"
+    payload = tools.PatchToolInput(
+        xlsx_path="input.xlsx",
+        ops=[{"op": "add_sheet", "sheet": "New"}],
+        mirror_artifact=True,
+    )
+    result = tools.run_patch_tool(payload, artifact_bridge_dir=bridge_dir)
+    assert result.mirrored_out_path is not None
+    assert Path(result.mirrored_out_path).exists()
+    assert result.warnings == []
+
+
+def test_run_make_tool_warns_when_bridge_is_not_configured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _fake_run_make(
+        request: MakeRequest, *, policy: object | None = None
+    ) -> PatchResult:
+        return PatchResult(out_path="out.xlsx", patch_diff=[], engine="openpyxl")
+
+    monkeypatch.setattr(tools, "run_make", _fake_run_make)
+    payload = tools.MakeToolInput(
+        out_path="output.xlsx",
+        ops=[{"op": "add_sheet", "sheet": "New"}],
+        mirror_artifact=True,
+    )
+    result = tools.run_make_tool(payload)
+    assert result.mirrored_out_path is None
+    assert any("artifact-bridge-dir" in warning for warning in result.warnings)
+
+
+def test_run_patch_tool_warns_when_mirror_copy_fails(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    source = tmp_path / "out.xlsx"
+    source.write_text("dummy", encoding="utf-8")
+
+    def _fake_run_patch(
+        request: PatchRequest, *, policy: object | None = None
+    ) -> PatchResult:
+        return PatchResult(out_path=str(source), patch_diff=[], engine="openpyxl")
+
+    def _raise_copy_error(src: Path, dst: Path) -> None:
+        raise OSError("copy failed")
+
+    monkeypatch.setattr(tools, "run_patch", _fake_run_patch)
+    monkeypatch.setattr("exstruct.mcp.tools.shutil.copy2", _raise_copy_error)
+    payload = tools.PatchToolInput(
+        xlsx_path="input.xlsx",
+        ops=[{"op": "add_sheet", "sheet": "New"}],
+        mirror_artifact=True,
+    )
+    result = tools.run_patch_tool(payload, artifact_bridge_dir=tmp_path / "bridge")
+    assert result.mirrored_out_path is None
+    assert any("Failed to mirror artifact" in warning for warning in result.warnings)
+
+
 def test_run_make_tool_builds_request(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

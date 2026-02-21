@@ -38,24 +38,24 @@
 
 ### 3. `apply_table_style`（FS-03）
 
-- [ ] `PatchOpType` に `apply_table_style` を追加
-- [ ] `PatchOp` に `style` / `table_name` を追加
-- [ ] validator を追加（必須項目、範囲妥当性、交差チェック前提）
-- [ ] openpyxl 実装を追加（Table + TableStyleInfo 適用）
-- [ ] com 指定時の warning + openpyxl フォールバック方針を実装
-- [ ] テスト追加（正常系、重複名、交差範囲、backend方針）
+- [x] `PatchOpType` に `apply_table_style` を追加
+- [x] `PatchOp` に `style` / `table_name` を追加
+- [x] validator を追加（必須項目、範囲妥当性、交差チェック前提）
+- [x] openpyxl 実装を追加（Table + TableStyleInfo 適用）
+- [x] com 指定時の warning + openpyxl フォールバック方針を実装
+- [x] テスト追加（正常系、重複名、交差範囲、backend方針）
 
 完了条件:
 - [ ] テーブルスタイルを1opで適用できる
 
 ### 4. 成果物ミラー（FS-04）
 
-- [ ] `ServerConfig` / CLI に `--artifact-bridge-dir` を追加
-- [ ] `PatchToolInput` / `MakeToolInput` に `mirror_artifact` を追加
-- [ ] `PatchToolOutput` / `MakeToolOutput` に `mirrored_out_path` を追加
-- [ ] 成功時ミラーコピー処理を実装（bridge有効時のみ）
-- [ ] コピー失敗時は warning のみ返し、処理失敗にしない
-- [ ] テスト追加（正常、bridge未設定、コピー失敗）
+- [x] `ServerConfig` / CLI に `--artifact-bridge-dir` を追加
+- [x] `PatchToolInput` / `MakeToolInput` に `mirror_artifact` を追加
+- [x] `PatchToolOutput` / `MakeToolOutput` に `mirrored_out_path` を追加
+- [x] 成功時ミラーコピー処理を実装（bridge有効時のみ）
+- [x] コピー失敗時は warning のみ返し、処理失敗にしない
+- [x] テスト追加（正常、bridge未設定、コピー失敗）
 
 完了条件:
 - [ ] `present_files` 連携向けの成果物パスが返せる
@@ -116,10 +116,10 @@
 
 ## テストケース（必須追跡）
 
-- [ ] パラメータ誤り時のヒント返却（`color` vs `fill_color`、`horizontal` vs `horizontal_align`）
-- [ ] `set_style` の単セル/範囲/属性未指定エラー
-- [ ] `apply_table_style` の正常系/重複テーブルエラー
-- [ ] `mirror_artifact` の正常コピー/bridge未設定/コピー失敗warning
+- [x] パラメータ誤り時のヒント返却（`color` vs `fill_color`、`horizontal` vs `horizontal_align`）
+- [x] `set_style` の単セル/範囲/属性未指定エラー
+- [x] `apply_table_style` の正常系/重複テーブルエラー
+- [x] `mirror_artifact` の正常コピー/bridge未設定/コピー失敗warning
 - [ ] `patch_plan` のchunk生成妥当性
 - [ ] `patch_apply_chunks` の成功時コミット、失敗時ロールバック
 - [ ] `exstruct_list_ops` の一覧妥当性

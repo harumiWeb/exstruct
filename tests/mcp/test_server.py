@@ -62,11 +62,13 @@ def test_parse_args_defaults(tmp_path: Path) -> None:
     assert config.log_level == "INFO"
     assert config.log_file is None
     assert config.on_conflict == "overwrite"
+    assert config.artifact_bridge_dir is None
     assert config.warmup is False
 
 
 def test_parse_args_with_options(tmp_path: Path) -> None:
     log_file = tmp_path / "log.txt"
+    bridge_dir = tmp_path / "bridge"
     config = server._parse_args(
         [
             "--root",
@@ -81,6 +83,8 @@ def test_parse_args_with_options(tmp_path: Path) -> None:
             str(log_file),
             "--on-conflict",
             "rename",
+            "--artifact-bridge-dir",
+            str(bridge_dir),
             "--warmup",
         ]
     )
@@ -88,6 +92,7 @@ def test_parse_args_with_options(tmp_path: Path) -> None:
     assert config.log_level == "DEBUG"
     assert config.log_file == log_file
     assert config.on_conflict == "rename"
+    assert config.artifact_bridge_dir == bridge_dir
     assert config.warmup is True
 
 
@@ -338,9 +343,11 @@ def test_register_tools_uses_default_on_conflict(
     assert patch_call[0].return_inverse_ops is False
     assert patch_call[0].preflight_formula_check is False
     assert patch_call[0].backend == "auto"
+    assert patch_call[0].mirror_artifact is False
     assert calls["make"][2] == "rename"
     make_call = cast(tuple[MakeToolInput, PathPolicy, OnConflictPolicy], calls["make"])
     assert make_call[0].ops[0].op == "add_sheet"
+    assert make_call[0].mirror_artifact is False
 
 
 def test_register_tools_returns_runtime_info(tmp_path: Path) -> None:
@@ -1036,9 +1043,15 @@ def test_run_server_sets_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
         def run(self) -> None:
             created["ran"] = True
 
-    def fake_create_app(policy: PathPolicy, *, on_conflict: OnConflictPolicy) -> _App:
+    def fake_create_app(
+        policy: PathPolicy,
+        *,
+        on_conflict: OnConflictPolicy,
+        artifact_bridge_dir: Path | None = None,
+    ) -> _App:
         created["policy"] = policy
         created["on_conflict"] = on_conflict
+        created["artifact_bridge_dir"] = artifact_bridge_dir
         return _App()
 
     monkeypatch.setattr(server, "_import_mcp", fake_import)
@@ -1048,6 +1061,7 @@ def test_run_server_sets_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     assert created["imported"] is True
     assert created["ran"] is True
     assert created["on_conflict"] == "overwrite"
+    assert created["artifact_bridge_dir"] is None
 
 
 def test_configure_logging_with_file(

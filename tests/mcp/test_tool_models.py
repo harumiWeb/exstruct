@@ -6,7 +6,9 @@ import pytest
 from exstruct.mcp.tools import (
     ExtractToolInput,
     MakeToolInput,
+    MakeToolOutput,
     PatchToolInput,
+    PatchToolOutput,
     ReadCellsToolInput,
     ReadFormulasToolInput,
     ReadJsonChunkToolInput,
@@ -40,6 +42,7 @@ def test_patch_tool_input_defaults() -> None:
     assert payload.return_inverse_ops is False
     assert payload.preflight_formula_check is False
     assert payload.backend == "auto"
+    assert payload.mirror_artifact is False
 
 
 def test_make_tool_input_defaults() -> None:
@@ -50,6 +53,16 @@ def test_make_tool_input_defaults() -> None:
     assert payload.return_inverse_ops is False
     assert payload.preflight_formula_check is False
     assert payload.backend == "auto"
+    assert payload.mirror_artifact is False
+
+
+def test_patch_and_make_tool_output_defaults() -> None:
+    patch_output = PatchToolOutput(
+        out_path="out.xlsx", patch_diff=[], engine="openpyxl"
+    )
+    make_output = MakeToolOutput(out_path="out.xlsx", patch_diff=[], engine="openpyxl")
+    assert patch_output.mirrored_out_path is None
+    assert make_output.mirrored_out_path is None
 
 
 def test_patch_tool_input_accepts_design_ops() -> None:
@@ -104,6 +117,24 @@ def test_patch_tool_input_accepts_set_style_op() -> None:
     )
     assert payload.ops[0].op == "set_style"
     assert payload.ops[0].fill_color == "#D9E1F2"
+
+
+def test_patch_tool_input_accepts_apply_table_style_op() -> None:
+    payload = PatchToolInput(
+        xlsx_path="input.xlsx",
+        ops=[
+            {
+                "op": "apply_table_style",
+                "sheet": "Sheet1",
+                "range": "A1:B3",
+                "style": "TableStyleMedium2",
+                "table_name": "SalesTable",
+            }
+        ],
+    )
+    assert payload.ops[0].op == "apply_table_style"
+    assert payload.ops[0].style == "TableStyleMedium2"
+    assert payload.ops[0].table_name == "SalesTable"
 
 
 def test_patch_tool_input_accepts_set_font_size_op() -> None:
