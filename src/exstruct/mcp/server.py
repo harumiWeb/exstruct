@@ -489,6 +489,7 @@ def _register_tools(
                 'merge_cells' (merge a rectangular range),
                 'unmerge_cells' (unmerge ranges intersecting target),
                 'set_alignment' (set horizontal/vertical alignment and wrap_text), and
+                'set_style' (apply multiple style attributes in one op), and
                 'restore_design_snapshot' (internal inverse restore op).
             out_dir: Output directory. Defaults to same directory as input.
             out_name: Output filename. Defaults to '{stem}_patched{ext}'.
@@ -668,6 +669,8 @@ def _normalize_patch_op_aliases(op_data: dict[str, Any], index: int) -> dict[str
         op_name="set_dimensions",
     )
     _normalize_dimension_size_aliases(normalized, index=index)
+    _normalize_alignment_aliases(normalized, index=index)
+    _normalize_fill_color_aliases(normalized, index=index)
     _normalize_draw_grid_border_range(normalized, index=index)
     return normalized
 
@@ -734,6 +737,53 @@ def _normalize_dimension_size_aliases(op_data: dict[str, Any], *, index: int) ->
         alias="width",
         canonical="column_width",
         op_name="set_dimensions",
+    )
+
+
+def _normalize_alignment_aliases(op_data: dict[str, Any], *, index: int) -> None:
+    """Normalize horizontal/vertical aliases for set_alignment operation.
+
+    Args:
+        op_data: Mutable operation payload.
+        index: Source index in ops.
+
+    Raises:
+        ValueError: If aliases conflict with canonical fields.
+    """
+    if op_data.get("op") != "set_alignment":
+        return
+    _alias_to_canonical_with_conflict_check(
+        op_data,
+        index=index,
+        alias="horizontal",
+        canonical="horizontal_align",
+        op_name="set_alignment",
+    )
+    _alias_to_canonical_with_conflict_check(
+        op_data,
+        index=index,
+        alias="vertical",
+        canonical="vertical_align",
+        op_name="set_alignment",
+    )
+
+
+def _normalize_fill_color_aliases(op_data: dict[str, Any], *, index: int) -> None:
+    """Normalize color alias for set_fill_color operation.
+
+    Args:
+        op_data: Mutable operation payload.
+        index: Source index in ops.
+
+    Raises:
+        ValueError: If aliases conflict with canonical fields.
+    """
+    _alias_to_canonical_with_conflict_check(
+        op_data,
+        index=index,
+        alias="color",
+        canonical="fill_color",
+        op_name="set_fill_color",
     )
 
 

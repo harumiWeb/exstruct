@@ -15,23 +15,23 @@
 
 ### 1. Validation UX（FS-01）
 
-- [ ] `_coerce_patch_ops` に alias 正規化を追加（`horizontal`/`vertical`/`color`）
-- [ ] `PatchErrorDetail` に `hint` / `expected_fields` / `example_op` を追加
-- [ ] 既知の入力ミスへ具体的ヒントを返すエラーヒント生成器を実装
-- [ ] 既存エラー経路（`PatchOpError.from_op` など）へ拡張項目を接続
-- [ ] テスト追加（alias正規化、ヒント内容、後方互換）
+- [x] `_coerce_patch_ops` に alias 正規化を追加（`horizontal`/`vertical`/`color`）
+- [x] `PatchErrorDetail` に `hint` / `expected_fields` / `example_op` を追加
+- [x] 既知の入力ミスへ具体的ヒントを返すエラーヒント生成器を実装
+- [x] 既存エラー経路（`PatchOpError.from_op` など）へ拡張項目を接続
+- [x] テスト追加（alias正規化、ヒント内容、後方互換）
 
 完了条件:
 - [ ] 誤入力時に自己修復可能なエラー情報が返る
 
 ### 2. `set_style`（FS-02）
 
-- [ ] `PatchOpType` に `set_style` を追加
-- [ ] `PatchOp` validator を追加（target exactly one、属性1つ以上）
-- [ ] openpyxl 実装を追加（font/fill/alignment の複合適用）
-- [ ] com 実装を追加（同等の複合適用）
-- [ ] inverse snapshot（font/fill/alignment）復元を実装
-- [ ] テスト追加（単セル、範囲、属性未指定、上限超過）
+- [x] `PatchOpType` に `set_style` を追加
+- [x] `PatchOp` validator を追加（target exactly one、属性1つ以上）
+- [x] openpyxl 実装を追加（font/fill/alignment の複合適用）
+- [x] com 実装を追加（同等の複合適用）
+- [x] inverse snapshot（font/fill/alignment）復元を実装
+- [x] テスト追加（単セル、範囲、属性未指定、上限超過）
 
 完了条件:
 - [ ] 1op で複数書式属性を安定適用できる

@@ -145,6 +145,19 @@ def test_coerce_patch_ops_normalizes_aliases() -> None:
                 "row": [1],
                 "height": 24,
             },
+            {
+                "op": "set_alignment",
+                "sheet": "Data",
+                "cell": "A1",
+                "horizontal": "center",
+                "vertical": "bottom",
+            },
+            {
+                "op": "set_fill_color",
+                "sheet": "Data",
+                "cell": "B1",
+                "color": "#D9E1F2",
+            },
         ]
     )
     assert result[0] == {"op": "add_sheet", "sheet": "Data"}
@@ -156,6 +169,12 @@ def test_coerce_patch_ops_normalizes_aliases() -> None:
     assert "row" not in result[1]
     assert "width" not in result[1]
     assert "height" not in result[1]
+    assert result[2]["horizontal_align"] == "center"
+    assert result[2]["vertical_align"] == "bottom"
+    assert "horizontal" not in result[2]
+    assert "vertical" not in result[2]
+    assert result[3]["fill_color"] == "#D9E1F2"
+    assert "color" not in result[3]
 
 
 def test_coerce_patch_ops_rejects_conflicting_aliases() -> None:
@@ -167,6 +186,21 @@ def test_coerce_patch_ops_rejects_conflicting_aliases() -> None:
                     "sheet": "Sheet1",
                     "columns": ["A"],
                     "col": ["B"],
+                }
+            ]
+        )
+
+
+def test_coerce_patch_ops_rejects_conflicting_alignment_aliases() -> None:
+    with pytest.raises(ValueError, match="conflicting fields"):
+        server._coerce_patch_ops(
+            [
+                {
+                    "op": "set_alignment",
+                    "sheet": "Sheet1",
+                    "cell": "A1",
+                    "horizontal": "left",
+                    "horizontal_align": "center",
                 }
             ]
         )

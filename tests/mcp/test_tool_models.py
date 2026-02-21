@@ -88,6 +88,24 @@ def test_patch_tool_input_accepts_merge_and_alignment_ops() -> None:
     assert payload.ops[1].op == "set_alignment"
 
 
+def test_patch_tool_input_accepts_set_style_op() -> None:
+    payload = PatchToolInput(
+        xlsx_path="input.xlsx",
+        ops=[
+            {
+                "op": "set_style",
+                "sheet": "Sheet1",
+                "range": "A1:B1",
+                "bold": True,
+                "fill_color": "d9e1f2",
+                "horizontal_align": "center",
+            }
+        ],
+    )
+    assert payload.ops[0].op == "set_style"
+    assert payload.ops[0].fill_color == "#D9E1F2"
+
+
 def test_patch_tool_input_accepts_set_font_size_op() -> None:
     payload = PatchToolInput(
         xlsx_path="input.xlsx",

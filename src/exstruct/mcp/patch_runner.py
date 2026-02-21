@@ -33,6 +33,7 @@ PatchOpType = Literal[
     "merge_cells",
     "unmerge_cells",
     "set_alignment",
+    "set_style",
     "restore_design_snapshot",
 ]
 PatchStatus = Literal["applied", "skipped"]
@@ -425,6 +426,7 @@ class PatchOp(BaseModel):
     - ``merge_cells``: Merge a rectangular range.
     - ``unmerge_cells``: Unmerge all merged ranges intersecting target range.
     - ``set_alignment``: Set horizontal/vertical alignment and/or wrap_text.
+    - ``set_style``: Set multiple style attributes in one operation.
     - ``restore_design_snapshot``: Restore style/dimension snapshot (internal inverse op).
     """
 
@@ -435,7 +437,7 @@ class PatchOp(BaseModel):
             "'draw_grid_border', 'set_bold', 'set_font_size', 'set_font_color', "
             "'set_fill_color', "
             "'set_dimensions', "
-            "'merge_cells', 'unmerge_cells', 'set_alignment', "
+            "'merge_cells', 'unmerge_cells', 'set_alignment', 'set_style', "
             "or 'restore_design_snapshot'."
         )
     )
@@ -512,15 +514,15 @@ class PatchOp(BaseModel):
     )
     horizontal_align: HorizontalAlignType | None = Field(
         default=None,
-        description="Horizontal alignment for set_alignment.",
+        description="Horizontal alignment for set_alignment/set_style.",
     )
     vertical_align: VerticalAlignType | None = Field(
         default=None,
-        description="Vertical alignment for set_alignment.",
+        description="Vertical alignment for set_alignment/set_style.",
     )
     wrap_text: bool | None = Field(
         default=None,
-        description="Wrap text flag for set_alignment.",
+        description="Wrap text flag for set_alignment/set_style.",
     )
     design_snapshot: DesignSnapshot | None = Field(
         default=None,
@@ -643,6 +645,7 @@ def _validator_for_op(op_type: PatchOpType) -> Callable[[PatchOp], None] | None:
         "merge_cells": _validate_merge_cells,
         "unmerge_cells": _validate_unmerge_cells,
         "set_alignment": _validate_set_alignment,
+        "set_style": _validate_set_style,
         "restore_design_snapshot": _validate_restore_design_snapshot,
     }
     return validators.get(op_type)
@@ -1007,6 +1010,38 @@ def _validate_set_alignment(op: PatchOp) -> None:
     _validate_style_target_size(op, op_name="set_alignment")
 
 
+def _validate_set_style(op: PatchOp) -> None:
+    """Validate set_style operation."""
+    _validate_no_legacy_edit_fields(op, op_name="set_style")
+    if op.base_cell is not None:
+        raise ValueError("set_style does not accept base_cell.")
+    if op.row_count is not None or op.col_count is not None:
+        raise ValueError("set_style does not accept row_count or col_count.")
+    if op.rows is not None or op.columns is not None:
+        raise ValueError("set_style does not accept rows or columns.")
+    if op.row_height is not None or op.column_width is not None:
+        raise ValueError("set_style does not accept row_height or column_width.")
+    if op.design_snapshot is not None:
+        raise ValueError("set_style does not accept design_snapshot.")
+    _validate_exactly_one_cell_or_range(op, op_name="set_style")
+    if (
+        op.bold is None
+        and op.font_size is None
+        and op.color is None
+        and op.fill_color is None
+        and op.horizontal_align is None
+        and op.vertical_align is None
+        and op.wrap_text is None
+    ):
+        raise ValueError(
+            "set_style requires at least one style field from: "
+            "bold, font_size, color, fill_color, horizontal_align, vertical_align, wrap_text."
+        )
+    if op.font_size is not None and op.font_size <= 0:
+        raise ValueError("set_style font_size must be > 0.")
+    _validate_style_target_size(op, op_name="set_style")
+
+
 def _validate_restore_design_snapshot(op: PatchOp) -> None:
     """Validate restore_design_snapshot operation."""
     _validate_no_legacy_edit_fields(op, op_name="restore_design_snapshot")
@@ -1187,6 +1222,9 @@ class PatchErrorDetail(BaseModel):
     sheet: str
     cell: str | None
     message: str
+    hint: str | None = None
+    expected_fields: list[str] = Field(default_factory=list)
+    example_op: str | None = None
 
 
 class FormulaIssue(BaseModel):
@@ -1466,6 +1504,9 @@ def _apply_with_openpyxl(
             sheet=issue.sheet,
             cell=issue.cell,
             message=f"Formula health check failed: {issue.message}",
+            hint=None,
+            expected_fields=[],
+            example_op=None,
         )
         return PatchResult(
             out_path=str(output_path),
@@ -1572,6 +1613,7 @@ def _contains_design_ops(ops: list[PatchOp]) -> bool:
         "merge_cells",
         "unmerge_cells",
         "set_alignment",
+        "set_style",
         "restore_design_snapshot",
     }
     return any(op.op in design_ops for op in ops)
@@ -1874,6 +1916,7 @@ def _apply_openpyxl_sheet_op(
         "merge_cells": lambda: _apply_openpyxl_merge_cells(sheet, op, index, warnings),
         "unmerge_cells": lambda: _apply_openpyxl_unmerge_cells(sheet, op, index),
         "set_alignment": lambda: _apply_openpyxl_set_alignment(sheet, op, index),
+        "set_style": lambda: _apply_openpyxl_set_style(sheet, op, index),
         "restore_design_snapshot": lambda: _apply_openpyxl_restore_design_snapshot(
             sheet, op, index
         ),
@@ -2272,6 +2315,73 @@ def _apply_openpyxl_set_alignment(
     )
 
 
+def _apply_openpyxl_set_style(
+    sheet: OpenpyxlWorksheetProtocol,
+    op: PatchOp,
+    index: int,
+) -> tuple[PatchDiffItem, PatchOp | None]:
+    """Apply set_style op."""
+    targets = _resolve_style_targets(op)
+    snapshot = DesignSnapshot(
+        fonts=[_snapshot_font(sheet[coord], coord) for coord in targets],
+        fills=[_snapshot_fill(sheet[coord], coord) for coord in targets],
+        alignments=[_snapshot_alignment(sheet[coord], coord) for coord in targets],
+    )
+    font_color = _normalize_hex_color(op.color) if op.color is not None else None
+    fill_color = (
+        _normalize_hex_color(op.fill_color) if op.fill_color is not None else None
+    )
+    pattern_fill_factory: Callable[..., OpenpyxlFillProtocol] | None = None
+    if fill_color is not None:
+        try:
+            from openpyxl.styles import PatternFill
+        except ImportError as exc:
+            raise RuntimeError(f"openpyxl is not available: {exc}") from exc
+        pattern_fill_factory = PatternFill
+    for coord in targets:
+        cell = sheet[coord]
+        font = copy(cell.font)
+        if op.bold is not None:
+            font.bold = op.bold
+        if op.font_size is not None:
+            font.size = op.font_size
+        if font_color is not None:
+            font.color = font_color
+        cell.font = font
+        if fill_color is not None and pattern_fill_factory is not None:
+            cell.fill = pattern_fill_factory(
+                fill_type="solid",
+                start_color=fill_color,
+                end_color=fill_color,
+            )
+        if (
+            op.horizontal_align is not None
+            or op.vertical_align is not None
+            or op.wrap_text is not None
+        ):
+            alignment = copy(cell.alignment)
+            if op.horizontal_align is not None:
+                alignment.horizontal = op.horizontal_align
+            if op.vertical_align is not None:
+                alignment.vertical = op.vertical_align
+            if op.wrap_text is not None:
+                alignment.wrap_text = op.wrap_text
+            cell.alignment = alignment
+    location = op.cell if op.cell is not None else op.range
+    parts = _build_set_style_summary_parts(op)
+    return (
+        PatchDiffItem(
+            op_index=index,
+            op=op.op,
+            sheet=op.sheet,
+            cell=location,
+            before=None,
+            after=PatchValue(kind="style", value=";".join(parts)),
+        ),
+        _build_restore_snapshot_op(op.sheet, snapshot),
+    )
+
+
 def _apply_openpyxl_restore_design_snapshot(
     sheet: OpenpyxlWorksheetProtocol,
     op: PatchOp,
@@ -2389,6 +2499,28 @@ def _build_skipped_result(
         after=before,
         status="skipped",
     )
+
+
+def _build_set_style_summary_parts(op: PatchOp) -> list[str]:
+    """Build summary parts for set_style diff output."""
+    parts: list[str] = []
+    if op.bold is not None:
+        parts.append(f"bold={op.bold}")
+    if op.font_size is not None:
+        parts.append(f"font_size={op.font_size}")
+    if op.color is not None:
+        parts.append(f"color={_normalize_hex_input(op.color, field_name='color')}")
+    if op.fill_color is not None:
+        parts.append(
+            f"fill_color={_normalize_hex_input(op.fill_color, field_name='fill_color')}"
+        )
+    if op.horizontal_align is not None:
+        parts.append(f"horizontal_align={op.horizontal_align}")
+    if op.vertical_align is not None:
+        parts.append(f"vertical_align={op.vertical_align}")
+    if op.wrap_text is not None:
+        parts.append(f"wrap_text={op.wrap_text}")
+    return parts
 
 
 def _require_formula(formula: str | None, op_name: str) -> str:
@@ -2931,6 +3063,7 @@ def _apply_xlwings_extended_op(
         "merge_cells": lambda: _apply_xlwings_merge_cells(sheet, op, index),
         "unmerge_cells": lambda: _apply_xlwings_unmerge_cells(sheet, op, index),
         "set_alignment": lambda: _apply_xlwings_set_alignment(sheet, op, index),
+        "set_style": lambda: _apply_xlwings_set_style(sheet, op, index),
         "restore_design_snapshot": lambda: _apply_xlwings_restore_design_snapshot(op),
     }
     handler = handlers.get(op.op)
@@ -3176,6 +3309,40 @@ def _apply_xlwings_set_alignment(
     )
 
 
+def _apply_xlwings_set_style(
+    sheet: XlwingsSheetProtocol, op: PatchOp, index: int
+) -> PatchDiffItem:
+    """Apply set_style with xlwings."""
+    target_range_ref = _xlwings_target_range_ref(op)
+    target_api = _xlwings_range_api(sheet.range(target_range_ref))
+    if op.bold is not None:
+        target_api.Font.Bold = op.bold
+    if op.font_size is not None:
+        target_api.Font.Size = op.font_size
+    if op.color is not None:
+        target_api.Font.Color = _hex_color_to_excel_rgb(op.color)
+    if op.fill_color is not None:
+        target_api.Interior.Color = _hex_color_to_excel_rgb(op.fill_color)
+    if op.horizontal_align is not None:
+        target_api.HorizontalAlignment = _XLWINGS_HORIZONTAL_ALIGN_MAP[
+            op.horizontal_align
+        ]
+    if op.vertical_align is not None:
+        target_api.VerticalAlignment = _XLWINGS_VERTICAL_ALIGN_MAP[op.vertical_align]
+    if op.wrap_text is not None:
+        target_api.WrapText = op.wrap_text
+    return PatchDiffItem(
+        op_index=index,
+        op=op.op,
+        sheet=op.sheet,
+        cell=target_range_ref,
+        before=None,
+        after=PatchValue(
+            kind="style", value=";".join(_build_set_style_summary_parts(op))
+        ),
+    )
+
+
 def _apply_xlwings_restore_design_snapshot(op: PatchOp) -> PatchDiffItem:
     """Reject restore_design_snapshot on COM backend."""
     raise ValueError("restore_design_snapshot is supported only on openpyxl backend.")
@@ -3349,11 +3516,62 @@ class PatchOpError(ValueError):
     @classmethod
     def from_op(cls, index: int, op: PatchOp, exc: Exception) -> PatchOpError:
         """Build a PatchOpError from an op and exception."""
+        hint, expected_fields, example_op = _build_patch_error_guidance(op, str(exc))
         detail = PatchErrorDetail(
             op_index=index,
             op=op.op,
             sheet=op.sheet,
             cell=op.cell,
             message=str(exc),
+            hint=hint,
+            expected_fields=expected_fields,
+            example_op=example_op,
         )
         return cls(detail)
+
+
+def _build_patch_error_guidance(
+    op: PatchOp, message: str
+) -> tuple[str | None, list[str], str | None]:
+    """Build structured guidance for common operation mistakes."""
+    if op.op == "set_fill_color" and (
+        "does not accept color" in message or "requires fill_color" in message
+    ):
+        return (
+            "set_fill_color では 'color' ではなく 'fill_color' を指定してください。",
+            ["op", "sheet", "cell or range", "fill_color"],
+            (
+                '{"op":"set_fill_color","sheet":"Sheet1",'
+                '"cell":"A1","fill_color":"#FFD966"}'
+            ),
+        )
+    if op.op == "set_alignment" and "requires at least one of" in message:
+        return (
+            "set_alignment は horizontal_align / vertical_align / wrap_text の"
+            " いずれかが必須です。alias の 'horizontal' / 'vertical' も利用できます。",
+            [
+                "op",
+                "sheet",
+                "cell or range",
+                "horizontal_align/vertical_align/wrap_text",
+            ],
+            (
+                '{"op":"set_alignment","sheet":"Sheet1","range":"A1:B1",'
+                '"horizontal_align":"center"}'
+            ),
+        )
+    if op.op == "set_style" and "requires at least one style field" in message:
+        return (
+            "set_style では style 属性を少なくとも1つ指定してください。",
+            [
+                "op",
+                "sheet",
+                "cell or range",
+                "bold/font_size/color/fill_color/horizontal_align/vertical_align/wrap_text",
+            ],
+            (
+                '{"op":"set_style","sheet":"Sheet1","range":"A1:B1",'
+                '"bold":true,"fill_color":"#D9E1F2","horizontal_align":"center"}'
+            ),
+        )
+    return None, [], None

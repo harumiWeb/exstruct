@@ -936,6 +936,24 @@ def test_patch_op_set_fill_color_rejects_color() -> None:
         )
 
 
+def test_patch_op_set_style_requires_at_least_one_style_field() -> None:
+    with pytest.raises(ValidationError, match="set_style requires at least one style"):
+        PatchOp(op="set_style", sheet="Sheet1", cell="A1")
+
+
+def test_patch_op_set_style_rejects_cell_and_range() -> None:
+    with pytest.raises(
+        ValidationError, match="set_style requires exactly one of cell or range"
+    ):
+        PatchOp(
+            op="set_style",
+            sheet="Sheet1",
+            cell="A1",
+            range="A1:B1",
+            bold=True,
+        )
+
+
 def test_run_patch_set_font_color(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1276,6 +1294,114 @@ def test_run_patch_set_alignment_inverse_restore(
         assert alignment.wrap_text is True
     finally:
         restored_book.close()
+
+
+def test_run_patch_set_style_and_inverse_restore(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    workbook = load_workbook(input_path)
+    try:
+        workbook["Sheet1"]["A1"].alignment = Alignment(horizontal="left")
+        workbook.save(input_path)
+    finally:
+        workbook.close()
+
+    result = run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[
+                PatchOp(
+                    op="set_style",
+                    sheet="Sheet1",
+                    range="A1:B1",
+                    bold=True,
+                    color="#112233",
+                    fill_color="#D9E1F2",
+                    horizontal_align="center",
+                    wrap_text=True,
+                )
+            ],
+            on_conflict="rename",
+            return_inverse_ops=True,
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert result.error is None
+    assert len(result.inverse_ops) == 1
+
+    out_book = load_workbook(result.out_path)
+    try:
+        cell = out_book["Sheet1"]["A1"]
+        assert cell.font.bold is True
+        assert str(getattr(cell.font.color, "rgb", "")).upper() == "FF112233"
+        assert cell.fill.fill_type == "solid"
+        assert str(getattr(cell.fill.start_color, "rgb", "")).upper() == "FFD9E1F2"
+        assert cell.alignment.horizontal == "center"
+        assert cell.alignment.wrap_text is True
+    finally:
+        out_book.close()
+
+    restored = run_patch(
+        PatchRequest(
+            xlsx_path=Path(result.out_path),
+            ops=result.inverse_ops,
+            on_conflict="rename",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    restored_book = load_workbook(restored.out_path)
+    try:
+        restored_cell = restored_book["Sheet1"]["A1"]
+        assert restored_cell.font.bold is False
+        assert restored_cell.fill.fill_type is None
+        assert restored_cell.alignment.horizontal == "left"
+    finally:
+        restored_book.close()
+
+
+def test_run_patch_error_includes_hint_for_known_set_fill_color_mistake(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+
+    def _raise_known_error(
+        sheet: patch_runner.OpenpyxlWorksheetProtocol,
+        op: PatchOp,
+        index: int,
+    ) -> tuple[patch_runner.PatchDiffItem, PatchOp | None]:
+        raise ValueError("set_fill_color does not accept color.")
+
+    monkeypatch.setattr(
+        patch_runner,
+        "_apply_openpyxl_set_fill_color",
+        _raise_known_error,
+    )
+    result = run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[
+                PatchOp(
+                    op="set_fill_color",
+                    sheet="Sheet1",
+                    cell="A1",
+                    fill_color="#112233",
+                )
+            ],
+            on_conflict="rename",
+            backend="openpyxl",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert result.error is not None
+    assert result.error.hint is not None
+    assert "fill_color" in result.error.hint
+    assert result.error.expected_fields
+    assert result.error.example_op is not None
 
 
 def test_run_patch_rejects_alignment_design_op_for_xls(
