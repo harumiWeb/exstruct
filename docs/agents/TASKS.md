@@ -69,29 +69,29 @@
 
 ### 6. ランタイム情報ツール（FS-06, optional）
 
-- [ ] `src/exstruct/mcp/server.py` に `exstruct_get_runtime_info` を追加
-- [ ] `src/exstruct/mcp/tools.py` に対応入出力モデルを追加
-- [ ] テスト追加（root/cwd/platform/path_examples の整合性）
-- [ ] `docs/mcp.md` に利用例を追加
+- [x] `src/exstruct/mcp/server.py` に `exstruct_get_runtime_info` を追加
+- [x] `src/exstruct/mcp/tools.py` に対応入出力モデルを追加
+- [x] テスト追加（root/cwd/platform/path_examples の整合性）
+- [x] `docs/mcp.md` に利用例を追加
 
 完了条件:
-- [ ] エージェントが root/cwd を1コールで取得できる
+- [x] エージェントが root/cwd を1コールで取得できる
 
 ### 7. ドキュメント整備
 
 - [x] `docs/mcp.md` に「色指定の仕様（color / fill_color）」節を追加
 - [x] `docs/mcp.md` に `set_font_color` / `set_fill_color` の最小例を追加
 - [x] `docs/mcp.md` に `set_dimensions` / `draw_grid_border` の最小例を追加
-- [ ] `docs/README.ja.md` の MCP 節に注意点を反映
+- [x] `docs/README.ja.md` の MCP 節に注意点を反映
 
 完了条件:
-- [ ] 同種ミスの再発を抑制できるドキュメントになっている
+- [x] 同種ミスの再発を抑制できるドキュメントになっている
 
 ### 8. 検証・リリース
 
 - [x] `uv run task precommit-run` を実行し、mypy / Ruff / pytest を通す
-- [ ] 変更点を `docs/release-notes/` に追加
-- [ ] PR テンプレートに受け入れ条件のチェックを記載
+- [x] 変更点を `docs/release-notes/` に追加
+- [x] PR テンプレートに受け入れ条件のチェックを記載
 
 完了条件:
 - [ ] CI グリーン

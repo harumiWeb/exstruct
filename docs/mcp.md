@@ -67,6 +67,7 @@ exstruct-mcp --root C:\\data --log-file C:\\logs\\exstruct-mcp.log --on-conflict
 - `exstruct_read_cells`
 - `exstruct_read_formulas`
 - `exstruct_validate_input`
+- `exstruct_get_runtime_info`
 
 ### `exstruct_extract` defaults and mode guide
 
@@ -98,6 +99,12 @@ Example sequence:
 
 ```json
 { "tool": "exstruct_read_json_chunk", "out_path": "C:\\data\\book.json", "sheet": "Sheet1", "max_bytes": 50000 }
+```
+
+If path behavior is unclear, inspect runtime info first:
+
+```json
+{ "tool": "exstruct_get_runtime_info" }
 ```
 
 ## Basic flow
@@ -295,6 +302,28 @@ Examples:
 - `draw_grid_border`: `range` shorthand is accepted and normalized to
   `base_cell` + `row_count` + `col_count`
 - Relative `out_path` for `exstruct_make` is resolved from MCP `--root`.
+
+### Runtime info tool
+
+- `exstruct_get_runtime_info` returns:
+  - `root`
+  - `cwd`
+  - `platform`
+  - `path_examples` (`relative` and `absolute`)
+
+Example response (shape):
+
+```json
+{
+  "root": "C:\\data",
+  "cwd": "C:\\Users\\agent\\workspace",
+  "platform": "win32",
+  "path_examples": {
+    "relative": "outputs/book.xlsx",
+    "absolute": "C:\\data\\outputs\\book.xlsx"
+  }
+}
+```
 
 ## AI agent configuration examples
 

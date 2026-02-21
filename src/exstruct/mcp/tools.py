@@ -165,6 +165,22 @@ class ValidateInputToolOutput(BaseModel):
     errors: list[str] = Field(default_factory=list)
 
 
+class RuntimePathExamples(BaseModel):
+    """Path examples for MCP runtime diagnostics."""
+
+    relative: str
+    absolute: str
+
+
+class RuntimeInfoToolOutput(BaseModel):
+    """MCP tool output for runtime environment information."""
+
+    root: str
+    cwd: str
+    platform: str
+    path_examples: RuntimePathExamples
+
+
 class PatchToolInput(BaseModel):
     """MCP tool input for patching Excel files."""
 

@@ -656,3 +656,9 @@ BSD-3-Clause. See `LICENSE` for details.
 
 - API リファレンス (GitHub Pages): https://harumiweb.github.io/exstruct/
 - JSON Schema は `schemas/` にモデルごとに配置しています。モデル変更後は `python scripts/gen_json_schema.py` で再生成してください。
+
+## MCP追加メモ（UX Hardening）
+
+- `exstruct_get_runtime_info` を追加しました。`root` / `cwd` / `platform` / `path_examples` を1回で確認できます。
+- `exstruct_make` の相対 `out_path` は MCP の `--root` 基準で解決されます。
+- 色指定は `color`（文字色）と `fill_color`（背景色）を分離し、`RRGGBB` / `AARRGGBB`（`#` あり・なし）を受け付けます。

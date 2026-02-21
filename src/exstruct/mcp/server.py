@@ -7,6 +7,7 @@ import json
 import logging
 import os
 from pathlib import Path
+import sys
 from types import ModuleType
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -32,6 +33,7 @@ from .tools import (
     ReadJsonChunkToolOutput,
     ReadRangeToolInput,
     ReadRangeToolOutput,
+    RuntimeInfoToolOutput,
     ValidateInputToolInput,
     ValidateInputToolOutput,
     run_extract_tool,
@@ -428,6 +430,26 @@ def _register_tools(
 
     validate_tool = app.tool(name="exstruct_validate_input")
     validate_tool(_validate_input_tool)
+
+    async def _runtime_info_tool() -> RuntimeInfoToolOutput:
+        """Return runtime diagnostics for MCP path troubleshooting.
+
+        Returns:
+            Runtime root/cwd/platform and valid path examples.
+        """
+        root = policy.normalize_root()
+        return RuntimeInfoToolOutput(
+            root=str(root),
+            cwd=str(Path.cwd().resolve()),
+            platform=sys.platform,
+            path_examples={
+                "relative": "outputs/book.xlsx",
+                "absolute": str(root / "outputs" / "book.xlsx"),
+            },
+        )
+
+    runtime_info_tool = app.tool(name="exstruct_get_runtime_info")
+    runtime_info_tool(_runtime_info_tool)
 
     async def _patch_tool(
         xlsx_path: str,

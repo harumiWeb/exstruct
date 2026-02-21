@@ -11,6 +11,7 @@ from exstruct.mcp.tools import (
     ReadFormulasToolInput,
     ReadJsonChunkToolInput,
     ReadRangeToolInput,
+    RuntimeInfoToolOutput,
 )
 
 
@@ -164,3 +165,16 @@ def test_read_formulas_tool_input_defaults() -> None:
     assert payload.sheet is None
     assert payload.range is None
     assert payload.include_values is False
+
+
+def test_runtime_info_tool_output_model() -> None:
+    payload = RuntimeInfoToolOutput(
+        root="C:\\data",
+        cwd="C:\\workspace",
+        platform="win32",
+        path_examples={
+            "relative": "outputs/book.xlsx",
+            "absolute": "C:\\data\\outputs\\book.xlsx",
+        },
+    )
+    assert payload.path_examples.relative == "outputs/book.xlsx"

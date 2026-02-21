@@ -26,6 +26,7 @@ from exstruct.mcp.tools import (
     ReadJsonChunkToolOutput,
     ReadRangeToolInput,
     ReadRangeToolOutput,
+    RuntimeInfoToolOutput,
     ValidateInputToolInput,
     ValidateInputToolOutput,
 )
@@ -306,6 +307,25 @@ def test_register_tools_uses_default_on_conflict(
     assert calls["make"][2] == "rename"
     make_call = cast(tuple[MakeToolInput, PathPolicy, OnConflictPolicy], calls["make"])
     assert make_call[0].ops[0].op == "add_sheet"
+
+
+def test_register_tools_returns_runtime_info(tmp_path: Path) -> None:
+    app = DummyApp()
+    policy = PathPolicy(root=tmp_path)
+    server._register_tools(app, policy, default_on_conflict="overwrite")
+
+    runtime_tool = cast(
+        Callable[..., Awaitable[object]],
+        app.tools["exstruct_get_runtime_info"],
+    )
+    result = cast(RuntimeInfoToolOutput, anyio.run(_call_async, runtime_tool, {}))
+    assert Path(result.root) == tmp_path.resolve()
+    assert Path(result.cwd) == Path.cwd().resolve()
+    assert result.platform != ""
+    assert result.path_examples.relative == "outputs/book.xlsx"
+    assert Path(result.path_examples.absolute) == (
+        tmp_path.resolve() / "outputs" / "book.xlsx"
+    )
 
 
 def test_register_tools_passes_read_tool_arguments(
