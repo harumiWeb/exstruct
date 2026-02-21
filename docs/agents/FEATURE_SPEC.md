@@ -120,6 +120,23 @@ Excelテーブルスタイルを1opで適用できるようにする。
 3. ドリフト防止
    1. ツール定義文言と `describe_op` 生成元は同一メタデータを参照する
 
+### FS-07: シート指定冗長性の削減（top-level `sheet`）
+
+`ops` ごとに `sheet` を重複指定しなくても大量操作を記述できるようにする。
+
+1. `exstruct_patch` / `exstruct_make` 入力に top-level `sheet: str | None = None` を追加
+2. 適用ルール
+   1. `op.sheet` がある場合は `op.sheet` を優先
+   2. `op.sheet` がない場合は top-level `sheet` を補完して使用
+3. `add_sheet` は `op.sheet`（または既存 alias `name`）を必須とし、top-level `sheet` は補完しない
+4. 非 `add_sheet` 系で `op.sheet` と top-level `sheet` の両方が未指定なら、自己修復可能な明示エラーを返す
+5. 後方互換
+   1. 既存の `op.sheet` 指定ペイロードは挙動変更なし
+   2. mixed運用（同一リクエスト内で一部 `op.sheet` 明示）を許容
+6. スキーマ可視化
+   1. `exstruct_patch` ミニスキーマを更新し、`sheet` の解決規則を明記
+   2. `exstruct_describe_op` の required/optional 表示も top-level `sheet` を反映する
+
 ## 主要な公開I/F変更
 
 1. `PatchOpType` 追加
@@ -144,6 +161,10 @@ Excelテーブルスタイルを1opで適用できるようにする。
    1. `--artifact-bridge-dir`
 7. ツール定義拡張
    1. `exstruct_patch` の docstring/description に `op` 別ミニスキーマを追加
+8. MCPツール入出力拡張
+   1. `sheet: str | None`（patch/make input の top-level デフォルトシート）
+9. `PatchOp` のシート解決仕様
+   1. `sheet` は「明示時に優先」フィールドとして扱い、最終適用前に解決される
 
 ## 受け入れ条件（Acceptance Criteria）
 
@@ -181,6 +202,13 @@ Excelテーブルスタイルを1opで適用できるようにする。
 1. 既存opの既存入力は挙動変更なし
 2. 既存テストが回帰しない
 
+### AC-08 top-level `sheet` 補完
+
+1. top-level `sheet` だけを指定した大量 `ops` で正常適用できる
+2. `op.sheet` がある操作は top-level `sheet` より優先される
+3. `add_sheet` は `op.sheet`（または `name`）未指定時に明示エラーになる
+4. 非 `add_sheet` でシート未解決時は、補完方法を含むエラー情報を返す
+
 ## テストケース
 
 1. パラメータ誤り時のヒント返却（`color` vs `fill_color`、`horizontal` vs `horizontal_align`）
@@ -190,6 +218,9 @@ Excelテーブルスタイルを1opで適用できるようにする。
 7. `exstruct_list_ops` の一覧妥当性
 8. `exstruct_describe_op` の required/optional/example 妥当性
 9. `exstruct_patch` ツール定義に `op` 別スキーマ情報が含まれること
+10. top-level `sheet` 指定時の `op.sheet` 補完と優先順位
+11. `add_sheet` の `op.sheet` 必須維持
+12. シート未解決時のエラーヒント妥当性
 
 ## 前提・デフォルト
 
@@ -199,6 +230,8 @@ Excelテーブルスタイルを1opで適用できるようにする。
 4. `--artifact-bridge-dir` 未指定時はミラー機能を無効化
 5. `apply_table_style` は Phase 2 で openpyxl 優先対応とする
 6. 入力スキーマ改善は「ツール定義拡充」を先行し、確認ツールは補完として追加する
+7. top-level `sheet` の既定値は `None`（未指定）
+8. `add_sheet` は明示的な `op.sheet` 指定を維持する
 
 ## 影響範囲
 
@@ -208,3 +241,4 @@ Excelテーブルスタイルを1opで適用できるようにする。
 4. `src/exstruct/mcp/io.py`（必要時）
 5. `docs/mcp.md`
 6. `tests/mcp/*`
+7. `docs/agents/TASKS.md`

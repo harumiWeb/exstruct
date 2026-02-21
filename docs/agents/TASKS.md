@@ -60,6 +60,22 @@
 完了条件:
 - [ ] `present_files` 連携向けの成果物パスが返せる
 
+### 5. シート指定冗長性削減（FS-07）
+
+- [ ] `PatchToolInput` / `MakeToolInput` に top-level `sheet: str | None` を追加
+- [ ] `run_patch_tool` / `run_make_tool` から `PatchRequest` / `MakeRequest` へ top-level `sheet` を伝播
+- [ ] `PatchRequest` / `MakeRequest` に top-level `sheet`（デフォルトシート）を追加
+- [ ] `ops` 正規化経路で `op.sheet` 未指定時に top-level `sheet` を補完する
+- [ ] 優先順位ルールを実装（`op.sheet` 明示 > top-level `sheet`）
+- [ ] `add_sheet` は `op.sheet`（または `name` alias）必須を維持し、top-level 補完対象外にする
+- [ ] 非 `add_sheet` でシート未解決時のエラー文面を自己修復可能な形へ整備する
+- [ ] `op` ミニスキーマ/describe_op 出力を更新し、sheet 解決ルールを明記する
+- [ ] テスト追加（補完、優先順位、add_sheet必須、未解決エラー、後方互換）
+
+完了条件:
+- [ ] 大量 `ops` での重複 `sheet` 指定を削減できる
+- [ ] 既存 `op.sheet` 指定の互換性を維持したまま適用できる
+
 ### 6. 入力スキーマ可視化（FS-06）
 
 - [x] `exstruct_patch` ツール定義に `op` 別ミニスキーマ（required/optional/constraints/example）を追加
@@ -88,7 +104,7 @@
 
 - [ ] `uv run task precommit-run` を実行
 - [ ] 既存回帰テスト + 新規ACテストが通過
-- [ ] AC-01 〜 AC-07 の達成をチェックリストで確認
+- [ ] AC-01 〜 AC-08 の達成をチェックリストで確認
 
 完了条件:
 - [ ] CI グリーン
@@ -109,3 +125,5 @@
 - [x] `exstruct_list_ops` の一覧妥当性
 - [x] `exstruct_describe_op` の required/optional/example 妥当性
 - [x] `exstruct_patch` ツール定義に `op` 別スキーマ情報が含まれること
+- [ ] top-level `sheet` 補完時の適用結果と優先順位
+- [ ] `add_sheet` の `op.sheet` 必須維持とエラー内容
