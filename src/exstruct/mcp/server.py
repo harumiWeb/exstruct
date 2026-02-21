@@ -490,6 +490,7 @@ def _register_tools(
     async def _patch_tool(
         xlsx_path: str,
         ops: list[dict[str, Any] | str],
+        sheet: str | None = None,
         out_dir: str | None = None,
         out_name: str | None = None,
         on_conflict: OnConflictPolicy | None = None,
@@ -529,6 +530,8 @@ def _register_tools(
                 'set_style' (apply multiple style attributes in one op), and
                 'apply_table_style' (create table and apply Excel table style), and
                 'restore_design_snapshot' (internal inverse restore op).
+            sheet: Optional default sheet name. Used when op.sheet is omitted
+                for non-add_sheet ops. If both are set, op.sheet wins.
             out_dir: Output directory. Defaults to same directory as input.
             out_name: Output filename. Defaults to '{stem}_patched{ext}'.
             on_conflict: Conflict policy when output file exists:
@@ -559,6 +562,7 @@ def _register_tools(
             ops=normalized_ops,
             out_dir=out_dir,
             out_name=out_name,
+            sheet=sheet,
             on_conflict=on_conflict,
             auto_formula=auto_formula,
             dry_run=dry_run,
@@ -594,6 +598,7 @@ def _register_tools(
     async def _make_tool(
         out_path: str,
         ops: list[dict[str, Any] | str] | None = None,
+        sheet: str | None = None,
         on_conflict: OnConflictPolicy | None = None,
         auto_formula: bool = False,
         dry_run: bool = False,
@@ -607,6 +612,8 @@ def _register_tools(
         Args:
             out_path: Output workbook path (.xlsx/.xlsm/.xls).
             ops: Optional patch operations. Accepts object list or JSON object strings.
+            sheet: Optional default sheet name. Used when op.sheet is omitted
+                for non-add_sheet ops. If both are set, op.sheet wins.
             on_conflict: Conflict policy when output file exists:
                 'overwrite' (replace), 'skip' (do nothing), 'rename' (auto-rename).
                 Defaults to server --on-conflict setting.
@@ -630,6 +637,7 @@ def _register_tools(
         payload = MakeToolInput(
             out_path=out_path,
             ops=normalized_ops,
+            sheet=sheet,
             on_conflict=on_conflict,
             auto_formula=auto_formula,
             dry_run=dry_run,
@@ -675,6 +683,8 @@ Args:
         object list (one object per operation). For compatibility with
         clients that cannot send object arrays, JSON object strings are
         also accepted and normalized before validation.
+    sheet: Optional default sheet name. Used when op.sheet is omitted
+        for non-add_sheet ops. If both are set, op.sheet wins.
     out_dir: Output directory. Defaults to same directory as input.
     out_name: Output filename. Defaults to '{stem}_patched{ext}'.
     on_conflict: Conflict policy when output file exists:

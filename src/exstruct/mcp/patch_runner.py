@@ -1315,6 +1315,7 @@ class PatchRequest(BaseModel):
 
     xlsx_path: Path
     ops: list[PatchOp]
+    sheet: str | None = None
     out_dir: Path | None = None
     out_name: str | None = None
     on_conflict: OnConflictPolicy = "overwrite"
@@ -1345,6 +1346,7 @@ class MakeRequest(BaseModel):
 
     out_path: Path
     ops: list[PatchOp] = Field(default_factory=list)
+    sheet: str | None = None
     on_conflict: OnConflictPolicy = "overwrite"
     auto_formula: bool = False
     dry_run: bool = False
@@ -1403,6 +1405,7 @@ def run_make(request: MakeRequest, *, policy: PathPolicy | None = None) -> Patch
         patch_request = PatchRequest(
             xlsx_path=seed_path,
             ops=request.ops,
+            sheet=request.sheet,
             out_dir=resolved_output.parent,
             out_name=resolved_output.name,
             on_conflict=request.on_conflict,

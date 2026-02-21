@@ -181,6 +181,7 @@ def test_run_patch_tool_builds_request(
     monkeypatch.setattr(tools, "run_patch", _fake_run_patch)
     payload = tools.PatchToolInput(
         xlsx_path="input.xlsx",
+        sheet="Sheet1",
         ops=[{"op": "add_sheet", "sheet": "New"}],
         dry_run=True,
         return_inverse_ops=True,
@@ -195,6 +196,7 @@ def test_run_patch_tool_builds_request(
     assert request.return_inverse_ops is True
     assert request.preflight_formula_check is True
     assert request.backend == "auto"
+    assert request.sheet == "Sheet1"
 
 
 def test_run_patch_tool_mirrors_artifact_when_enabled(
@@ -280,6 +282,7 @@ def test_run_make_tool_builds_request(
     monkeypatch.setattr(tools, "run_make", _fake_run_make)
     payload = tools.MakeToolInput(
         out_path="output.xlsx",
+        sheet="Sheet1",
         ops=[{"op": "add_sheet", "sheet": "New"}],
         dry_run=True,
         return_inverse_ops=True,
@@ -294,6 +297,7 @@ def test_run_make_tool_builds_request(
     assert request.return_inverse_ops is True
     assert request.preflight_formula_check is True
     assert request.backend == "auto"
+    assert request.sheet == "Sheet1"
 
 
 def test_run_list_ops_tool_returns_known_ops() -> None:
@@ -306,7 +310,7 @@ def test_run_list_ops_tool_returns_known_ops() -> None:
 
 def test_run_describe_op_tool_returns_schema_details() -> None:
     result = tools.run_describe_op_tool(tools.DescribeOpToolInput(op="set_fill_color"))
-    assert result.required == ["sheet", "fill_color"]
+    assert result.required == ["sheet (or top-level sheet)", "fill_color"]
     assert "cell" in result.optional
     assert result.aliases == {"color": "fill_color"}
     assert result.example["op"] == "set_fill_color"

@@ -5,7 +5,7 @@ import shutil
 from typing import Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from exstruct import ExtractionMode
 
@@ -24,7 +24,11 @@ from .extract_runner import (
     run_extract,
 )
 from .io import PathPolicy
-from .op_schema import get_patch_op_schema, list_patch_op_schemas
+from .op_schema import (
+    get_patch_op_schema,
+    list_patch_op_schemas,
+    schema_with_sheet_resolution_rules,
+)
 from .patch_runner import (
     FormulaIssue,
     MakeRequest,
@@ -219,6 +223,7 @@ class PatchToolInput(BaseModel):
 
     xlsx_path: str
     ops: list[PatchOp]
+    sheet: str | None = None
     out_dir: str | None = None
     out_name: str | None = None
     on_conflict: OnConflictPolicy | None = None
@@ -229,12 +234,28 @@ class PatchToolInput(BaseModel):
     backend: Literal["auto", "com", "openpyxl"] = "auto"
     mirror_artifact: bool = False
 
+    @field_validator("sheet")
+    @classmethod
+    def _validate_sheet(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        candidate = value.strip()
+        if not candidate:
+            raise ValueError("sheet must not be empty when provided.")
+        return candidate
+
+    @model_validator(mode="before")
+    @classmethod
+    def _fill_ops_sheet_from_top_level(cls, data: object) -> object:
+        return _resolve_top_level_sheet_for_payload(data)
+
 
 class MakeToolInput(BaseModel):
     """MCP tool input for creating and patching new Excel files."""
 
     out_path: str
     ops: list[PatchOp] = Field(default_factory=list)
+    sheet: str | None = None
     on_conflict: OnConflictPolicy | None = None
     auto_formula: bool = False
     dry_run: bool = False
@@ -242,6 +263,21 @@ class MakeToolInput(BaseModel):
     preflight_formula_check: bool = False
     backend: Literal["auto", "com", "openpyxl"] = "auto"
     mirror_artifact: bool = False
+
+    @field_validator("sheet")
+    @classmethod
+    def _validate_sheet(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        candidate = value.strip()
+        if not candidate:
+            raise ValueError("sheet must not be empty when provided.")
+        return candidate
+
+    @model_validator(mode="before")
+    @classmethod
+    def _fill_ops_sheet_from_top_level(cls, data: object) -> object:
+        return _resolve_top_level_sheet_for_payload(data)
 
 
 class PatchToolOutput(BaseModel):
@@ -426,6 +462,7 @@ def run_patch_tool(
     request = PatchRequest(
         xlsx_path=Path(payload.xlsx_path),
         ops=payload.ops,
+        sheet=payload.sheet,
         out_dir=Path(payload.out_dir) if payload.out_dir else None,
         out_name=payload.out_name,
         on_conflict=payload.on_conflict or on_conflict or "overwrite",
@@ -466,6 +503,7 @@ def run_make_tool(
     request = MakeRequest(
         out_path=Path(payload.out_path),
         ops=payload.ops,
+        sheet=payload.sheet,
         on_conflict=payload.on_conflict or on_conflict or "overwrite",
         auto_formula=payload.auto_formula,
         dry_run=payload.dry_run,
@@ -620,13 +658,81 @@ def run_describe_op_tool(payload: DescribeOpToolInput) -> DescribeOpToolOutput:
         raise ValueError(
             f"Unknown op '{payload.op}'. Use exstruct_list_ops to inspect available ops."
         )
+    display_schema = schema_with_sheet_resolution_rules(schema)
     return DescribeOpToolOutput(
         op=schema.op,
-        required=schema.required,
-        optional=schema.optional,
-        constraints=schema.constraints,
-        example=dict(schema.example),
-        aliases=dict(schema.aliases),
+        required=display_schema.required,
+        optional=display_schema.optional,
+        constraints=display_schema.constraints,
+        example=dict(display_schema.example),
+        aliases=dict(display_schema.aliases),
+    )
+
+
+def _resolve_top_level_sheet_for_payload(data: object) -> object:
+    """Resolve top-level sheet default into operation dict payloads."""
+    if not isinstance(data, dict):
+        return data
+    ops_raw = data.get("ops")
+    if not isinstance(ops_raw, list):
+        return data
+    top_level_sheet = _normalize_top_level_sheet(data.get("sheet"))
+    resolved_ops: list[object] = []
+    for index, op_raw in enumerate(ops_raw):
+        if not isinstance(op_raw, dict):
+            resolved_ops.append(op_raw)
+            continue
+        op_copy = dict(op_raw)
+        op_name_raw = op_copy.get("op")
+        op_name = op_name_raw if isinstance(op_name_raw, str) else ""
+        op_sheet = op_copy.get("sheet")
+        if op_name == "add_sheet":
+            if "sheet" not in op_copy:
+                if "name" in op_copy:
+                    op_copy["sheet"] = op_copy.get("name")
+                else:
+                    raise ValueError(
+                        _build_missing_sheet_message(index=index, op_name="add_sheet")
+                    )
+            if op_copy.get("sheet") is None:
+                raise ValueError(
+                    _build_missing_sheet_message(index=index, op_name="add_sheet")
+                )
+            resolved_ops.append(op_copy)
+            continue
+        if op_sheet is None:
+            if top_level_sheet is None:
+                raise ValueError(
+                    _build_missing_sheet_message(index=index, op_name=op_name)
+                )
+            op_copy["sheet"] = top_level_sheet
+        resolved_ops.append(op_copy)
+    payload = dict(data)
+    payload["ops"] = resolved_ops
+    if top_level_sheet is not None:
+        payload["sheet"] = top_level_sheet
+    return payload
+
+
+def _normalize_top_level_sheet(value: object) -> str | None:
+    """Normalize optional top-level sheet text."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        return None
+    candidate = value.strip()
+    if not candidate:
+        return None
+    return candidate
+
+
+def _build_missing_sheet_message(*, index: int, op_name: str) -> str:
+    """Build self-healing error for unresolved sheet selection."""
+    target_op = op_name or "<unknown>"
+    return (
+        f"ops[{index}] ({target_op}) is missing sheet. "
+        "Set op.sheet, or set top-level sheet for non-add_sheet ops. "
+        "For add_sheet, op.sheet (or alias name) is required."
     )
 
 

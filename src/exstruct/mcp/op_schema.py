@@ -35,33 +35,74 @@ def build_patch_tool_mini_schema() -> str:
     """Build a human-readable mini schema section for exstruct_patch doc."""
     lines: list[str] = []
     lines.append("Mini op schema (required/optional/constraints/example/aliases):")
+    lines.append(
+        "Sheet resolution: non-add_sheet ops allow top-level sheet fallback; "
+        "op.sheet overrides top-level sheet."
+    )
     for schema in list_patch_op_schemas():
+        display_schema = schema_with_sheet_resolution_rules(schema)
         lines.append(f"- {schema.op}: {schema.description}")
         lines.append(
             "  required: "
-            + (", ".join(schema.required) if schema.required else "(none)")
+            + (
+                ", ".join(display_schema.required)
+                if display_schema.required
+                else "(none)"
+            )
         )
         lines.append(
             "  optional: "
-            + (", ".join(schema.optional) if schema.optional else "(none)")
+            + (
+                ", ".join(display_schema.optional)
+                if display_schema.optional
+                else "(none)"
+            )
         )
         lines.append(
             "  constraints: "
-            + (", ".join(schema.constraints) if schema.constraints else "(none)")
+            + (
+                ", ".join(display_schema.constraints)
+                if display_schema.constraints
+                else "(none)"
+            )
         )
-        lines.append(f"  example: {schema.example}")
+        lines.append(f"  example: {display_schema.example}")
         lines.append(
             "  aliases: "
             + (
                 ", ".join(
                     f"{alias} -> {canonical}"
-                    for alias, canonical in sorted(schema.aliases.items())
+                    for alias, canonical in sorted(display_schema.aliases.items())
                 )
-                if schema.aliases
+                if display_schema.aliases
                 else "(none)"
             )
         )
     return "\n".join(lines)
+
+
+def schema_with_sheet_resolution_rules(schema: PatchOpSchema) -> PatchOpSchema:
+    """Return display schema with top-level sheet resolution notes."""
+    if "sheet" not in schema.required:
+        return schema
+    updated_required = [
+        (
+            "sheet (or top-level sheet)"
+            if item == "sheet" and schema.op != "add_sheet"
+            else item
+        )
+        for item in schema.required
+    ]
+    updated_constraints = list(schema.constraints)
+    if schema.op == "add_sheet":
+        updated_constraints.append("top-level sheet is not used for add_sheet")
+    else:
+        updated_constraints.append(
+            "op.sheet overrides top-level sheet when both are set"
+        )
+    return schema.model_copy(
+        update={"required": updated_required, "constraints": updated_constraints}
+    )
 
 
 _PATCH_OP_SCHEMA_BY_NAME: dict[str, PatchOpSchema] = {

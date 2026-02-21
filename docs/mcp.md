@@ -207,6 +207,7 @@ Examples:
   - `preflight_formula_check`
   - `auto_formula`
   - `backend`
+  - `sheet` (top-level default sheet for non-`add_sheet` ops)
 - `.xls` constraints:
   - requires Windows Excel COM
   - rejects `backend="openpyxl"`
@@ -262,6 +263,7 @@ Example:
   - `return_inverse_ops`: return undo operations
   - `preflight_formula_check`: detect formula issues before save
   - `auto_formula`: treat `=...` in `set_value` as formula
+  - `sheet`: top-level default sheet used when `op.sheet` is omitted (non-`add_sheet` only)
   - `mirror_artifact`: copy output workbook to `--artifact-bridge-dir` on success
 - Backend selection:
   - `backend="auto"` (default): prefers COM when available; otherwise openpyxl.
@@ -274,6 +276,10 @@ Example:
 - Conflict handling follows server `--on-conflict` unless overridden per tool call
 - `restore_design_snapshot` remains openpyxl-only.
 - `apply_table_style` on `backend="com"` returns a warning and falls back to openpyxl.
+- Sheet resolution order:
+  - `op.sheet` is used when present
+  - otherwise top-level `sheet` is used for non-`add_sheet` ops
+  - `add_sheet` still requires explicit `op.sheet` (or alias `name`)
 
 ### `set_style` quick guide
 

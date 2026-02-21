@@ -46,6 +46,7 @@ def test_patch_tool_input_defaults() -> None:
     assert payload.preflight_formula_check is False
     assert payload.backend == "auto"
     assert payload.mirror_artifact is False
+    assert payload.sheet is None
 
 
 def test_make_tool_input_defaults() -> None:
@@ -57,6 +58,67 @@ def test_make_tool_input_defaults() -> None:
     assert payload.preflight_formula_check is False
     assert payload.backend == "auto"
     assert payload.mirror_artifact is False
+    assert payload.sheet is None
+
+
+def test_patch_tool_input_applies_top_level_sheet_fallback() -> None:
+    payload = PatchToolInput(
+        xlsx_path="input.xlsx",
+        sheet="Sheet1",
+        ops=[{"op": "set_value", "cell": "A1", "value": "x"}],
+    )
+    assert payload.ops[0].sheet == "Sheet1"
+
+
+def test_patch_tool_input_prioritizes_op_sheet_over_top_level() -> None:
+    payload = PatchToolInput(
+        xlsx_path="input.xlsx",
+        sheet="Sheet1",
+        ops=[{"op": "set_value", "sheet": "Data", "cell": "A1", "value": "x"}],
+    )
+    assert payload.ops[0].sheet == "Data"
+
+
+def test_patch_tool_input_rejects_add_sheet_without_explicit_sheet() -> None:
+    with pytest.raises(ValidationError, match="add_sheet\\) is missing sheet"):
+        PatchToolInput(
+            xlsx_path="input.xlsx",
+            sheet="Sheet1",
+            ops=[{"op": "add_sheet"}],
+        )
+
+
+def test_patch_tool_input_accepts_add_sheet_name_alias() -> None:
+    payload = PatchToolInput(
+        xlsx_path="input.xlsx",
+        ops=[{"op": "add_sheet", "name": "Data"}],
+    )
+    assert payload.ops[0].sheet == "Data"
+
+
+def test_patch_tool_input_rejects_unresolved_sheet_for_non_add_sheet() -> None:
+    with pytest.raises(ValidationError, match="missing sheet"):
+        PatchToolInput(
+            xlsx_path="input.xlsx",
+            ops=[{"op": "set_value", "cell": "A1", "value": "x"}],
+        )
+
+
+def test_make_tool_input_applies_top_level_sheet_fallback() -> None:
+    payload = MakeToolInput(
+        out_path="output.xlsx",
+        sheet="Sheet1",
+        ops=[{"op": "set_value", "cell": "A1", "value": "x"}],
+    )
+    assert payload.ops[0].sheet == "Sheet1"
+
+
+def test_make_tool_input_accepts_add_sheet_name_alias() -> None:
+    payload = MakeToolInput(
+        out_path="output.xlsx",
+        ops=[{"op": "add_sheet", "name": "Data"}],
+    )
+    assert payload.ops[0].sheet == "Data"
 
 
 def test_patch_and_make_tool_output_defaults() -> None:

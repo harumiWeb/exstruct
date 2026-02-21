@@ -391,7 +391,7 @@ def test_register_tools_returns_ops_schema_tools(tmp_path: Path) -> None:
         DescribeOpToolOutput,
         anyio.run(_call_async, describe_tool, {"op": "set_fill_color"}),
     )
-    assert describe_result.required == ["sheet", "fill_color"]
+    assert describe_result.required == ["sheet (or top-level sheet)", "fill_color"]
     assert describe_result.aliases == {"color": "fill_color"}
 
 
@@ -418,8 +418,12 @@ def test_patch_tool_doc_includes_op_mini_schema(tmp_path: Path) -> None:
     assert patch_doc is not None
     assert "Mini op schema" in patch_doc
     assert "set_fill_color" in patch_doc
-    assert "required: sheet, fill_color" in patch_doc
+    assert "required: sheet (or top-level sheet), fill_color" in patch_doc
     assert "aliases: color -> fill_color" in patch_doc
+    assert (
+        "Sheet resolution: non-add_sheet ops allow top-level sheet fallback"
+        in patch_doc
+    )
 
 
 def test_register_tools_passes_read_tool_arguments(
@@ -610,6 +614,73 @@ def test_register_tools_accepts_patch_ops_json_strings(
     assert patch_call[0].ops[0].sheet == "New"
     assert patch_call[0].ops[1].op == "set_bold"
     assert patch_call[0].ops[1].cell == "A1"
+
+
+def test_register_tools_applies_top_level_sheet_fallback(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    app = DummyApp()
+    policy = PathPolicy(root=tmp_path)
+    calls: dict[str, tuple[object, ...]] = {}
+
+    def fake_run_extract_tool(
+        payload: ExtractToolInput,
+        *,
+        policy: PathPolicy,
+        on_conflict: OnConflictPolicy,
+    ) -> ExtractToolOutput:
+        return ExtractToolOutput(out_path="out.json")
+
+    def fake_run_read_json_chunk_tool(
+        payload: ReadJsonChunkToolInput,
+        *,
+        policy: PathPolicy,
+    ) -> ReadJsonChunkToolOutput:
+        return ReadJsonChunkToolOutput(chunk="{}")
+
+    def fake_run_validate_input_tool(
+        payload: ValidateInputToolInput,
+        *,
+        policy: PathPolicy,
+    ) -> ValidateInputToolOutput:
+        return ValidateInputToolOutput(is_readable=True)
+
+    def fake_run_patch_tool(
+        payload: PatchToolInput,
+        *,
+        policy: PathPolicy,
+        on_conflict: OnConflictPolicy,
+    ) -> PatchToolOutput:
+        calls["patch"] = (payload, policy, on_conflict)
+        return PatchToolOutput(out_path="out.xlsx", patch_diff=[], engine="openpyxl")
+
+    async def fake_run_sync(func: Callable[[], object]) -> object:
+        return func()
+
+    monkeypatch.setattr(server, "run_extract_tool", fake_run_extract_tool)
+    monkeypatch.setattr(
+        server, "run_read_json_chunk_tool", fake_run_read_json_chunk_tool
+    )
+    monkeypatch.setattr(server, "run_validate_input_tool", fake_run_validate_input_tool)
+    monkeypatch.setattr(server, "run_patch_tool", fake_run_patch_tool)
+    monkeypatch.setattr(anyio.to_thread, "run_sync", fake_run_sync)
+
+    server._register_tools(app, policy, default_on_conflict="overwrite")
+    patch_tool = cast(Callable[..., Awaitable[object]], app.tools["exstruct_patch"])
+    anyio.run(
+        _call_async,
+        patch_tool,
+        {
+            "xlsx_path": "in.xlsx",
+            "sheet": "Sheet1",
+            "ops": [{"op": "set_value", "cell": "A1", "value": "x"}],
+        },
+    )
+    patch_call = cast(
+        tuple[PatchToolInput, PathPolicy, OnConflictPolicy], calls["patch"]
+    )
+    assert patch_call[0].sheet == "Sheet1"
+    assert patch_call[0].ops[0].sheet == "Sheet1"
 
 
 def test_register_tools_accepts_make_ops_json_strings(
