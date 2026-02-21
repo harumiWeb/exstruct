@@ -2,174 +2,217 @@
 
 ## Feature Name
 
-MCP UX Hardening for `exstruct_make` / `exstruct_patch`
+MCP UX Hardening Phase 2 (Claude Review Closure)
 
 ## 背景
 
-`sample.md` の会話ログでは、`exstruct_make` 呼び出し 10 回中 6 回が失敗しており、主因は以下です。
+`review.md` のレビュー結果を一次情報として採用し、MCP UX の未解決課題を解消する。
 
-1. 操作パラメータ名の不一致（例: `col` / `width` / `name`）
-2. 色指定のフォーマット制約が分かりづらい（HEX の扱い）
-3. 文字色と背景色の概念が API 上で分離されていない
-4. `draw_grid_border` の指定方法が直感とずれる（`range` 不可）
-5. `out_path` のルート制約が分かりづらく、再試行がループする
+既に改善済みの項目:
+
+1. 色概念の分離（`color` / `fill_color`）
+2. `draw_grid_border` の `range` shorthand
+3. `out_path` の root 診断改善
+
+今回の対象は、上記以外の未解決課題（書式一括化、テーブルスタイル、検証UX、成果物連携、大量操作、入力スキーマ可視化）とする。
 
 ## 目的
 
-1. AI エージェントの初回成功率を上げる
-2. 色指定を「任意HEXで安全に使える仕様」にする
-3. `color`（文字色）と `fill_color`（背景色）を明確に分離する
-4. 既存 API 互換を可能な限り維持しつつ入力許容を拡張する
+1. 書式操作時の試行錯誤回数を削減する
+2. 大量操作時の失敗コストを削減する
+3. 生成ファイル受け渡しをチャット内ワークフローで完結させる
+4. 実行前に `op` 単位の正しい入力を確認できるようにする
 
 ## 非目的
 
-1. `PatchOp` の大規模再設計
-2. 既存成功ケースの挙動変更
-3. 追加の外部依存導入
+1. 既存 `set_bold` / `set_font_size` / `set_fill_color` などの削除
+2. 既存 `exstruct_patch` の原子性（all-or-nothing）の撤廃
+3. MCP外部プロダクト固有実装（Claude専用SDK実装）
 
 ## スコープ
 
-### FS-01: PatchOp 入力エイリアス正規化（非色情報）
+### FS-01: Validation UX強化
 
-`_coerce_patch_ops` で以下を正規化してから `PatchOp` 検証へ渡す。
+既知の誤入力に対する正規化と、自己修復しやすいエラー情報を追加する。
 
-1. `add_sheet`: `name` があり `sheet` が無い場合は `sheet = name`
-2. `set_dimensions`: `col` -> `columns`, `row` -> `rows`
-3. `set_dimensions`: `width` -> `column_width`（列指定時）, `height` -> `row_height`（行指定時）
+1. alias 正規化
+   1. `set_alignment.horizontal -> horizontal_align`
+   2. `set_alignment.vertical -> vertical_align`
+   3. `set_fill_color.color -> fill_color`
+2. `PatchErrorDetail` 拡張
+   1. `hint: str | None`
+   2. `expected_fields: list[str]`
+   3. `example_op: str | None`
+3. エラー文面方針
+   1. 何が違うか
+   2. 正しい引数名
+   3. 最小JSON例
 
-優先順位:
-1. 正式フィールドが存在する場合は正式フィールドを優先
-2. エイリアスと正式フィールドが矛盾する場合はエラーにする
+### FS-02: `set_style` 追加
 
-注意:
-- `color -> fill_color` の自動変換は行わない（`color` と `fill_color` を別概念として扱う）
+単一opで複数書式を適用できるようにする。
 
-### FS-02: 色指定を任意HEXで許容（`color` / `fill_color` 共通）
+1. 新規 `PatchOpType`: `set_style`
+2. 対象指定
+   1. `cell` または `range` のどちらか一方（exactly one）
+3. 指定可能属性
+   1. `bold`
+   2. `font_size`
+   3. `color`
+   4. `fill_color`
+   5. `horizontal_align`
+   6. `vertical_align`
+   7. `wrap_text`
+4. 少なくとも1属性必須
+5. 既存上限 `_MAX_STYLE_TARGET_CELLS` を適用
+6. 既存個別opは後方互換維持
 
-`color` と `fill_color` は固定色ではなく、任意HEXを受け付ける。
+### FS-03: `apply_table_style` 追加
 
-許容フォーマット:
-1. `RRGGBB`
-2. `AARRGGBB`
-3. `#RRGGBB`
-4. `#AARRGGBB`
+Excelテーブルスタイルを1opで適用できるようにする。
 
-内部正規化:
-1. `#` が無い場合は補完
-2. 大文字化（例: `#1f4e79` -> `#1F4E79`）
+1. 新規 `PatchOpType`: `apply_table_style`
+2. 必須
+   1. `sheet`
+   2. `range`
+   3. `style`
+3. オプション
+   1. `table_name`（未指定時は自動採番）
+4. 既存テーブル重複/交差は明示エラー
+5. Backend方針
+   1. Phase 2 は `openpyxl` 正式対応
+   2. `com` は warning を返して `openpyxl` フォールバック
 
-不正文字列（桁数不一致・非16進文字）はエラー。
+### FS-04: 成果物ミラー（`present_files` 連携）
 
-### FS-03: 文字色操作 `set_font_color` の追加
+生成成果物を bridge 先へミラーし、チャット側への受け渡しを容易にする。
 
-`PatchOpType` に `set_font_color` を追加する。
+1. サーバー起動引数に `--artifact-bridge-dir` を追加
+2. `exstruct_make` / `exstruct_patch` 入力に `mirror_artifact: bool = false` を追加
+3. 成功時のみ、`mirror_artifact=true` かつ bridge 設定ありでコピー
+4. 出力モデルに `mirrored_out_path: str | None` を追加
+5. ミラー失敗は処理失敗にせず `warnings` に記録
 
-仕様:
-1. 必須: `sheet`, `color`
-2. 対象指定: `cell` または `range` のどちらか一方（両方不可）
-3. `fill_color` は受け付けない
-4. 既存のスタイル操作と同様に最大対象セル数制限を適用
+### FS-05: 大量操作向け分割実行API（新規ツール）
 
-意味:
-1. `color`: 文字色（font color）
-2. `fill_color`: 背景色（solid fill）
+原子性を維持したまま大量opを扱うため、計画と適用を分離する。
 
-### FS-04: `draw_grid_border` の `range` shorthand 対応
+1. `exstruct_patch_plan`
+   1. 入力: `xlsx_path`, `ops`, `chunk_by`, `max_ops_per_chunk`
+   2. 出力: `plan_id`, `chunk_summaries`, `total_ops`
+2. `exstruct_patch_apply_chunks`
+   1. 入力: `plan_id`, `out_dir`, `out_name`, `backend`
+   2. 実行: 内部ステージングで全chunk適用後に最終保存（全体原子性維持）
+   3. 失敗時: 最終成果物は生成しない
 
-`draw_grid_border` で `range` を受け取ったら内部で以下に変換する。
+### FS-06: 入力スキーマ可視化（優先: ツール定義拡充、補完: 確認ツール）
 
-1. `base_cell`: 範囲左上セル
-2. `row_count`: 範囲行数
-3. `col_count`: 範囲列数
+実行前に `op` 単位の入力仕様を確認できるようにする。
 
-制約:
-1. `range` と `base_cell/row_count/col_count` の併用は不可
-2. 既存の最大セル数制限は維持
+1. 優先実装: `exstruct_patch` ツール定義内スキーマ拡充
+   1. `op` ごとの required/optional フィールドを明記
+   2. フィールド型・制約（exactly one, >0, hex形式など）を明記
+   3. `op` ごとの最小実行例を明記
+   4. alias（例: `horizontal -> horizontal_align`）の対応を明記
+2. 補完実装: スキーマ確認ツール
+   1. `exstruct_list_ops`（`op` 一覧と短い説明）
+   2. `exstruct_describe_op`（required/optional/constraints/example/aliases）
+3. ドリフト防止
+   1. ツール定義文言と `describe_op` 生成元は同一メタデータを参照する
 
-### FS-05: `out_path` の root 基準化と診断改善
+## 主要な公開I/F変更
 
-1. 相対パス `out_path` は必ず MCP `--root` 基準で解決する
-2. `Path is outside root` エラー時、以下を含むメッセージを返す
-   - 解決後パス
-   - 許可 root
-   - 有効な指定例（相対）
-
-例: `out_path: "outputs/book.xlsx"`
-
-### FS-06: ランタイム情報取得ツール（任意）
-
-新規ツール `exstruct_get_runtime_info` を追加し、以下を返す。
-
-1. `root`
-2. `cwd`
-3. `platform`
-4. `path_examples`（有効な相対/絶対例）
-
-目的は path 制約デバッグの初動短縮。
+1. `PatchOpType` 追加
+   1. `set_style`
+   2. `apply_table_style`
+2. `PatchOp` フィールド追加
+   1. `style: str | None`（`apply_table_style` 用）
+   2. `table_name: str | None`（`apply_table_style` 用）
+3. `PatchErrorDetail` 追加フィールド
+   1. `hint`
+   2. `expected_fields`
+   3. `example_op`
+4. MCPツール追加
+   1. `exstruct_patch_plan`
+   2. `exstruct_patch_apply_chunks`
+   3. `exstruct_list_ops`
+   4. `exstruct_describe_op`
+5. MCPツール入出力拡張
+   1. `mirror_artifact`（make/patch input）
+   2. `mirrored_out_path`（make/patch output）
+6. サーバーCLI拡張
+   1. `--artifact-bridge-dir`
+7. ツール定義拡張
+   1. `exstruct_patch` の docstring/description に `op` 別ミニスキーマを追加
 
 ## 受け入れ条件（Acceptance Criteria）
 
-### AC-01 入力互換
+### AC-01 Validation UX
 
-1. `name` 指定の `add_sheet` が成功する
-2. `col` + `width` 指定の `set_dimensions` が成功する
+1. 誤引数入力時に `hint` が返る
+2. 誤引数入力時に `expected_fields` が返る
+3. 誤引数入力時に `example_op` が返る
 
-### AC-02 HEX自由指定
+### AC-02 `set_style`
 
-1. `fill_color: "1F4E79"` が成功し、内部値が `#1F4E79`
-2. `color: "CC336699"` が成功し、内部値が `#CC336699`
-3. 不正フォーマットは失敗し、エラーメッセージは明確
+1. 1op でヘッダ装飾（太字/文字色/背景色/整列）が適用できる
+2. `cell`/`range` の同時指定はエラー
+3. 属性未指定はエラー
 
-### AC-03 色概念の分離
+### AC-03 `apply_table_style`
 
-1. `set_fill_color` は `fill_color` のみ受理し、文字色は変更しない
-2. `set_font_color` は `color` のみ受理し、背景色は変更しない
-3. `set_font_color` に `fill_color` を渡した場合はエラー
+1. 指定範囲にテーブルスタイルが適用される
+2. 既存テーブルと交差する範囲指定は明示エラー
 
-### AC-04 border shorthand
+### AC-04 成果物ミラー
 
-1. `draw_grid_border` で `range: "A4:G19"` が成功する
-2. `range` と `base_cell` 併用時は明確なエラー
+1. `mirror_artifact=true` かつ bridge 設定ありで `mirrored_out_path` が返る
+2. bridge 未設定時は通常処理を継続し warning を返す
+3. コピー失敗時も patch/make 結果は成功扱いで warning を返す
 
-### AC-05 path UX
+### AC-05 分割実行API
 
-1. 相対 `out_path` が root 配下へ解決される
-2. root 外パスで、修正に必要な情報を含むエラーが返る
+1. `exstruct_patch_plan` が安定した chunk 計画を返す
+2. `exstruct_patch_apply_chunks` 成功時に最終成果物が1つ生成される
+3. `exstruct_patch_apply_chunks` 失敗時に最終成果物は残らない
 
-### AC-06 後方互換
+### AC-06 入力スキーマ可視化
 
-1. 既存の正式入力は挙動変更なし
-2. 既存テストがすべて通る
+1. `exstruct_patch` ツール定義だけで主要 `op` の required/optional/example を確認できる
+2. `exstruct_list_ops` が利用可能 `op` 一覧を返す
+3. `exstruct_describe_op` が `required` / `optional` / `constraints` / `example` / `aliases` を返す
+
+### AC-07 後方互換
+
+1. 既存opの既存入力は挙動変更なし
+2. 既存テストが回帰しない
+
+## テストケース
+
+1. パラメータ誤り時のヒント返却（`color` vs `fill_color`、`horizontal` vs `horizontal_align`）
+2. `set_style` の単セル/範囲/属性未指定エラー
+3. `apply_table_style` の正常系/重複テーブルエラー
+4. `mirror_artifact` の正常コピー/bridge未設定/コピー失敗warning
+5. `patch_plan` のchunk生成妥当性
+6. `patch_apply_chunks` の成功時コミット、失敗時ロールバック
+7. `exstruct_list_ops` の一覧妥当性
+8. `exstruct_describe_op` の required/optional/example 妥当性
+9. `exstruct_patch` ツール定義に `op` 別スキーマ情報が含まれること
+
+## 前提・デフォルト
+
+1. 既存の `exstruct_patch` 原子性は維持する
+2. 新機能は後方互換優先（既存入力/既存レスポンス項目は破壊しない）
+3. `mirror_artifact` の既定値は `false`
+4. `--artifact-bridge-dir` 未指定時はミラー機能を無効化
+5. `apply_table_style` は Phase 2 で openpyxl 優先対応とする
+6. 入力スキーマ改善は「ツール定義拡充」を先行し、確認ツールは補完として追加する
 
 ## 影響範囲
 
-1. `src/exstruct/mcp/server.py`（入力正規化）
-2. `src/exstruct/mcp/patch_runner.py`（`set_font_color` 追加、色検証拡張）
-3. `src/exstruct/mcp/io.py`（パス診断文言）
-4. `src/exstruct/mcp/tools.py`（必要に応じたモデル説明更新）
-5. `docs/mcp.md`（色指定と新opサンプル追加）
-6. `tests/mcp/*`（回帰・新規テスト）
-
-## リスクと対策
-
-1. `color` の意味の誤解（文字色か背景色か）
-   - 対策: `set_font_color` と `set_fill_color` の責務を明示し、混在入力はエラー
-2. 入力曖昧性の増加
-   - 対策: 正式フィールド優先、矛盾時エラー
-3. 変換ロジック肥大化
-   - 対策: 正規化関数を小分けし 1 責務を維持
-
-## リリース方針（段階導入）
-
-### Phase 1（必須）
-
-1. FS-01
-2. FS-02
-3. FS-03
-4. FS-04
-5. FS-05
-
-### Phase 2（推奨）
-
-1. FS-06
-2. ドキュメントの「失敗しやすい例」拡充
+1. `src/exstruct/mcp/server.py`
+2. `src/exstruct/mcp/tools.py`
+3. `src/exstruct/mcp/patch_runner.py`
+4. `src/exstruct/mcp/io.py`（必要時）
+5. `docs/mcp.md`
+6. `tests/mcp/*`

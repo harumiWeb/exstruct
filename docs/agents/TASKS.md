@@ -2,103 +2,126 @@
 
 未完了 [ ], 完了 [x]
 
-## Epic: MCP UX Hardening
+## Epic: MCP UX Hardening Phase 2 (Claude Review Closure)
 
-### 0. 事前準備
+### 0. 仕様固定と設計（FS全体）
 
-- [ ] `sample.md` の失敗ケースをテストケース化する方針を確定する
-- [ ] 既存の `tests/mcp/` で再利用可能な fixture を確認する
-
-### 1. 入力正規化（FS-01）
-
-- [x] `src/exstruct/mcp/server.py` の `_coerce_patch_ops` を拡張し、`name -> sheet` を追加
-- [x] `src/exstruct/mcp/server.py` の `_coerce_patch_ops` を拡張し、`col/row -> columns/rows` を追加
-- [x] `src/exstruct/mcp/server.py` の `_coerce_patch_ops` を拡張し、`width/height -> column_width/row_height` を追加
-- [x] 正式フィールドとエイリアスが矛盾する場合のエラー仕様を実装
-- [x] `color -> fill_color` 自動変換を無効化し、仕様として禁止
-- [x] 上記変換の単体テストを追加（正常系/矛盾系）
+- [ ] `review.md` の指摘を FS/AC にマッピングし、非対象を明文化する
+- [ ] 公開I/F変更一覧（型、ツール、CLI、レスポンス）を確定する
+- [ ] 既存互換ポリシー（後方互換・原子性維持）を設計メモに固定する
 
 完了条件:
-- [x] `name` / `col` / `width` 入力が `PatchOp` 検証前に正規化される
-- [x] `color` と `fill_color` が混同されない
+- [ ] Feature Spec と実装対象が1対1で追跡できる
 
-### 2. HEX自由指定（FS-02）
+### 1. Validation UX（FS-01）
 
-- [x] `src/exstruct/mcp/patch_runner.py` の色バリデータを拡張し、`color`/`fill_color` ともに `#` なし 6/8 桁を許容
-- [x] 内部正規化（`#` 補完 + 大文字化）を実装
-- [x] 不正桁数・不正文字のエラーを維持
-- [x] テスト追加（6桁/8桁/`#`あり/`#`なし/不正値）
-
-完了条件:
-- [x] 任意HEX指定が成功する
-- [x] 不正入力は明確なエラーになる
-
-### 3. 文字色 `set_font_color` 追加（FS-03）
-
-- [x] `src/exstruct/mcp/patch_runner.py` の `PatchOpType` に `set_font_color` を追加
-- [x] `PatchOp` に `color` フィールドを追加
-- [x] `set_font_color` 専用バリデーションを追加（`sheet` + `color` + exactly one of `cell`/`range`）
-- [x] `set_font_color` 実処理を openpyxl/com 両方に追加
-- [x] `set_font_color` で `fill_color` 指定時にエラー化
-- [x] テスト追加（単セル/範囲/エラーケース）
+- [ ] `_coerce_patch_ops` に alias 正規化を追加（`horizontal`/`vertical`/`color`）
+- [ ] `PatchErrorDetail` に `hint` / `expected_fields` / `example_op` を追加
+- [ ] 既知の入力ミスへ具体的ヒントを返すエラーヒント生成器を実装
+- [ ] 既存エラー経路（`PatchOpError.from_op` など）へ拡張項目を接続
+- [ ] テスト追加（alias正規化、ヒント内容、後方互換）
 
 完了条件:
-- [x] `color` は文字色として適用される
-- [x] `fill_color` とは独立して動作する
+- [ ] 誤入力時に自己修復可能なエラー情報が返る
 
-### 4. draw_grid_border shorthand（FS-04）
+### 2. `set_style`（FS-02）
 
-- [x] `src/exstruct/mcp/server.py` または `src/exstruct/mcp/patch_runner.py` で `range` から `base_cell/row_count/col_count` へ正規化
-- [x] `range` と `base_cell/row_count/col_count` の併用エラーを実装
-- [x] 最大セル数制限の既存チェックが有効なことを確認
-- [x] テスト追加（正常系/併用エラー/上限制約）
-
-完了条件:
-- [x] `draw_grid_border + range` が成功する
-- [x] 併用ケースで明確なエラーになる
-
-### 5. パス UX 改善（FS-05）
-
-- [x] 相対 `out_path` 解決ルールを root 基準で統一
-- [x] `Path is outside root` エラー文言に root と有効例を追加
-- [x] テスト追加（相対成功/絶対失敗/診断メッセージ）
+- [ ] `PatchOpType` に `set_style` を追加
+- [ ] `PatchOp` validator を追加（target exactly one、属性1つ以上）
+- [ ] openpyxl 実装を追加（font/fill/alignment の複合適用）
+- [ ] com 実装を追加（同等の複合適用）
+- [ ] inverse snapshot（font/fill/alignment）復元を実装
+- [ ] テスト追加（単セル、範囲、属性未指定、上限超過）
 
 完了条件:
-- [x] 相対 `out_path` が環境依存せず安定
-- [x] root 外エラーの自己修復性が上がる
+- [ ] 1op で複数書式属性を安定適用できる
 
-### 6. ランタイム情報ツール（FS-06, optional）
+### 3. `apply_table_style`（FS-03）
 
-- [x] `src/exstruct/mcp/server.py` に `exstruct_get_runtime_info` を追加
-- [x] `src/exstruct/mcp/tools.py` に対応入出力モデルを追加
-- [x] テスト追加（root/cwd/platform/path_examples の整合性）
-- [x] `docs/mcp.md` に利用例を追加
+- [ ] `PatchOpType` に `apply_table_style` を追加
+- [ ] `PatchOp` に `style` / `table_name` を追加
+- [ ] validator を追加（必須項目、範囲妥当性、交差チェック前提）
+- [ ] openpyxl 実装を追加（Table + TableStyleInfo 適用）
+- [ ] com 指定時の warning + openpyxl フォールバック方針を実装
+- [ ] テスト追加（正常系、重複名、交差範囲、backend方針）
 
 完了条件:
-- [x] エージェントが root/cwd を1コールで取得できる
+- [ ] テーブルスタイルを1opで適用できる
+
+### 4. 成果物ミラー（FS-04）
+
+- [ ] `ServerConfig` / CLI に `--artifact-bridge-dir` を追加
+- [ ] `PatchToolInput` / `MakeToolInput` に `mirror_artifact` を追加
+- [ ] `PatchToolOutput` / `MakeToolOutput` に `mirrored_out_path` を追加
+- [ ] 成功時ミラーコピー処理を実装（bridge有効時のみ）
+- [ ] コピー失敗時は warning のみ返し、処理失敗にしない
+- [ ] テスト追加（正常、bridge未設定、コピー失敗）
+
+完了条件:
+- [ ] `present_files` 連携向けの成果物パスが返せる
+
+### 5. 分割実行API（FS-05）
+
+- [ ] `exstruct_patch_plan` の入出力モデルを追加
+- [ ] `exstruct_patch_apply_chunks` の入出力モデルを追加
+- [ ] サーバーへ新規2ツールを登録
+- [ ] chunk生成ロジックを実装（`chunk_by`, `max_ops_per_chunk`）
+- [ ] 内部ステージング + 原子コミット実装（成功時のみ最終保存）
+- [ ] 失敗時ロールバック保証を実装（最終成果物未生成）
+- [ ] テスト追加（計画妥当性、成功時、失敗時）
+
+完了条件:
+- [ ] 大量操作時も原子性を維持した分割実行が可能
+
+### 6. 入力スキーマ可視化（FS-06）
+
+- [ ] `exstruct_patch` ツール定義に `op` 別ミニスキーマ（required/optional/constraints/example）を追加
+- [ ] `op` 別ミニスキーマに alias 対応を明記
+- [ ] スキーマ記述の生成元を共通メタデータ化し、定義ドリフトを防止
+- [ ] `exstruct_list_ops` の入出力モデルとサーバー登録を追加
+- [ ] `exstruct_describe_op` の入出力モデルとサーバー登録を追加
+- [ ] `exstruct_describe_op` に `required` / `optional` / `constraints` / `example` / `aliases` を実装
+- [ ] テスト追加（一覧妥当性、describe内容、未知opエラー、tool定義文言）
+
+完了条件:
+- [ ] 実行前に主要 `op` の入力仕様と動作例を確認できる
 
 ### 7. ドキュメント整備
 
-- [x] `docs/mcp.md` に「色指定の仕様（color / fill_color）」節を追加
-- [x] `docs/mcp.md` に `set_font_color` / `set_fill_color` の最小例を追加
-- [x] `docs/mcp.md` に `set_dimensions` / `draw_grid_border` の最小例を追加
-- [x] `docs/README.ja.md` の MCP 節に注意点を反映
+- [ ] `docs/mcp.md` に `set_style` を追記（最小例、制約、エラー例）
+- [ ] `docs/mcp.md` に `apply_table_style` を追記（最小例、制約）
+- [ ] `docs/mcp.md` に `mirror_artifact` / `mirrored_out_path` を追記
+- [ ] `docs/mcp.md` に `exstruct_patch_plan` / `exstruct_patch_apply_chunks` を追記
+- [ ] `docs/mcp.md` に `exstruct_list_ops` / `exstruct_describe_op` を追記
+- [ ] 失敗例→正解例（引数名ミス）カタログを追記
 
 完了条件:
-- [x] 同種ミスの再発を抑制できるドキュメントになっている
+- [ ] レビューで指摘された試行錯誤パターンをドキュメントで回避できる
 
-### 8. 検証・リリース
+### 8. 検証・受け入れ
 
-- [x] `uv run task precommit-run` を実行し、mypy / Ruff / pytest を通す
-- [x] 変更点を `docs/release-notes/` に追加
-- [x] PR テンプレートに受け入れ条件のチェックを記載
+- [ ] `uv run task precommit-run` を実行
+- [ ] 既存回帰テスト + 新規ACテストが通過
+- [ ] AC-01 〜 AC-07 の達成をチェックリストで確認
 
 完了条件:
 - [ ] CI グリーン
-- [ ] Feature Spec の AC-01〜AC-06 を満たす
+- [ ] Feature Spec の受け入れ条件を満たす
 
 ## 優先順位
 
-1. P0: 1, 2, 3, 4, 5
-2. P1: 7
-3. P2: 6, 8
+1. P0: 1, 2, 3, 4, 5, 6（ただし6は「ツール定義拡充」を最優先）
+2. P1: 6（`exstruct_list_ops` / `exstruct_describe_op`）, 7
+3. P2: 8
+
+## テストケース（必須追跡）
+
+- [ ] パラメータ誤り時のヒント返却（`color` vs `fill_color`、`horizontal` vs `horizontal_align`）
+- [ ] `set_style` の単セル/範囲/属性未指定エラー
+- [ ] `apply_table_style` の正常系/重複テーブルエラー
+- [ ] `mirror_artifact` の正常コピー/bridge未設定/コピー失敗warning
+- [ ] `patch_plan` のchunk生成妥当性
+- [ ] `patch_apply_chunks` の成功時コミット、失敗時ロールバック
+- [ ] `exstruct_list_ops` の一覧妥当性
+- [ ] `exstruct_describe_op` の required/optional/example 妥当性
+- [ ] `exstruct_patch` ツール定義に `op` 別スキーマ情報が含まれること
