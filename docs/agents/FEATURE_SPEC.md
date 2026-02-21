@@ -170,12 +170,6 @@ Excelテーブルスタイルを1opで適用できるようにする。
 2. bridge 未設定時は通常処理を継続し warning を返す
 3. コピー失敗時も patch/make 結果は成功扱いで warning を返す
 
-### AC-05 分割実行API
-
-1. `exstruct_patch_plan` が安定した chunk 計画を返す
-2. `exstruct_patch_apply_chunks` 成功時に最終成果物が1つ生成される
-3. `exstruct_patch_apply_chunks` 失敗時に最終成果物は残らない
-
 ### AC-06 入力スキーマ可視化
 
 1. `exstruct_patch` ツール定義だけで主要 `op` の required/optional/example を確認できる

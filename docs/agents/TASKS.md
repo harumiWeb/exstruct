@@ -60,19 +60,6 @@
 完了条件:
 - [ ] `present_files` 連携向けの成果物パスが返せる
 
-### 5. 分割実行API（FS-05）
-
-- [ ] `exstruct_patch_plan` の入出力モデルを追加
-- [ ] `exstruct_patch_apply_chunks` の入出力モデルを追加
-- [ ] サーバーへ新規2ツールを登録
-- [ ] chunk生成ロジックを実装（`chunk_by`, `max_ops_per_chunk`）
-- [ ] 内部ステージング + 原子コミット実装（成功時のみ最終保存）
-- [ ] 失敗時ロールバック保証を実装（最終成果物未生成）
-- [ ] テスト追加（計画妥当性、成功時、失敗時）
-
-完了条件:
-- [ ] 大量操作時も原子性を維持した分割実行が可能
-
 ### 6. 入力スキーマ可視化（FS-06）
 
 - [ ] `exstruct_patch` ツール定義に `op` 別ミニスキーマ（required/optional/constraints/example）を追加
