@@ -98,11 +98,28 @@
 - [x] Ruff: 0 エラー
 - [x] テスト: 全て成功
 
+## 8. レガシー実装完全廃止（Phase 2）
+
+- [ ] `src/exstruct/mcp/patch/legacy_runner.py` 依存の棚卸し（import/呼び出し元を全列挙）
+- [ ] `patch/service.py` / `patch/engine/*` の `legacy_runner` 依存を新モジュール群へ置換
+- [ ] `patch/models.py` の `patch_runner` 経由 import を廃止し、実体モデル定義へ移行
+- [ ] `patch_runner.py` の monkeypatch 互換レイヤを段階的に削除（必要な公開 API は維持）
+- [ ] `tests/mcp/test_patch_runner.py` の私有関数前提テストを責務別テストへ移管
+- [ ] `src/exstruct/mcp/patch/ops/*` を導入し、op 実装を backend 別に分離
+- [ ] `legacy_runner.py` を削除し、不要な再エクスポートを整理
+- [ ] 互換性要件を満たしたまま `uv run task precommit-run` と回帰テストを再通過
+
+完了条件:
+- [ ] `legacy_runner.py` がリポジトリから削除されている
+- [ ] `patch_runner.py` が公開 API の薄い入口のみを保持している
+- [ ] patch 実装の依存方向が `service -> engine/ops` に一本化されている
+- [ ] 既存 MCP I/F 互換とテスト成功が維持されている
+
 ## 優先順位
 
 1. P0: 1, 2, 3
 2. P1: 4, 5
-3. P2: 6, 7
+3. P2: 6, 7, 8
 
 ## マイルストーン（推奨）
 
@@ -110,3 +127,4 @@
 2. M2: ドメイン/正規化分離完了（Task 2-3）
 3. M3: service/engine 分離完了（Task 4）
 4. M4: テスト・ドキュメント・品質ゲート完了（Task 5-7）
+5. M5: レガシー実装完全廃止完了（Task 8）
