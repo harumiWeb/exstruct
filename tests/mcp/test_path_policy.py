@@ -17,8 +17,9 @@ def test_path_policy_allows_within_root(tmp_path: Path) -> None:
 def test_path_policy_denies_outside_root(tmp_path: Path) -> None:
     policy = PathPolicy(root=tmp_path)
     outside = tmp_path.parent / "outside.txt"
-    with pytest.raises(ValueError, match="resolved=.*root=.*example_relative"):
+    with pytest.raises(ValueError, match="resolved=.*root=.*example_relative") as exc:
         policy.ensure_allowed(outside)
+    assert "exstruct_get_runtime_info" in str(exc.value)
 
 
 def test_path_policy_denies_glob(tmp_path: Path) -> None:

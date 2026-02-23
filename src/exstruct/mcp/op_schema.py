@@ -287,6 +287,24 @@ _PATCH_OP_SCHEMA_BY_NAME: dict[str, PatchOpSchema] = {
             "width": "column_width",
         },
     ),
+    "auto_fit_columns": PatchOpSchema(
+        op="auto_fit_columns",
+        description="Auto-fit column widths with optional width bounds.",
+        required=["sheet"],
+        optional=["columns", "min_width", "max_width"],
+        constraints=[
+            "columns optional (uses used columns when omitted)",
+            "min_width > 0, max_width > 0 when provided",
+            "min_width <= max_width when both are provided",
+        ],
+        example={
+            "op": "auto_fit_columns",
+            "sheet": "Sheet1",
+            "columns": ["A", 2],
+            "min_width": 8,
+            "max_width": 40,
+        },
+    ),
     "merge_cells": PatchOpSchema(
         op="merge_cells",
         description="Merge one rectangular range.",

@@ -39,7 +39,8 @@ class PathPolicy(BaseModel):
             raise ValueError(
                 "Path is outside root. "
                 f"resolved={resolved}, root={root}, "
-                "example_relative='outputs/book.xlsx'"
+                "example_relative='outputs/book.xlsx'. "
+                "Use exstruct_get_runtime_info to inspect valid root-based paths."
             )
         if self._is_denied(resolved, root):
             raise ValueError(f"Path is denied by policy: {resolved}")

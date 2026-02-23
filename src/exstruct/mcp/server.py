@@ -524,6 +524,7 @@ def _register_tools(
                 'set_font_color' (apply font color; requires color and exactly one of cell/range),
                 'set_fill_color' (apply solid fill),
                 'set_dimensions' (set row height/column width),
+                'auto_fit_columns' (auto-fit column widths with optional bounds),
                 'merge_cells' (merge a rectangular range),
                 'unmerge_cells' (unmerge ranges intersecting target),
                 'set_alignment' (set horizontal/vertical alignment and wrap_text), and

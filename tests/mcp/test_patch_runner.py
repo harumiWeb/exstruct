@@ -938,6 +938,117 @@ def test_run_patch_set_dimensions(
         assert sheet.column_dimensions["B"].width == 18.0
     finally:
         workbook.close()
+    after_value = result.patch_diff[0].after
+    assert after_value is not None
+    assert isinstance(after_value.value, str)
+    assert "columns=A, B (2)" in after_value.value
+
+
+def test_run_patch_auto_fit_columns_with_bounds(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    workbook = load_workbook(input_path)
+    try:
+        sheet = workbook["Sheet1"]
+        sheet["A1"] = "short"
+        sheet["B1"] = "this is a much longer sample text"
+        workbook.save(input_path)
+    finally:
+        workbook.close()
+    result = run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[
+                PatchOp(
+                    op="auto_fit_columns",
+                    sheet="Sheet1",
+                    min_width=8,
+                    max_width=20,
+                )
+            ],
+            on_conflict="rename",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert result.error is None
+    workbook = load_workbook(result.out_path)
+    try:
+        sheet = workbook["Sheet1"]
+        width_a = sheet.column_dimensions["A"].width
+        width_b = sheet.column_dimensions["B"].width
+        assert width_a is not None
+        assert width_b is not None
+        assert 8 <= width_a <= 20
+        assert 8 <= width_b <= 20
+        assert width_b >= width_a
+    finally:
+        workbook.close()
+
+
+def test_run_patch_auto_fit_columns_accepts_mixed_column_identifiers(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    result = run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[
+                PatchOp(
+                    op="auto_fit_columns",
+                    sheet="Sheet1",
+                    columns=["A", 2],
+                    min_width=9,
+                )
+            ],
+            on_conflict="rename",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert result.error is None
+    workbook = load_workbook(result.out_path)
+    try:
+        sheet = workbook["Sheet1"]
+        assert sheet.column_dimensions["A"].width is not None
+        assert sheet.column_dimensions["B"].width is not None
+        assert sheet.column_dimensions["A"].width >= 9
+        assert sheet.column_dimensions["B"].width >= 9
+    finally:
+        workbook.close()
+
+
+def test_patch_op_auto_fit_columns_rejects_invalid_bounds() -> None:
+    with pytest.raises(
+        ValidationError, match="auto_fit_columns requires min_width <= max_width"
+    ):
+        PatchOp(
+            op="auto_fit_columns",
+            sheet="Sheet1",
+            min_width=20,
+            max_width=10,
+        )
+
+
+def test_run_patch_warns_when_ops_exceed_soft_threshold(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    ops = [
+        PatchOp(op="set_value", sheet="Sheet1", cell="A1", value=f"v{i}")
+        for i in range(201)
+    ]
+    result = run_patch(
+        PatchRequest(xlsx_path=input_path, ops=ops, on_conflict="rename"),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert result.error is None
+    assert any("Recommended maximum is 200" in warning for warning in result.warnings)
 
 
 def test_patch_op_set_bold_rejects_cell_and_range() -> None:

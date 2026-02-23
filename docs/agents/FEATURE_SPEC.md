@@ -1,244 +1,245 @@
-﻿# Feature Spec for AI Agent (Phase-by-Phase)
+# Feature Spec for AI Agent (Phase 3)
 
 ## Feature Name
 
-MCP UX Hardening Phase 2 (Claude Review Closure)
+MCP UX Hardening Phase 3 (Claude Feedback Triage)
 
 ## 背景
 
-`review.md` のレビュー結果を一次情報として採用し、MCP UX の未解決課題を解消する。
+`review.md` のフィードバックを精査し、以下を再分類した。
 
-既に改善済みの項目:
+1. 今回実装する項目
+2. 今回は見送り、次フェーズ候補に残す項目
 
-1. 色概念の分離（`color` / `fill_color`）
-2. `draw_grid_border` の `range` shorthand
-3. `out_path` の root 診断改善
-
-今回の対象は、上記以外の未解決課題（書式一括化、テーブルスタイル、検証UX、成果物連携、大量操作、入力スキーマ可視化）とする。
+Phase 2 までで対応済みの項目（`set_style`、`apply_table_style`、`mirror_artifact`、top-level `sheet`、スキーマ可視化など）は維持し、Phase 3 では初期体験と実運用時の失敗コスト削減に集中する。
 
 ## 目的
 
-1. 書式操作時の試行錯誤回数を削減する
-2. 大量操作時の失敗コストを削減する
-3. 生成ファイル受け渡しをチャット内ワークフローで完結させる
-4. 実行前に `op` 単位の正しい入力を確認できるようにする
+1. パス解決の初期つまずきを減らす
+2. `exstruct_make` の直感的なシート生成挙動を提供する
+3. 列幅調整の手動試行錯誤を減らす
+4. 大量 `ops` 実行時の判断を支援する
+5. `set_dimensions` の実行結果確認を容易にする
 
 ## 非目的
 
-1. 既存 `set_bold` / `set_font_size` / `set_fill_color` などの削除
-2. 既存 `exstruct_patch` の原子性（all-or-nothing）の撤廃
-3. MCP外部プロダクト固有実装（Claude専用SDK実装）
+1. `freeze_panes` の実装
+2. セルコメント追加 (`set_comment`) の実装
+3. 条件付き書式編集の実装
+4. `apply_table_style` の COM ネイティブ対応
+5. `patch_plan` / `patch_apply_chunks` の新規 API 追加
+6. 上書き専用の新規 API フラグ追加
+
+## 追加レビュー指摘（未コミット差分レビュー）
+
+未コミット差分レビューで、次の 2 点を修正対象として追加する。
+
+1. `make(sheet=...)` と `add_sheet(...)` の競合判定が大文字小文字差異で漏れる
+2. openpyxl の `auto_fit_columns` が列数に比例して全シート走査を繰り返す
+
+## レビュー指摘の採否
+
+| 項目 | 判定 | 方針 |
+|---|---|---|
+| パス解決が分かりにくい | 実施 | エラーヒント強化 + ドキュメント導線改善 |
+| `exstruct_make` の `sheet` 指定で直感的に作成したい | 実施 | 条件付きで初期シート改名 |
+| `set_dimensions` の列指定確認がしにくい | 実施 | diff可読性改善 + docs明記 |
+| 大量 `ops` の上限が不明 | 実施 | 推奨上限を仕様化し warning 返却 |
+| `auto_fit` が欲しい | 実施 | 新規 `auto_fit_columns` op追加 |
+| `freeze_panes` が欲しい | 見送り | 次フェーズ候補 |
+| 条件付き書式編集 | 見送り | 別フェーズ |
+| セルコメント追加 | 見送り | 今回は `auto_fit_columns` 優先 |
+| `apply_table_style` の COM warning 解消 | 見送り | COM ネイティブ対応は別フェーズ |
+| 上書きモードの分かりにくさ | 部分実施 | API追加せず docs 明確化 |
 
 ## スコープ
 
-### FS-01: Validation UX強化
+### FS-01: Path UX 改善
 
-既知の誤入力に対する正規化と、自己修復しやすいエラー情報を追加する。
+`PathPolicy.ensure_allowed` の root 外エラーに、自己修復導線を追加する。
 
-1. alias 正規化
-   1. `set_alignment.horizontal -> horizontal_align`
-   2. `set_alignment.vertical -> vertical_align`
-   3. `set_fill_color.color -> fill_color`
-2. `PatchErrorDetail` 拡張
-   1. `hint: str | None`
-   2. `expected_fields: list[str]`
-   3. `example_op: str | None`
-3. エラー文面方針
-   1. 何が違うか
-   2. 正しい引数名
-   3. 最小JSON例
+1. 既存エラーメッセージに以下を追記
+   1. `exstruct_get_runtime_info` の利用案内
+2. 既存の `resolved=... root=... example_relative=...` 情報は維持
 
-### FS-02: `set_style` 追加
+### FS-02: `exstruct_make` の初期シート挙動改善
 
-単一opで複数書式を適用できるようにする。
+`MakeRequest.sheet` が指定された場合の初期シート名を改善する。
 
-1. 新規 `PatchOpType`: `set_style`
-2. 対象指定
-   1. `cell` または `range` のどちらか一方（exactly one）
-3. 指定可能属性
-   1. `bold`
-   2. `font_size`
-   3. `color`
-   4. `fill_color`
-   5. `horizontal_align`
-   6. `vertical_align`
-   7. `wrap_text`
-4. 少なくとも1属性必須
-5. 既存上限 `_MAX_STYLE_TARGET_CELLS` を適用
-6. 既存個別opは後方互換維持
+1. ルール
+   1. `sheet` 指定あり かつ 同名 `add_sheet` が `ops` に無い場合
+      1. seed workbook の初期シートを `sheet` 名へ改名して開始
+   2. 同名 `add_sheet` がある場合
+      1. 初期シートは `Sheet1` のまま維持（後方互換）
+2. `.xlsx/.xlsm` (openpyxl) と `.xls` (COM seed) の両方で同一ルール
 
-### FS-03: `apply_table_style` 追加
+### FS-03: `auto_fit_columns` 追加
 
-Excelテーブルスタイルを1opで適用できるようにする。
+列幅の自動調整を 1 op で実行できるようにする。
 
-1. 新規 `PatchOpType`: `apply_table_style`
-2. 必須
-   1. `sheet`
-   2. `range`
-   3. `style`
-3. オプション
-   1. `table_name`（未指定時は自動採番）
-4. 既存テーブル重複/交差は明示エラー
-5. Backend方針
-   1. Phase 2 は `openpyxl` 正式対応
-   2. `com` は warning を返して `openpyxl` フォールバック
+1. 新規 `PatchOpType`: `auto_fit_columns`
+2. 新規 `PatchOp` フィールド
+   1. `min_width: float | None`
+   2. `max_width: float | None`
+3. 入力仕様
+   1. 必須: `sheet`
+   2. 任意: `columns`, `min_width`, `max_width`
+   3. 制約: `min_width > 0`, `max_width > 0`, `min_width <= max_width`
+4. 適用対象
+   1. `columns` 指定あり: 指定列のみ（`"A"` と `2` の混在可）
+   2. `columns` 省略: 使用中列全体
+5. バックエンド方針
+   1. openpyxl: 文字長ベース推定で幅計算し、必要に応じて clamp
+   2. COM: `AutoFit` 実行後に必要に応じて clamp
 
-### FS-04: 成果物ミラー（`present_files` 連携）
+### FS-04: 大量 `ops` ソフト上限警告
 
-生成成果物を bridge 先へミラーし、チャット側への受け渡しを容易にする。
+大量実行の判断支援として警告を返す。
 
-1. サーバー起動引数に `--artifact-bridge-dir` を追加
-2. `exstruct_make` / `exstruct_patch` 入力に `mirror_artifact: bool = false` を追加
-3. 成功時のみ、`mirror_artifact=true` かつ bridge 設定ありでコピー
-4. 出力モデルに `mirrored_out_path: str | None` を追加
-5. ミラー失敗は処理失敗にせず `warnings` に記録
+1. しきい値: `200`
+2. 条件: `len(ops) > 200`
+3. 挙動
+   1. 処理は継続（失敗にしない）
+   2. `PatchResult.warnings` に分割推奨メッセージを追加
 
-### FS-05: 大量操作向け分割実行API（新規ツール）
+### FS-05: `set_dimensions` diff 可読性改善
 
-原子性を維持したまま大量opを扱うため、計画と適用を分離する。
+列指定の適用確認を容易にする。
 
-1. `exstruct_patch_plan`
-   1. 入力: `xlsx_path`, `ops`, `chunk_by`, `max_ops_per_chunk`
-   2. 出力: `plan_id`, `chunk_summaries`, `total_ops`
-2. `exstruct_patch_apply_chunks`
-   1. 入力: `plan_id`, `out_dir`, `out_name`, `backend`
-   2. 実行: 内部ステージングで全chunk適用後に最終保存（全体原子性維持）
-   3. 失敗時: 最終成果物は生成しない
+1. `set_dimensions` の `PatchDiffItem.after.value` を改善
+2. 列情報は正規化後の列名を要約表示
+   1. 例: `columns=A, B (2)`
+3. 行情報も同様に要約表示
 
-### FS-06: 入力スキーマ可視化（優先: ツール定義拡充、補完: 確認ツール）
+### FS-06: ドキュメント改善
 
-実行前に `op` 単位の入力仕様を確認できるようにする。
+`docs/mcp.md` を Phase 3 仕様へ更新する。
 
-1. 優先実装: `exstruct_patch` ツール定義内スキーマ拡充
-   1. `op` ごとの required/optional フィールドを明記
-   2. フィールド型・制約（exactly one, >0, hex形式など）を明記
-   3. `op` ごとの最小実行例を明記
-   4. alias（例: `horizontal -> horizontal_align`）の対応を明記
-2. 補完実装: スキーマ確認ツール
-   1. `exstruct_list_ops`（`op` 一覧と短い説明）
-   2. `exstruct_describe_op`（required/optional/constraints/example/aliases）
-3. ドリフト防止
-   1. ツール定義文言と `describe_op` 生成元は同一メタデータを参照する
+1. `auto_fit_columns` の quick guide を追加
+2. `set_dimensions` の列指定（文字/数値両対応）を明記
+3. `ops` ソフト上限（200）と分割ガイドを追記
+4. in-place 上書きの明確な手順を追記
+5. パスエラー時の `exstruct_get_runtime_info` 導線を追記
 
-### FS-07: シート指定冗長性の削減（top-level `sheet`）
+### FS-07: `make` 初期シート競合判定の厳密化
 
-`ops` ごとに `sheet` を重複指定しなくても大量操作を記述できるようにする。
+`MakeRequest.sheet` と `add_sheet` の競合判定を Excel のシート名解決規則に合わせる。
 
-1. `exstruct_patch` / `exstruct_make` 入力に top-level `sheet: str | None = None` を追加
-2. 適用ルール
-   1. `op.sheet` がある場合は `op.sheet` を優先
-   2. `op.sheet` がない場合は top-level `sheet` を補完して使用
-3. `add_sheet` は `op.sheet`（または既存 alias `name`）を必須とし、top-level `sheet` は補完しない
-4. 非 `add_sheet` 系で `op.sheet` と top-level `sheet` の両方が未指定なら、自己修復可能な明示エラーを返す
-5. 後方互換
-   1. 既存の `op.sheet` 指定ペイロードは挙動変更なし
-   2. mixed運用（同一リクエスト内で一部 `op.sheet` 明示）を許容
-6. スキーマ可視化
-   1. `exstruct_patch` ミニスキーマを更新し、`sheet` の解決規則を明記
-   2. `exstruct_describe_op` の required/optional 表示も top-level `sheet` を反映する
+1. 競合判定は大文字小文字非依存で行う
+   1. `sheet="Data"` と `add_sheet("data")` は競合として扱う
+2. 競合時の挙動は既存仕様を維持
+   1. 初期シートは `Sheet1` のまま開始する
+3. 後方互換
+   1. 既存の同一大文字小文字ケース（`Data` と `Data`）の挙動は不変
 
-## 主要な公開I/F変更
+### FS-08: `auto_fit_columns`（openpyxl）の 1-pass 化
+
+openpyxl バックエンドの列幅推定を 1 回のシート走査で完結させる。
+
+1. 目的
+   1. 列ごとの全シート再走査を廃止し、列数増加時の実行時間悪化を抑制する
+2. 方針
+   1. 1 回の走査で列ごとの最大表示長を集計
+   2. 集計結果から対象列の推定幅を算出して clamp を適用
+3. 非機能要件
+   1. `columns` 省略時でも実行時間のオーダーが `O(セル数 + 対象列数)` に収まること
+4. 機能互換
+   1. 既存の `min_width` / `max_width` / `columns` の意味は変更しない
+
+## 主要な公開 I/F 変更
 
 1. `PatchOpType` 追加
-   1. `set_style`
-   2. `apply_table_style`
+   1. `auto_fit_columns`
 2. `PatchOp` フィールド追加
-   1. `style: str | None`（`apply_table_style` 用）
-   2. `table_name: str | None`（`apply_table_style` 用）
-3. `PatchErrorDetail` 追加フィールド
-   1. `hint`
-   2. `expected_fields`
-   3. `example_op`
-4. MCPツール追加
-   1. `exstruct_patch_plan`
-   2. `exstruct_patch_apply_chunks`
-   3. `exstruct_list_ops`
-   4. `exstruct_describe_op`
-5. MCPツール入出力拡張
-   1. `mirror_artifact`（make/patch input）
-   2. `mirrored_out_path`（make/patch output）
-6. サーバーCLI拡張
-   1. `--artifact-bridge-dir`
-7. ツール定義拡張
-   1. `exstruct_patch` の docstring/description に `op` 別ミニスキーマを追加
-8. MCPツール入出力拡張
-   1. `sheet: str | None`（patch/make input の top-level デフォルトシート）
-9. `PatchOp` のシート解決仕様
-   1. `sheet` は「明示時に優先」フィールドとして扱い、最終適用前に解決される
+   1. `min_width: float | None`
+   2. `max_width: float | None`
+3. `exstruct_patch` の mini schema 追加
+   1. `auto_fit_columns` の required / optional / constraints / example
+4. `exstruct_describe_op` 対応
+   1. `auto_fit_columns` の仕様詳細を返却
+5. `PatchResult.warnings` 拡張
+   1. `ops > 200` の推奨分割 warning
+6. `set_dimensions` diff 表示変更
+   1. 列要約の可読化
+7. `exstruct_make` seed 作成仕様変更
+   1. 条件成立時に初期シート名として `sheet` を採用
 
 ## 受け入れ条件（Acceptance Criteria）
 
-### AC-01 Validation UX
+### AC-01 Path UX
 
-1. 誤引数入力時に `hint` が返る
-2. 誤引数入力時に `expected_fields` が返る
-3. 誤引数入力時に `example_op` が返る
+1. root 外パスエラーに `exstruct_get_runtime_info` 導線が含まれる
 
-### AC-02 `set_style`
+### AC-02 `make` 初期シート挙動
 
-1. 1op でヘッダ装飾（太字/文字色/背景色/整列）が適用できる
-2. `cell`/`range` の同時指定はエラー
-3. 属性未指定はエラー
+1. `make(sheet="Data")` かつ同名 `add_sheet` なしで初期シートが `Data` になる
+2. 同名 `add_sheet("Data")` を含む場合は後方互換を維持し、重複エラーを起こさない
 
-### AC-03 `apply_table_style`
+### AC-03 `auto_fit_columns`
 
-1. 指定範囲にテーブルスタイルが適用される
-2. 既存テーブルと交差する範囲指定は明示エラー
+1. `columns` 省略で使用中列全体が対象になる
+2. `columns=["A", 2]` の混在指定が適用される
+3. `min_width` / `max_width` で幅が clamp される
 
-### AC-04 成果物ミラー
+### AC-04 大量 `ops` 警告
 
-1. `mirror_artifact=true` かつ bridge 設定ありで `mirrored_out_path` が返る
-2. bridge 未設定時は通常処理を継続し warning を返す
-3. コピー失敗時も patch/make 結果は成功扱いで warning を返す
+1. `len(ops)=201` で warning が返る
+2. 処理自体は成功する
 
-### AC-06 入力スキーマ可視化
+### AC-05 `set_dimensions` diff
 
-1. `exstruct_patch` ツール定義だけで主要 `op` の required/optional/example を確認できる
-2. `exstruct_list_ops` が利用可能 `op` 一覧を返す
-3. `exstruct_describe_op` が `required` / `optional` / `constraints` / `example` / `aliases` を返す
+1. 実行結果 diff に正規化済み列ラベル要約が含まれる
 
-### AC-07 後方互換
+### AC-06 後方互換
 
-1. 既存opの既存入力は挙動変更なし
+1. 既存 op の既存入力は挙動変更しない
 2. 既存テストが回帰しない
 
-### AC-08 top-level `sheet` 補完
+### AC-07 `make` 競合判定（大文字小文字）
 
-1. top-level `sheet` だけを指定した大量 `ops` で正常適用できる
-2. `op.sheet` がある操作は top-level `sheet` より優先される
-3. `add_sheet` は `op.sheet`（または `name`）未指定時に明示エラーになる
-4. 非 `add_sheet` でシート未解決時は、補完方法を含むエラー情報を返す
+1. `make(sheet="Data")` + `add_sheet("data")` で重複エラーを発生させない
+2. 上記ケースで初期シートは `Sheet1` を維持し、`add_sheet("data")` が適用される
+
+### AC-08 `auto_fit_columns` 1-pass 性能要件
+
+1. openpyxl 実装で列ごとの全シート再走査を行わない
+2. `columns` 省略時の大規模シートでも実行時間が列数に対して過度に悪化しない
 
 ## テストケース
 
-1. パラメータ誤り時のヒント返却（`color` vs `fill_color`、`horizontal` vs `horizontal_align`）
-2. `set_style` の単セル/範囲/属性未指定エラー
-3. `apply_table_style` の正常系/重複テーブルエラー
-4. `mirror_artifact` の正常コピー/bridge未設定/コピー失敗warning
-7. `exstruct_list_ops` の一覧妥当性
-8. `exstruct_describe_op` の required/optional/example 妥当性
-9. `exstruct_patch` ツール定義に `op` 別スキーマ情報が含まれること
-10. top-level `sheet` 指定時の `op.sheet` 補完と優先順位
-11. `add_sheet` の `op.sheet` 必須維持
-12. シート未解決時のエラーヒント妥当性
+1. `make` で `sheet="Data"`・同名 `add_sheet` なしの初期シート名確認
+2. `make` で `sheet="Data"` + `add_sheet("Data")` の競合回避確認
+3. `auto_fit_columns`（全列対象 + clamp）
+4. `auto_fit_columns`（`columns=["A",2]`）
+5. `auto_fit_columns` の不正境界（`min_width > max_width`）エラー
+6. `len(ops)=201` の warning
+7. `set_dimensions` diff の列要約確認
+8. root 外パスエラーメッセージの導線確認
+9. `make(sheet="Data")` + `add_sheet("data")` で競合回避できること
+10. `auto_fit_columns` openpyxl が 1-pass 集計で幅計算すること（回帰防止）
 
 ## 前提・デフォルト
 
-1. 既存の `exstruct_patch` 原子性は維持する
-2. 新機能は後方互換優先（既存入力/既存レスポンス項目は破壊しない）
-3. `mirror_artifact` の既定値は `false`
-4. `--artifact-bridge-dir` 未指定時はミラー機能を無効化
-5. `apply_table_style` は Phase 2 で openpyxl 優先対応とする
-6. 入力スキーマ改善は「ツール定義拡充」を先行し、確認ツールは補完として追加する
-7. top-level `sheet` の既定値は `None`（未指定）
-8. `add_sheet` は明示的な `op.sheet` 指定を維持する
+1. ソフト上限しきい値は `200`
+2. `ops > 200` は warning のみ（失敗にしない）
+3. `auto_fit_columns.columns` 未指定時は使用中列全体を対象
+4. openpyxl は文字長ベース推定、COM は `AutoFit` ベース
+5. `freeze_panes`、`set_comment`、条件付き書式編集は今回スコープ外
+6. `patch_plan/apply_chunks` は今回スコープ外
+7. 上書き専用 API は追加しない（ドキュメントで運用明確化）
+8. Excel シート名競合は大文字小文字非依存として扱う
 
 ## 影響範囲
 
-1. `src/exstruct/mcp/server.py`
-2. `src/exstruct/mcp/tools.py`
-3. `src/exstruct/mcp/patch_runner.py`
-4. `src/exstruct/mcp/io.py`（必要時）
+1. `src/exstruct/mcp/io.py`
+2. `src/exstruct/mcp/patch_runner.py`
+3. `src/exstruct/mcp/op_schema.py`
+4. `src/exstruct/mcp/server.py`
 5. `docs/mcp.md`
-6. `tests/mcp/*`
-7. `docs/agents/TASKS.md`
+6. `tests/mcp/test_path_policy.py`
+7. `tests/mcp/test_make_runner.py`
+8. `tests/mcp/test_patch_runner.py`
+9. `tests/mcp/test_tool_models.py`
+10. `tests/mcp/test_tools_handlers.py`
+11. `tests/mcp/test_server.py`
+12. `docs/agents/TASKS.md`

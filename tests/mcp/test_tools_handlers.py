@@ -306,6 +306,7 @@ def test_run_list_ops_tool_returns_known_ops() -> None:
     assert "set_value" in op_names
     assert "set_style" in op_names
     assert "apply_table_style" in op_names
+    assert "auto_fit_columns" in op_names
 
 
 def test_run_describe_op_tool_returns_schema_details() -> None:

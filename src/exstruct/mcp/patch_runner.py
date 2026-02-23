@@ -30,6 +30,7 @@ PatchOpType = Literal[
     "set_font_color",
     "set_fill_color",
     "set_dimensions",
+    "auto_fit_columns",
     "merge_cells",
     "unmerge_cells",
     "set_alignment",
@@ -58,6 +59,7 @@ _A1_RANGE_PATTERN = re.compile(r"^[A-Za-z]{1,3}[1-9][0-9]*:[A-Za-z]{1,3}[1-9][0-
 _HEX_COLOR_PATTERN = re.compile(r"^#?(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$")
 _COLUMN_LABEL_PATTERN = re.compile(r"^[A-Za-z]{1,3}$")
 _MAX_STYLE_TARGET_CELLS = 10_000
+_SOFT_MAX_OPS_WARNING_THRESHOLD = 200
 
 HorizontalAlignType = Literal[
     "general",
@@ -403,6 +405,8 @@ class XlwingsColumnApiProtocol(Protocol):
 
     ColumnWidth: float
 
+    def AutoFit(self) -> None: ...  # noqa: N802
+
 
 @runtime_checkable
 class XlwingsSheetApiProtocol(Protocol):
@@ -431,6 +435,7 @@ class PatchOp(BaseModel):
     - ``set_font_color``: Set font color for one cell or one range.
     - ``set_fill_color``: Set solid fill color for one cell or one range.
     - ``set_dimensions``: Set row height and/or column width.
+    - ``auto_fit_columns``: Auto-fit column widths with optional bounds.
     - ``merge_cells``: Merge a rectangular range.
     - ``unmerge_cells``: Unmerge all merged ranges intersecting target range.
     - ``set_alignment``: Set horizontal/vertical alignment and/or wrap_text.
@@ -446,6 +451,7 @@ class PatchOp(BaseModel):
             "'draw_grid_border', 'set_bold', 'set_font_size', 'set_font_color', "
             "'set_fill_color', "
             "'set_dimensions', "
+            "'auto_fit_columns', "
             "'merge_cells', 'unmerge_cells', 'set_alignment', 'set_style', "
             "'apply_table_style', "
             "or 'restore_design_snapshot'."
@@ -521,6 +527,14 @@ class PatchOp(BaseModel):
     column_width: float | None = Field(
         default=None,
         description="Target column width for set_dimensions.",
+    )
+    min_width: float | None = Field(
+        default=None,
+        description="Optional minimum width bound for auto_fit_columns.",
+    )
+    max_width: float | None = Field(
+        default=None,
+        description="Optional maximum width bound for auto_fit_columns.",
     )
     horizontal_align: HorizontalAlignType | None = Field(
         default=None,
@@ -635,6 +649,15 @@ class PatchOp(BaseModel):
             raise ValueError("style/table_name must not be empty when provided.")
         return candidate
 
+    @field_validator("min_width", "max_width")
+    @classmethod
+    def _validate_optional_positive_width(cls, value: float | None) -> float | None:
+        if value is None:
+            return None
+        if value <= 0:
+            raise ValueError("min_width/max_width must be > 0.")
+        return value
+
     @model_validator(mode="after")
     def _validate_op(self) -> PatchOp:
         validator = _validator_for_op(self.op)
@@ -670,6 +693,7 @@ def _validator_for_op(op_type: PatchOpType) -> Callable[[PatchOp], None] | None:
         "set_font_color": _validate_set_font_color,
         "set_fill_color": _validate_set_fill_color,
         "set_dimensions": _validate_set_dimensions,
+        "auto_fit_columns": _validate_auto_fit_columns,
         "merge_cells": _validate_merge_cells,
         "unmerge_cells": _validate_unmerge_cells,
         "set_alignment": _validate_set_alignment,
@@ -964,6 +988,34 @@ def _validate_set_dimensions(op: PatchOp) -> None:
         raise ValueError("set_dimensions column_width must be > 0.")
 
 
+def _validate_auto_fit_columns(op: PatchOp) -> None:
+    """Validate auto_fit_columns operation."""
+    _validate_no_legacy_edit_fields(
+        op, op_name="auto_fit_columns", allow_auto_fit_fields=True
+    )
+    if op.cell is not None or op.range is not None or op.base_cell is not None:
+        raise ValueError("auto_fit_columns does not accept cell/range/base_cell.")
+    if op.row_count is not None or op.col_count is not None:
+        raise ValueError("auto_fit_columns does not accept row_count or col_count.")
+    if op.bold is not None or op.color is not None or op.fill_color is not None:
+        raise ValueError("auto_fit_columns does not accept bold, color, or fill_color.")
+    if op.font_size is not None:
+        raise ValueError("auto_fit_columns does not accept font_size.")
+    if op.rows is not None or op.row_height is not None or op.column_width is not None:
+        raise ValueError(
+            "auto_fit_columns does not accept rows, row_height, or column_width."
+        )
+    if op.design_snapshot is not None:
+        raise ValueError("auto_fit_columns does not accept design_snapshot.")
+    _validate_no_alignment_fields(op, op_name="auto_fit_columns")
+    if (
+        op.min_width is not None
+        and op.max_width is not None
+        and op.min_width > op.max_width
+    ):
+        raise ValueError("auto_fit_columns requires min_width <= max_width.")
+
+
 def _validate_merge_cells(op: PatchOp) -> None:
     """Validate merge_cells operation."""
     _validate_no_legacy_edit_fields(op, op_name="merge_cells")
@@ -1133,7 +1185,11 @@ def _validate_restore_design_snapshot(op: PatchOp) -> None:
 
 
 def _validate_no_legacy_edit_fields(
-    op: PatchOp, *, op_name: str, allow_table_fields: bool = False
+    op: PatchOp,
+    *,
+    op_name: str,
+    allow_table_fields: bool = False,
+    allow_auto_fit_fields: bool = False,
 ) -> None:
     """Reject fields that are unrelated to design operations."""
     if op.expected is not None:
@@ -1149,31 +1205,37 @@ def _validate_no_legacy_edit_fields(
             raise ValueError(f"{op_name} does not accept style.")
         if op.table_name is not None:
             raise ValueError(f"{op_name} does not accept table_name.")
+    if not allow_auto_fit_fields:
+        if op.min_width is not None:
+            raise ValueError(f"{op_name} does not accept min_width.")
+        if op.max_width is not None:
+            raise ValueError(f"{op_name} does not accept max_width.")
 
 
 def _validate_no_design_fields(op: PatchOp, *, op_name: str) -> None:
     """Reject design-only fields for legacy value edit operations."""
     if op.row_count is not None or op.col_count is not None:
         raise ValueError(f"{op_name} does not accept row_count or col_count.")
-    if op.bold is not None:
-        raise ValueError(f"{op_name} does not accept bold.")
-    if op.color is not None:
-        raise ValueError(f"{op_name} does not accept color.")
-    if op.font_size is not None:
-        raise ValueError(f"{op_name} does not accept font_size.")
-    if op.fill_color is not None:
-        raise ValueError(f"{op_name} does not accept fill_color.")
     if op.rows is not None or op.columns is not None:
         raise ValueError(f"{op_name} does not accept rows or columns.")
     if op.row_height is not None or op.column_width is not None:
         raise ValueError(f"{op_name} does not accept row_height or column_width.")
-    if op.style is not None:
-        raise ValueError(f"{op_name} does not accept style.")
-    if op.table_name is not None:
-        raise ValueError(f"{op_name} does not accept table_name.")
+    _reject_optional_field(op_name, "bold", op.bold)
+    _reject_optional_field(op_name, "color", op.color)
+    _reject_optional_field(op_name, "font_size", op.font_size)
+    _reject_optional_field(op_name, "fill_color", op.fill_color)
+    _reject_optional_field(op_name, "style", op.style)
+    _reject_optional_field(op_name, "table_name", op.table_name)
     _validate_no_alignment_fields(op, op_name=op_name)
-    if op.design_snapshot is not None:
-        raise ValueError(f"{op_name} does not accept design_snapshot.")
+    _reject_optional_field(op_name, "design_snapshot", op.design_snapshot)
+    _reject_optional_field(op_name, "min_width", op.min_width)
+    _reject_optional_field(op_name, "max_width", op.max_width)
+
+
+def _reject_optional_field(op_name: str, field_name: str, value: object) -> None:
+    """Raise when an optional field is provided for an unsupported op."""
+    if value is not None:
+        raise ValueError(f"{op_name} does not accept {field_name}.")
 
 
 def _validate_no_alignment_fields(op: PatchOp, *, op_name: str) -> None:
@@ -1400,8 +1462,13 @@ def run_make(request: MakeRequest, *, policy: PathPolicy | None = None) -> Patch
     _ensure_supported_extension(resolved_output)
     _validate_make_request_constraints(request, resolved_output)
     seed_path = _build_make_seed_path(resolved_output)
+    initial_sheet_name = _resolve_make_initial_sheet_name(request)
     try:
-        _create_seed_workbook(seed_path, resolved_output.suffix.lower())
+        _create_seed_workbook(
+            seed_path,
+            resolved_output.suffix.lower(),
+            initial_sheet_name=initial_sheet_name,
+        )
         patch_request = PatchRequest(
             xlsx_path=seed_path,
             ops=request.ops,
@@ -1447,6 +1514,7 @@ def run_patch(
         policy=policy,
     )
     warnings: list[str] = []
+    _append_large_ops_warning(warnings, request.ops)
     effective_request = request
     if request.backend == "com" and _contains_apply_table_style_op(request.ops):
         warnings.append(
@@ -1698,6 +1766,7 @@ def _contains_design_ops(ops: list[PatchOp]) -> bool:
         "set_font_color",
         "set_fill_color",
         "set_dimensions",
+        "auto_fit_columns",
         "merge_cells",
         "unmerge_cells",
         "set_alignment",
@@ -1711,6 +1780,17 @@ def _contains_design_ops(ops: list[PatchOp]) -> bool:
 def _contains_apply_table_style_op(ops: list[PatchOp]) -> bool:
     """Return True when apply_table_style is present."""
     return any(op.op == "apply_table_style" for op in ops)
+
+
+def _append_large_ops_warning(warnings: list[str], ops: list[PatchOp]) -> None:
+    """Append warning when operation count exceeds the soft threshold."""
+    if len(ops) <= _SOFT_MAX_OPS_WARNING_THRESHOLD:
+        return
+    warnings.append(
+        "Large patch request: "
+        f"{len(ops)} ops. Recommended maximum is "
+        f"{_SOFT_MAX_OPS_WARNING_THRESHOLD}; consider splitting into batches."
+    )
 
 
 def _resolve_input_path(path: Path, *, policy: PathPolicy | None) -> Path:
@@ -1778,16 +1858,33 @@ def _build_make_seed_path(output_path: Path) -> Path:
     return output_path.parent / seed_name
 
 
-def _create_seed_workbook(seed_path: Path, extension: str) -> None:
-    """Create an empty workbook seed and normalize first sheet to Sheet1."""
+def _resolve_make_initial_sheet_name(request: MakeRequest) -> str:
+    """Resolve initial sheet name for `exstruct_make` seed workbook."""
+    if request.sheet is None:
+        return "Sheet1"
+    requested_sheet = request.sheet.strip()
+    if not requested_sheet:
+        return "Sheet1"
+    has_conflicting_add_sheet = any(
+        op.op == "add_sheet" and op.sheet == requested_sheet for op in request.ops
+    )
+    if has_conflicting_add_sheet:
+        return "Sheet1"
+    return requested_sheet
+
+
+def _create_seed_workbook(
+    seed_path: Path, extension: str, *, initial_sheet_name: str
+) -> None:
+    """Create an empty workbook seed with the resolved initial sheet name."""
     _ensure_output_dir(seed_path)
     if extension == ".xls":
-        _create_xls_seed_with_com(seed_path)
+        _create_xls_seed_with_com(seed_path, initial_sheet_name=initial_sheet_name)
         return
-    _create_openpyxl_seed(seed_path)
+    _create_openpyxl_seed(seed_path, initial_sheet_name=initial_sheet_name)
 
 
-def _create_openpyxl_seed(seed_path: Path) -> None:
+def _create_openpyxl_seed(seed_path: Path, *, initial_sheet_name: str) -> None:
     """Create an empty workbook via openpyxl."""
     try:
         from openpyxl import Workbook
@@ -1798,13 +1895,13 @@ def _create_openpyxl_seed(seed_path: Path) -> None:
         active_sheet = workbook.active
         if active_sheet is None:
             raise RuntimeError("Failed to create default worksheet.")
-        active_sheet.title = "Sheet1"
+        active_sheet.title = initial_sheet_name
         workbook.save(seed_path)
     finally:
         workbook.close()
 
 
-def _create_xls_seed_with_com(seed_path: Path) -> None:
+def _create_xls_seed_with_com(seed_path: Path, *, initial_sheet_name: str) -> None:
     """Create an empty .xls workbook via Excel COM."""
     com = get_com_availability()
     if not com.available:
@@ -1816,7 +1913,7 @@ def _create_xls_seed_with_com(seed_path: Path) -> None:
     app.screen_updating = False
     workbook = app.books.add()
     try:
-        workbook.sheets[0].name = "Sheet1"
+        workbook.sheets[0].name = initial_sheet_name
         workbook.save(str(seed_path))
     except Exception as exc:
         raise RuntimeError(f"COM workbook creation failed: {exc}") from exc
@@ -2007,6 +2104,7 @@ def _apply_openpyxl_sheet_op(
         "set_font_color": lambda: _apply_openpyxl_set_font_color(sheet, op, index),
         "set_fill_color": lambda: _apply_openpyxl_set_fill_color(sheet, op, index),
         "set_dimensions": lambda: _apply_openpyxl_set_dimensions(sheet, op, index),
+        "auto_fit_columns": lambda: _apply_openpyxl_auto_fit_columns(sheet, op, index),
         "merge_cells": lambda: _apply_openpyxl_merge_cells(sheet, op, index, warnings),
         "unmerge_cells": lambda: _apply_openpyxl_unmerge_cells(sheet, op, index),
         "set_alignment": lambda: _apply_openpyxl_set_alignment(sheet, op, index),
@@ -2284,7 +2382,7 @@ def _apply_openpyxl_set_dimensions(
                 )
             )
             row_dimension.height = op.row_height
-        parts.append(f"rows={len(op.rows)}")
+        parts.append(f"rows={_summarize_int_targets(op.rows)}")
     if op.columns is not None and op.column_width is not None:
         normalized_columns = _normalize_columns_for_dimensions(op.columns)
         for column in normalized_columns:
@@ -2296,7 +2394,47 @@ def _apply_openpyxl_set_dimensions(
                 )
             )
             column_dimension.width = op.column_width
-        parts.append(f"columns={len(normalized_columns)}")
+        parts.append(f"columns={_summarize_column_targets(normalized_columns)}")
+    return (
+        PatchDiffItem(
+            op_index=index,
+            op=op.op,
+            sheet=op.sheet,
+            cell=None,
+            before=None,
+            after=PatchValue(kind="dimension", value=", ".join(parts)),
+        ),
+        _build_restore_snapshot_op(op.sheet, snapshot),
+    )
+
+
+def _apply_openpyxl_auto_fit_columns(
+    sheet: OpenpyxlWorksheetProtocol,
+    op: PatchOp,
+    index: int,
+) -> tuple[PatchDiffItem, PatchOp | None]:
+    """Apply auto_fit_columns op using openpyxl text-length estimation."""
+    target_columns = _resolve_auto_fit_columns_openpyxl(sheet, op.columns)
+    if not target_columns:
+        raise ValueError("auto_fit_columns could not resolve target columns.")
+    snapshot = DesignSnapshot()
+    for column in target_columns:
+        column_dimension = sheet.column_dimensions[column]
+        snapshot.column_dimensions.append(
+            ColumnDimensionSnapshot(
+                column=column,
+                width=getattr(column_dimension, "width", None),
+            )
+        )
+        estimated_width = _estimate_openpyxl_column_width(sheet, column)
+        column_dimension.width = _clamp_column_width(
+            estimated_width, min_width=op.min_width, max_width=op.max_width
+        )
+    parts = [f"columns={_summarize_column_targets(target_columns)}"]
+    if op.min_width is not None:
+        parts.append(f"min_width={op.min_width}")
+    if op.max_width is not None:
+        parts.append(f"max_width={op.max_width}")
     return (
         PatchDiffItem(
             op_index=index,
@@ -2907,6 +3045,134 @@ def _normalize_columns_for_dimensions(columns: list[str | int]) -> list[str]:
     return normalized
 
 
+def _summarize_column_targets(columns: list[str], *, preview_limit: int = 5) -> str:
+    """Return a concise summary for column target labels."""
+    return _summarize_targets(columns, preview_limit=preview_limit)
+
+
+def _summarize_int_targets(values: list[int], *, preview_limit: int = 5) -> str:
+    """Return a concise summary for numeric target lists."""
+    text_values = [str(value) for value in values]
+    return _summarize_targets(text_values, preview_limit=preview_limit)
+
+
+def _summarize_targets(values: list[str], *, preview_limit: int = 5) -> str:
+    """Return preview text with total count for diff logs."""
+    if not values:
+        return "(0)"
+    preview = ", ".join(values[:preview_limit])
+    if len(values) > preview_limit:
+        preview = f"{preview}, ..."
+    return f"{preview} ({len(values)})"
+
+
+def _clamp_column_width(
+    width: float, *, min_width: float | None, max_width: float | None
+) -> float:
+    """Clamp a column width by optional lower/upper bounds."""
+    clamped = width
+    if min_width is not None and clamped < min_width:
+        clamped = min_width
+    if max_width is not None and clamped > max_width:
+        clamped = max_width
+    return float(clamped)
+
+
+def _resolve_auto_fit_columns_openpyxl(
+    sheet: OpenpyxlWorksheetProtocol,
+    columns: list[str | int] | None,
+) -> list[str]:
+    """Resolve auto-fit target columns for openpyxl backend."""
+    if columns is not None:
+        return _normalize_columns_for_dimensions(columns)
+    used_columns = _detect_openpyxl_used_column_indexes(sheet)
+    if not used_columns:
+        return ["A"]
+    return [_column_index_to_label(index) for index in used_columns]
+
+
+def _detect_openpyxl_used_column_indexes(
+    sheet: OpenpyxlWorksheetProtocol,
+) -> list[int]:
+    """Detect used column indexes from non-empty openpyxl cells."""
+    iter_rows = getattr(sheet, "iter_rows", None)
+    if iter_rows is None:
+        return [1]
+    used_indexes: set[int] = set()
+    for row in iter_rows():
+        for cell in row:
+            if _is_blank_cell_value(getattr(cell, "value", None)):
+                continue
+            used_index = _extract_openpyxl_cell_column_index(cell)
+            if used_index is not None:
+                used_indexes.add(used_index)
+    if used_indexes:
+        return sorted(used_indexes)
+    max_column = getattr(sheet, "max_column", None)
+    if isinstance(max_column, int) and max_column > 0:
+        return list(range(1, max_column + 1))
+    return [1]
+
+
+def _estimate_openpyxl_column_width(
+    sheet: OpenpyxlWorksheetProtocol, column_label: str
+) -> float:
+    """Estimate column width by the longest visible text length."""
+    iter_rows = getattr(sheet, "iter_rows", None)
+    if iter_rows is None:
+        return 8.43
+    target_index = _column_label_to_index(column_label)
+    max_len = 0
+    for row in iter_rows():
+        for cell in row:
+            column_index = _extract_openpyxl_cell_column_index(cell)
+            if column_index != target_index:
+                continue
+            cell_value = getattr(cell, "value", None)
+            if _is_blank_cell_value(cell_value):
+                continue
+            max_len = max(max_len, _text_display_length(cell_value))
+    if max_len <= 0:
+        default_width = getattr(sheet.column_dimensions[column_label], "width", None)
+        if isinstance(default_width, int | float) and default_width > 0:
+            return float(default_width)
+        return 8.43
+    return float(max_len + 2)
+
+
+def _extract_openpyxl_cell_column_index(cell: object) -> int | None:
+    """Extract 1-based column index from an openpyxl cell-like object."""
+    raw_column = getattr(cell, "column", None)
+    if isinstance(raw_column, int):
+        return raw_column if raw_column > 0 else None
+    if isinstance(raw_column, str):
+        normalized = raw_column.strip().upper()
+        if not normalized:
+            return None
+        return _column_label_to_index(normalized)
+    coordinate = str(getattr(cell, "coordinate", "")).strip()
+    if not coordinate:
+        return None
+    if not _A1_PATTERN.match(coordinate):
+        return None
+    column_label, _ = _split_a1(coordinate)
+    return _column_label_to_index(column_label)
+
+
+def _is_blank_cell_value(value: object) -> bool:
+    """Return True when the value is considered blank for width detection."""
+    if value is None:
+        return True
+    return isinstance(value, str) and value == ""
+
+
+def _text_display_length(value: object) -> int:
+    """Estimate visible text length for one cell value."""
+    text = str(value)
+    lines = text.splitlines() or [text]
+    return max(len(line) for line in lines)
+
+
 def _set_grid_border(cell: OpenpyxlCellProtocol) -> None:
     """Set thin black border on all sides."""
     try:
@@ -3250,6 +3516,7 @@ def _apply_xlwings_extended_op(
         "set_font_color": lambda: _apply_xlwings_set_font_color(sheet, op, index),
         "set_fill_color": lambda: _apply_xlwings_set_fill_color(sheet, op, index),
         "set_dimensions": lambda: _apply_xlwings_set_dimensions(sheet, op, index),
+        "auto_fit_columns": lambda: _apply_xlwings_auto_fit_columns(sheet, op, index),
         "merge_cells": lambda: _apply_xlwings_merge_cells(sheet, op, index),
         "unmerge_cells": lambda: _apply_xlwings_unmerge_cells(sheet, op, index),
         "set_alignment": lambda: _apply_xlwings_set_alignment(sheet, op, index),
@@ -3419,12 +3686,48 @@ def _apply_xlwings_set_dimensions(
     if op.rows is not None and op.row_height is not None:
         for row_index in op.rows:
             sheet_api.Rows(row_index).RowHeight = op.row_height
-        parts.append(f"rows={len(op.rows)}")
+        parts.append(f"rows={_summarize_int_targets(op.rows)}")
     if op.columns is not None and op.column_width is not None:
         normalized_columns = _normalize_columns_for_dimensions(op.columns)
         for column in normalized_columns:
             sheet_api.Columns(column).ColumnWidth = op.column_width
-        parts.append(f"columns={len(normalized_columns)}")
+        parts.append(f"columns={_summarize_column_targets(normalized_columns)}")
+    return PatchDiffItem(
+        op_index=index,
+        op=op.op,
+        sheet=op.sheet,
+        cell=None,
+        before=None,
+        after=PatchValue(kind="dimension", value=", ".join(parts)),
+    )
+
+
+def _apply_xlwings_auto_fit_columns(
+    sheet: XlwingsSheetProtocol, op: PatchOp, index: int
+) -> PatchDiffItem:
+    """Apply auto_fit_columns with xlwings COM AutoFit."""
+    sheet_api = _xlwings_sheet_api(sheet)
+    target_columns = _resolve_auto_fit_columns_xlwings(sheet, op.columns)
+    if not target_columns:
+        raise ValueError("auto_fit_columns could not resolve target columns.")
+    for column in target_columns:
+        column_api = sheet_api.Columns(column)
+        auto_fit = getattr(column_api, "AutoFit", None)
+        if callable(auto_fit):
+            auto_fit()
+        current_width = getattr(column_api, "ColumnWidth", None)
+        if isinstance(current_width, int | float):
+            width_value = float(current_width)
+        else:
+            width_value = 8.43
+        column_api.ColumnWidth = _clamp_column_width(
+            width_value, min_width=op.min_width, max_width=op.max_width
+        )
+    parts = [f"columns={_summarize_column_targets(target_columns)}"]
+    if op.min_width is not None:
+        parts.append(f"min_width={op.min_width}")
+    if op.max_width is not None:
+        parts.append(f"max_width={op.max_width}")
     return PatchDiffItem(
         op_index=index,
         op=op.op,
@@ -3611,6 +3914,22 @@ def _set_xlwings_cell_value(
         return PatchValue(kind="formula", value=value)
     cell.value = value
     return PatchValue(kind="value", value=value)
+
+
+def _resolve_auto_fit_columns_xlwings(
+    sheet: XlwingsSheetProtocol, columns: list[str | int] | None
+) -> list[str]:
+    """Resolve auto-fit target columns for xlwings backend."""
+    if columns is not None:
+        return _normalize_columns_for_dimensions(columns)
+    used_range = getattr(sheet, "used_range", None)
+    if used_range is None:
+        return ["A"]
+    last_cell = getattr(used_range, "last_cell", None)
+    last_column = getattr(last_cell, "column", None)
+    if isinstance(last_column, int) and last_column > 0:
+        return [_column_index_to_label(index) for index in range(1, last_column + 1)]
+    return ["A"]
 
 
 def _xlwings_range_api(target: XlwingsRangeProtocol) -> XlwingsRangeApiProtocol:

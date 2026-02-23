@@ -202,6 +202,25 @@ def test_patch_tool_input_accepts_apply_table_style_op() -> None:
     assert payload.ops[0].table_name == "SalesTable"
 
 
+def test_patch_tool_input_accepts_auto_fit_columns_op() -> None:
+    payload = PatchToolInput(
+        xlsx_path="input.xlsx",
+        ops=[
+            {
+                "op": "auto_fit_columns",
+                "sheet": "Sheet1",
+                "columns": ["A", 2],
+                "min_width": 8,
+                "max_width": 40,
+            }
+        ],
+    )
+    assert payload.ops[0].op == "auto_fit_columns"
+    assert payload.ops[0].columns == ["A", 2]
+    assert payload.ops[0].min_width == 8
+    assert payload.ops[0].max_width == 40
+
+
 def test_patch_tool_input_accepts_set_font_size_op() -> None:
     payload = PatchToolInput(
         xlsx_path="input.xlsx",

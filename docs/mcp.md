@@ -110,6 +110,9 @@ If path behavior is unclear, inspect runtime info first:
 { "tool": "exstruct_get_runtime_info" }
 ```
 
+When a path is outside `--root`, the error message also recommends
+`exstruct_get_runtime_info` with a relative path example.
+
 ## Basic flow
 
 1. Call `exstruct_extract` to generate the output JSON file
@@ -199,7 +202,11 @@ Examples:
 - `out_path` is required
 - `ops` is optional (empty list is allowed)
 - Supported output extensions: `.xlsx`, `.xlsm`, `.xls`
-- Initial sheet is normalized to `Sheet1`
+- Initial sheet behavior:
+  - default is `Sheet1`
+  - when `sheet` is specified and the same name is not created by `add_sheet`,
+    the initial sheet is created with that `sheet` name
+  - when `add_sheet` creates the same name, initial sheet remains `Sheet1`
 - Reuses patch pipeline, so `patch_diff`/`error` shape is compatible with `exstruct_patch`
 - Supports the same extended flags as `exstruct_patch`:
   - `dry_run`
@@ -252,6 +259,7 @@ Example:
   - `set_font_color`
   - `set_fill_color`
   - `set_dimensions`
+  - `auto_fit_columns`
   - `merge_cells`
   - `unmerge_cells`
   - `set_alignment`
@@ -265,6 +273,8 @@ Example:
   - `auto_formula`: treat `=...` in `set_value` as formula
   - `sheet`: top-level default sheet used when `op.sheet` is omitted (non-`add_sheet` only)
   - `mirror_artifact`: copy output workbook to `--artifact-bridge-dir` on success
+- Large ops guidance:
+  - `ops` over `200` still runs, but returns a warning that recommends splitting into batches.
 - Backend selection:
   - `backend="auto"` (default): prefers COM when available; otherwise openpyxl.
     Also uses openpyxl when `dry_run`/`return_inverse_ops`/`preflight_formula_check` is enabled.
@@ -335,6 +345,32 @@ Example:
 }
 ```
 
+### `auto_fit_columns` quick guide
+
+- Purpose: auto-fit column widths and optionally clamp with min/max bounds.
+- Required: `sheet`.
+- Optional: `columns`, `min_width`, `max_width`.
+- `columns` supports Excel letters and numeric indexes (for example `["A", 2]`).
+- If `columns` is omitted, used columns are targeted.
+
+Example:
+
+```json
+{
+  "tool": "exstruct_patch",
+  "xlsx_path": "C:\\data\\book.xlsx",
+  "ops": [
+    {
+      "op": "auto_fit_columns",
+      "sheet": "Sheet1",
+      "columns": ["A", 2],
+      "min_width": 8,
+      "max_width": 40
+    }
+  ]
+}
+```
+
 ### Color fields (`color` / `fill_color`)
 
 - `set_font_color` uses `color` (font color only)
@@ -367,6 +403,7 @@ Examples:
   - `col` -> `columns`
   - `height` -> `row_height`
   - `width` -> `column_width`
+  - `columns` accepts both letters (`"A"`, `"AA"`) and positive indexes (`1`, `2`, ...)
 - `draw_grid_border`: `range` shorthand is accepted and normalized to
   `base_cell` + `row_count` + `col_count`
 - `set_alignment`:
@@ -416,6 +453,28 @@ Examples:
   - `{"op":"set_alignment","sheet":"Sheet1","cell":"A1","horizontal":"center","vertical":"center"}`
 - Correct:
   - `{"op":"set_alignment","sheet":"Sheet1","cell":"A1","horizontal_align":"center","vertical_align":"center"}`
+
+### In-place overwrite recipe
+
+To overwrite the original workbook path explicitly:
+
+1. set `out_name` to the same filename as the input workbook
+2. set `on_conflict` to `overwrite`
+3. keep `out_dir` empty (or set it to the same directory)
+
+Example:
+
+```json
+{
+  "tool": "exstruct_patch",
+  "xlsx_path": "C:\\data\\book.xlsx",
+  "out_name": "book.xlsx",
+  "on_conflict": "overwrite",
+  "ops": [
+    { "op": "set_value", "sheet": "Sheet1", "cell": "A1", "value": "updated" }
+  ]
+}
+```
 
 ### Runtime info tool
 
