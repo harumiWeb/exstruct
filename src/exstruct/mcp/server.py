@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import functools
 import importlib
-import json
 import logging
 import os
 from pathlib import Path
@@ -19,6 +18,16 @@ from exstruct import ExtractionMode
 from .extract_runner import OnConflictPolicy
 from .io import PathPolicy
 from .op_schema import build_patch_tool_mini_schema
+from .patch.normalize import (
+    build_patch_op_error_message as _normalize_build_patch_op_error_message,
+    coerce_patch_ops as _normalize_coerce_patch_ops,
+    parse_patch_op_json as _normalize_parse_patch_op_json,
+)
+from .shared.a1 import (
+    column_index_to_label as _shared_column_index_to_label,
+    column_label_to_index as _shared_column_label_to_index,
+    split_a1 as _shared_split_a1,
+)
 from .tools import (
     DescribeOpToolInput,
     DescribeOpToolOutput,
@@ -760,15 +769,7 @@ def _coerce_patch_ops(ops_data: list[dict[str, Any] | str]) -> list[dict[str, An
     Raises:
         ValueError: If a string op is not valid JSON object.
     """
-    normalized_ops: list[dict[str, Any]] = []
-    for index, raw_op in enumerate(ops_data):
-        parsed_op = (
-            dict(raw_op)
-            if isinstance(raw_op, dict)
-            else _parse_patch_op_json(raw_op, index)
-        )
-        normalized_ops.append(_normalize_patch_op_aliases(parsed_op, index))
-    return normalized_ops
+    return _normalize_coerce_patch_ops(ops_data)
 
 
 def _normalize_patch_op_aliases(op_data: dict[str, Any], index: int) -> dict[str, Any]:
@@ -1005,54 +1006,23 @@ def _split_a1_cell(cell_ref: str, *, index: int) -> tuple[int, int]:
     Raises:
         ValueError: If format is invalid.
     """
-    text = cell_ref.strip().upper()
-    if not text:
-        raise ValueError(_build_patch_op_error_message(index, "empty cell reference"))
-    col_chars: list[str] = []
-    row_chars: list[str] = []
-    for char in text:
-        if char.isalpha() and not row_chars:
-            col_chars.append(char)
-            continue
-        if char.isdigit():
-            row_chars.append(char)
-            continue
+    try:
+        column, row = _shared_split_a1(cell_ref.strip().upper())
+    except ValueError as exc:
         raise ValueError(
             _build_patch_op_error_message(index, f"invalid cell reference '{cell_ref}'")
-        )
-    if not col_chars or not row_chars:
-        raise ValueError(
-            _build_patch_op_error_message(index, f"invalid cell reference '{cell_ref}'")
-        )
-    row = int("".join(row_chars))
-    if row < 1:
-        raise ValueError(
-            _build_patch_op_error_message(index, f"invalid row index in '{cell_ref}'")
-        )
-    return _column_label_to_index("".join(col_chars)), row
+        ) from exc
+    return _column_label_to_index(column), row
 
 
 def _column_label_to_index(label: str) -> int:
     """Convert Excel column label (A, B, AA) to 1-based index."""
-    total = 0
-    for char in label:
-        if not ("A" <= char <= "Z"):
-            raise ValueError(f"Invalid column label: {label}")
-        total = total * 26 + (ord(char) - ord("A") + 1)
-    return total
+    return _shared_column_label_to_index(label)
 
 
 def _column_index_to_label(index: int) -> str:
     """Convert 1-based column index to Excel column label."""
-    if index < 1:
-        raise ValueError("Column index must be positive.")
-    chars: list[str] = []
-    current = index
-    while current > 0:
-        current -= 1
-        chars.append(chr(ord("A") + (current % 26)))
-        current //= 26
-    return "".join(reversed(chars))
+    return _shared_column_index_to_label(index)
 
 
 def _parse_patch_op_json(raw_op: str, index: int) -> dict[str, Any]:
@@ -1068,18 +1038,7 @@ def _parse_patch_op_json(raw_op: str, index: int) -> dict[str, Any]:
     Raises:
         ValueError: If the string is not valid JSON object.
     """
-    text = raw_op.strip()
-    if not text:
-        raise ValueError(_build_patch_op_error_message(index, "empty string"))
-    try:
-        parsed = json.loads(text)
-    except json.JSONDecodeError as exc:
-        raise ValueError(_build_patch_op_error_message(index, "invalid JSON")) from exc
-    if not isinstance(parsed, dict):
-        raise ValueError(
-            _build_patch_op_error_message(index, "JSON value must be an object")
-        )
-    return cast(dict[str, Any], parsed)
+    return _normalize_parse_patch_op_json(raw_op, index=index)
 
 
 def _build_patch_op_error_message(index: int, reason: str) -> str:
@@ -1092,8 +1051,4 @@ def _build_patch_op_error_message(index: int, reason: str) -> str:
     Returns:
         Human-readable error message.
     """
-    example = '{"op":"set_value","sheet":"Sheet1","cell":"A1","value":"sample"}'
-    return (
-        f"Invalid patch operation at ops[{index}]: {reason}. "
-        f"Use object form like {example}."
-    )
+    return _normalize_build_patch_op_error_message(index, reason)

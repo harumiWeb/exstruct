@@ -4,7 +4,7 @@ from typing import Any, get_args
 
 from pydantic import BaseModel, Field
 
-from .patch_runner import PatchOpType
+from .patch.types import PatchOpType
 
 
 class PatchOpSchema(BaseModel):

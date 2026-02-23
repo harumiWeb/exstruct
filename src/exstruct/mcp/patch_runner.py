@@ -5,53 +5,38 @@ from contextlib import contextmanager
 from copy import copy
 from pathlib import Path
 import re
-from typing import Literal, Protocol, cast, runtime_checkable
+from typing import Protocol, cast, runtime_checkable
 from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 import xlwings as xw
 
-from exstruct.cli.availability import get_com_availability
+from exstruct.cli.availability import get_com_availability as get_com_availability
 
 from .extract_runner import OnConflictPolicy
 from .io import PathPolicy
-
-PatchOpType = Literal[
-    "set_value",
-    "set_formula",
-    "add_sheet",
-    "set_range_values",
-    "fill_formula",
-    "set_value_if",
-    "set_formula_if",
-    "draw_grid_border",
-    "set_bold",
-    "set_font_size",
-    "set_font_color",
-    "set_fill_color",
-    "set_dimensions",
-    "auto_fit_columns",
-    "merge_cells",
-    "unmerge_cells",
-    "set_alignment",
-    "set_style",
-    "apply_table_style",
-    "restore_design_snapshot",
-]
-PatchStatus = Literal["applied", "skipped"]
-PatchValueKind = Literal["value", "formula", "sheet", "style", "dimension"]
-PatchBackend = Literal["auto", "com", "openpyxl"]
-PatchEngine = Literal["com", "openpyxl"]
-FormulaIssueLevel = Literal["warning", "error"]
-FormulaIssueCode = Literal[
-    "invalid_token",
-    "ref_error",
-    "name_error",
-    "div0_error",
-    "value_error",
-    "na_error",
-    "circular_ref_suspected",
-]
+from .patch.types import (
+    FormulaIssueCode,
+    FormulaIssueLevel,
+    HorizontalAlignType,
+    PatchBackend,
+    PatchEngine,
+    PatchOpType,
+    PatchStatus,
+    PatchValueKind,
+    VerticalAlignType,
+)
+from .shared.a1 import (
+    column_index_to_label as _shared_column_index_to_label,
+    column_label_to_index as _shared_column_label_to_index,
+    range_cell_count as _shared_range_cell_count,
+    split_a1 as _shared_split_a1,
+)
+from .shared.output_path import (
+    apply_conflict_policy as _shared_apply_conflict_policy,
+    next_available_path as _shared_next_available_path,
+    resolve_output_path as _shared_resolve_output_path,
+)
 
 _ALLOWED_EXTENSIONS = {".xlsx", ".xlsm", ".xls"}
 _A1_PATTERN = re.compile(r"^[A-Za-z]{1,3}[1-9][0-9]*$")
@@ -60,18 +45,6 @@ _HEX_COLOR_PATTERN = re.compile(r"^#?(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$")
 _COLUMN_LABEL_PATTERN = re.compile(r"^[A-Za-z]{1,3}$")
 _MAX_STYLE_TARGET_CELLS = 10_000
 _SOFT_MAX_OPS_WARNING_THRESHOLD = 200
-
-HorizontalAlignType = Literal[
-    "general",
-    "left",
-    "center",
-    "right",
-    "fill",
-    "justify",
-    "centerContinuous",
-    "distributed",
-]
-VerticalAlignType = Literal["top", "center", "bottom", "justify", "distributed"]
 
 _XLWINGS_HORIZONTAL_ALIGN_MAP: dict[HorizontalAlignType, int] = {
     "general": -4105,
@@ -1271,28 +1244,12 @@ def _range_cell_count(range_ref: str | None) -> int:
     """Return the number of cells represented by an A1 range."""
     if range_ref is None:
         raise ValueError("range is required.")
-    start, end = range_ref.split(":", maxsplit=1)
-    start_col, start_row = _split_a1(start)
-    end_col, end_row = _split_a1(end)
-    min_col = min(_column_label_to_index(start_col), _column_label_to_index(end_col))
-    max_col = max(_column_label_to_index(start_col), _column_label_to_index(end_col))
-    min_row = min(start_row, end_row)
-    max_row = max(start_row, end_row)
-    return (max_col - min_col + 1) * (max_row - min_row + 1)
+    return _shared_range_cell_count(range_ref)
 
 
 def _split_a1(value: str) -> tuple[str, int]:
     """Split A1 notation into normalized (column_label, row_index)."""
-    if not _A1_PATTERN.match(value):
-        raise ValueError(f"Invalid cell reference: {value}")
-    idx = 0
-    for index, char in enumerate(value):
-        if char.isdigit():
-            idx = index
-            break
-    column = value[:idx].upper()
-    row = int(value[idx:])
-    return column, row
+    return _shared_split_a1(value)
 
 
 def _normalize_column_identifier(value: str | int) -> str | int:
@@ -1309,25 +1266,12 @@ def _normalize_column_identifier(value: str | int) -> str | int:
 
 def _column_label_to_index(label: str) -> int:
     """Convert Excel-style column label (A/AA) to 1-based index."""
-    if not _COLUMN_LABEL_PATTERN.match(label):
-        raise ValueError(f"Invalid column label: {label}")
-    index = 0
-    for char in label:
-        index = index * 26 + (ord(char) - ord("A") + 1)
-    return index
+    return _shared_column_label_to_index(label)
 
 
 def _column_index_to_label(index: int) -> str:
     """Convert 1-based column index to Excel-style column label."""
-    if index < 1:
-        raise ValueError("Column index must be positive.")
-    chunks: list[str] = []
-    current = index
-    while current > 0:
-        current -= 1
-        chunks.append(chr(ord("A") + (current % 26)))
-        current //= 26
-    return "".join(reversed(chunks))
+    return _shared_column_index_to_label(index)
 
 
 class PatchValue(BaseModel):
@@ -1458,34 +1402,9 @@ def run_make(request: MakeRequest, *, policy: PathPolicy | None = None) -> Patch
         ValueError: If request validation fails.
         RuntimeError: If backend operations fail.
     """
-    resolved_output = _resolve_make_output_path(request.out_path, policy=policy)
-    _ensure_supported_extension(resolved_output)
-    _validate_make_request_constraints(request, resolved_output)
-    seed_path = _build_make_seed_path(resolved_output)
-    initial_sheet_name = _resolve_make_initial_sheet_name(request)
-    try:
-        _create_seed_workbook(
-            seed_path,
-            resolved_output.suffix.lower(),
-            initial_sheet_name=initial_sheet_name,
-        )
-        patch_request = PatchRequest(
-            xlsx_path=seed_path,
-            ops=request.ops,
-            sheet=request.sheet,
-            out_dir=resolved_output.parent,
-            out_name=resolved_output.name,
-            on_conflict=request.on_conflict,
-            auto_formula=request.auto_formula,
-            dry_run=request.dry_run,
-            return_inverse_ops=request.return_inverse_ops,
-            preflight_formula_check=request.preflight_formula_check,
-            backend=request.backend,
-        )
-        return run_patch(patch_request, policy=policy)
-    finally:
-        if seed_path.exists():
-            seed_path.unlink()
+    from .patch.service import run_make as _service_run_make
+
+    return _service_run_make(request, policy=policy)
 
 
 def run_patch(
@@ -1505,108 +1424,9 @@ def run_patch(
         ValueError: If validation fails or the path violates policy.
         RuntimeError: If a backend operation fails.
     """
-    resolved_input = _resolve_input_path(request.xlsx_path, policy=policy)
-    _ensure_supported_extension(resolved_input)
-    output_path = _resolve_output_path(
-        resolved_input,
-        out_dir=request.out_dir,
-        out_name=request.out_name,
-        policy=policy,
-    )
-    warnings: list[str] = []
-    _append_large_ops_warning(warnings, request.ops)
-    effective_request = request
-    if request.backend == "com" and _contains_apply_table_style_op(request.ops):
-        warnings.append(
-            "backend='com' does not support apply_table_style; falling back to openpyxl."
-        )
-        effective_request = request.model_copy(update={"backend": "openpyxl"})
-    com = get_com_availability()
-    selected_engine = _select_patch_engine(
-        request=effective_request,
-        input_path=resolved_input,
-        com_available=com.available,
-    )
-    output_path, warning, skipped = _apply_conflict_policy(
-        output_path, effective_request.on_conflict
-    )
-    if warning:
-        warnings.append(warning)
-    if skipped and not effective_request.dry_run:
-        return PatchResult(
-            out_path=str(output_path),
-            patch_diff=[],
-            inverse_ops=[],
-            formula_issues=[],
-            warnings=warnings,
-            engine=selected_engine,
-        )
-    if skipped and effective_request.dry_run:
-        warnings.append(
-            "Dry-run mode ignores on_conflict=skip and simulates patch without writing."
-        )
+    from .patch.service import run_patch as _service_run_patch
 
-    if resolved_input.suffix.lower() == ".xls" and _contains_design_ops(
-        effective_request.ops
-    ):
-        raise ValueError(
-            "Design operations are not supported for .xls files. Convert to .xlsx/.xlsm first."
-        )
-    if (
-        selected_engine == "openpyxl"
-        and com.reason
-        and effective_request.backend == "auto"
-    ):
-        warnings.append(f"COM unavailable: {com.reason}")
-    if selected_engine == "openpyxl" and _requires_openpyxl_backend(effective_request):
-        warnings.append("Using openpyxl backend due to patch request constraints.")
-
-    _ensure_output_dir(output_path)
-    if selected_engine == "com":
-        try:
-            diff = _apply_ops_xlwings(
-                resolved_input,
-                output_path,
-                effective_request.ops,
-                effective_request.auto_formula,
-            )
-            return PatchResult(
-                out_path=str(output_path),
-                patch_diff=diff,
-                inverse_ops=[],
-                formula_issues=[],
-                warnings=warnings,
-                engine="com",
-            )
-        except PatchOpError as exc:
-            return PatchResult(
-                out_path=str(output_path),
-                patch_diff=[],
-                inverse_ops=[],
-                formula_issues=[],
-                warnings=warnings,
-                error=exc.detail,
-                engine="com",
-            )
-        except Exception as exc:
-            if _allow_auto_openpyxl_fallback(effective_request, resolved_input):
-                warnings.append(
-                    f"COM patch failed; falling back to openpyxl. ({exc!r})"
-                )
-                return _apply_with_openpyxl(
-                    effective_request,
-                    resolved_input,
-                    output_path,
-                    warnings,
-                )
-            raise RuntimeError(f"COM patch failed: {exc}") from exc
-
-    return _apply_with_openpyxl(
-        effective_request,
-        resolved_input,
-        output_path,
-        warnings,
-    )
+    return _service_run_patch(request, policy=policy)
 
 
 def _apply_with_openpyxl(
@@ -1817,13 +1637,14 @@ def _resolve_output_path(
     policy: PathPolicy | None,
 ) -> Path:
     """Build and validate the output path."""
-    target_dir = out_dir or input_path.parent
-    target_dir = policy.ensure_allowed(target_dir) if policy else target_dir.resolve()
-    name = _normalize_output_name(input_path, out_name)
-    output_path = (target_dir / name).resolve()
-    if policy is not None:
-        output_path = policy.ensure_allowed(output_path)
-    return output_path
+    return _shared_resolve_output_path(
+        input_path,
+        out_dir=out_dir,
+        out_name=out_name,
+        policy=policy,
+        default_suffix=input_path.suffix,
+        default_name_builder="patched",
+    )
 
 
 def _resolve_make_output_path(path: Path, *, policy: PathPolicy | None) -> Path:
@@ -1963,35 +1784,12 @@ def _apply_conflict_policy(
     output_path: Path, on_conflict: OnConflictPolicy
 ) -> tuple[Path, str | None, bool]:
     """Apply output conflict policy to a resolved output path."""
-    if not output_path.exists():
-        return output_path, None, False
-    if on_conflict == "skip":
-        return (
-            output_path,
-            f"Output exists; skipping write: {output_path.name}",
-            True,
-        )
-    if on_conflict == "rename":
-        renamed = _next_available_path(output_path)
-        return (
-            renamed,
-            f"Output exists; renamed to: {renamed.name}",
-            False,
-        )
-    return output_path, None, False
+    return _shared_apply_conflict_policy(output_path, on_conflict)
 
 
 def _next_available_path(path: Path) -> Path:
     """Return the next available path by appending a numeric suffix."""
-    if not path.exists():
-        return path
-    stem = path.stem
-    suffix = path.suffix
-    for idx in range(1, 10_000):
-        candidate = path.with_name(f"{stem}_{idx}{suffix}")
-        if not candidate.exists():
-            return candidate
-    raise RuntimeError(f"Failed to resolve unique path for {path}")
+    return _shared_next_available_path(path)
 
 
 def _apply_ops_openpyxl(

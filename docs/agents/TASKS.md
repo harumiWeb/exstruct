@@ -6,58 +6,58 @@
 
 ## 0. 事前準備と合意
 
-- [ ] `FEATURE_SPEC.md` と本タスクの整合性確認
-- [ ] 既存公開 API（import 経路・MCP I/F）の互換条件を明文化
-- [ ] 回帰対象テスト群の確定（patch/make/server/tools）
+- [x] `FEATURE_SPEC.md` と本タスクの整合性確認
+- [x] 既存公開 API（import 経路・MCP I/F）の互換条件を明文化
+- [x] 回帰対象テスト群の確定（patch/make/server/tools）
 
 完了条件:
-- [ ] 仕様・互換条件・テスト対象がレビューで承認されている
+- [x] 仕様・互換条件・テスト対象がレビューで承認されている
 
 ## 1. 共通ユーティリティ抽出（低リスク先行）
 
-- [ ] `src/exstruct/mcp/shared/a1.py` を追加
-- [ ] A1/列変換関数を `patch_runner.py`・`server.py` から移設
-- [ ] `src/exstruct/mcp/shared/output_path.py` を追加
-- [ ] 出力 path 解決/競合処理を `patch_runner.py`・`extract_runner.py` から移設
-- [ ] 既存呼び出し元を共通ユーティリティ利用へ置換
+- [x] `src/exstruct/mcp/shared/a1.py` を追加
+- [x] A1/列変換関数を `patch_runner.py`・`server.py` から移設
+- [x] `src/exstruct/mcp/shared/output_path.py` を追加
+- [x] 出力 path 解決/競合処理を `patch_runner.py`・`extract_runner.py` から移設
+- [x] 既存呼び出し元を共通ユーティリティ利用へ置換
 
 完了条件:
-- [ ] A1 と output path の重複実装が削除されている
-- [ ] 関連テストが回帰なしで通る
+- [x] A1 と output path の重複実装が削除されている
+- [x] 関連テストが回帰なしで通る
 
 ## 2. patch ドメイン分離（型とモデル）
 
-- [ ] `src/exstruct/mcp/patch/types.py` を追加
-- [ ] `PatchOpType` ほか patch 共通型を移設
-- [ ] `src/exstruct/mcp/patch/models.py` を追加
-- [ ] `PatchOp` / `PatchRequest` / `MakeRequest` / `PatchResult` と snapshot モデルを移設
-- [ ] `patch_runner.py` から新モジュールを再エクスポート
+- [x] `src/exstruct/mcp/patch/types.py` を追加
+- [x] `PatchOpType` ほか patch 共通型を移設
+- [x] `src/exstruct/mcp/patch/models.py` を追加
+- [x] `PatchOp` / `PatchRequest` / `MakeRequest` / `PatchResult` と snapshot モデルを移設
+- [x] `patch_runner.py` から新モジュールを再エクスポート
 
 完了条件:
-- [ ] モデルが `patch_runner.py` 以外からも直接利用可能
-- [ ] `patch_runner.py` のモデル定義が削減されている
+- [x] モデルが `patch_runner.py` 以外からも直接利用可能
+- [x] `patch_runner.py` のモデル定義が削減されている
 
 ## 3. 正規化と仕様メタデータの一元化
 
-- [ ] `src/exstruct/mcp/patch/specs.py` を追加
-- [ ] op ごとの required/optional/constraints/aliases を集約
-- [ ] `src/exstruct/mcp/patch/normalize.py` を追加
-- [ ] top-level `sheet` 解決と alias 正規化を移設
-- [ ] `server.py` の `_coerce_patch_ops` 系を共通ロジック利用へ置換
-- [ ] `tools.py` の top-level `sheet` 解決を共通ロジック利用へ置換
-- [ ] `op_schema.py` の `PatchOpType` 依存を `patch/specs.py` / `patch/types.py` へ変更
+- [x] `src/exstruct/mcp/patch/specs.py` を追加
+- [x] op ごとの required/optional/constraints/aliases を集約
+- [x] `src/exstruct/mcp/patch/normalize.py` を追加
+- [x] top-level `sheet` 解決と alias 正規化を移設
+- [x] `server.py` の `_coerce_patch_ops` 系を共通ロジック利用へ置換
+- [x] `tools.py` の top-level `sheet` 解決を共通ロジック利用へ置換
+- [x] `op_schema.py` の `PatchOpType` 依存を `patch/specs.py` / `patch/types.py` へ変更
 
 完了条件:
-- [ ] patch op 正規化実装が単一ソース化されている
-- [ ] `server.py` と `tools.py` の重複ロジックが削減されている
+- [x] patch op 正規化実装が単一ソース化されている
+- [x] `server.py` と `tools.py` の重複ロジックが削減されている
 
 ## 4. サービス層と backend 分離
 
-- [ ] `src/exstruct/mcp/patch/service.py` を追加
-- [ ] `run_patch` / `run_make` のオーケストレーションを移設
-- [ ] `src/exstruct/mcp/patch/engine/base.py` を追加（engine protocol）
-- [ ] `openpyxl` 実装を `engine/openpyxl_engine.py` へ移設
-- [ ] `xlwings` 実装を `engine/xlwings_engine.py` へ移設
+- [x] `src/exstruct/mcp/patch/service.py` を追加
+- [x] `run_patch` / `run_make` のオーケストレーションを移設
+- [x] `src/exstruct/mcp/patch/engine/base.py` を追加（engine protocol）
+- [x] `openpyxl` 実装を `engine/openpyxl_engine.py` へ移設
+- [x] `xlwings` 実装を `engine/xlwings_engine.py` へ移設
 - [ ] 必要に応じて op 実装を `patch/ops/*` へ分離
 - [ ] `patch_runner.py` を薄いファサードへ縮退
 
@@ -67,16 +67,16 @@
 
 ## 5. テスト再配置と追加
 
-- [ ] `tests/mcp/patch/test_normalize.py` を追加
-- [ ] `tests/mcp/patch/test_service.py` を追加
-- [ ] `tests/mcp/shared/test_a1.py` を追加
-- [ ] `tests/mcp/shared/test_output_path.py` を追加
+- [x] `tests/mcp/patch/test_normalize.py` を追加
+- [x] `tests/mcp/patch/test_service.py` を追加
+- [x] `tests/mcp/shared/test_a1.py` を追加
+- [x] `tests/mcp/shared/test_output_path.py` を追加
 - [ ] 既存テストを責務別に分割（必要箇所のみ）
-- [ ] `tests/mcp/test_patch_runner.py` の互換観点テストを維持
+- [x] `tests/mcp/test_patch_runner.py` の互換観点テストを維持
 
 完了条件:
-- [ ] 新規分割モジュールに直接対応するテストが存在する
-- [ ] 既存互換テストが通る
+- [x] 新規分割モジュールに直接対応するテストが存在する
+- [x] 既存互換テストが通る
 
 ## 6. ドキュメント更新
 
@@ -89,14 +89,14 @@
 
 ## 7. 品質ゲート
 
-- [ ] `uv run task precommit-run` 実行
-- [ ] 失敗時は修正して再実行
-- [ ] 変更差分の自己レビュー（責務分離・循環依存・互換性）
+- [x] `uv run task precommit-run` 実行
+- [x] 失敗時は修正して再実行
+- [x] 変更差分の自己レビュー（責務分離・循環依存・互換性）
 
 完了条件:
-- [ ] mypy strict: 0 エラー
-- [ ] Ruff: 0 エラー
-- [ ] テスト: 全て成功
+- [x] mypy strict: 0 エラー
+- [x] Ruff: 0 エラー
+- [x] テスト: 全て成功
 
 ## 優先順位
 

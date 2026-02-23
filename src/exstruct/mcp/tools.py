@@ -29,6 +29,10 @@ from .op_schema import (
     list_patch_op_schemas,
     schema_with_sheet_resolution_rules,
 )
+from .patch.normalize import (
+    build_missing_sheet_message as _normalize_build_missing_sheet_message,
+    resolve_top_level_sheet_for_payload as _normalize_resolve_top_level_sheet_for_payload,
+)
 from .patch_runner import (
     FormulaIssue,
     MakeRequest,
@@ -671,47 +675,7 @@ def run_describe_op_tool(payload: DescribeOpToolInput) -> DescribeOpToolOutput:
 
 def _resolve_top_level_sheet_for_payload(data: object) -> object:
     """Resolve top-level sheet default into operation dict payloads."""
-    if not isinstance(data, dict):
-        return data
-    ops_raw = data.get("ops")
-    if not isinstance(ops_raw, list):
-        return data
-    top_level_sheet = _normalize_top_level_sheet(data.get("sheet"))
-    resolved_ops: list[object] = []
-    for index, op_raw in enumerate(ops_raw):
-        if not isinstance(op_raw, dict):
-            resolved_ops.append(op_raw)
-            continue
-        op_copy = dict(op_raw)
-        op_name_raw = op_copy.get("op")
-        op_name = op_name_raw if isinstance(op_name_raw, str) else ""
-        op_sheet = op_copy.get("sheet")
-        if op_name == "add_sheet":
-            if "sheet" not in op_copy:
-                if "name" in op_copy:
-                    op_copy["sheet"] = op_copy.get("name")
-                else:
-                    raise ValueError(
-                        _build_missing_sheet_message(index=index, op_name="add_sheet")
-                    )
-            if op_copy.get("sheet") is None:
-                raise ValueError(
-                    _build_missing_sheet_message(index=index, op_name="add_sheet")
-                )
-            resolved_ops.append(op_copy)
-            continue
-        if op_sheet is None:
-            if top_level_sheet is None:
-                raise ValueError(
-                    _build_missing_sheet_message(index=index, op_name=op_name)
-                )
-            op_copy["sheet"] = top_level_sheet
-        resolved_ops.append(op_copy)
-    payload = dict(data)
-    payload["ops"] = resolved_ops
-    if top_level_sheet is not None:
-        payload["sheet"] = top_level_sheet
-    return payload
+    return _normalize_resolve_top_level_sheet_for_payload(data)
 
 
 def _normalize_top_level_sheet(value: object) -> str | None:
@@ -728,12 +692,7 @@ def _normalize_top_level_sheet(value: object) -> str | None:
 
 def _build_missing_sheet_message(*, index: int, op_name: str) -> str:
     """Build self-healing error for unresolved sheet selection."""
-    target_op = op_name or "<unknown>"
-    return (
-        f"ops[{index}] ({target_op}) is missing sheet. "
-        "Set op.sheet, or set top-level sheet for non-add_sheet ops. "
-        "For add_sheet, op.sheet (or alias name) is required."
-    )
+    return _normalize_build_missing_sheet_message(index=index, op_name=op_name)
 
 
 def _to_patch_tool_output(result: PatchResult) -> PatchToolOutput:
