@@ -1,125 +1,112 @@
 # Task List
 
-未完了 [ ], 完了 [x]
+未完了: `[ ]` / 完了: `[x]`
 
-## Epic: MCP UX Hardening Phase 3 (Claude Feedback Triage)
+## Epic: MCP Patch Architecture Refactor (Phase 1)
 
-### 0. 仕様固定と設計
+## 0. 事前準備と合意
 
-- [x] `review.md` の指摘を「今回実装 / 見送り」に再分類
-- [x] 公開 I/F 変更一覧（型、ツール定義、レスポンス、ドキュメント）を確定
-- [x] 後方互換ポリシー（既存 op 挙動維持）を固定
-- [x] 見送り項目（`freeze_panes`、`set_comment`、条件付き書式編集、chunk API）を明文化
-
-完了条件:
-- [x] `FEATURE_SPEC.md` とタスクが 1 対 1 で追跡可能
-
-### 1. FS-01 Path UX 改善
-
-- [x] `PathPolicy.ensure_allowed` の root 外エラー文に `exstruct_get_runtime_info` 導線を追加
-- [x] 既存の `resolved/root/example_relative` 情報を維持
-- [x] テスト追加（導線文言の存在確認）
+- [ ] `FEATURE_SPEC.md` と本タスクの整合性確認
+- [ ] 既存公開 API（import 経路・MCP I/F）の互換条件を明文化
+- [ ] 回帰対象テスト群の確定（patch/make/server/tools）
 
 完了条件:
-- [x] パスエラー時に自己修復導線が返る
+- [ ] 仕様・互換条件・テスト対象がレビューで承認されている
 
-### 2. FS-02 `exstruct_make` 初期シート挙動改善
+## 1. 共通ユーティリティ抽出（低リスク先行）
 
-- [x] `run_make` に初期シート名解決ロジックを追加
-- [x] `sheet` 指定 + 同名 `add_sheet` なしで初期シートを改名
-- [x] 同名 `add_sheet` ありの場合は `Sheet1` 維持（後方互換）
-- [x] openpyxl seed / COM seed の両経路に適用
-- [x] テスト追加（改名ケース、競合回避ケース）
-
-完了条件:
-- [x] `make` の `sheet` 指定が直感と整合する
-
-### 3. FS-03 `auto_fit_columns` 実装
-
-- [x] `PatchOpType` に `auto_fit_columns` を追加
-- [x] `PatchOp` に `min_width` / `max_width` を追加
-- [x] validator 実装（許可フィールド制約、`min<=max`、正値制約）
-- [x] openpyxl 実装（使用中列判定 + 文字長推定 + clamp）
-- [x] COM 実装（AutoFit + clamp）
-- [x] `op_schema` / `describe_op` / patch mini schema へ反映
-- [x] テスト追加（全列、混在列指定、境界異常）
+- [ ] `src/exstruct/mcp/shared/a1.py` を追加
+- [ ] A1/列変換関数を `patch_runner.py`・`server.py` から移設
+- [ ] `src/exstruct/mcp/shared/output_path.py` を追加
+- [ ] 出力 path 解決/競合処理を `patch_runner.py`・`extract_runner.py` から移設
+- [ ] 既存呼び出し元を共通ユーティリティ利用へ置換
 
 完了条件:
-- [x] 列幅の自動調整を 1 op で実行できる
+- [ ] A1 と output path の重複実装が削除されている
+- [ ] 関連テストが回帰なしで通る
 
-### 4. FS-04 大量 `ops` ソフト上限警告
+## 2. patch ドメイン分離（型とモデル）
 
-- [x] `ops > 200` の warning を `PatchResult.warnings` に追加
-- [x] 実行継続（失敗しない）を実装
-- [x] テスト追加（`len(ops)=201`）
-
-完了条件:
-- [x] 大量操作時に分割判断のガイドが返る
-
-### 5. FS-05 `set_dimensions` diff 可読性改善
-
-- [x] 行/列ターゲット要約ヘルパーを追加
-- [x] `set_dimensions` diff を正規化列ラベル要約で出力
-- [x] テスト追加（diff 文言検証）
+- [ ] `src/exstruct/mcp/patch/types.py` を追加
+- [ ] `PatchOpType` ほか patch 共通型を移設
+- [ ] `src/exstruct/mcp/patch/models.py` を追加
+- [ ] `PatchOp` / `PatchRequest` / `MakeRequest` / `PatchResult` と snapshot モデルを移設
+- [ ] `patch_runner.py` から新モジュールを再エクスポート
 
 完了条件:
-- [x] 列指定の適用確認が diff で容易になる
+- [ ] モデルが `patch_runner.py` 以外からも直接利用可能
+- [ ] `patch_runner.py` のモデル定義が削減されている
 
-### 6. FS-06 ドキュメント更新
+## 3. 正規化と仕様メタデータの一元化
 
-- [x] `docs/mcp.md` に `auto_fit_columns` quick guide を追加
-- [x] `docs/mcp.md` に `ops` ソフト上限（200）と分割ガイドを追加
-- [x] `docs/mcp.md` に in-place 上書き手順を追記
-- [x] `docs/mcp.md` に path troubleshooting 導線を追記
-- [x] `docs/mcp.md` に `set_dimensions` 列指定の確認ポイントを追記
-
-完了条件:
-- [x] Phase 3 仕様と利用ガイドの乖離がない
-
-### 7. 検証・受け入れ
-
-- [x] MCP 関連主要テスト実行
-- [x] `uv run task precommit-run` 実行
-- [x] AC-01〜AC-06 をチェックリストで確認
+- [ ] `src/exstruct/mcp/patch/specs.py` を追加
+- [ ] op ごとの required/optional/constraints/aliases を集約
+- [ ] `src/exstruct/mcp/patch/normalize.py` を追加
+- [ ] top-level `sheet` 解決と alias 正規化を移設
+- [ ] `server.py` の `_coerce_patch_ops` 系を共通ロジック利用へ置換
+- [ ] `tools.py` の top-level `sheet` 解決を共通ロジック利用へ置換
+- [ ] `op_schema.py` の `PatchOpType` 依存を `patch/specs.py` / `patch/types.py` へ変更
 
 完了条件:
-- [ ] CI グリーン
-- [x] 受け入れ条件を満たす
+- [ ] patch op 正規化実装が単一ソース化されている
+- [ ] `server.py` と `tools.py` の重複ロジックが削減されている
 
-### 8. FS-07 `make` 競合判定の大文字小文字統一
+## 4. サービス層と backend 分離
 
-- [ ] `_resolve_make_initial_sheet_name` の競合判定を case-insensitive に修正
-- [ ] `make(sheet="Data")` + `add_sheet("data")` で `Sheet1` 維持となることを実装
-- [ ] openpyxl/COM の既存挙動を壊さないことを確認
-- [ ] テスト追加（大小文字差分の競合ケース）
-
-完了条件:
-- [ ] 大文字小文字差分の `add_sheet` で回帰しない
-
-### 9. FS-08 `auto_fit_columns` openpyxl 1-pass 最適化
-
-- [ ] 列ごとの全シート再走査を廃止し、1 回の走査で列最大長を集計
-- [ ] 既存の `columns` / `min_width` / `max_width` の挙動互換を維持
-- [ ] 回帰テスト追加（1-pass 実装を担保するテスト）
+- [ ] `src/exstruct/mcp/patch/service.py` を追加
+- [ ] `run_patch` / `run_make` のオーケストレーションを移設
+- [ ] `src/exstruct/mcp/patch/engine/base.py` を追加（engine protocol）
+- [ ] `openpyxl` 実装を `engine/openpyxl_engine.py` へ移設
+- [ ] `xlwings` 実装を `engine/xlwings_engine.py` へ移設
+- [ ] 必要に応じて op 実装を `patch/ops/*` へ分離
+- [ ] `patch_runner.py` を薄いファサードへ縮退
 
 完了条件:
-- [ ] `columns` 省略時でも列数依存の過度な性能劣化が発生しない
+- [ ] `patch_runner.py` の主責務が公開互換維持のみになっている
+- [ ] engine 分岐/実装が `service.py` と `engine/*` に分離されている
+
+## 5. テスト再配置と追加
+
+- [ ] `tests/mcp/patch/test_normalize.py` を追加
+- [ ] `tests/mcp/patch/test_service.py` を追加
+- [ ] `tests/mcp/shared/test_a1.py` を追加
+- [ ] `tests/mcp/shared/test_output_path.py` を追加
+- [ ] 既存テストを責務別に分割（必要箇所のみ）
+- [ ] `tests/mcp/test_patch_runner.py` の互換観点テストを維持
+
+完了条件:
+- [ ] 新規分割モジュールに直接対応するテストが存在する
+- [ ] 既存互換テストが通る
+
+## 6. ドキュメント更新
+
+- [ ] `docs/agents/ARCHITECTURE.md` に新構成を反映
+- [ ] `docs/agents/DATA_MODEL.md` の patch モデル参照先を更新
+- [ ] 必要に応じて `docs/mcp.md` の内部実装説明を更新
+
+完了条件:
+- [ ] 参照先のコードパスが現行構成と一致している
+
+## 7. 品質ゲート
+
+- [ ] `uv run task precommit-run` 実行
+- [ ] 失敗時は修正して再実行
+- [ ] 変更差分の自己レビュー（責務分離・循環依存・互換性）
+
+完了条件:
+- [ ] mypy strict: 0 エラー
+- [ ] Ruff: 0 エラー
+- [ ] テスト: 全て成功
 
 ## 優先順位
 
-1. P0: 1, 2, 3, 4, 5
-2. P1: 6, 8
-3. P2: 7, 9
+1. P0: 1, 2, 3
+2. P1: 4, 5
+3. P2: 6, 7
 
-## テストケース（必須追跡）
+## マイルストーン（推奨）
 
-- [x] `make(sheet="Data")`・同名 `add_sheet` なしで初期シートが `Data`
-- [x] `make(sheet="Data")` + `add_sheet("Data")` で競合せず適用
-- [x] `auto_fit_columns`（全列 + clamp）
-- [x] `auto_fit_columns`（`columns=["A",2]`）
-- [x] `auto_fit_columns` の不正境界（`min_width > max_width`）
-- [x] `len(ops)=201` の warning と成功継続
-- [x] `set_dimensions` diff の列要約表示
-- [x] root 外パスエラーで `exstruct_get_runtime_info` 導線を返す
-- [ ] `make(sheet="Data")` + `add_sheet("data")` で競合回避できる
-- [ ] `auto_fit_columns`（openpyxl）が 1-pass 集計で幅計算する
+1. M1: 共通ユーティリティ抽出完了（Task 1）
+2. M2: ドメイン/正規化分離完了（Task 2-3）
+3. M3: service/engine 分離完了（Task 4）
+4. M4: テスト・ドキュメント・品質ゲート完了（Task 5-7）
