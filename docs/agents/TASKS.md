@@ -59,10 +59,10 @@
 - [x] `openpyxl` 実装を `engine/openpyxl_engine.py` へ移設
 - [x] `xlwings` 実装を `engine/xlwings_engine.py` へ移設
 - [ ] 必要に応じて op 実装を `patch/ops/*` へ分離
-- [ ] `patch_runner.py` を薄いファサードへ縮退
+- [x] `patch_runner.py` を薄いファサードへ縮退
 
 完了条件:
-- [ ] `patch_runner.py` の主責務が公開互換維持のみになっている
+- [x] `patch_runner.py` の主責務が公開互換維持のみになっている
 - [ ] engine 分岐/実装が `service.py` と `engine/*` に分離されている
 
 ## 5. テスト再配置と追加
@@ -80,12 +80,12 @@
 
 ## 6. ドキュメント更新
 
-- [ ] `docs/agents/ARCHITECTURE.md` に新構成を反映
-- [ ] `docs/agents/DATA_MODEL.md` の patch モデル参照先を更新
-- [ ] 必要に応じて `docs/mcp.md` の内部実装説明を更新
+- [x] `docs/agents/ARCHITECTURE.md` に新構成を反映
+- [x] `docs/agents/DATA_MODEL.md` の patch モデル参照先を更新
+- [x] 必要に応じて `docs/mcp.md` の内部実装説明を更新
 
 完了条件:
-- [ ] 参照先のコードパスが現行構成と一致している
+- [x] 参照先のコードパスが現行構成と一致している
 
 ## 7. 品質ゲート
 

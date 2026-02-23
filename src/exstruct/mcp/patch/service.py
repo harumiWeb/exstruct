@@ -3,7 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from exstruct.mcp.io import PathPolicy
-from exstruct.mcp.patch_runner import (
+import exstruct.mcp.patch.legacy_runner as runner
+from exstruct.mcp.patch.legacy_runner import (
     FormulaIssue,
     MakeRequest,
     PatchDiffItem,
@@ -20,8 +21,6 @@ from .types import PatchOpType
 
 def run_make(request: MakeRequest, *, policy: PathPolicy | None = None) -> PatchResult:
     """Create a new workbook and apply patch operations in one call."""
-    import exstruct.mcp.patch_runner as runner
-
     resolved_output = runner._resolve_make_output_path(request.out_path, policy=policy)
     runner._ensure_supported_extension(resolved_output)
     runner._validate_make_request_constraints(request, resolved_output)
@@ -56,8 +55,6 @@ def run_patch(
     request: PatchRequest, *, policy: PathPolicy | None = None
 ) -> PatchResult:
     """Run a patch operation and write the updated workbook."""
-    import exstruct.mcp.patch_runner as runner
-
     resolved_input = runner._resolve_input_path(request.xlsx_path, policy=policy)
     runner._ensure_supported_extension(resolved_input)
     output_path = runner._resolve_output_path(
@@ -170,8 +167,6 @@ def _apply_with_openpyxl(
     warnings: list[str],
 ) -> PatchResult:
     """Apply patch operations using openpyxl."""
-    import exstruct.mcp.patch_runner as runner
-
     try:
         diff, inverse_ops, formula_issues, op_warnings = apply_openpyxl_engine(
             request,
@@ -266,8 +261,6 @@ def _find_preflight_issue_origin(
 
 def _op_targets_issue_cell(op: PatchOp, sheet: str, cell: str) -> bool:
     """Return True when an op can affect the specified sheet/cell."""
-    import exstruct.mcp.patch_runner as runner
-
     if op.sheet != sheet:
         return False
     if op.cell is not None:
