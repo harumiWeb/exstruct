@@ -1021,6 +1021,57 @@ def test_run_patch_auto_fit_columns_accepts_mixed_column_identifiers(
         workbook.close()
 
 
+def test_run_patch_auto_fit_columns_openpyxl_uses_single_pass_collector(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    workbook = load_workbook(input_path)
+    try:
+        sheet = workbook["Sheet1"]
+        sheet["A1"] = "a"
+        sheet["B1"] = "bbbbbbbb"
+        sheet["C1"] = "cccccccccccc"
+        workbook.save(input_path)
+    finally:
+        workbook.close()
+
+    call_count = 0
+    original = patch_runner._collect_openpyxl_target_column_max_lengths
+
+    def _counting_collector(
+        sheet: patch_runner.OpenpyxlWorksheetProtocol, target_indexes: set[int]
+    ) -> dict[int, int]:
+        nonlocal call_count
+        call_count += 1
+        return original(sheet, target_indexes)
+
+    monkeypatch.setattr(
+        patch_runner,
+        "_collect_openpyxl_target_column_max_lengths",
+        _counting_collector,
+    )
+
+    result = run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[
+                PatchOp(
+                    op="auto_fit_columns",
+                    sheet="Sheet1",
+                    columns=["A", "B", "C"],
+                )
+            ],
+            on_conflict="rename",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+
+    assert result.error is None
+    assert call_count == 1
+
+
 def test_patch_op_auto_fit_columns_rejects_invalid_bounds() -> None:
     with pytest.raises(
         ValidationError, match="auto_fit_columns requires min_width <= max_width"

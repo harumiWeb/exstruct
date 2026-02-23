@@ -1865,12 +1865,23 @@ def _resolve_make_initial_sheet_name(request: MakeRequest) -> str:
     requested_sheet = request.sheet.strip()
     if not requested_sheet:
         return "Sheet1"
+    normalized_requested_sheet = _normalize_sheet_name_for_make_conflict(
+        requested_sheet
+    )
     has_conflicting_add_sheet = any(
-        op.op == "add_sheet" and op.sheet == requested_sheet for op in request.ops
+        op.op == "add_sheet"
+        and _normalize_sheet_name_for_make_conflict(op.sheet)
+        == normalized_requested_sheet
+        for op in request.ops
     )
     if has_conflicting_add_sheet:
         return "Sheet1"
     return requested_sheet
+
+
+def _normalize_sheet_name_for_make_conflict(sheet_name: str) -> str:
+    """Normalize sheet name text for make-time conflict detection."""
+    return sheet_name.strip().casefold()
 
 
 def _create_seed_workbook(
@@ -2417,6 +2428,12 @@ def _apply_openpyxl_auto_fit_columns(
     target_columns = _resolve_auto_fit_columns_openpyxl(sheet, op.columns)
     if not target_columns:
         raise ValueError("auto_fit_columns could not resolve target columns.")
+    target_column_indexes = {
+        _column_label_to_index(column) for column in target_columns
+    }
+    max_lengths = _collect_openpyxl_target_column_max_lengths(
+        sheet, target_column_indexes
+    )
     snapshot = DesignSnapshot()
     for column in target_columns:
         column_dimension = sheet.column_dimensions[column]
@@ -2426,7 +2443,8 @@ def _apply_openpyxl_auto_fit_columns(
                 width=getattr(column_dimension, "width", None),
             )
         )
-        estimated_width = _estimate_openpyxl_column_width(sheet, column)
+        max_len = max_lengths.get(_column_label_to_index(column), 0)
+        estimated_width = _resolve_openpyxl_estimated_width(column_dimension, max_len)
         column_dimension.width = _clamp_column_width(
             estimated_width, min_width=op.min_width, max_width=op.max_width
         )
@@ -3114,26 +3132,35 @@ def _detect_openpyxl_used_column_indexes(
     return [1]
 
 
-def _estimate_openpyxl_column_width(
-    sheet: OpenpyxlWorksheetProtocol, column_label: str
-) -> float:
-    """Estimate column width by the longest visible text length."""
+def _collect_openpyxl_target_column_max_lengths(
+    sheet: OpenpyxlWorksheetProtocol, target_indexes: set[int]
+) -> dict[int, int]:
+    """Collect max display lengths for target columns in a single sheet pass."""
     iter_rows = getattr(sheet, "iter_rows", None)
     if iter_rows is None:
-        return 8.43
-    target_index = _column_label_to_index(column_label)
-    max_len = 0
+        return {}
+    max_lengths: dict[int, int] = {}
     for row in iter_rows():
         for cell in row:
             column_index = _extract_openpyxl_cell_column_index(cell)
-            if column_index != target_index:
+            if column_index is None or column_index not in target_indexes:
                 continue
             cell_value = getattr(cell, "value", None)
             if _is_blank_cell_value(cell_value):
                 continue
-            max_len = max(max_len, _text_display_length(cell_value))
+            text_len = _text_display_length(cell_value)
+            prev = max_lengths.get(column_index, 0)
+            if text_len > prev:
+                max_lengths[column_index] = text_len
+    return max_lengths
+
+
+def _resolve_openpyxl_estimated_width(
+    column_dimension: OpenpyxlColumnDimensionProtocol, max_len: int
+) -> float:
+    """Resolve estimated width from max text length or current default width."""
     if max_len <= 0:
-        default_width = getattr(sheet.column_dimensions[column_label], "width", None)
+        default_width = getattr(column_dimension, "width", None)
         if isinstance(default_width, int | float) and default_width > 0:
             return float(default_width)
         return 8.43

@@ -115,6 +115,32 @@ def test_run_make_keeps_sheet1_when_matching_add_sheet_exists(
         workbook.close()
 
 
+def test_run_make_keeps_sheet1_when_add_sheet_differs_only_by_case(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    out_path = tmp_path / "book.xlsx"
+    result = run_make(
+        MakeRequest(
+            out_path=out_path,
+            sheet="Data",
+            ops=[
+                PatchOp(op="add_sheet", sheet="data"),
+                PatchOp(op="set_value", sheet="data", cell="A1", value="ok"),
+            ],
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+    assert result.error is None
+    workbook = load_workbook(result.out_path)
+    try:
+        assert "Sheet1" in workbook.sheetnames
+        assert "data" in workbook.sheetnames
+        assert workbook["data"]["A1"].value == "ok"
+    finally:
+        workbook.close()
+
+
 def test_run_make_conflict_overwrite(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
