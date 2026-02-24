@@ -1216,3 +1216,53 @@ def test_warmup_exstruct_imports(monkeypatch: pytest.MonkeyPatch) -> None:
     server._warmup_exstruct()
     assert "exstruct.core.cells" in calls
     assert "exstruct.core.integrate" in calls
+
+
+def test_normalize_patch_op_aliases_helper_covers_all_alias_paths() -> None:
+    op = {
+        "op": "set_dimensions",
+        "sheet": "Data",
+        "row": [1],
+        "height": 20,
+        "col": ["A", 2],
+        "width": 18,
+    }
+    normalized = server._normalize_patch_op_aliases(op, index=0)
+    assert normalized["rows"] == [1]
+    assert normalized["row_height"] == 20
+    assert normalized["columns"] == ["A", 2]
+    assert normalized["column_width"] == 18
+    assert "row" not in normalized
+    assert "col" not in normalized
+    assert "height" not in normalized
+    assert "width" not in normalized
+
+
+def test_normalize_draw_grid_border_range_rejects_non_string() -> None:
+    op_data: dict[str, object] = {"op": "draw_grid_border", "range": 123}
+    with pytest.raises(ValueError, match="range must be a string A1 range"):
+        server._normalize_draw_grid_border_range(op_data, index=2)
+
+
+def test_parse_a1_range_geometry_normalizes_reverse_range() -> None:
+    base_cell, row_count, col_count = server._parse_a1_range_geometry("C3:A1", index=0)
+    assert base_cell == "A1"
+    assert row_count == 3
+    assert col_count == 3
+
+
+def test_parse_a1_range_geometry_rejects_invalid_shape() -> None:
+    with pytest.raises(ValueError, match="draw_grid_border range must be like"):
+        server._parse_a1_range_geometry("A1", index=1)
+
+
+def test_split_a1_cell_rejects_invalid_reference() -> None:
+    with pytest.raises(ValueError, match="invalid cell reference"):
+        server._split_a1_cell("1A", index=3)
+
+
+def test_parse_patch_op_json_and_error_message_helpers() -> None:
+    parsed = server._parse_patch_op_json('{"op":"add_sheet","sheet":"S1"}', index=0)
+    assert parsed == {"op": "add_sheet", "sheet": "S1"}
+    message = server._build_patch_op_error_message(5, "bad input")
+    assert message.startswith("Invalid patch operation at ops[5]: bad input")
