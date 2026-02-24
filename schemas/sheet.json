@@ -751,6 +751,14 @@
       "default": null,
       "description": "Merged cell ranges on the sheet."
     },
+    "merged_ranges": {
+      "description": "Merged ranges in A1 notation (e.g., 'A1:C3'). Used in alpha_col-oriented output.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Merged Ranges",
+      "type": "array"
+    },
     "print_areas": {
       "description": "User-defined print areas.",
       "items": {
