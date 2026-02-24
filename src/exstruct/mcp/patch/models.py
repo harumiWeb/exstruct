@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from exstruct.mcp.patch_runner import (
+from .legacy_runner import (
     AlignmentSnapshot,
     BorderSideSnapshot,
     BorderSnapshot,

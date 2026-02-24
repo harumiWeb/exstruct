@@ -63,7 +63,7 @@
 
 完了条件:
 - [x] `patch_runner.py` の主責務が公開互換維持のみになっている
-- [ ] engine 分岐/実装が `service.py` と `engine/*` に分離されている
+- [x] engine 分岐/実装が `service.py` と `engine/*` に分離されている
 
 ## 5. テスト再配置と追加
 
@@ -100,8 +100,8 @@
 
 ## 8. レガシー実装完全廃止（Phase 2）
 
-- [ ] `src/exstruct/mcp/patch/legacy_runner.py` 依存の棚卸し（import/呼び出し元を全列挙）
-- [ ] `patch/service.py` / `patch/engine/*` の `legacy_runner` 依存を新モジュール群へ置換
+- [x] `src/exstruct/mcp/patch/legacy_runner.py` 依存の棚卸し（import/呼び出し元を全列挙）
+- [x] `patch/service.py` / `patch/engine/*` の `legacy_runner` 依存を新モジュール群へ置換
 - [ ] `patch/models.py` の `patch_runner` 経由 import を廃止し、実体モデル定義へ移行
 - [ ] `patch_runner.py` の monkeypatch 互換レイヤを段階的に削除（必要な公開 API は維持）
 - [ ] `tests/mcp/test_patch_runner.py` の私有関数前提テストを責務別テストへ移管

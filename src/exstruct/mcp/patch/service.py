@@ -3,8 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from exstruct.mcp.io import PathPolicy
-import exstruct.mcp.patch.legacy_runner as runner
-from exstruct.mcp.patch.legacy_runner import (
+
+from . import runtime
+from .engine.openpyxl_engine import apply_openpyxl_engine
+from .engine.xlwings_engine import apply_xlwings_engine
+from .models import (
     FormulaIssue,
     MakeRequest,
     PatchDiffItem,
@@ -13,21 +16,18 @@ from exstruct.mcp.patch.legacy_runner import (
     PatchRequest,
     PatchResult,
 )
-
-from .engine.openpyxl_engine import apply_openpyxl_engine
-from .engine.xlwings_engine import apply_xlwings_engine
 from .types import PatchOpType
 
 
 def run_make(request: MakeRequest, *, policy: PathPolicy | None = None) -> PatchResult:
     """Create a new workbook and apply patch operations in one call."""
-    resolved_output = runner._resolve_make_output_path(request.out_path, policy=policy)
-    runner._ensure_supported_extension(resolved_output)
-    runner._validate_make_request_constraints(request, resolved_output)
-    seed_path = runner._build_make_seed_path(resolved_output)
-    initial_sheet_name = runner._resolve_make_initial_sheet_name(request)
+    resolved_output = runtime.resolve_make_output_path(request.out_path, policy=policy)
+    runtime.ensure_supported_extension(resolved_output)
+    runtime.validate_make_request_constraints(request, resolved_output)
+    seed_path = runtime.build_make_seed_path(resolved_output)
+    initial_sheet_name = runtime.resolve_make_initial_sheet_name(request)
     try:
-        runner._create_seed_workbook(
+        runtime.create_seed_workbook(
             seed_path,
             resolved_output.suffix.lower(),
             initial_sheet_name=initial_sheet_name,
@@ -55,35 +55,35 @@ def run_patch(
     request: PatchRequest, *, policy: PathPolicy | None = None
 ) -> PatchResult:
     """Run a patch operation and write the updated workbook."""
-    resolved_input = runner._resolve_input_path(request.xlsx_path, policy=policy)
-    runner._ensure_supported_extension(resolved_input)
-    output_path = runner._resolve_output_path(
+    resolved_input = runtime.resolve_input_path(request.xlsx_path, policy=policy)
+    runtime.ensure_supported_extension(resolved_input)
+    output_path = runtime.resolve_output_path(
         resolved_input,
         out_dir=request.out_dir,
         out_name=request.out_name,
         policy=policy,
     )
     warnings: list[str] = []
-    runner._append_large_ops_warning(warnings, request.ops)
+    runtime.append_large_ops_warning(warnings, request.ops)
     effective_request = request
-    if request.backend == "com" and runner._contains_apply_table_style_op(request.ops):
+    if request.backend == "com" and runtime.contains_apply_table_style_op(request.ops):
         warnings.append(
             "backend='com' does not support apply_table_style; falling back to openpyxl."
         )
         effective_request = request.model_copy(update={"backend": "openpyxl"})
-    if resolved_input.suffix.lower() == ".xls" and runner._contains_design_ops(
+    if resolved_input.suffix.lower() == ".xls" and runtime.contains_design_ops(
         effective_request.ops
     ):
         raise ValueError(
             "Design operations are not supported for .xls files. Convert to .xlsx/.xlsm first."
         )
-    com = runner.get_com_availability()
-    selected_engine = runner._select_patch_engine(
+    com = runtime.get_com_availability()
+    selected_engine = runtime.select_patch_engine(
         request=effective_request,
         input_path=resolved_input,
         com_available=com.available,
     )
-    output_path, warning, skipped = runner._apply_conflict_policy(
+    output_path, warning, skipped = runtime.apply_conflict_policy(
         output_path, effective_request.on_conflict
     )
     if warning:
@@ -107,12 +107,12 @@ def run_patch(
         and effective_request.backend == "auto"
     ):
         warnings.append(f"COM unavailable: {com.reason}")
-    if selected_engine == "openpyxl" and runner._requires_openpyxl_backend(
+    if selected_engine == "openpyxl" and runtime.requires_openpyxl_backend(
         effective_request
     ):
         warnings.append("Using openpyxl backend due to patch request constraints.")
 
-    runner._ensure_output_dir(output_path)
+    runtime.ensure_output_dir(output_path)
     if selected_engine == "com":
         try:
             diff = apply_xlwings_engine(
@@ -129,7 +129,7 @@ def run_patch(
                 warnings=warnings,
                 engine="com",
             )
-        except runner.PatchOpError as exc:
+        except runtime.PatchOpError as exc:
             return PatchResult(
                 out_path=str(output_path),
                 patch_diff=[],
@@ -140,7 +140,7 @@ def run_patch(
                 engine="com",
             )
         except Exception as exc:
-            if runner._allow_auto_openpyxl_fallback(effective_request, resolved_input):
+            if runtime.allow_auto_openpyxl_fallback(effective_request, resolved_input):
                 warnings.append(
                     f"COM patch failed; falling back to openpyxl. ({exc!r})"
                 )
@@ -173,7 +173,7 @@ def _apply_with_openpyxl(
             input_path,
             output_path,
         )
-    except runner.PatchOpError as exc:
+    except runtime.PatchOpError as exc:
         return PatchResult(
             out_path=str(output_path),
             patch_diff=[],
@@ -267,7 +267,7 @@ def _op_targets_issue_cell(op: PatchOp, sheet: str, cell: str) -> bool:
         return op.cell == cell
     if op.range is None:
         return False
-    for row in runner._expand_range_coordinates(op.range):
+    for row in runtime.expand_range_coordinates(op.range):
         if cell in row:
             return True
     return False

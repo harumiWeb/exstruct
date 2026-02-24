@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import exstruct.mcp.patch.legacy_runner as runner
-from exstruct.mcp.patch.legacy_runner import PatchOp
+from exstruct.mcp.patch.models import PatchOp
+from exstruct.mcp.patch.runtime import apply_ops_xlwings
 
 
 def apply_xlwings_engine(
@@ -13,13 +13,7 @@ def apply_xlwings_engine(
     auto_formula: bool,
 ) -> list[object]:
     """Apply patch operations using the existing xlwings backend implementation."""
-    diff = runner._apply_ops_xlwings(
-        input_path,
-        output_path,
-        ops,
-        auto_formula,
-    )
-    return list(diff)
+    return apply_ops_xlwings(input_path, output_path, ops, auto_formula)
 
 
 __all__ = ["apply_xlwings_engine"]
