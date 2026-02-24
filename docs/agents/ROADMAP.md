@@ -50,9 +50,21 @@
 
 ## v0.4.0
 
-- MCPサーバー機能追加
+- MCPサーバー機能追加(Read Only MVP)
 
 ## v0.5.0
+
+- MCPサーバー機能強化（Write）
+
+## v0.5.5
+
+- MCPサーバーの機能強化（図形、グラフ、画像対応）
+
+## v0.6.0
+
+- バックエンドに LibreOffice を追加（COM と選択可能に）
+
+## v0.8.0
 
 - Excel Form Controls 解析
 
