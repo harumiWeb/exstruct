@@ -316,6 +316,18 @@ class XlwingsWorkbookProtocol(Protocol):
 
 
 @runtime_checkable
+class XlwingsAppProtocol(Protocol):
+    """Protocol for xlwings app lifecycle used during cleanup."""
+
+    display_alerts: bool
+    screen_updating: bool
+
+    def quit(self) -> None: ...  # noqa: N802
+
+    def kill(self) -> None: ...  # noqa: N802
+
+
+@runtime_checkable
 class XlwingsFontApiProtocol(Protocol):
     """Protocol for xlwings COM font API."""
 
@@ -1750,17 +1762,8 @@ def _create_xls_seed_with_com(seed_path: Path, *, initial_sheet_name: str) -> No
     except Exception as exc:
         raise RuntimeError(f"COM workbook creation failed: {exc}") from exc
     finally:
-        try:
-            workbook.close()
-        except Exception:
-            pass
-        try:
-            app.quit()
-        except Exception:
-            try:
-                app.kill()
-            except Exception:
-                pass
+        _close_workbook_safely(workbook)
+        _quit_app_safely(app)
 
 
 def _normalize_output_name(input_path: Path, out_name: str | None) -> str:
@@ -3823,6 +3826,25 @@ def _xlwings_cell_value(cell: XlwingsRangeProtocol) -> PatchValue | None:
     return PatchValue(kind="value", value=value)
 
 
+def _close_workbook_safely(workbook: XlwingsWorkbookProtocol) -> None:
+    """Close workbook and ignore cleanup failures."""
+    try:
+        workbook.close()
+    except Exception:
+        return
+
+
+def _quit_app_safely(app: XlwingsAppProtocol) -> None:
+    """Quit xlwings app and fallback to force-kill on failure."""
+    try:
+        app.quit()
+    except Exception:
+        try:
+            app.kill()
+        except Exception:
+            return
+
+
 @contextmanager
 def _xlwings_workbook(file_path: Path) -> Iterator[XlwingsWorkbookProtocol]:
     """Open an Excel workbook with a dedicated COM app."""
@@ -3833,17 +3855,8 @@ def _xlwings_workbook(file_path: Path) -> Iterator[XlwingsWorkbookProtocol]:
     try:
         yield workbook
     finally:
-        try:
-            workbook.close()
-        except Exception:
-            pass
-        try:
-            app.quit()
-        except Exception:
-            try:
-                app.kill()
-            except Exception:
-                pass
+        _close_workbook_safely(workbook)
+        _quit_app_safely(app)
 
 
 class PatchOpError(ValueError):

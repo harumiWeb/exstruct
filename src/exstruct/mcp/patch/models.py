@@ -7,8 +7,6 @@ from typing import Protocol, runtime_checkable
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from exstruct.cli.availability import get_com_availability as get_com_availability
-
 from ..extract_runner import OnConflictPolicy
 from ..shared.a1 import (
     column_index_to_label as _shared_column_index_to_label,
