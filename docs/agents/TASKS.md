@@ -181,3 +181,64 @@
 - [ ] `uv run pytest -m "not com and not render" --cov=exstruct --cov-report=xml --cov-fail-under=80` 実行
 - [x] `uv run coverage report -m` で改善確認
 - [ ] 完了条件: 全体80%以上、主要低下ファイルの改善、静的解析0エラー
+
+---
+
+## Epic: PR #65 Review Follow-up (Stabilization)
+
+## 0. レビュー棚卸し（GitHub MCP）
+
+- [ ] PR #65 の unresolved review threads を一覧化（2026-02-24基準）
+- [ ] 指摘を `P0（即対応）/P1（同PR対応）/P2（別Epic）` に分類
+- [ ] 分類結果を `FEATURE_SPEC.md` と同期
+
+完了条件:
+- [ ] 指摘一覧・優先度・対応方針が文書化されている
+
+## 1. P0: 機能不具合修正
+
+- [ ] `src/exstruct/mcp/patch/service.py` で `apply_table_style` を含む `backend="auto"` 要求を openpyxl へルーティング
+- [ ] Windows/COM 有効時の回帰テストを追加（`tests/mcp/patch/test_service.py`）
+- [ ] 既存 `backend="com"` fallback との挙動差分がないことを確認
+
+完了条件:
+- [ ] `apply_table_style` が `backend="auto"` で失敗しない
+- [ ] 追加テストが安定して通る
+
+## 2. P0: ドキュメント整合修正
+
+- [ ] `docs/agents/LEGACY_DEPENDENCY_INVENTORY.md` の `legacy_runner` 前提記述を現行実装へ更新
+- [ ] `docs/mcp.md` Mistake catalog の alias 記述矛盾（`color` / `horizontal` / `vertical`）を解消
+- [ ] ドキュメント内の参照パス整合を再確認
+
+完了条件:
+- [ ] 指摘対象ドキュメントが実装仕様と一致している
+
+## 3. P1: 低リスク品質改善（同PR）
+
+- [ ] `src/exstruct/mcp/server.py` の重複・未使用正規化 helper 群を削除し `patch.normalize` に一本化
+- [ ] `_register_tools` docstring に `default_on_conflict` / `artifact_bridge_dir` を追記
+- [ ] 変更差分内の docstring 欠落を補完（テスト含む）
+
+完了条件:
+- [ ] 重複ロジック削減後も既存テストが回帰しない
+- [ ] docstring 指摘の主要残件が解消される
+
+## 4. P2: 別Epicへ分離する設計課題
+
+- [ ] `patch/__init__.py` 公開API（正規化 helper 公開の是非）を設計判断
+- [ ] engine 戻り値の BaseModel 化（tuple 返却廃止）を別PRタスク化
+- [ ] `shared/a1.py` 戻り値モデル化と呼び出し側移行を別PRタスク化
+- [ ] `patch/internal.py` の外部境界型（`Any` + 正規化）再設計を別PRタスク化
+
+完了条件:
+- [ ] 各課題に owner / 期限 / 受け入れ基準が付与された別タスクが起票済み
+
+## 5. 検証とクローズ
+
+- [ ] `uv run task precommit-run` 実行
+- [ ] 必要テスト（patch/service/server/docs 関連）を実行
+- [ ] GitHub 上で P0 指摘を resolve、P1/P2 は方針コメントを残す
+
+完了条件:
+- [ ] P0 が全て完了し、PR #65 のマージ阻害が解消されている

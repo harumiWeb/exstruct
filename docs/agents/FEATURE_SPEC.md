@@ -229,3 +229,83 @@ MCP 大規模リファクタリング後、全体カバレッジが 80% から 7
    対策: 不足テストを同PRで同時投入する。
 3. リスク: 互換レイヤー除外に後退する。
    対策: 恒久除外を禁止し、必要時は別承認で期限付き措置とする。
+
+---
+
+## Feature Name
+
+PR #65 Review Follow-up (Stabilization)
+
+## 背景
+
+2026-02-24 時点で PR #65 には GitHub 上で未解決レビュー指摘が残っている。
+主要な論点は次の 3 系統。
+
+1. 機能不具合: `backend="auto"` かつ `apply_table_style` で COM が選択されると失敗する。
+2. ドキュメント不整合: `legacy_runner` 参照や alias 許容/禁止の記述が実装と一致しない。
+3. 設計改善提案: BaseModel 境界、tuple/dict 返却、Protocol 整理、A1戻り値モデル化など。
+
+## 目的
+
+1. マージ阻害となる不具合・矛盾（P0）を優先解消する。
+2. 低リスクで回収できる品質改善（P1）を同PRで解消する。
+3. 変更波及の大きい設計変更（P2）は別Epicへ分離し、短期安定性を優先する。
+
+## 対応方針（指摘分類）
+
+### P0: 同PRで必ず対応
+
+1. `src/exstruct/mcp/patch/service.py`
+   1. `apply_table_style` を含む場合、`backend="auto"` でも openpyxl 側へルーティングする。
+2. `docs/agents/LEGACY_DEPENDENCY_INVENTORY.md`
+   1. 削除済み `legacy_runner.py` 前提の記述を現行構成へ修正する。
+3. `docs/mcp.md`
+   1. Mistake catalog と alias 仕様の矛盾（`color`, `horizontal`, `vertical`）を解消する。
+
+### P1: 同PRで実施する低リスク改善
+
+1. `src/exstruct/mcp/server.py`
+   1. 未使用・重複の正規化 helper 群を削除し、`patch.normalize` への一元化を明確化する。
+2. Docstring 指摘
+   1. 変更差分内で欠落している docstring を追加し、品質ゲートの指摘ノイズを減らす。
+3. `src/exstruct/mcp/server.py::_register_tools`
+   1. 追加済み引数（`default_on_conflict`, `artifact_bridge_dir`）を docstring に反映する。
+
+### P2: 別Epicへ分離（今回は設計判断のみ）
+
+1. `patch/__init__.py` 公開 API 方針
+   1. 正規化 helper を公開し続けるか、内部化するかを決定する。
+2. engine 戻り値の BaseModel 化（tuple 返却廃止）。
+3. `shared/a1.py` 戻り値の BaseModel 化と呼び出し側移行。
+4. `patch/internal.py` の外部ライブラリ境界（`Any` 受け + 内部正規化）再設計。
+
+## スコープ
+
+### In Scope
+
+1. P0 の不具合修正とドキュメント整合。
+2. P1 の低リスクなコード整理・docstring 修正。
+3. P2 の設計判断結果をタスク化し、別Epicへ登録。
+
+### Out of Scope
+
+1. P2 の大規模設計変更の実装完了。
+2. 公開 API の破壊的変更。
+3. リリース範囲を拡大する新機能追加。
+
+## 受け入れ基準（Acceptance Criteria）
+
+1. `backend="auto"` + `apply_table_style` が Windows/COM 環境でも失敗しない。
+2. `LEGACY_DEPENDENCY_INVENTORY.md` と `docs/mcp.md` の記述が現行実装と一致する。
+3. PR #65 の P0 指摘が GitHub 上で解消済みになる。
+4. P1 指摘は対応完了、または理由付きで deferred が明記される。
+5. `uv run task precommit-run` が成功する。
+
+## リスクと対策
+
+1. リスク: P1 範囲が膨張し、P0 対応が遅延する。
+   1. 対策: P0 完了前は P2 由来変更を着手しない。
+2. リスク: 設計変更を同PRに混在させ、回帰リスクが上がる。
+   1. 対策: P2 は issue 化して別PRへ分離する。
+3. リスク: docstring 修正が大量化してレビュー負荷が上がる。
+   1. 対策: 変更差分に限定して優先対応し、残件は別タスクへ切り出す。
