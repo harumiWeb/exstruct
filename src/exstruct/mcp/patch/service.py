@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TypeVar
+
+from pydantic import BaseModel, ValidationError
 
 from exstruct.mcp.io import PathPolicy
 
@@ -17,6 +20,8 @@ from .models import (
     PatchResult,
 )
 from .types import PatchOpType
+
+TModel = TypeVar("TModel", bound=BaseModel)
 
 
 def run_make(request: MakeRequest, *, policy: PathPolicy | None = None) -> PatchResult:
@@ -123,20 +128,21 @@ def run_patch(
             )
             return PatchResult(
                 out_path=str(output_path),
-                patch_diff=[item for item in diff if isinstance(item, PatchDiffItem)],
+                patch_diff=_coerce_patch_diff_items(diff),
                 inverse_ops=[],
                 formula_issues=[],
                 warnings=warnings,
                 engine="com",
             )
         except runtime.PatchOpError as exc:
+            error = _coerce_patch_error_detail(exc.detail)
             return PatchResult(
                 out_path=str(output_path),
                 patch_diff=[],
                 inverse_ops=[],
                 formula_issues=[],
                 warnings=warnings,
-                error=exc.detail,
+                error=error,
                 engine="com",
             )
         except Exception as exc:
@@ -174,13 +180,14 @@ def _apply_with_openpyxl(
             output_path,
         )
     except runtime.PatchOpError as exc:
+        error = _coerce_patch_error_detail(exc.detail)
         return PatchResult(
             out_path=str(output_path),
             patch_diff=[],
             inverse_ops=[],
             formula_issues=[],
             warnings=warnings,
-            error=exc.detail,
+            error=error,
             engine="openpyxl",
         )
     except ValueError:
@@ -192,11 +199,9 @@ def _apply_with_openpyxl(
     except Exception as exc:
         raise RuntimeError(f"openpyxl patch failed: {exc}") from exc
 
-    patch_diff = [item for item in diff if isinstance(item, PatchDiffItem)]
-    typed_inverse_ops = [item for item in inverse_ops if isinstance(item, PatchOp)]
-    typed_formula_issues = [
-        item for item in formula_issues if isinstance(item, FormulaIssue)
-    ]
+    patch_diff = _coerce_patch_diff_items(diff)
+    typed_inverse_ops = _coerce_inverse_ops(inverse_ops)
+    typed_formula_issues = _coerce_formula_issues(formula_issues)
     warnings.extend(op_warnings)
     if not request.dry_run:
         warnings.append(
@@ -271,6 +276,48 @@ def _op_targets_issue_cell(op: PatchOp, sheet: str, cell: str) -> bool:
         if cell in row:
             return True
     return False
+
+
+def _coerce_patch_diff_items(items: list[object]) -> list[PatchDiffItem]:
+    """Coerce backend diff items into canonical PatchDiffItem models."""
+    return _coerce_model_list(items, PatchDiffItem)
+
+
+def _coerce_inverse_ops(items: list[object]) -> list[PatchOp]:
+    """Coerce backend inverse ops into canonical PatchOp models."""
+    return _coerce_model_list(items, PatchOp)
+
+
+def _coerce_formula_issues(items: list[object]) -> list[FormulaIssue]:
+    """Coerce backend formula findings into canonical FormulaIssue models."""
+    return _coerce_model_list(items, FormulaIssue)
+
+
+def _coerce_patch_error_detail(detail: object) -> PatchErrorDetail | None:
+    """Coerce backend error detail into canonical PatchErrorDetail model."""
+    coerced = _coerce_model_list([detail], PatchErrorDetail)
+    if not coerced:
+        return None
+    return coerced[0]
+
+
+def _coerce_model_list(items: list[object], model_cls: type[TModel]) -> list[TModel]:
+    """Convert model-like items to target Pydantic models and skip invalid entries."""
+    coerced: list[TModel] = []
+    for item in items:
+        try:
+            if isinstance(item, model_cls):
+                coerced.append(item)
+                continue
+            source: object
+            if isinstance(item, BaseModel):
+                source = item.model_dump(mode="python")
+            else:
+                source = item
+            coerced.append(model_cls.model_validate(source))
+        except ValidationError:
+            continue
+    return coerced
 
 
 __all__ = ["run_make", "run_patch"]

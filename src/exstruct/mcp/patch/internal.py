@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from copy import copy
 from pathlib import Path
 import re
-from typing import Protocol, cast, runtime_checkable
+from typing import Any, Protocol, cast, runtime_checkable
 from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -1404,7 +1404,7 @@ def run_make(request: MakeRequest, *, policy: PathPolicy | None = None) -> Patch
     """
     from .service import run_make as _service_run_make
 
-    return _service_run_make(request, policy=policy)
+    return cast(PatchResult, _service_run_make(cast(Any, request), policy=policy))
 
 
 def run_patch(
@@ -1426,7 +1426,7 @@ def run_patch(
     """
     from .service import run_patch as _service_run_patch
 
-    return _service_run_patch(request, policy=policy)
+    return cast(PatchResult, _service_run_patch(cast(Any, request), policy=policy))
 
 
 def _apply_with_openpyxl(

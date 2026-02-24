@@ -263,7 +263,7 @@ MCP の patch/make で利用するモデル群は、後方互換のため
 
 実体の配置は以下です。
 
-- 実装本体: `src/exstruct/mcp/patch/legacy_runner.py`
+- 実体モデル: `src/exstruct/mcp/patch/models.py`
 - 互換ファサード: `src/exstruct/mcp/patch_runner.py`
 - サービス層: `src/exstruct/mcp/patch/service.py`
 

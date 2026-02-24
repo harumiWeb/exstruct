@@ -102,18 +102,18 @@
 
 - [x] `src/exstruct/mcp/patch/legacy_runner.py` 依存の棚卸し（import/呼び出し元を全列挙）
 - [x] `patch/service.py` / `patch/engine/*` の `legacy_runner` 依存を新モジュール群へ置換
-- [ ] `patch/models.py` の `patch_runner` 経由 import を廃止し、実体モデル定義へ移行
+- [x] `patch/models.py` の `patch_runner` 経由 import を廃止し、実体モデル定義へ移行
 - [x] `patch_runner.py` の monkeypatch 互換レイヤを段階的に削除（必要な公開 API は維持）
 - [x] `tests/mcp/test_patch_runner.py` の私有関数前提テストを責務別テストへ移管
 - [x] `src/exstruct/mcp/patch/ops/*` を導入し、op 実装を backend 別に分離
-- [ ] `legacy_runner.py` を削除し、不要な再エクスポートを整理
+- [x] `legacy_runner.py` を削除し、不要な再エクスポートを整理
 - [x] 互換性要件を満たしたまま `uv run task precommit-run` と回帰テストを再通過
 
 完了条件:
-- [ ] `legacy_runner.py` がリポジトリから削除されている
-- [ ] `patch_runner.py` が公開 API の薄い入口のみを保持している
-- [ ] patch 実装の依存方向が `service -> engine/ops` に一本化されている
-- [ ] 既存 MCP I/F 互換とテスト成功が維持されている
+- [x] `legacy_runner.py` がリポジトリから削除されている
+- [x] `patch_runner.py` が公開 API の薄い入口のみを保持している
+- [x] patch 実装の依存方向が `service -> engine/ops` に一本化されている
+- [x] 既存 MCP I/F 互換とテスト成功が維持されている
 
 ## 優先順位
 

@@ -7,8 +7,8 @@ import pytest
 
 from exstruct.cli.availability import ComAvailability
 from exstruct.mcp.io import PathPolicy
-from exstruct.mcp.patch import legacy_runner
-from exstruct.mcp.patch.models import PatchOp, PatchRequest
+from exstruct.mcp.patch import internal as legacy_runner
+from exstruct.mcp.patch.internal import PatchOp, PatchRequest
 
 
 def _create_workbook(path: Path) -> None:

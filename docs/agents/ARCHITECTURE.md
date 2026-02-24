@@ -76,7 +76,7 @@ CLI エントリポイント
 Patch 系は `src/exstruct/mcp/patch/` に責務分離して実装する。
 
 - `patch_runner.py` → 互換性維持用ファサード（既存 import 経路を維持）
-- `patch/legacy_runner.py` → 既存 patch 実装の後方互換レイヤ
+- `patch/internal.py` → patch 実装の内部互換レイヤ（非公開）
 - `patch/service.py` → `run_patch` / `run_make` のオーケストレーション
 - `patch/runtime.py` → path/backend 選択など実行時ユーティリティ集約
 - `patch/engine/openpyxl_engine.py` → openpyxl 実行境界

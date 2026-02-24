@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, cast
 
-from exstruct.mcp.patch import legacy_runner as _legacy
+from exstruct.mcp.patch import internal as _internal
 from exstruct.mcp.patch.models import PatchRequest
 
 
@@ -12,8 +13,8 @@ def apply_openpyxl_ops(
     output_path: Path,
 ) -> tuple[list[object], list[object], list[object], list[str]]:
     """Apply patch operations using the openpyxl implementation."""
-    diff, inverse_ops, formula_issues, op_warnings = _legacy._apply_ops_openpyxl(
-        request,
+    diff, inverse_ops, formula_issues, op_warnings = _internal._apply_ops_openpyxl(
+        cast(Any, request),
         input_path,
         output_path,
     )

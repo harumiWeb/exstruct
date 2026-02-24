@@ -12,7 +12,7 @@ from exstruct.mcp.patch.ops.xlwings_ops import apply_xlwings_ops
 def test_apply_openpyxl_ops_delegates_to_legacy(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import exstruct.mcp.patch.legacy_runner as legacy_runner
+    import exstruct.mcp.patch.internal as legacy_runner
 
     expected = (("diff",), ("inverse",), ("issues",), ("warn",))
 
@@ -38,7 +38,7 @@ def test_apply_openpyxl_ops_delegates_to_legacy(
 def test_apply_xlwings_ops_delegates_to_legacy(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import exstruct.mcp.patch.legacy_runner as legacy_runner
+    import exstruct.mcp.patch.internal as legacy_runner
 
     expected = ("diff",)
 

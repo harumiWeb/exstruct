@@ -1,68 +1,69 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, cast
 
 from exstruct.cli.availability import ComAvailability
 from exstruct.mcp.extract_runner import OnConflictPolicy
 from exstruct.mcp.io import PathPolicy
 
-from . import legacy_runner as _legacy
+from . import internal as _internal
 from .models import MakeRequest, PatchOp, PatchRequest
 from .types import PatchEngine
 
-PatchOpError = _legacy.PatchOpError
+PatchOpError = _internal.PatchOpError
 
 
 def get_com_availability() -> ComAvailability:
     """Return COM availability via the compatibility layer."""
-    return _legacy.get_com_availability()
+    return _internal.get_com_availability()
 
 
 def append_large_ops_warning(warnings: list[str], ops: list[PatchOp]) -> None:
     """Append warnings when patch operation count is large."""
-    _legacy._append_large_ops_warning(warnings, ops)
+    _internal._append_large_ops_warning(warnings, cast(list[Any], ops))
 
 
 def contains_apply_table_style_op(ops: list[PatchOp]) -> bool:
     """Return whether operations include apply_table_style."""
-    return _legacy._contains_apply_table_style_op(ops)
+    return _internal._contains_apply_table_style_op(cast(list[Any], ops))
 
 
 def contains_design_ops(ops: list[PatchOp]) -> bool:
     """Return whether operations include design-affecting ops."""
-    return _legacy._contains_design_ops(ops)
+    return _internal._contains_design_ops(cast(list[Any], ops))
 
 
 def resolve_make_output_path(path: Path, *, policy: PathPolicy | None) -> Path:
     """Resolve output path for make requests."""
-    return _legacy._resolve_make_output_path(path, policy=policy)
+    return _internal._resolve_make_output_path(path, policy=policy)
 
 
 def ensure_supported_extension(path: Path) -> None:
     """Validate workbook extension for patch/make operations."""
-    _legacy._ensure_supported_extension(path)
+    _internal._ensure_supported_extension(path)
 
 
 def validate_make_request_constraints(request: MakeRequest, output_path: Path) -> None:
     """Validate make-request constraints against target output."""
-    _legacy._validate_make_request_constraints(request, output_path)
+    _internal._validate_make_request_constraints(cast(Any, request), output_path)
 
 
 def build_make_seed_path(output_path: Path) -> Path:
     """Return temporary seed workbook path for make operations."""
-    return _legacy._build_make_seed_path(output_path)
+    return _internal._build_make_seed_path(output_path)
 
 
 def resolve_make_initial_sheet_name(request: MakeRequest) -> str:
     """Resolve initial sheet name for make operations."""
-    return _legacy._resolve_make_initial_sheet_name(request)
+    return _internal._resolve_make_initial_sheet_name(cast(Any, request))
 
 
 def create_seed_workbook(
     seed_path: Path, extension: str, *, initial_sheet_name: str
 ) -> None:
     """Create seed workbook used by make operation orchestration."""
-    _legacy._create_seed_workbook(
+    _internal._create_seed_workbook(
         seed_path,
         extension,
         initial_sheet_name=initial_sheet_name,
@@ -71,7 +72,7 @@ def create_seed_workbook(
 
 def resolve_input_path(path: Path, *, policy: PathPolicy | None) -> Path:
     """Resolve and validate input workbook path."""
-    return _legacy._resolve_input_path(path, policy=policy)
+    return _internal._resolve_input_path(path, policy=policy)
 
 
 def resolve_output_path(
@@ -82,7 +83,7 @@ def resolve_output_path(
     policy: PathPolicy | None,
 ) -> Path:
     """Resolve and validate output workbook path."""
-    return _legacy._resolve_output_path(
+    return _internal._resolve_output_path(
         input_path,
         out_dir=out_dir,
         out_name=out_name,
@@ -94,8 +95,8 @@ def select_patch_engine(
     *, request: PatchRequest, input_path: Path, com_available: bool
 ) -> PatchEngine:
     """Select runtime patch engine based on request and environment."""
-    return _legacy._select_patch_engine(
-        request=request,
+    return _internal._select_patch_engine(
+        request=cast(Any, request),
         input_path=input_path,
         com_available=com_available,
     )
@@ -105,27 +106,27 @@ def apply_conflict_policy(
     output_path: Path, on_conflict: OnConflictPolicy
 ) -> tuple[Path, str | None, bool]:
     """Apply conflict policy to an output path."""
-    return _legacy._apply_conflict_policy(output_path, on_conflict)
+    return _internal._apply_conflict_policy(output_path, on_conflict)
 
 
 def requires_openpyxl_backend(request: PatchRequest) -> bool:
     """Return whether request requires openpyxl backend."""
-    return _legacy._requires_openpyxl_backend(request)
+    return _internal._requires_openpyxl_backend(cast(Any, request))
 
 
 def ensure_output_dir(path: Path) -> None:
     """Ensure parent directory exists for output path."""
-    _legacy._ensure_output_dir(path)
+    _internal._ensure_output_dir(path)
 
 
 def allow_auto_openpyxl_fallback(request: PatchRequest, input_path: Path) -> bool:
     """Return whether COM failures should fallback to openpyxl."""
-    return _legacy._allow_auto_openpyxl_fallback(request, input_path)
+    return _internal._allow_auto_openpyxl_fallback(cast(Any, request), input_path)
 
 
 def expand_range_coordinates(range_ref: str) -> list[list[str]]:
     """Expand an A1 range into 2D cell coordinates."""
-    return _legacy._expand_range_coordinates(range_ref)
+    return _internal._expand_range_coordinates(range_ref)
 
 
 __all__ = [

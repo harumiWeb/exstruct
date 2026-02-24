@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from exstruct.mcp.patch import legacy_runner as _legacy
+from exstruct.mcp.patch import internal as _internal
 
-PatchOpError = _legacy.PatchOpError
+PatchOpError = _internal.PatchOpError
 
 __all__ = ["PatchOpError"]
