@@ -71,7 +71,7 @@
 - [x] `tests/mcp/patch/test_service.py` を追加
 - [x] `tests/mcp/shared/test_a1.py` を追加
 - [x] `tests/mcp/shared/test_output_path.py` を追加
-- [ ] 既存テストを責務別に分割（必要箇所のみ）
+- [x] 既存テストを責務別に分割（必要箇所のみ）
 - [x] `tests/mcp/test_patch_runner.py` の互換観点テストを維持
 
 完了条件:
@@ -103,11 +103,11 @@
 - [x] `src/exstruct/mcp/patch/legacy_runner.py` 依存の棚卸し（import/呼び出し元を全列挙）
 - [x] `patch/service.py` / `patch/engine/*` の `legacy_runner` 依存を新モジュール群へ置換
 - [ ] `patch/models.py` の `patch_runner` 経由 import を廃止し、実体モデル定義へ移行
-- [ ] `patch_runner.py` の monkeypatch 互換レイヤを段階的に削除（必要な公開 API は維持）
-- [ ] `tests/mcp/test_patch_runner.py` の私有関数前提テストを責務別テストへ移管
+- [x] `patch_runner.py` の monkeypatch 互換レイヤを段階的に削除（必要な公開 API は維持）
+- [x] `tests/mcp/test_patch_runner.py` の私有関数前提テストを責務別テストへ移管
 - [x] `src/exstruct/mcp/patch/ops/*` を導入し、op 実装を backend 別に分離
 - [ ] `legacy_runner.py` を削除し、不要な再エクスポートを整理
-- [ ] 互換性要件を満たしたまま `uv run task precommit-run` と回帰テストを再通過
+- [x] 互換性要件を満たしたまま `uv run task precommit-run` と回帰テストを再通過
 
 完了条件:
 - [ ] `legacy_runner.py` がリポジトリから削除されている

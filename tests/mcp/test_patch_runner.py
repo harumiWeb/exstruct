@@ -74,43 +74,6 @@ def test_run_patch_set_value_and_formula(
     assert result.engine == "openpyxl"
 
 
-def test_run_patch_backend_auto_prefers_com(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    input_path = tmp_path / "book.xlsx"
-    _create_workbook(input_path)
-    calls: dict[str, bool] = {}
-
-    monkeypatch.setattr(
-        patch_runner,
-        "get_com_availability",
-        lambda: ComAvailability(available=True, reason=None),
-    )
-
-    def _fake_apply_ops_xlwings(
-        input_path: Path,
-        output_path: Path,
-        ops: list[PatchOp],
-        auto_formula: bool,
-    ) -> list[patch_runner.PatchDiffItem]:
-        calls["com"] = True
-        return []
-
-    monkeypatch.setattr(patch_runner, "_apply_ops_xlwings", _fake_apply_ops_xlwings)
-    result = run_patch(
-        PatchRequest(
-            xlsx_path=input_path,
-            ops=[PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="new")],
-            on_conflict="rename",
-            backend="auto",
-        ),
-        policy=PathPolicy(root=tmp_path),
-    )
-    assert result.error is None
-    assert result.engine == "com"
-    assert calls["com"] is True
-
-
 def test_run_patch_backend_auto_uses_openpyxl_when_com_unavailable(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -196,117 +159,6 @@ def test_patch_request_backend_com_rejects_restore_design_snapshot() -> None:
             ],
             backend="com",
         )
-
-
-def test_run_patch_backend_auto_fallbacks_to_openpyxl_on_com_error(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    input_path = tmp_path / "book.xlsx"
-    _create_workbook(input_path)
-    monkeypatch.setattr(
-        patch_runner,
-        "get_com_availability",
-        lambda: ComAvailability(available=True, reason=None),
-    )
-
-    def _raise_com_error(
-        input_path: Path,
-        output_path: Path,
-        ops: list[PatchOp],
-        auto_formula: bool,
-    ) -> list[patch_runner.PatchDiffItem]:
-        raise RuntimeError("boom")
-
-    monkeypatch.setattr(patch_runner, "_apply_ops_xlwings", _raise_com_error)
-    result = run_patch(
-        PatchRequest(
-            xlsx_path=input_path,
-            ops=[PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="new")],
-            on_conflict="rename",
-            backend="auto",
-        ),
-        policy=PathPolicy(root=tmp_path),
-    )
-    assert result.error is None
-    assert result.engine == "openpyxl"
-    assert any("falling back to openpyxl" in warning for warning in result.warnings)
-
-
-def test_run_patch_backend_com_does_not_fallback_on_com_error(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    input_path = tmp_path / "book.xlsx"
-    _create_workbook(input_path)
-    monkeypatch.setattr(
-        patch_runner,
-        "get_com_availability",
-        lambda: ComAvailability(available=True, reason=None),
-    )
-
-    def _raise_com_error(
-        input_path: Path,
-        output_path: Path,
-        ops: list[PatchOp],
-        auto_formula: bool,
-    ) -> list[patch_runner.PatchDiffItem]:
-        raise RuntimeError("boom")
-
-    monkeypatch.setattr(patch_runner, "_apply_ops_xlwings", _raise_com_error)
-    with pytest.raises(RuntimeError, match=r"COM patch failed"):
-        run_patch(
-            PatchRequest(
-                xlsx_path=input_path,
-                ops=[PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="new")],
-                on_conflict="rename",
-                backend="com",
-            ),
-            policy=PathPolicy(root=tmp_path),
-        )
-
-
-def test_run_patch_backend_com_fallbacks_for_apply_table_style(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    input_path = tmp_path / "book.xlsx"
-    _create_workbook(input_path)
-    _seed_table_source(input_path)
-    monkeypatch.setattr(
-        patch_runner,
-        "get_com_availability",
-        lambda: ComAvailability(available=True, reason=None),
-    )
-
-    def _fail_if_called(
-        input_path: Path,
-        output_path: Path,
-        ops: list[PatchOp],
-        auto_formula: bool,
-    ) -> list[patch_runner.PatchDiffItem]:
-        raise AssertionError("COM backend should not be called for apply_table_style")
-
-    monkeypatch.setattr(patch_runner, "_apply_ops_xlwings", _fail_if_called)
-    result = run_patch(
-        PatchRequest(
-            xlsx_path=input_path,
-            ops=[
-                PatchOp(
-                    op="apply_table_style",
-                    sheet="Sheet1",
-                    range="A1:B3",
-                    style="TableStyleMedium2",
-                    table_name="SalesTable",
-                )
-            ],
-            on_conflict="rename",
-            backend="com",
-        ),
-        policy=PathPolicy(root=tmp_path),
-    )
-    assert result.error is None
-    assert result.engine == "openpyxl"
-    assert any(
-        "does not support apply_table_style" in warning for warning in result.warnings
-    )
 
 
 def test_run_patch_add_sheet_and_set_value(
@@ -1021,57 +873,6 @@ def test_run_patch_auto_fit_columns_accepts_mixed_column_identifiers(
         workbook.close()
 
 
-def test_run_patch_auto_fit_columns_openpyxl_uses_single_pass_collector(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    _disable_com(monkeypatch)
-    input_path = tmp_path / "book.xlsx"
-    _create_workbook(input_path)
-    workbook = load_workbook(input_path)
-    try:
-        sheet = workbook["Sheet1"]
-        sheet["A1"] = "a"
-        sheet["B1"] = "bbbbbbbb"
-        sheet["C1"] = "cccccccccccc"
-        workbook.save(input_path)
-    finally:
-        workbook.close()
-
-    call_count = 0
-    original = patch_runner._collect_openpyxl_target_column_max_lengths
-
-    def _counting_collector(
-        sheet: patch_runner.OpenpyxlWorksheetProtocol, target_indexes: set[int]
-    ) -> dict[int, int]:
-        nonlocal call_count
-        call_count += 1
-        return original(sheet, target_indexes)
-
-    monkeypatch.setattr(
-        patch_runner,
-        "_collect_openpyxl_target_column_max_lengths",
-        _counting_collector,
-    )
-
-    result = run_patch(
-        PatchRequest(
-            xlsx_path=input_path,
-            ops=[
-                PatchOp(
-                    op="auto_fit_columns",
-                    sheet="Sheet1",
-                    columns=["A", "B", "C"],
-                )
-            ],
-            on_conflict="rename",
-        ),
-        policy=PathPolicy(root=tmp_path),
-    )
-
-    assert result.error is None
-    assert call_count == 1
-
-
 def test_patch_op_auto_fit_columns_rejects_invalid_bounds() -> None:
     with pytest.raises(
         ValidationError, match="auto_fit_columns requires min_width <= max_width"
@@ -1243,46 +1044,6 @@ def test_patch_op_set_font_size_requires_target() -> None:
         ValidationError, match="set_font_size requires exactly one of cell or range"
     ):
         PatchOp(op="set_font_size", sheet="Sheet1", font_size=12)
-
-
-def test_apply_xlwings_set_font_size() -> None:
-    class _FakeFontApi:
-        Size: float = 0.0
-
-    class _FakeRangeApi:
-        Font: _FakeFontApi
-
-        def __init__(self) -> None:
-            self.Font = _FakeFontApi()
-
-    class _FakeRange:
-        value: object | None = None
-        formula: str | None = None
-        api: object
-
-        def __init__(self, api: _FakeRangeApi) -> None:
-            self.api = api
-
-    class _FakeSheet:
-        name = "Sheet1"
-        api = object()
-
-        def __init__(self) -> None:
-            self.range_api = _FakeRangeApi()
-            self.last_ref = ""
-
-        def range(self, cell: str) -> patch_runner.XlwingsRangeProtocol:
-            self.last_ref = cell
-            return _FakeRange(self.range_api)
-
-    sheet = _FakeSheet()
-    op = PatchOp(op="set_font_size", sheet="Sheet1", range="A1:B2", font_size=13.0)
-    diff = patch_runner._apply_xlwings_set_font_size(sheet, op, index=0)
-
-    assert sheet.last_ref == "A1:B2"
-    assert sheet.range_api.Font.Size == 13.0
-    assert diff.after is not None
-    assert diff.after.value == "font_size=13.0"
 
 
 def test_patch_op_set_dimensions_requires_dimension_pair() -> None:
@@ -1714,48 +1475,6 @@ def test_run_patch_apply_table_style_rejects_intersection(
     )
     assert second.error is not None
     assert "intersects existing table" in second.error.message
-
-
-def test_run_patch_error_includes_hint_for_known_set_fill_color_mistake(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    _disable_com(monkeypatch)
-    input_path = tmp_path / "book.xlsx"
-    _create_workbook(input_path)
-
-    def _raise_known_error(
-        sheet: patch_runner.OpenpyxlWorksheetProtocol,
-        op: PatchOp,
-        index: int,
-    ) -> tuple[patch_runner.PatchDiffItem, PatchOp | None]:
-        raise ValueError("set_fill_color does not accept color.")
-
-    monkeypatch.setattr(
-        patch_runner,
-        "_apply_openpyxl_set_fill_color",
-        _raise_known_error,
-    )
-    result = run_patch(
-        PatchRequest(
-            xlsx_path=input_path,
-            ops=[
-                PatchOp(
-                    op="set_fill_color",
-                    sheet="Sheet1",
-                    cell="A1",
-                    fill_color="#112233",
-                )
-            ],
-            on_conflict="rename",
-            backend="openpyxl",
-        ),
-        policy=PathPolicy(root=tmp_path),
-    )
-    assert result.error is not None
-    assert result.error.hint is not None
-    assert "fill_color" in result.error.hint
-    assert result.error.expected_fields
-    assert result.error.example_op is not None
 
 
 def test_run_patch_rejects_alignment_design_op_for_xls(
