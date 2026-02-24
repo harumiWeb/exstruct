@@ -218,3 +218,55 @@ def test_service_run_patch_backend_com_fallbacks_for_apply_table_style(
     assert any(
         "does not support apply_table_style" in warning for warning in result.warnings
     )
+
+
+def test_service_run_patch_backend_auto_fallbacks_for_apply_table_style(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+
+    monkeypatch.setattr(
+        patch_runtime,
+        "get_com_availability",
+        lambda: ComAvailability(available=True, reason=None),
+    )
+
+    def _fail_if_called(
+        input_path: Path,
+        output_path: Path,
+        ops: list[PatchOp],
+        auto_formula: bool,
+    ) -> list[object]:
+        raise AssertionError("COM backend should not be called for apply_table_style")
+
+    def _fake_apply_openpyxl_engine(
+        request: PatchRequest,
+        input_path: Path,
+        output_path: Path,
+    ) -> tuple[list[object], list[object], list[object], list[str]]:
+        return [], [], [], []
+
+    monkeypatch.setattr(service, "apply_xlwings_engine", _fail_if_called)
+    monkeypatch.setattr(service, "apply_openpyxl_engine", _fake_apply_openpyxl_engine)
+    result = service.run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[
+                PatchOp(
+                    op="apply_table_style",
+                    sheet="Sheet1",
+                    range="A1:B3",
+                    style="TableStyleMedium2",
+                    table_name="SalesTable",
+                )
+            ],
+            on_conflict="rename",
+            backend="auto",
+        )
+    )
+    assert result.error is None
+    assert result.engine == "openpyxl"
+    assert any(
+        "does not support apply_table_style" in warning for warning in result.warnings
+    )

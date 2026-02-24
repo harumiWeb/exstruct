@@ -71,7 +71,9 @@ def run_patch(
     warnings: list[str] = []
     runtime.append_large_ops_warning(warnings, request.ops)
     effective_request = request
-    if request.backend == "com" and runtime.contains_apply_table_style_op(request.ops):
+    if request.backend in {"com", "auto"} and runtime.contains_apply_table_style_op(
+        request.ops
+    ):
         warnings.append(
             "backend='com' does not support apply_table_style; falling back to openpyxl."
         )

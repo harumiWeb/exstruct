@@ -11,6 +11,7 @@ import pytest
 from exstruct.mcp import server
 from exstruct.mcp.extract_runner import OnConflictPolicy
 from exstruct.mcp.io import PathPolicy
+from exstruct.mcp.patch import normalize as patch_normalize
 from exstruct.mcp.tools import (
     DescribeOpToolOutput,
     ExtractToolInput,
@@ -1218,7 +1219,7 @@ def test_warmup_exstruct_imports(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "exstruct.core.integrate" in calls
 
 
-def test_normalize_patch_op_aliases_helper_covers_all_alias_paths() -> None:
+def test_patch_normalize_aliases_covers_dimension_alias_paths() -> None:
     op = {
         "op": "set_dimensions",
         "sheet": "Data",
@@ -1227,7 +1228,7 @@ def test_normalize_patch_op_aliases_helper_covers_all_alias_paths() -> None:
         "col": ["A", 2],
         "width": 18,
     }
-    normalized = server._normalize_patch_op_aliases(op, index=0)
+    normalized = patch_normalize.normalize_patch_op_aliases(op, index=0)
     assert normalized["rows"] == [1]
     assert normalized["row_height"] == 20
     assert normalized["columns"] == ["A", 2]
@@ -1238,27 +1239,25 @@ def test_normalize_patch_op_aliases_helper_covers_all_alias_paths() -> None:
     assert "width" not in normalized
 
 
-def test_normalize_draw_grid_border_range_rejects_non_string() -> None:
+def test_patch_normalize_draw_grid_border_range_rejects_non_string() -> None:
     op_data: dict[str, object] = {"op": "draw_grid_border", "range": 123}
     with pytest.raises(ValueError, match="range must be a string A1 range"):
-        server._normalize_draw_grid_border_range(op_data, index=2)
+        patch_normalize.normalize_draw_grid_border_range(op_data, index=2)
 
 
-def test_parse_a1_range_geometry_normalizes_reverse_range() -> None:
-    base_cell, row_count, col_count = server._parse_a1_range_geometry("C3:A1", index=0)
-    assert base_cell == "A1"
-    assert row_count == 3
-    assert col_count == 3
+def test_patch_normalize_draw_grid_border_range_normalizes_reverse_range() -> None:
+    op_data: dict[str, object] = {"op": "draw_grid_border", "range": "C3:A1"}
+    patch_normalize.normalize_draw_grid_border_range(op_data, index=0)
+    assert op_data["base_cell"] == "A1"
+    assert op_data["row_count"] == 3
+    assert op_data["col_count"] == 3
+    assert "range" not in op_data
 
 
-def test_parse_a1_range_geometry_rejects_invalid_shape() -> None:
+def test_patch_normalize_draw_grid_border_range_rejects_invalid_shape() -> None:
+    op_data: dict[str, object] = {"op": "draw_grid_border", "range": "A1"}
     with pytest.raises(ValueError, match="draw_grid_border range must be like"):
-        server._parse_a1_range_geometry("A1", index=1)
-
-
-def test_split_a1_cell_rejects_invalid_reference() -> None:
-    with pytest.raises(ValueError, match="invalid cell reference"):
-        server._split_a1_cell("1A", index=3)
+        patch_normalize.normalize_draw_grid_border_range(op_data, index=1)
 
 
 def test_parse_patch_op_json_and_error_message_helpers() -> None:

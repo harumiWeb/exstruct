@@ -238,7 +238,6 @@ Example:
 The patch implementation is layered to keep compatibility while enabling refactoring:
 
 - `exstruct.mcp.patch_runner`: compatibility facade (existing import path)
-- `exstruct.mcp.patch.legacy_runner`: backward-compatible implementation layer
 - `exstruct.mcp.patch.service`: patch/make orchestration
 - `exstruct.mcp.patch.engine.*`: backend execution boundaries (openpyxl/com)
 - `exstruct.mcp.patch.runtime`: runtime utilities (path/backend selection)
@@ -291,14 +290,15 @@ This keeps MCP tool I/O stable while allowing internal module separation.
 - Backend selection:
   - `backend="auto"` (default): prefers COM when available; otherwise openpyxl.
     Also uses openpyxl when `dry_run`/`return_inverse_ops`/`preflight_formula_check` is enabled.
+    Requests including `apply_table_style` are also routed to openpyxl.
   - `backend="com"`: forces COM. Requires Excel COM and rejects
     `dry_run`/`return_inverse_ops`/`preflight_formula_check`.
+    If `apply_table_style` is included, returns a warning and falls back to openpyxl.
   - `backend="openpyxl"`: forces openpyxl (`.xls` is not supported).
 - Output includes `engine` (`"com"` or `"openpyxl"`) to show which backend was actually used.
 - Output includes `mirrored_out_path` when mirroring is requested and succeeds.
 - Conflict handling follows server `--on-conflict` unless overridden per tool call
 - `restore_design_snapshot` remains openpyxl-only.
-- `apply_table_style` on `backend="com"` returns a warning and falls back to openpyxl.
 - Sheet resolution order:
   - `op.sheet` is used when present
   - otherwise top-level `sheet` is used for non-`add_sheet` ops
@@ -457,15 +457,19 @@ Examples:
 
 ## Mistake catalog (error -> fix)
 
-- Wrong:
-  - `{"op":"set_fill_color","sheet":"Sheet1","cell":"A1","color":"#D9E1F2"}`
+- Wrong (conflicting alias and canonical field):
+  - `{"op":"set_fill_color","sheet":"Sheet1","cell":"A1","color":"#D9E1F2","fill_color":"#FFFFFF"}`
 - Correct:
   - `{"op":"set_fill_color","sheet":"Sheet1","cell":"A1","fill_color":"#D9E1F2"}`
 
-- Wrong:
-  - `{"op":"set_alignment","sheet":"Sheet1","cell":"A1","horizontal":"center","vertical":"center"}`
+- Wrong (conflicting alias and canonical field):
+  - `{"op":"set_alignment","sheet":"Sheet1","cell":"A1","horizontal":"center","horizontal_align":"left"}`
 - Correct:
   - `{"op":"set_alignment","sheet":"Sheet1","cell":"A1","horizontal_align":"center","vertical_align":"center"}`
+
+- Note:
+  - `color` (`set_fill_color`) and `horizontal`/`vertical` (`set_alignment`) are accepted aliases.
+  - Canonical fields (`fill_color`, `horizontal_align`, `vertical_align`) are recommended.
 
 ### In-place overwrite recipe
 
