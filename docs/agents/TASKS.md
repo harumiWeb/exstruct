@@ -238,7 +238,7 @@
 
 - [x] `uv run task precommit-run` 実行
 - [x] 必要テスト（patch/service/server/docs 関連）を実行
-- [ ] GitHub 上で P0 指摘を resolve、P1/P2 は方針コメントを残す
+- [x] GitHub 上で P0 指摘を resolve、P1/P2 は方針コメントを残す
 
 完了条件:
-- [ ] P0 が全て完了し、PR #65 のマージ阻害が解消されている
+- [x] P0 が全て完了し、PR #65 のマージ阻害が解消されている
