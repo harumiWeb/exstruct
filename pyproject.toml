@@ -68,6 +68,7 @@ omit = [
     "tests/*",
     "*/test_*.py",
     "*/gen_py/*",
+    "src/exstruct/mcp/patch/engine/base.py",
 ]
 
 [tool.ruff]
