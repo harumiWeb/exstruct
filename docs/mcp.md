@@ -241,6 +241,8 @@ The patch implementation is layered to keep compatibility while enabling refacto
 - `exstruct.mcp.patch.legacy_runner`: backward-compatible implementation layer
 - `exstruct.mcp.patch.service`: patch/make orchestration
 - `exstruct.mcp.patch.engine.*`: backend execution boundaries (openpyxl/com)
+- `exstruct.mcp.patch.runtime`: runtime utilities (path/backend selection)
+- `exstruct.mcp.patch.ops.*`: backend-specific op application entrypoints
 
 This keeps MCP tool I/O stable while allowing internal module separation.
 

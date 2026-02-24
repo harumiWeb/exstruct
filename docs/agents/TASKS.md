@@ -58,7 +58,7 @@
 - [x] `src/exstruct/mcp/patch/engine/base.py` を追加（engine protocol）
 - [x] `openpyxl` 実装を `engine/openpyxl_engine.py` へ移設
 - [x] `xlwings` 実装を `engine/xlwings_engine.py` へ移設
-- [ ] 必要に応じて op 実装を `patch/ops/*` へ分離
+- [x] 必要に応じて op 実装を `patch/ops/*` へ分離
 - [x] `patch_runner.py` を薄いファサードへ縮退
 
 完了条件:
@@ -105,7 +105,7 @@
 - [ ] `patch/models.py` の `patch_runner` 経由 import を廃止し、実体モデル定義へ移行
 - [ ] `patch_runner.py` の monkeypatch 互換レイヤを段階的に削除（必要な公開 API は維持）
 - [ ] `tests/mcp/test_patch_runner.py` の私有関数前提テストを責務別テストへ移管
-- [ ] `src/exstruct/mcp/patch/ops/*` を導入し、op 実装を backend 別に分離
+- [x] `src/exstruct/mcp/patch/ops/*` を導入し、op 実装を backend 別に分離
 - [ ] `legacy_runner.py` を削除し、不要な再エクスポートを整理
 - [ ] 互換性要件を満たしたまま `uv run task precommit-run` と回帰テストを再通過
 

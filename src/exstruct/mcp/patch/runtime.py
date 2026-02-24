@@ -123,36 +123,6 @@ def allow_auto_openpyxl_fallback(request: PatchRequest, input_path: Path) -> boo
     return _legacy._allow_auto_openpyxl_fallback(request, input_path)
 
 
-def apply_ops_openpyxl(
-    request: PatchRequest,
-    input_path: Path,
-    output_path: Path,
-) -> tuple[list[object], list[object], list[object], list[str]]:
-    """Apply operations using the legacy openpyxl implementation."""
-    diff, inverse_ops, formula_issues, op_warnings = _legacy._apply_ops_openpyxl(
-        request,
-        input_path,
-        output_path,
-    )
-    return (
-        list(diff),
-        list(inverse_ops),
-        list(formula_issues),
-        list(op_warnings),
-    )
-
-
-def apply_ops_xlwings(
-    input_path: Path,
-    output_path: Path,
-    ops: list[PatchOp],
-    auto_formula: bool,
-) -> list[object]:
-    """Apply operations using the legacy xlwings implementation."""
-    diff = _legacy._apply_ops_xlwings(input_path, output_path, ops, auto_formula)
-    return list(diff)
-
-
 def expand_range_coordinates(range_ref: str) -> list[list[str]]:
     """Expand an A1 range into 2D cell coordinates."""
     return _legacy._expand_range_coordinates(range_ref)
@@ -163,8 +133,6 @@ __all__ = [
     "allow_auto_openpyxl_fallback",
     "append_large_ops_warning",
     "apply_conflict_policy",
-    "apply_ops_openpyxl",
-    "apply_ops_xlwings",
     "build_make_seed_path",
     "contains_apply_table_style_op",
     "contains_design_ops",
