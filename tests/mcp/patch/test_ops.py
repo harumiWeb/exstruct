@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from exstruct.mcp.patch.models import PatchOp, PatchRequest
+from exstruct.mcp.patch.models import OpenpyxlEngineResult, PatchOp, PatchRequest
 from exstruct.mcp.patch.ops.openpyxl_ops import apply_openpyxl_ops
 from exstruct.mcp.patch.ops.xlwings_ops import apply_xlwings_ops
 
@@ -32,7 +32,12 @@ def test_apply_openpyxl_ops_delegates_to_legacy(
         Path("input.xlsx"),
         Path("output.xlsx"),
     )
-    assert result == (["diff"], ["inverse"], ["issues"], ["warn"])
+    assert result == OpenpyxlEngineResult(
+        patch_diff=["diff"],
+        inverse_ops=["inverse"],
+        formula_issues=["issues"],
+        op_warnings=["warn"],
+    )
 
 
 def test_apply_xlwings_ops_delegates_to_legacy(

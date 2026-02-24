@@ -176,7 +176,7 @@ def _apply_with_openpyxl(
 ) -> PatchResult:
     """Apply patch operations using openpyxl."""
     try:
-        diff, inverse_ops, formula_issues, op_warnings = apply_openpyxl_engine(
+        engine_result = apply_openpyxl_engine(
             request,
             input_path,
             output_path,
@@ -201,10 +201,10 @@ def _apply_with_openpyxl(
     except Exception as exc:
         raise RuntimeError(f"openpyxl patch failed: {exc}") from exc
 
-    patch_diff = _coerce_patch_diff_items(diff)
-    typed_inverse_ops = _coerce_inverse_ops(inverse_ops)
-    typed_formula_issues = _coerce_formula_issues(formula_issues)
-    warnings.extend(op_warnings)
+    patch_diff = _coerce_patch_diff_items(engine_result.patch_diff)
+    typed_inverse_ops = _coerce_inverse_ops(engine_result.inverse_ops)
+    typed_formula_issues = _coerce_formula_issues(engine_result.formula_issues)
+    warnings.extend(engine_result.op_warnings)
     if not request.dry_run:
         warnings.append(
             "openpyxl editing may drop shapes/charts or unsupported elements."

@@ -270,14 +270,17 @@ PR #65 Review Follow-up (Stabilization)
    1. 変更差分内で欠落している docstring を追加し、品質ゲートの指摘ノイズを減らす。
 3. `src/exstruct/mcp/server.py::_register_tools`
    1. 追加済み引数（`default_on_conflict`, `artifact_bridge_dir`）を docstring に反映する。
+4. `src/exstruct/mcp/patch/engine/openpyxl_engine.py` / `src/exstruct/mcp/patch/ops/openpyxl_ops.py`
+   1. openpyxl engine の構造化戻り値を tuple から `BaseModel`（`OpenpyxlEngineResult`）へ統一する。
+5. `tests/mcp/patch/test_service.py`
+   1. 新規追加テスト・helper の docstring を Google スタイルで補完する。
 
 ### P2: 別Epicへ分離（今回は設計判断のみ）
 
 1. `patch/__init__.py` 公開 API 方針
    1. 正規化 helper を公開し続けるか、内部化するかを決定する。
-2. engine 戻り値の BaseModel 化（tuple 返却廃止）。
-3. `shared/a1.py` 戻り値の BaseModel 化と呼び出し側移行。
-4. `patch/internal.py` の外部ライブラリ境界（`Any` 受け + 内部正規化）再設計。
+2. `shared/a1.py` 戻り値の BaseModel 化と呼び出し側移行。
+3. `patch/internal.py` の外部ライブラリ境界（`Any` 受け + 内部正規化）再設計。
 
 ## スコープ
 

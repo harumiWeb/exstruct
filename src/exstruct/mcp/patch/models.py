@@ -1364,6 +1364,22 @@ class MakeRequest(BaseModel):
         return self
 
 
+class OpenpyxlEngineResult(BaseModel):
+    """Structured result returned by the openpyxl engine boundary.
+
+    Attributes:
+        patch_diff: Backend patch diff payload items.
+        inverse_ops: Backend inverse operation payload items.
+        formula_issues: Backend formula issue payload items.
+        op_warnings: Backend warning messages emitted during apply.
+    """
+
+    patch_diff: list[object] = Field(default_factory=list)
+    inverse_ops: list[object] = Field(default_factory=list)
+    formula_issues: list[object] = Field(default_factory=list)
+    op_warnings: list[str] = Field(default_factory=list)
+
+
 class PatchResult(BaseModel):
     """Output model for ExStruct MCP patch."""
 
@@ -1399,6 +1415,7 @@ __all__ = [
     "MakeRequest",
     "MergeStateSnapshot",
     "OpenpyxlWorksheetProtocol",
+    "OpenpyxlEngineResult",
     "PatchDiffItem",
     "PatchErrorDetail",
     "PatchOp",

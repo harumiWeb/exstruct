@@ -7,10 +7,16 @@ import pytest
 
 from exstruct.cli.availability import ComAvailability
 from exstruct.mcp.patch import runtime as patch_runtime, service
+from exstruct.mcp.patch.models import OpenpyxlEngineResult
 from exstruct.mcp.patch_runner import MakeRequest, PatchOp, PatchRequest, PatchResult
 
 
 def _create_workbook(path: Path) -> None:
+    """Create a minimal workbook fixture for patch tests.
+
+    Args:
+        path: Target workbook path.
+    """
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "Sheet1"
@@ -22,6 +28,11 @@ def _create_workbook(path: Path) -> None:
 def test_patch_runner_run_patch_delegates_to_service(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Verify patch_runner.run_patch delegates to patch.service.run_patch.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+    """
     import exstruct.mcp.patch_runner as patch_runner
 
     expected = PatchResult(out_path="out.xlsx", patch_diff=[], engine="openpyxl")
@@ -43,6 +54,11 @@ def test_patch_runner_run_patch_delegates_to_service(
 def test_patch_runner_run_make_delegates_to_service(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Verify patch_runner.run_make delegates to patch.service.run_make.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+    """
     import exstruct.mcp.patch_runner as patch_runner
 
     expected = PatchResult(out_path="out.xlsx", patch_diff=[], engine="openpyxl")
@@ -61,6 +77,12 @@ def test_patch_runner_run_make_delegates_to_service(
 def test_service_run_patch_backend_auto_prefers_com(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Verify backend=auto uses COM when available.
+
+    Args:
+        tmp_path: Temporary directory fixture.
+        monkeypatch: Pytest monkeypatch fixture.
+    """
     input_path = tmp_path / "book.xlsx"
     _create_workbook(input_path)
     calls: dict[str, bool] = {}
@@ -97,6 +119,12 @@ def test_service_run_patch_backend_auto_prefers_com(
 def test_service_run_patch_backend_auto_fallbacks_to_openpyxl_on_com_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Verify backend=auto falls back to openpyxl when COM apply fails.
+
+    Args:
+        tmp_path: Temporary directory fixture.
+        monkeypatch: Pytest monkeypatch fixture.
+    """
     input_path = tmp_path / "book.xlsx"
     _create_workbook(input_path)
 
@@ -118,8 +146,8 @@ def test_service_run_patch_backend_auto_fallbacks_to_openpyxl_on_com_error(
         request: PatchRequest,
         input_path: Path,
         output_path: Path,
-    ) -> tuple[list[object], list[object], list[object], list[str]]:
-        return [], [], [], []
+    ) -> OpenpyxlEngineResult:
+        return OpenpyxlEngineResult()
 
     monkeypatch.setattr(service, "apply_xlwings_engine", _raise_com_error)
     monkeypatch.setattr(service, "apply_openpyxl_engine", _fake_apply_openpyxl_engine)
@@ -139,6 +167,12 @@ def test_service_run_patch_backend_auto_fallbacks_to_openpyxl_on_com_error(
 def test_service_run_patch_backend_com_does_not_fallback_on_com_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Verify backend=com propagates COM errors without fallback.
+
+    Args:
+        tmp_path: Temporary directory fixture.
+        monkeypatch: Pytest monkeypatch fixture.
+    """
     input_path = tmp_path / "book.xlsx"
     _create_workbook(input_path)
 
@@ -171,6 +205,12 @@ def test_service_run_patch_backend_com_does_not_fallback_on_com_error(
 def test_service_run_patch_backend_com_fallbacks_for_apply_table_style(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Verify backend=com reroutes apply_table_style to openpyxl.
+
+    Args:
+        tmp_path: Temporary directory fixture.
+        monkeypatch: Pytest monkeypatch fixture.
+    """
     input_path = tmp_path / "book.xlsx"
     _create_workbook(input_path)
 
@@ -192,8 +232,8 @@ def test_service_run_patch_backend_com_fallbacks_for_apply_table_style(
         request: PatchRequest,
         input_path: Path,
         output_path: Path,
-    ) -> tuple[list[object], list[object], list[object], list[str]]:
-        return [], [], [], []
+    ) -> OpenpyxlEngineResult:
+        return OpenpyxlEngineResult()
 
     monkeypatch.setattr(service, "apply_xlwings_engine", _fail_if_called)
     monkeypatch.setattr(service, "apply_openpyxl_engine", _fake_apply_openpyxl_engine)
@@ -223,6 +263,12 @@ def test_service_run_patch_backend_com_fallbacks_for_apply_table_style(
 def test_service_run_patch_backend_auto_fallbacks_for_apply_table_style(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Verify backend=auto reroutes apply_table_style to openpyxl.
+
+    Args:
+        tmp_path: Temporary directory fixture.
+        monkeypatch: Pytest monkeypatch fixture.
+    """
     input_path = tmp_path / "book.xlsx"
     _create_workbook(input_path)
 
@@ -244,8 +290,8 @@ def test_service_run_patch_backend_auto_fallbacks_for_apply_table_style(
         request: PatchRequest,
         input_path: Path,
         output_path: Path,
-    ) -> tuple[list[object], list[object], list[object], list[str]]:
-        return [], [], [], []
+    ) -> OpenpyxlEngineResult:
+        return OpenpyxlEngineResult()
 
     monkeypatch.setattr(service, "apply_xlwings_engine", _fail_if_called)
     monkeypatch.setattr(service, "apply_openpyxl_engine", _fake_apply_openpyxl_engine)

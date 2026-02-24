@@ -219,15 +219,18 @@
 - [x] `src/exstruct/mcp/server.py` の重複・未使用正規化 helper 群を削除し `patch.normalize` に一本化
 - [x] `_register_tools` docstring に `default_on_conflict` / `artifact_bridge_dir` を追記
 - [x] 変更差分内の docstring 欠落を補完（テスト含む）
+- [x] `src/exstruct/mcp/patch/engine/openpyxl_engine.py` / `patch/ops/openpyxl_ops.py` の戻り値を `OpenpyxlEngineResult`（BaseModel）へ統一
+- [x] `src/exstruct/mcp/patch/service.py` の openpyxl 呼び出しを結果モデル参照へ更新
+- [x] `tests/mcp/patch/test_service.py` の新規 helper/テストに Google スタイル docstring を追加
 
 完了条件:
 - [x] 重複ロジック削減後も既存テストが回帰しない
 - [x] docstring 指摘の主要残件が解消される
+- [x] openpyxl engine 境界の tuple 返却が解消される
 
 ## 4. P2: 別Epicへ分離する設計課題
 
 - [ ] `patch/__init__.py` 公開API（正規化 helper 公開の是非）を設計判断
-- [ ] engine 戻り値の BaseModel 化（tuple 返却廃止）を別PRタスク化
 - [ ] `shared/a1.py` 戻り値モデル化と呼び出し側移行を別PRタスク化
 - [ ] `patch/internal.py` の外部境界型（`Any` + 正規化）再設計を別PRタスク化
 
