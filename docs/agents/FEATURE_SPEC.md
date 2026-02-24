@@ -159,3 +159,73 @@ src/exstruct/mcp/
    1. å¯¾ç­–: æ—¢å­˜æ–‡è¨€äº’æ›ã‚’ç¶­æŒã—ã€å¿…è¦æ™‚ã¯å·®åˆ†ã‚’æ˜ç¤ºã—ã¦ãƒ†ã‚¹ãƒˆæ›´æ–°ã™ã‚‹
 3. ãƒªã‚¹ã‚¯: engine åˆ†é›¢æ™‚ã®æŒ™å‹•å·®
    1. å¯¾ç­–: backend ã”ã¨ã®å›å¸°ãƒ†ã‚¹ãƒˆã‚’å…ˆã«å›ºå®šã—ã¦ã‹ã‚‰ç§»è¡Œã™ã‚‹
+
+---
+
+## Feature Name
+
+MCP Coverage Recovery (Post-Refactor)
+
+## ”wŒi
+
+MCP‘å‹K–ÍƒŠƒtƒ@ƒNƒ^ƒŠƒ“ƒOŒãA‘S‘ÌƒJƒoƒŒƒbƒW‚ª 85% ‚©‚ç 78.24% ‚É’á‰º‚µ‚½B  
+`coverage.xml` ‚Ì–¢Àss‚Í 1,654 s‚ÅA‚¤‚¿ `src/exstruct/mcp/*` ‚ª 1,176 si71.1%j‚ğè‚ß‚éB  
+åˆö‚ÍˆÈ‰º‚Ì’Ê‚èB
+
+1. `src/exstruct/mcp/patch/internal.py`i59.42%, 806 missj
+2. `src/exstruct/mcp/patch/models.py`i77.74%, 181 missj
+3. `src/exstruct/mcp/server.py`i70.17%, 71 missj
+
+## –Ú“I
+
+1. ‘S‘ÌƒJƒoƒŒƒbƒW‚ğ 85%ˆÈã‚Ö‰ñ•œ‚µˆÛ‚·‚éB
+2. ’á‰º—vˆöƒ‚ƒWƒ…[ƒ‹‚ğƒeƒXƒg‚Å’¼Ú‰ü‘P‚·‚éB
+3. `omit` ˆË‘¶‚Å‚ÌŒ©‚©‚¯ã‚Ì‰ñ•œ‚Ís‚í‚È‚¢iÀs•s”\ƒR[ƒh‚ÌÅ¬—áŠO‚Ì‚İ‹–—ejB
+
+## ƒXƒR[ƒv
+
+### In Scope
+
+1. `tests/mcp/patch/*` ‚ÌŠg’£imodels/internal/service’†Sj
+2. `tests/mcp/test_server.py` ‚Ì–¢ƒJƒo[•ªŠò’Ç‰Á
+3. `tests/mcp/test_sheet_reader.py` / `tests/mcp/test_chunk_reader.py` ‚Ì‹«ŠEƒP[ƒX’Ç‰Á
+4. CIƒQ[ƒgİ’è‚Ì‹­‰»i`--cov-fail-under=85` ‚Æ patch coverage 85%j
+5. ’Ç‹LƒhƒLƒ…ƒƒ“ƒgi–{d—lEƒ^ƒXƒNE•K—vÅ¬ŒÀ‚ÌƒeƒXƒg—vŒ”½‰fj
+
+### Out of Scope
+
+1. patch op ‚ÌV‹K‹@”\’Ç‰Á
+2. ŒöŠJAPId—l‚Ì•ÏX
+3. ‘å‹K–ÍƒfƒBƒŒƒNƒgƒŠÄ•Ò
+
+## À‘••ûj
+
+1. `patch/models.py` ‚ÌƒoƒŠƒf[ƒVƒ‡ƒ“•ªŠò‚ğ `pytest.mark.parametrize` ‚Å–Ô—…‚·‚éB
+2. `patch/internal.py` ‚Ì openpyxl/xlwings “K—p•ªŠòAƒGƒ‰[•ªŠòA•Û‘¶‰Â”Û•ªŠò‚ğ¬‚³‚Èfixture‚Å–Ô—…‚·‚éB
+3. `server.py` ‚Ì alias³‹K‰»EA1ƒp[ƒXEƒGƒ‰[ƒƒbƒZ[ƒWŒo˜H‚ğ–Ô—…‚·‚éB
+4. `sheet_reader.py` / `chunk_reader.py` ‚Ì–¢Às‹«ŠEi‹ó“ü—ÍA•s³rangeApagination‹«ŠEj‚ğ’Ç‰Á‚·‚éB
+5. CI‚ğu‘S‘Ì85%–¢–‚Å¸”svu•ÏXs85%–¢–‚Å¸”sv‚É‚·‚éB
+
+## ŒöŠJAPI/ƒCƒ“ƒ^[ƒtƒF[ƒX•ÏX
+
+1. PythonŒöŠJAPI‚Ì•ÏX‚Ís‚í‚È‚¢B
+2. CIƒCƒ“ƒ^[ƒtƒF[ƒX‚Æ‚µ‚ÄˆÈ‰º‚ğ’Ç‰ÁE•ÏX‚·‚éB
+3. ƒeƒXƒgÀsƒRƒ}ƒ“ƒh‚É `--cov-fail-under=85` ‚ğ’Ç‰Á‚·‚éB
+4. Codecov `patch` ƒXƒe[ƒ^ƒX–Ú•W‚ğ `85%` ‚Éİ’è‚·‚éB
+
+## ó‚¯“ü‚êŠî€iAcceptance Criteriaj
+
+1. `uv run pytest -m "not com and not render" --cov=exstruct --cov-report=xml --cov-fail-under=85` ‚ª¬Œ÷‚·‚éB
+2. `coverage.xml` ‚Ì‘S‘Ì line-rate ‚ª 85%ˆÈã‚Å‚ ‚éB
+3. Codecov patch coverage ‚Ì required status ‚ª 85%ˆÈã‚Å‚ ‚éB
+4. `patch/internal.py`, `patch/models.py`, `server.py` ‚Ì line-rate ‚ªŒ»ó’l‚æ‚è—LˆÓ‚É‰ü‘P‚µ‚Ä‚¢‚éB
+5. `uv run task precommit-run` ‚ª¬Œ÷‚·‚éimypy strict / RuffŠÜ‚ŞjB
+
+## ƒŠƒXƒN‚Æ‘Îô
+
+1. ƒŠƒXƒN: `patch/internal.py` ‚Ì•ªŠò‚ª‘½‚­H”‚ª–c‚ç‚ŞB  
+   ‘Îô: ¸”sŒn‚ğ `parametrize` ‰»‚µA1ƒeƒXƒg‚ ‚½‚è‚Ì–Ô—…Œø—¦‚ğÅ‘å‰»‚·‚éB
+2. ƒŠƒXƒN: CIƒQ[ƒg‹­‰»‚Åˆê“I‚É¸”s‚ª‘‚¦‚éB  
+   ‘Îô: ’iŠK“±“ü‚¹‚¸“¯PR“à‚Å•s‘«ƒeƒXƒg‚ğ“¯“Š“ü‚·‚éB
+3. ƒŠƒXƒN: ŒİŠ·ƒŒƒCƒ„[œŠO‚Ö‚ÌŒã‘Ş”»’fB  
+   ‘Îô: –{d—l‚Å‚ÍP‹vœŠO‚ğ‹Ö~‚µA•K—v‚ÍŠúŒÀ•t‚«b’è‘[’u‚ğ•Ê³”F‚Æ‚·‚éB

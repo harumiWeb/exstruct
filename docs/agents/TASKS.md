@@ -128,3 +128,56 @@
 3. M3: service/engine åˆ†é›¢å®Œäº†ï¼ˆTask 4ï¼‰
 4. M4: ãƒ†ã‚¹ãƒˆãƒ»ãƒ‰ã‚­ãƒ¥ãƒ¡ãƒ³ãƒˆãƒ»å“è³ªã‚²ãƒ¼ãƒˆå®Œäº†ï¼ˆTask 5-7ï¼‰
 5. M5: ãƒ¬ã‚¬ã‚·ãƒ¼å®Ÿè£…å®Œå…¨å»ƒæ­¢å®Œäº†ï¼ˆTask 8ï¼‰
+
+---
+
+## Epic: MCP Coverage Recovery (Post-Refactor)
+
+## 0. Œ»óŒÅ’è‚Æ·•ªŒv‘ª
+
+- [ ] `coverage.xml` ‚ğŠî€’l‚Æ‚µ‚Ä•Û‘¶i78.24% / miss 1,654j
+- [ ] ’á‰ºåˆö3ƒtƒ@ƒCƒ‹‚Ì–¢Àss‚ğ‹L˜^iinternal/models/serverj
+- [ ] ‰ü‘PŒã”äŠr—pƒRƒ}ƒ“ƒh‚ğŒÅ’è‰»
+- [ ] Š®—¹ğŒ: before/after ‚Ì”äŠr•\‚ªì¬‚³‚ê‚Ä‚¢‚é
+
+## 1. `patch/models.py` •ªŠò–Ô—…
+
+- [ ] `PatchOp` Še validator ‚Ì¸”sŒn‚ğ `parametrize` ‚Å’Ç‰Á
+- [ ] alias‹£‡E•K{•s‘«EŒ^•s³E”ÍˆÍ•s³‚ÌƒP[ƒX‚ğ’Ç‰Á
+- [ ] `set_style` / `set_alignment` / `set_dimensions` ‚Ì‹«ŠE’lƒP[ƒX‚ğ’Ç‰Á
+- [ ] Š®—¹ğŒ: `models.py` ‚Ì–¢Àss‚ğ‘å•íŒ¸i–ÚˆÀ 80+ sƒJƒo[j
+
+## 2. `patch/internal.py` •ªŠò–Ô—…
+
+- [ ] openpyxl “K—pŒni¬Œ÷/¸”s/skipj‚ğ fixtureƒx[ƒX‚Å’Ç‰Á
+- [ ] `dry_run` / `preflight_formula_check` / `return_inverse_ops` ‚Ì•ªŠò‚ğ’Ç‰Á
+- [ ] unsupported op / sheet not found / range shape mismatch ‚ğ–Ô—…
+- [ ] conflict policyioverwrite/rename/skipj‚Ì•ªŠò‚ğ–Ô—…
+- [ ] Š®—¹ğŒ: `internal.py` ‚Ì–¢Àss‚ğ‘å•íŒ¸i–ÚˆÀ 250+ sƒJƒo[j
+
+## 3. `server.py` –¢ƒJƒo[Œo˜H‚Ì•âŠ®
+
+- [ ] alias³‹K‰» helper ‚ÌƒGƒ‰[Œo˜HƒeƒXƒg‚ğ’Ç‰Á
+- [ ] draw_grid_border range shorthand ‚Ì•s³“ü—ÍƒeƒXƒg‚ğ’Ç‰Á
+- [ ] patch op JSON parse ‚Ì—áŠO•¶Œ¾ƒeƒXƒg‚ğ’Ç‰Á
+- [ ] Š®—¹ğŒ: `server.py` ‚Ì line-rate ‚ğ—LˆÓ‰ü‘Pi–ÚˆÀ +10pt ˆÈãj
+
+## 4. ReaderŒn‚Ì‹«ŠEƒP[ƒX•âŠ®
+
+- [ ] `test_sheet_reader.py` ‚É invalid range / empty result / boundary ‚ğ’Ç‰Á
+- [ ] `test_chunk_reader.py` ‚É cursor/filter/max_bytes ‹«ŠEƒeƒXƒg‚ğ’Ç‰Á
+- [ ] Š®—¹ğŒ: `sheet_reader.py` ‚Æ `chunk_reader.py` ‚Ì–¢Àss‚ğíŒ¸
+
+## 5. CIƒQ[ƒg‹­‰»
+
+- [ ] ƒeƒXƒgƒRƒ}ƒ“ƒh‚É `--cov-fail-under=85` ‚ğ’Ç‰Á
+- [ ] `codecov.yml` ‚Ì patch target ‚ğ `85%` ‚Éİ’è
+- [ ] PR‚É project/patch —¼ƒXƒe[ƒ^ƒX‚ğ required ‚Æ‚µ‚Ä‰^—p
+- [ ] Š®—¹ğŒ: 85% –¢–‚ÌPR‚ªCI‚ÅŠmÀ‚É¸”s‚·‚é
+
+## 6. ŒŸØ
+
+- [ ] `uv run task precommit-run` Às
+- [ ] `uv run pytest -m "not com and not render" --cov=exstruct --cov-report=xml --cov-fail-under=85` Às
+- [ ] `uv run coverage report -m` ‚Å‰ü‘PŠm”F
+- [ ] Š®—¹ğŒ: ‘S‘Ì85%ˆÈãAå—v’á‰ºƒtƒ@ƒCƒ‹‚Ì‰ü‘PAÃ“I‰ğÍ0ƒGƒ‰[
