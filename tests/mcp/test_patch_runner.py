@@ -161,6 +161,26 @@ def test_patch_request_backend_com_rejects_restore_design_snapshot() -> None:
         )
 
 
+def test_patch_request_backend_openpyxl_rejects_create_chart() -> None:
+    with pytest.raises(
+        ValidationError,
+        match=r"create_chart is supported only on COM backend",
+    ):
+        PatchRequest(
+            xlsx_path=Path("book.xlsx"),
+            ops=[
+                PatchOp(
+                    op="create_chart",
+                    sheet="Sheet1",
+                    chart_type="line",
+                    data_range="A1:B3",
+                    anchor_cell="D2",
+                )
+            ],
+            backend="openpyxl",
+        )
+
+
 def test_run_patch_add_sheet_and_set_value(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

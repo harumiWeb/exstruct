@@ -45,6 +45,7 @@ _HEX_COLOR_PATTERN = re.compile(r"^#?(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$")
 _COLUMN_LABEL_PATTERN = re.compile(r"^[A-Za-z]{1,3}$")
 _MAX_STYLE_TARGET_CELLS = 10_000
 _SOFT_MAX_OPS_WARNING_THRESHOLD = 200
+_CHART_TYPE_SET = {"line", "column", "pie"}
 
 _XLWINGS_HORIZONTAL_ALIGN_MAP: dict[HorizontalAlignType, int] = {
     "general": -4105,
@@ -369,6 +370,8 @@ class XlwingsRangeApiProtocol(Protocol):
     HorizontalAlignment: int
     VerticalAlignment: int
     WrapText: bool
+    Left: float
+    Top: float
 
     def Borders(self, edge: int) -> XlwingsBorderApiProtocol: ...  # noqa: N802
 
@@ -402,6 +405,27 @@ class XlwingsSheetApiProtocol(Protocol):
     def Columns(self, key: str) -> XlwingsColumnApiProtocol: ...  # noqa: N802
 
 
+@runtime_checkable
+class XlwingsChartObjectProtocol(Protocol):
+    """Protocol for xlwings COM chart object."""
+
+    Name: str
+    Chart: object
+
+
+@runtime_checkable
+class XlwingsChartObjectsCollectionProtocol(Protocol):
+    """Protocol for xlwings COM ChartObjects collection."""
+
+    Count: int
+
+    def Add(  # noqa: N802
+        self, left: float, top: float, width: float, height: float
+    ) -> XlwingsChartObjectProtocol: ...
+
+    def __call__(self, index: int) -> XlwingsChartObjectProtocol: ...
+
+
 class PatchOp(BaseModel):
     """Single patch operation for an Excel workbook.
 
@@ -426,6 +450,7 @@ class PatchOp(BaseModel):
     - ``set_alignment``: Set horizontal/vertical alignment and/or wrap_text.
     - ``set_style``: Set multiple style attributes in one operation.
     - ``apply_table_style``: Create an Excel table and apply table style.
+    - ``create_chart``: Create a new chart from source ranges (COM only).
     - ``restore_design_snapshot``: Restore style/dimension snapshot (internal inverse op).
     """
 
@@ -439,6 +464,7 @@ class PatchOp(BaseModel):
             "'auto_fit_columns', "
             "'merge_cells', 'unmerge_cells', 'set_alignment', 'set_style', "
             "'apply_table_style', "
+            "'create_chart', "
             "or 'restore_design_snapshot'."
         )
     )
@@ -545,6 +571,42 @@ class PatchOp(BaseModel):
         default=None,
         description="Design snapshot payload for restore_design_snapshot.",
     )
+    chart_type: str | None = Field(
+        default=None,
+        description="Chart type for create_chart: line, column, pie.",
+    )
+    data_range: str | None = Field(
+        default=None,
+        description="Data range in A1 notation for create_chart.",
+    )
+    category_range: str | None = Field(
+        default=None,
+        description="Optional category range in A1 notation for create_chart.",
+    )
+    anchor_cell: str | None = Field(
+        default=None,
+        description="Top-left anchor cell in A1 notation for chart placement.",
+    )
+    chart_name: str | None = Field(
+        default=None,
+        description="Optional chart object name for create_chart.",
+    )
+    width: float | None = Field(
+        default=None,
+        description="Optional chart width (points) for create_chart.",
+    )
+    height: float | None = Field(
+        default=None,
+        description="Optional chart height (points) for create_chart.",
+    )
+    titles_from_data: bool | None = Field(
+        default=None,
+        description="Whether to infer titles from source data for create_chart.",
+    )
+    series_from_rows: bool | None = Field(
+        default=None,
+        description="Whether chart series are oriented by rows for create_chart.",
+    )
 
     @field_validator("sheet")
     @classmethod
@@ -583,6 +645,37 @@ class PatchOp(BaseModel):
             raise ValueError(f"Invalid range reference: {value}")
         start, end = candidate.split(":", maxsplit=1)
         return f"{start.upper()}:{end.upper()}"
+
+    @field_validator("data_range", "category_range")
+    @classmethod
+    def _validate_chart_range(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        candidate = value.strip()
+        if not _A1_RANGE_PATTERN.match(candidate):
+            raise ValueError(f"Invalid chart range reference: {value}")
+        start, end = candidate.split(":", maxsplit=1)
+        return f"{start.upper()}:{end.upper()}"
+
+    @field_validator("anchor_cell")
+    @classmethod
+    def _validate_anchor_cell(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        candidate = value.strip()
+        if not _A1_PATTERN.match(candidate):
+            raise ValueError(f"Invalid anchor_cell reference: {value}")
+        return candidate.upper()
+
+    @field_validator("chart_type")
+    @classmethod
+    def _validate_chart_type(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip().lower()
+        if normalized not in _CHART_TYPE_SET:
+            raise ValueError("chart_type must be one of: line, column, pie.")
+        return normalized
 
     @field_validator("fill_color")
     @classmethod
@@ -624,23 +717,25 @@ class PatchOp(BaseModel):
             normalized.append(_normalize_column_identifier(column))
         return normalized
 
-    @field_validator("style", "table_name")
+    @field_validator("style", "table_name", "chart_name")
     @classmethod
     def _validate_non_empty_optional_text(cls, value: str | None) -> str | None:
         if value is None:
             return None
         candidate = value.strip()
         if not candidate:
-            raise ValueError("style/table_name must not be empty when provided.")
+            raise ValueError(
+                "style/table_name/chart_name must not be empty when provided."
+            )
         return candidate
 
-    @field_validator("min_width", "max_width")
+    @field_validator("min_width", "max_width", "width", "height")
     @classmethod
     def _validate_optional_positive_width(cls, value: float | None) -> float | None:
         if value is None:
             return None
         if value <= 0:
-            raise ValueError("min_width/max_width must be > 0.")
+            raise ValueError("min_width/max_width/width/height must be > 0.")
         return value
 
     @model_validator(mode="after")
@@ -684,6 +779,7 @@ def _validator_for_op(op_type: PatchOpType) -> Callable[[PatchOp], None] | None:
         "set_alignment": _validate_set_alignment,
         "set_style": _validate_set_style,
         "apply_table_style": _validate_apply_table_style,
+        "create_chart": _validate_create_chart,
         "restore_design_snapshot": _validate_restore_design_snapshot,
     }
     return validators.get(op_type)
@@ -1169,12 +1265,46 @@ def _validate_restore_design_snapshot(op: PatchOp) -> None:
         raise ValueError("restore_design_snapshot requires design_snapshot.")
 
 
+def _validate_create_chart(op: PatchOp) -> None:
+    """Validate create_chart operation."""
+    _validate_no_legacy_edit_fields(op, op_name="create_chart", allow_chart_fields=True)
+    if op.cell is not None or op.range is not None or op.base_cell is not None:
+        raise ValueError("create_chart does not accept cell/range/base_cell.")
+    if op.row_count is not None or op.col_count is not None:
+        raise ValueError("create_chart does not accept row_count or col_count.")
+    if (
+        op.bold is not None
+        or op.color is not None
+        or op.fill_color is not None
+        or op.font_size is not None
+    ):
+        raise ValueError("create_chart does not accept style fields.")
+    if op.rows is not None or op.columns is not None:
+        raise ValueError("create_chart does not accept rows or columns.")
+    if op.row_height is not None or op.column_width is not None:
+        raise ValueError("create_chart does not accept row_height or column_width.")
+    _validate_no_alignment_fields(op, op_name="create_chart")
+    if op.design_snapshot is not None:
+        raise ValueError("create_chart does not accept design_snapshot.")
+    if op.chart_type is None:
+        raise ValueError("create_chart requires chart_type.")
+    if op.data_range is None:
+        raise ValueError("create_chart requires data_range.")
+    if op.anchor_cell is None:
+        raise ValueError("create_chart requires anchor_cell.")
+    if op.titles_from_data is None:
+        op.titles_from_data = True
+    if op.series_from_rows is None:
+        op.series_from_rows = False
+
+
 def _validate_no_legacy_edit_fields(
     op: PatchOp,
     *,
     op_name: str,
     allow_table_fields: bool = False,
     allow_auto_fit_fields: bool = False,
+    allow_chart_fields: bool = False,
 ) -> None:
     """Reject fields that are unrelated to design operations."""
     if op.expected is not None:
@@ -1195,6 +1325,16 @@ def _validate_no_legacy_edit_fields(
             raise ValueError(f"{op_name} does not accept min_width.")
         if op.max_width is not None:
             raise ValueError(f"{op_name} does not accept max_width.")
+    if not allow_chart_fields:
+        _reject_optional_field(op_name, "chart_type", op.chart_type)
+        _reject_optional_field(op_name, "data_range", op.data_range)
+        _reject_optional_field(op_name, "category_range", op.category_range)
+        _reject_optional_field(op_name, "anchor_cell", op.anchor_cell)
+        _reject_optional_field(op_name, "chart_name", op.chart_name)
+        _reject_optional_field(op_name, "width", op.width)
+        _reject_optional_field(op_name, "height", op.height)
+        _reject_optional_field(op_name, "titles_from_data", op.titles_from_data)
+        _reject_optional_field(op_name, "series_from_rows", op.series_from_rows)
 
 
 def _validate_no_design_fields(op: PatchOp, *, op_name: str) -> None:
@@ -1215,6 +1355,15 @@ def _validate_no_design_fields(op: PatchOp, *, op_name: str) -> None:
     _reject_optional_field(op_name, "design_snapshot", op.design_snapshot)
     _reject_optional_field(op_name, "min_width", op.min_width)
     _reject_optional_field(op_name, "max_width", op.max_width)
+    _reject_optional_field(op_name, "chart_type", op.chart_type)
+    _reject_optional_field(op_name, "data_range", op.data_range)
+    _reject_optional_field(op_name, "category_range", op.category_range)
+    _reject_optional_field(op_name, "anchor_cell", op.anchor_cell)
+    _reject_optional_field(op_name, "chart_name", op.chart_name)
+    _reject_optional_field(op_name, "width", op.width)
+    _reject_optional_field(op_name, "height", op.height)
+    _reject_optional_field(op_name, "titles_from_data", op.titles_from_data)
+    _reject_optional_field(op_name, "series_from_rows", op.series_from_rows)
 
 
 def _reject_optional_field(op_name: str, field_name: str, value: object) -> None:
@@ -1345,16 +1494,26 @@ class PatchRequest(BaseModel):
 
     @model_validator(mode="after")
     def _validate_backend_constraints(self) -> PatchRequest:
-        if self.backend != "com":
-            return self
-        if self.dry_run or self.return_inverse_ops or self.preflight_formula_check:
+        has_create_chart = any(op.op == "create_chart" for op in self.ops)
+        if has_create_chart and self.backend == "openpyxl":
             raise ValueError(
-                "backend='com' does not support dry_run, return_inverse_ops, "
-                "or preflight_formula_check."
+                "create_chart is supported only on COM backend; backend='openpyxl' is not allowed."
             )
-        if any(op.op == "restore_design_snapshot" for op in self.ops):
+        if self.backend == "com":
+            if self.dry_run or self.return_inverse_ops or self.preflight_formula_check:
+                raise ValueError(
+                    "backend='com' does not support dry_run, return_inverse_ops, "
+                    "or preflight_formula_check."
+                )
+            if any(op.op == "restore_design_snapshot" for op in self.ops):
+                raise ValueError(
+                    "backend='com' does not support restore_design_snapshot operation."
+                )
+        if has_create_chart and (
+            self.dry_run or self.return_inverse_ops or self.preflight_formula_check
+        ):
             raise ValueError(
-                "backend='com' does not support restore_design_snapshot operation."
+                "create_chart does not support dry_run, return_inverse_ops, or preflight_formula_check."
             )
         return self
 
@@ -1374,16 +1533,26 @@ class MakeRequest(BaseModel):
 
     @model_validator(mode="after")
     def _validate_backend_constraints(self) -> MakeRequest:
-        if self.backend != "com":
-            return self
-        if self.dry_run or self.return_inverse_ops or self.preflight_formula_check:
+        has_create_chart = any(op.op == "create_chart" for op in self.ops)
+        if has_create_chart and self.backend == "openpyxl":
             raise ValueError(
-                "backend='com' does not support dry_run, return_inverse_ops, "
-                "or preflight_formula_check."
+                "create_chart is supported only on COM backend; backend='openpyxl' is not allowed."
             )
-        if any(op.op == "restore_design_snapshot" for op in self.ops):
+        if self.backend == "com":
+            if self.dry_run or self.return_inverse_ops or self.preflight_formula_check:
+                raise ValueError(
+                    "backend='com' does not support dry_run, return_inverse_ops, "
+                    "or preflight_formula_check."
+                )
+            if any(op.op == "restore_design_snapshot" for op in self.ops):
+                raise ValueError(
+                    "backend='com' does not support restore_design_snapshot operation."
+                )
+        if has_create_chart and (
+            self.dry_run or self.return_inverse_ops or self.preflight_formula_check
+        ):
             raise ValueError(
-                "backend='com' does not support restore_design_snapshot operation."
+                "create_chart does not support dry_run, return_inverse_ops, or preflight_formula_check."
             )
         return self
 
@@ -1553,6 +1722,8 @@ def _allow_auto_openpyxl_fallback(request: PatchRequest, input_path: Path) -> bo
     """Return True when COM failure can fallback to openpyxl."""
     if request.backend != "auto":
         return False
+    if _contains_create_chart_op(request.ops):
+        return False
     return input_path.suffix.lower() in {".xlsx", ".xlsm"}
 
 
@@ -1568,7 +1739,10 @@ def _select_patch_engine(
 ) -> PatchEngine:
     """Select concrete patch engine based on request and environment."""
     extension = input_path.suffix.lower()
+    has_create_chart = _contains_create_chart_op(request.ops)
     if request.backend == "openpyxl":
+        if has_create_chart:
+            raise ValueError("create_chart is supported only on COM backend.")
         if extension == ".xls":
             raise ValueError("backend='openpyxl' cannot edit .xls files.")
         return "openpyxl"
@@ -1583,9 +1757,17 @@ def _select_patch_engine(
             )
         return "com"
     if _requires_openpyxl_backend(request):
+        if has_create_chart:
+            raise ValueError(
+                "create_chart does not support dry_run, return_inverse_ops, or preflight_formula_check."
+            )
         return "openpyxl"
     if com_available:
         return "com"
+    if has_create_chart:
+        raise ValueError(
+            "create_chart requires Windows Excel COM availability in this environment."
+        )
     return "openpyxl"
 
 
@@ -1612,6 +1794,11 @@ def _contains_design_ops(ops: list[PatchOp]) -> bool:
 def _contains_apply_table_style_op(ops: list[PatchOp]) -> bool:
     """Return True when apply_table_style is present."""
     return any(op.op == "apply_table_style" for op in ops)
+
+
+def _contains_create_chart_op(ops: list[PatchOp]) -> bool:
+    """Return True when create_chart is present."""
+    return any(op.op == "create_chart" for op in ops)
 
 
 def _append_large_ops_warning(warnings: list[str], ops: list[PatchOp]) -> None:
@@ -1924,6 +2111,7 @@ def _apply_openpyxl_sheet_op(
         "apply_table_style": lambda: _apply_openpyxl_apply_table_style(
             sheet, op, index
         ),
+        "create_chart": lambda: _apply_openpyxl_create_chart(op),
         "restore_design_snapshot": lambda: _apply_openpyxl_restore_design_snapshot(
             sheet, op, index
         ),
@@ -2498,6 +2686,13 @@ def _apply_openpyxl_restore_design_snapshot(
             after=PatchValue(kind="style", value="design_snapshot_restored"),
         ),
         None,
+    )
+
+
+def _apply_openpyxl_create_chart(op: PatchOp) -> tuple[PatchDiffItem, PatchOp | None]:
+    """Reject create_chart on openpyxl backend."""
+    raise ValueError(
+        f"create_chart is supported only on COM backend (sheet={op.sheet})."
     )
 
 
@@ -3350,6 +3545,7 @@ def _apply_xlwings_extended_op(
         "set_alignment": lambda: _apply_xlwings_set_alignment(sheet, op, index),
         "set_style": lambda: _apply_xlwings_set_style(sheet, op, index),
         "apply_table_style": lambda: _apply_xlwings_apply_table_style(op),
+        "create_chart": lambda: _apply_xlwings_create_chart(sheet, op, index),
         "restore_design_snapshot": lambda: _apply_xlwings_restore_design_snapshot(op),
     }
     handler = handlers.get(op.op)
@@ -3668,6 +3864,131 @@ def _apply_xlwings_set_style(
 def _apply_xlwings_apply_table_style(op: PatchOp) -> PatchDiffItem:
     """Reject apply_table_style on COM backend."""
     raise ValueError("apply_table_style is supported only on openpyxl backend.")
+
+
+def _apply_xlwings_create_chart(
+    sheet: XlwingsSheetProtocol, op: PatchOp, index: int
+) -> PatchDiffItem:
+    """Apply create_chart with xlwings COM API."""
+    if op.chart_type is None or op.data_range is None or op.anchor_cell is None:
+        raise ValueError(
+            "create_chart requires chart_type, data_range, and anchor_cell."
+        )
+
+    chart_type_id = _resolve_chart_type_id(op.chart_type)
+    if chart_type_id is None:
+        raise ValueError("create_chart chart_type must be one of: line, column, pie.")
+
+    sheet_api = _xlwings_sheet_api(sheet)
+    anchor_left, anchor_top = _resolve_chart_anchor(sheet, op.anchor_cell)
+    chart_width = float(op.width if op.width is not None else 360.0)
+    chart_height = float(op.height if op.height is not None else 220.0)
+    chart_objects = _resolve_chart_objects(sheet_api)
+    _validate_chart_name_uniqueness(chart_objects, op.chart_name)
+
+    chart_object = chart_objects().Add(
+        anchor_left, anchor_top, chart_width, chart_height
+    )
+    chart = getattr(chart_object, "Chart", None)
+    if chart is None:
+        raise ValueError("create_chart failed to acquire chart COM object.")
+
+    chart.ChartType = chart_type_id
+    chart.SetSourceData(sheet.range(op.data_range).api)
+    _apply_chart_category_range(sheet, chart, op.category_range)
+    if op.series_from_rows is not None:
+        plot_by = 1 if op.series_from_rows else 2
+        chart.PlotBy = plot_by
+    _apply_titles_from_data_flag(chart, op.titles_from_data)
+    if op.chart_name is not None:
+        chart_object.Name = op.chart_name
+
+    chart_label = op.chart_name or str(getattr(chart_object, "Name", "Chart"))
+    chart_summary = f"type={op.chart_type};data={op.data_range};anchor={op.anchor_cell};name={chart_label}"
+    return PatchDiffItem(
+        op_index=index,
+        op=op.op,
+        sheet=op.sheet,
+        cell=op.anchor_cell,
+        before=None,
+        after=PatchValue(kind="chart", value=chart_summary),
+    )
+
+
+def _resolve_chart_type_id(chart_type: str) -> int | None:
+    """Map chart type name to Excel COM chart type id."""
+    chart_type_map = {"line": 4, "column": 51, "pie": 5}
+    return chart_type_map.get(chart_type)
+
+
+def _resolve_chart_anchor(
+    sheet: XlwingsSheetProtocol, anchor_cell: str
+) -> tuple[float, float]:
+    """Return chart anchor coordinates from an A1 anchor cell."""
+    anchor_api = _xlwings_range_api(sheet.range(anchor_cell))
+    return float(anchor_api.Left), float(anchor_api.Top)
+
+
+def _resolve_chart_objects(
+    sheet_api: XlwingsSheetApiProtocol,
+) -> Callable[[], XlwingsChartObjectsCollectionProtocol]:
+    """Return callable ChartObjects COM accessor."""
+    chart_objects = getattr(sheet_api, "ChartObjects", None)
+    if not callable(chart_objects):
+        raise ValueError("create_chart requires sheet ChartObjects COM API.")
+    return cast(Callable[[], XlwingsChartObjectsCollectionProtocol], chart_objects)
+
+
+def _existing_chart_names(
+    chart_objects: Callable[[], XlwingsChartObjectsCollectionProtocol],
+) -> set[str]:
+    """Collect chart object names from a worksheet."""
+    chart_collection = chart_objects()
+    existing_count = int(getattr(chart_collection, "Count", 0))
+    names: set[str] = set()
+    for chart_index in range(1, existing_count + 1):
+        item = chart_collection(chart_index)
+        name_value = getattr(item, "Name", None)
+        if isinstance(name_value, str):
+            names.add(name_value)
+    return names
+
+
+def _validate_chart_name_uniqueness(
+    chart_objects: Callable[[], XlwingsChartObjectsCollectionProtocol],
+    chart_name: str | None,
+) -> None:
+    """Validate chart_name uniqueness against existing chart objects."""
+    if chart_name is None:
+        return
+    if chart_name in _existing_chart_names(chart_objects):
+        raise ValueError(f"create_chart chart_name already exists: {chart_name}")
+
+
+def _apply_chart_category_range(
+    sheet: XlwingsSheetProtocol, chart: object, category_range: str | None
+) -> None:
+    """Apply category range to all chart series when provided."""
+    if category_range is None:
+        return
+    series_collection = getattr(chart, "SeriesCollection", None)
+    if not callable(series_collection):
+        return
+    series_count = int(series_collection().Count)
+    for series_idx in range(1, series_count + 1):
+        series_collection(series_idx).XValues = sheet.range(category_range).api
+
+
+def _apply_titles_from_data_flag(chart: object, titles_from_data: bool | None) -> None:
+    """Apply titles_from_data behavior for COM chart series names."""
+    if titles_from_data is not False:
+        return
+    series_collection = getattr(chart, "SeriesCollection", None)
+    if not callable(series_collection):
+        return
+    series_count = int(series_collection().Count)
+    for series_idx in range(1, series_count + 1):
+        series_collection(series_idx).Name = f"Series {series_idx}"
 
 
 def _apply_xlwings_restore_design_snapshot(op: PatchOp) -> PatchDiffItem:

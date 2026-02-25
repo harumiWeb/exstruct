@@ -202,6 +202,27 @@ def test_patch_tool_input_accepts_apply_table_style_op() -> None:
     assert payload.ops[0].table_name == "SalesTable"
 
 
+def test_patch_tool_input_accepts_create_chart_op() -> None:
+    payload = PatchToolInput(
+        xlsx_path="input.xlsx",
+        ops=[
+            {
+                "op": "create_chart",
+                "sheet": "Sheet1",
+                "chart_type": "line",
+                "data_range": "A1:C10",
+                "category_range": "A2:A10",
+                "anchor_cell": "E2",
+                "chart_name": "Trend",
+            }
+        ],
+    )
+    assert payload.ops[0].op == "create_chart"
+    assert payload.ops[0].chart_type == "line"
+    assert payload.ops[0].titles_from_data is True
+    assert payload.ops[0].series_from_rows is False
+
+
 def test_patch_tool_input_accepts_auto_fit_columns_op() -> None:
     payload = PatchToolInput(
         xlsx_path="input.xlsx",

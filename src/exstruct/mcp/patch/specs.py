@@ -45,6 +45,7 @@ PATCH_OP_SPECS: Final[dict[PatchOpType, PatchOpSpec]] = {
     ),
     "set_style": PatchOpSpec(op="set_style"),
     "apply_table_style": PatchOpSpec(op="apply_table_style"),
+    "create_chart": PatchOpSpec(op="create_chart"),
     "restore_design_snapshot": PatchOpSpec(op="restore_design_snapshot"),
 }
 

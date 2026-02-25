@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from typing import Any, cast
+from unittest.mock import MagicMock
 
 from pydantic import ValidationError
 import pytest
@@ -326,3 +327,100 @@ def test_internal_auto_fit_column_resolution_defaults() -> None:
     assert internal._resolve_auto_fit_columns_xlwings(
         cast(internal.XlwingsSheetProtocol, _SheetWithUsedRange()), None
     ) == ["A", "B", "C"]
+
+
+def test_internal_create_chart_honors_titles_from_data_false() -> None:
+    series_1 = MagicMock()
+    series_1.Name = "Header-A"
+    series_2 = MagicMock()
+    series_2.Name = "Header-B"
+    series_items = {1: series_1, 2: series_2}
+    series_collection = MagicMock()
+    series_collection.side_effect = (
+        lambda index=None: MagicMock(Count=2) if index is None else series_items[index]
+    )
+
+    chart = MagicMock()
+    chart.SeriesCollection = series_collection
+    chart_object = MagicMock()
+    chart_object.Chart = chart
+    chart_object.Name = "Chart 1"
+
+    chart_collection = MagicMock()
+    chart_collection.Count = 0
+    chart_collection.Add.return_value = chart_object
+    chart_objects = MagicMock()
+    chart_objects.side_effect = lambda index=None: (
+        chart_collection if index is None else chart_object
+    )
+
+    anchor_range = MagicMock()
+    anchor_range.api = MagicMock(Left=10.0, Top=20.0)
+    data_range = MagicMock()
+    data_range.api = "DATA_API"
+    sheet = MagicMock()
+    sheet.api = MagicMock(ChartObjects=chart_objects)
+    sheet.range.side_effect = lambda ref: {
+        "E2": anchor_range,
+        "A1:C3": data_range,
+    }[ref]
+
+    op = internal.PatchOp(
+        op="create_chart",
+        sheet="Sheet1",
+        chart_type="line",
+        data_range="A1:C3",
+        anchor_cell="E2",
+        titles_from_data=False,
+    )
+
+    diff = internal._apply_xlwings_create_chart(
+        cast(internal.XlwingsSheetProtocol, sheet), op, index=0
+    )
+
+    chart.SetSourceData.assert_called_once_with("DATA_API")
+    assert series_1.Name == "Series 1"
+    assert series_2.Name == "Series 2"
+    assert diff.after is not None
+    assert diff.after.kind == "chart"
+
+
+def test_internal_create_chart_allows_name_matching_new_default_name() -> None:
+    chart = MagicMock()
+    chart.SeriesCollection = MagicMock(
+        side_effect=lambda index=None: MagicMock(Count=0)
+    )
+    chart_object = MagicMock()
+    chart_object.Chart = chart
+    chart_object.Name = "Chart 1"
+
+    chart_collection = MagicMock()
+    chart_collection.Count = 0
+    chart_collection.Add.return_value = chart_object
+    chart_objects = MagicMock(side_effect=lambda index=None: chart_collection)
+
+    anchor_range = MagicMock()
+    anchor_range.api = MagicMock(Left=15.0, Top=25.0)
+    data_range = MagicMock()
+    data_range.api = "DATA_API"
+    sheet = MagicMock()
+    sheet.api = MagicMock(ChartObjects=chart_objects)
+    sheet.range.side_effect = lambda ref: {
+        "D2": anchor_range,
+        "A1:B3": data_range,
+    }[ref]
+
+    op = internal.PatchOp(
+        op="create_chart",
+        sheet="Sheet1",
+        chart_type="line",
+        data_range="A1:B3",
+        anchor_cell="D2",
+        chart_name="Chart 1",
+    )
+
+    internal._apply_xlwings_create_chart(
+        cast(internal.XlwingsSheetProtocol, sheet), op, index=0
+    )
+
+    assert chart_object.Name == "Chart 1"

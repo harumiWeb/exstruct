@@ -383,6 +383,7 @@ def test_register_tools_returns_ops_schema_tools(tmp_path: Path) -> None:
     assert "set_value" in listed_ops
     assert "set_style" in listed_ops
     assert "apply_table_style" in listed_ops
+    assert "create_chart" in listed_ops
     assert "auto_fit_columns" in listed_ops
 
     describe_tool = cast(
