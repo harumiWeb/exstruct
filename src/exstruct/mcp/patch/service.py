@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import TypeVar
 
@@ -280,17 +281,17 @@ def _op_targets_issue_cell(op: PatchOp, sheet: str, cell: str) -> bool:
     return False
 
 
-def _coerce_patch_diff_items(items: list[object]) -> list[PatchDiffItem]:
+def _coerce_patch_diff_items(items: Sequence[object]) -> list[PatchDiffItem]:
     """Coerce backend diff items into canonical PatchDiffItem models."""
     return _coerce_model_list(items, PatchDiffItem)
 
 
-def _coerce_inverse_ops(items: list[object]) -> list[PatchOp]:
+def _coerce_inverse_ops(items: Sequence[object]) -> list[PatchOp]:
     """Coerce backend inverse ops into canonical PatchOp models."""
     return _coerce_model_list(items, PatchOp)
 
 
-def _coerce_formula_issues(items: list[object]) -> list[FormulaIssue]:
+def _coerce_formula_issues(items: Sequence[object]) -> list[FormulaIssue]:
     """Coerce backend formula findings into canonical FormulaIssue models."""
     return _coerce_model_list(items, FormulaIssue)
 
@@ -303,7 +304,9 @@ def _coerce_patch_error_detail(detail: object) -> PatchErrorDetail | None:
     return coerced[0]
 
 
-def _coerce_model_list(items: list[object], model_cls: type[TModel]) -> list[TModel]:
+def _coerce_model_list(
+    items: Sequence[object], model_cls: type[TModel]
+) -> list[TModel]:
     """Convert model-like items to target Pydantic models and skip invalid entries."""
     coerced: list[TModel] = []
     for item in items:

@@ -19,6 +19,7 @@ def _create_workbook(path: Path) -> None:
     """
     workbook = Workbook()
     sheet = workbook.active
+    assert sheet is not None
     sheet.title = "Sheet1"
     sheet["A1"] = "old"
     workbook.save(path)

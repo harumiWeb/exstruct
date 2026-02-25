@@ -26,31 +26,11 @@ from .types import (
     VerticalAlignType,
 )
 
-_ALLOWED_EXTENSIONS = {".xlsx", ".xlsm", ".xls"}
 _A1_PATTERN = re.compile(r"^[A-Za-z]{1,3}[1-9][0-9]*$")
 _A1_RANGE_PATTERN = re.compile(r"^[A-Za-z]{1,3}[1-9][0-9]*:[A-Za-z]{1,3}[1-9][0-9]*$")
 _HEX_COLOR_PATTERN = re.compile(r"^#?(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$")
 _COLUMN_LABEL_PATTERN = re.compile(r"^[A-Za-z]{1,3}$")
 _MAX_STYLE_TARGET_CELLS = 10_000
-_SOFT_MAX_OPS_WARNING_THRESHOLD = 200
-
-_XLWINGS_HORIZONTAL_ALIGN_MAP: dict[HorizontalAlignType, int] = {
-    "general": -4105,
-    "left": -4131,
-    "center": -4108,
-    "right": -4152,
-    "fill": 5,
-    "justify": -4130,
-    "centerContinuous": 7,
-    "distributed": -4117,
-}
-_XLWINGS_VERTICAL_ALIGN_MAP: dict[VerticalAlignType, int] = {
-    "top": -4160,
-    "center": -4108,
-    "bottom": -4107,
-    "justify": -4130,
-    "distributed": -4117,
-}
 
 
 class BorderSideSnapshot(BaseModel):
@@ -1374,9 +1354,9 @@ class OpenpyxlEngineResult(BaseModel):
         op_warnings: Backend warning messages emitted during apply.
     """
 
-    patch_diff: list[object] = Field(default_factory=list)
-    inverse_ops: list[object] = Field(default_factory=list)
-    formula_issues: list[object] = Field(default_factory=list)
+    patch_diff: list[PatchDiffItem] = Field(default_factory=list)
+    inverse_ops: list[PatchOp] = Field(default_factory=list)
+    formula_issues: list[FormulaIssue] = Field(default_factory=list)
     op_warnings: list[str] = Field(default_factory=list)
 
 

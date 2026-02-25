@@ -29,3 +29,5 @@ htmlcov/
 .tmp_mcp_test/
 sample.md
 review.md
+
+.cocoindex_code/
