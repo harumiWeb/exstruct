@@ -9,6 +9,11 @@ from pydantic import BaseModel, Field
 from exstruct import ExtractionMode, process_excel
 
 from .io import PathPolicy
+from .shared.output_path import (
+    apply_conflict_policy as _shared_apply_conflict_policy,
+    next_available_path as _shared_next_available_path,
+    resolve_output_path as _shared_resolve_output_path,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -179,14 +184,14 @@ def _resolve_output_path(
     Raises:
         ValueError: If the path violates the policy.
     """
-    target_dir = out_dir or input_path.parent
-    target_dir = policy.ensure_allowed(target_dir) if policy else target_dir.resolve()
-    suffix = _format_suffix(fmt)
-    name = _normalize_output_name(input_path, out_name, suffix)
-    output_path = (target_dir / name).resolve()
-    if policy is not None:
-        output_path = policy.ensure_allowed(output_path)
-    return output_path
+    return _shared_resolve_output_path(
+        input_path,
+        out_dir=out_dir,
+        out_name=out_name,
+        policy=policy,
+        default_suffix=_format_suffix(fmt),
+        default_name_builder="same_stem",
+    )
 
 
 def _normalize_output_name(input_path: Path, out_name: str | None, suffix: str) -> str:
@@ -259,35 +264,12 @@ def _apply_conflict_policy(
     Returns:
         Tuple of (resolved output path, warning message or None, skipped flag).
     """
-    if not output_path.exists():
-        return output_path, None, False
-    if on_conflict == "skip":
-        return (
-            output_path,
-            f"Output exists; skipping write: {output_path.name}",
-            True,
-        )
-    if on_conflict == "rename":
-        renamed = _next_available_path(output_path)
-        return (
-            renamed,
-            f"Output exists; renamed to: {renamed.name}",
-            False,
-        )
-    return output_path, None, False
+    return _shared_apply_conflict_policy(output_path, on_conflict)
 
 
 def _next_available_path(path: Path) -> Path:
     """Return the next available path by appending a numeric suffix."""
-    if not path.exists():
-        return path
-    stem = path.stem
-    suffix = path.suffix
-    for idx in range(1, 10_000):
-        candidate = path.with_name(f"{stem}_{idx}{suffix}")
-        if not candidate.exists():
-            return candidate
-    raise RuntimeError(f"Failed to resolve unique path for {path}")
+    return _shared_next_available_path(path)
 
 
 def _try_read_workbook_meta(path: Path) -> tuple[WorkbookMeta | None, list[str]]:

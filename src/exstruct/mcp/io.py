@@ -33,13 +33,23 @@ class PathPolicy(BaseModel):
         Raises:
             ValueError: If the path is outside the root or denied by glob.
         """
-        resolved = path.resolve()
         root = self.normalize_root()
+        resolved = self._resolve_from_root(path, root)
         if resolved != root and root not in resolved.parents:
-            raise ValueError(f"Path is outside root: {resolved}")
+            raise ValueError(
+                "Path is outside root. "
+                f"resolved={resolved}, root={root}, "
+                "example_relative='outputs/book.xlsx'. "
+                "Use exstruct_get_runtime_info to inspect valid root-based paths."
+            )
         if self._is_denied(resolved, root):
             raise ValueError(f"Path is denied by policy: {resolved}")
         return resolved
+
+    def _resolve_from_root(self, path: Path, root: Path) -> Path:
+        """Resolve path using root as the base for relative inputs."""
+        candidate = path if path.is_absolute() else root / path
+        return candidate.resolve()
 
     def _is_denied(self, path: Path, root: Path) -> bool:
         """Check if a path is denied by glob rules.

@@ -159,3 +159,89 @@ def test_read_cells_requires_sheet_for_multi_sheet_payload(tmp_path: Path) -> No
     request = ReadCellsRequest(out_path=out, addresses=["A1"])
     with pytest.raises(ValueError, match=r"Available sheets: A, B"):
         read_cells(request)
+
+
+def test_read_range_excludes_empty_cells_when_include_empty_false(
+    tmp_path: Path,
+) -> None:
+    data = {"book_name": "book", "sheets": {"Data": {"rows": []}}}
+    out = tmp_path / "out.json"
+    _write_json(out, data)
+
+    request = ReadRangeRequest(
+        out_path=out,
+        sheet="Data",
+        range="A1:B1",
+        include_empty=False,
+    )
+    result = read_range(request)
+    assert result.cells == []
+
+
+def test_read_range_rejects_missing_output_file(tmp_path: Path) -> None:
+    request = ReadRangeRequest(
+        out_path=tmp_path / "missing.json", sheet="Data", range="A1"
+    )
+    with pytest.raises(FileNotFoundError, match="Output file not found"):
+        read_range(request)
+
+
+def test_sheet_reader_private_helpers_cover_invalid_payload_paths() -> None:
+    from exstruct.mcp import sheet_reader
+
+    with pytest.raises(ValueError, match="expected object at root"):
+        sheet_reader._parse_json("[]")
+
+    with pytest.raises(ValueError, match="sheets is not a mapping"):
+        sheet_reader._select_sheet({"sheets": []}, None)
+    with pytest.raises(ValueError, match="sheet payload is not an object"):
+        sheet_reader._select_sheet({"sheets": {"Only": []}}, None)
+    with pytest.raises(ValueError, match="Invalid A1 range"):
+        sheet_reader._parse_range("B2:A1")
+
+
+def test_sheet_reader_private_parsers_and_normalizers() -> None:
+    from exstruct.mcp import sheet_reader
+
+    assert sheet_reader._build_value_map({"rows": "not-list"}) == {}
+    value_map = sheet_reader._build_value_map(
+        {
+            "rows": [
+                {"r": 1, "c": {"0": "v0", "AA": "vaa", "-1": "skip"}},
+                {"r": 0, "c": {"0": "skip"}},
+                {"r": 2, "c": ["skip"]},
+            ]
+        }
+    )
+    assert value_map[(1, 1)] == "v0"
+    assert value_map[(1, 27)] == "vaa"
+
+    formula_map, has_formula = sheet_reader._build_formula_map(
+        {
+            "formulas_map": {
+                1: [[1, 0]],
+                "=OK": [[1, 0], [0, 0], [1], "bad"],
+            }
+        }
+    )
+    assert has_formula is True
+    assert formula_map == {(1, 1): "=OK"}
+
+    assert sheet_reader._parse_formula_position("bad") is None
+    assert sheet_reader._parse_formula_position([1]) is None
+    assert sheet_reader._parse_formula_position([1, "x"]) is None
+    assert sheet_reader._parse_formula_position([0, 0]) is None
+    assert sheet_reader._parse_formula_position([1, -1]) is None
+
+    assert sheet_reader._parse_col_key("-1") is None
+    assert sheet_reader._parse_col_key("3") == 4
+    assert sheet_reader._parse_col_key("AB") == 28
+    assert sheet_reader._parse_col_key("A1") is None
+
+    with pytest.raises(ValueError, match="Invalid column index"):
+        sheet_reader._col_to_alpha(0)
+    with pytest.raises(ValueError, match="Invalid column label"):
+        sheet_reader._alpha_to_col("A!")
+
+    assert sheet_reader._normalize_scalar({"a": 1}) == "{'a': 1}"
+    assert sheet_reader._as_optional_str(10) == "10"

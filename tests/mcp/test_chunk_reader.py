@@ -275,3 +275,75 @@ def test_read_json_chunk_warns_on_too_small_max_bytes(tmp_path: Path) -> None:
     request = ReadJsonChunkRequest(out_path=out, sheet="Sheet1", max_bytes=max_bytes)
     result = read_json_chunk(request)
     assert any("max_bytes too small" in warning for warning in result.warnings)
+
+
+def test_read_json_chunk_missing_output_file_raises(tmp_path: Path) -> None:
+    request = ReadJsonChunkRequest(out_path=tmp_path / "missing.json", sheet="Sheet1")
+    with pytest.raises(FileNotFoundError, match="Output file not found"):
+        read_json_chunk(request)
+
+
+def test_read_json_chunk_single_sheet_without_explicit_sheet(tmp_path: Path) -> None:
+    data = {
+        "book_name": "book",
+        "sheets": {"Only": {"rows": [{"r": 1, "c": {"0": "A"}}]}},
+    }
+    out = tmp_path / "out.json"
+    _write_json(out, data)
+    request = ReadJsonChunkRequest(
+        out_path=out,
+        sheet=None,
+        filter=ReadJsonChunkFilter(rows=(1, 1)),
+        max_bytes=10_000,
+    )
+    result = read_json_chunk(request)
+    payload = json.loads(result.chunk)
+    assert payload["sheet_name"] == "Only"
+
+
+def test_chunk_reader_private_helpers_cover_boundary_paths() -> None:
+    rows = [{"r": 1, "c": {"0": "A"}}, {"r": 2, "c": "not-dict"}]
+    filtered = chunk_reader._filter_cols(rows, (1, 1), warnings=[])
+    assert filtered[1]["c"] == "not-dict"
+    assert chunk_reader._extract_rows({"rows": "invalid"}) == []
+    assert chunk_reader._col_in_range("bad-key", 0, 3) is False
+    assert chunk_reader._row_index({"r": "x"}) == -1
+    assert chunk_reader._parse_col_index("A1") is None
+
+
+def test_build_sheet_chunk_returns_next_cursor_when_second_row_overflows() -> None:
+    data = {"book_name": "book"}
+    sheet_name = "Sheet1"
+    rows = [
+        {"r": 1, "c": {"0": "x" * 80}},
+        {"r": 2, "c": {"0": "y" * 80}},
+    ]
+    sheet_data = {"rows": rows}
+
+    first_payload = {
+        "book_name": "book",
+        "sheet_name": sheet_name,
+        "sheet": {"rows": [rows[0]]},
+    }
+    second_payload = {
+        "book_name": "book",
+        "sheet_name": sheet_name,
+        "sheet": {"rows": rows},
+    }
+    first_size = len(chunk_reader._serialize_json(first_payload).encode("utf-8"))
+    second_size = len(chunk_reader._serialize_json(second_payload).encode("utf-8"))
+    max_bytes = first_size + 1
+    assert second_size > max_bytes
+
+    chunk, next_cursor, warnings = chunk_reader._build_sheet_chunk(
+        data,
+        sheet_name,
+        sheet_data,
+        rows,
+        cursor=None,
+        max_bytes=max_bytes,
+    )
+    payload = json.loads(chunk)
+    assert len(payload["sheet"]["rows"]) == 1
+    assert next_cursor == "1"
+    assert warnings == []

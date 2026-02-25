@@ -253,3 +253,26 @@ WorkbookData {
 - 0.14: `MergedCell` / `SheetData.merged_cells` を追加
 - 0.15: `MergedCells` を schema + items 形式に変更し圧縮形式を導入
 - 0.16: `SheetData.formulas_map` を追加
+
+---
+
+# Appendix A. MCP Patch Models
+
+MCP の patch/make で利用するモデル群は、後方互換のため
+`exstruct.mcp.patch_runner` から引き続き import 可能です。
+
+実体の配置は以下です。
+
+- 実体モデル: `src/exstruct/mcp/patch/models.py`
+- 互換ファサード: `src/exstruct/mcp/patch_runner.py`
+- サービス層: `src/exstruct/mcp/patch/service.py`
+
+主なモデル:
+
+- `PatchOp`
+- `PatchRequest`
+- `MakeRequest`
+- `PatchResult`
+- `PatchDiffItem`
+- `PatchErrorDetail`
+- `FormulaIssue`

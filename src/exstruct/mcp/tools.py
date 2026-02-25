@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+import shutil
 from typing import Literal
+from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from exstruct import ExtractionMode
 
@@ -22,13 +24,24 @@ from .extract_runner import (
     run_extract,
 )
 from .io import PathPolicy
+from .op_schema import (
+    get_patch_op_schema,
+    list_patch_op_schemas,
+    schema_with_sheet_resolution_rules,
+)
+from .patch.normalize import (
+    build_missing_sheet_message as _normalize_build_missing_sheet_message,
+    resolve_top_level_sheet_for_payload as _normalize_resolve_top_level_sheet_for_payload,
+)
 from .patch_runner import (
     FormulaIssue,
+    MakeRequest,
     PatchDiffItem,
     PatchErrorDetail,
     PatchOp,
     PatchRequest,
     PatchResult,
+    run_make,
     run_patch,
 )
 from .sheet_reader import (
@@ -163,11 +176,58 @@ class ValidateInputToolOutput(BaseModel):
     errors: list[str] = Field(default_factory=list)
 
 
+class RuntimePathExamples(BaseModel):
+    """Path examples for MCP runtime diagnostics."""
+
+    relative: str
+    absolute: str
+
+
+class RuntimeInfoToolOutput(BaseModel):
+    """MCP tool output for runtime environment information."""
+
+    root: str
+    cwd: str
+    platform: str
+    path_examples: RuntimePathExamples
+
+
+class OpSummary(BaseModel):
+    """Short op metadata for list output."""
+
+    op: str
+    description: str
+
+
+class ListOpsToolOutput(BaseModel):
+    """MCP tool output for listing supported patch operations."""
+
+    ops: list[OpSummary] = Field(default_factory=list)
+
+
+class DescribeOpToolInput(BaseModel):
+    """MCP tool input for describing one patch op."""
+
+    op: str
+
+
+class DescribeOpToolOutput(BaseModel):
+    """MCP tool output for patch op schema details."""
+
+    op: str
+    required: list[str] = Field(default_factory=list)
+    optional: list[str] = Field(default_factory=list)
+    constraints: list[str] = Field(default_factory=list)
+    example: dict[str, object] = Field(default_factory=dict)
+    aliases: dict[str, str] = Field(default_factory=dict)
+
+
 class PatchToolInput(BaseModel):
     """MCP tool input for patching Excel files."""
 
     xlsx_path: str
     ops: list[PatchOp]
+    sheet: str | None = None
     out_dir: str | None = None
     out_name: str | None = None
     on_conflict: OnConflictPolicy | None = None
@@ -175,6 +235,53 @@ class PatchToolInput(BaseModel):
     dry_run: bool = False
     return_inverse_ops: bool = False
     preflight_formula_check: bool = False
+    backend: Literal["auto", "com", "openpyxl"] = "auto"
+    mirror_artifact: bool = False
+
+    @field_validator("sheet")
+    @classmethod
+    def _validate_sheet(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        candidate = value.strip()
+        if not candidate:
+            raise ValueError("sheet must not be empty when provided.")
+        return candidate
+
+    @model_validator(mode="before")
+    @classmethod
+    def _fill_ops_sheet_from_top_level(cls, data: object) -> object:
+        return _resolve_top_level_sheet_for_payload(data)
+
+
+class MakeToolInput(BaseModel):
+    """MCP tool input for creating and patching new Excel files."""
+
+    out_path: str
+    ops: list[PatchOp] = Field(default_factory=list)
+    sheet: str | None = None
+    on_conflict: OnConflictPolicy | None = None
+    auto_formula: bool = False
+    dry_run: bool = False
+    return_inverse_ops: bool = False
+    preflight_formula_check: bool = False
+    backend: Literal["auto", "com", "openpyxl"] = "auto"
+    mirror_artifact: bool = False
+
+    @field_validator("sheet")
+    @classmethod
+    def _validate_sheet(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        candidate = value.strip()
+        if not candidate:
+            raise ValueError("sheet must not be empty when provided.")
+        return candidate
+
+    @model_validator(mode="before")
+    @classmethod
+    def _fill_ops_sheet_from_top_level(cls, data: object) -> object:
+        return _resolve_top_level_sheet_for_payload(data)
 
 
 class PatchToolOutput(BaseModel):
@@ -185,7 +292,22 @@ class PatchToolOutput(BaseModel):
     inverse_ops: list[PatchOp] = Field(default_factory=list)
     formula_issues: list[FormulaIssue] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    mirrored_out_path: str | None = None
     error: PatchErrorDetail | None = None
+    engine: Literal["com", "openpyxl"]
+
+
+class MakeToolOutput(BaseModel):
+    """MCP tool output for workbook creation and patching."""
+
+    out_path: str
+    patch_diff: list[PatchDiffItem] = Field(default_factory=list)
+    inverse_ops: list[PatchOp] = Field(default_factory=list)
+    formula_issues: list[FormulaIssue] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    mirrored_out_path: str | None = None
+    error: PatchErrorDetail | None = None
+    engine: Literal["com", "openpyxl"]
 
 
 def run_extract_tool(
@@ -329,6 +451,7 @@ def run_patch_tool(
     *,
     policy: PathPolicy | None = None,
     on_conflict: OnConflictPolicy | None = None,
+    artifact_bridge_dir: Path | None = None,
 ) -> PatchToolOutput:
     """Run the patch tool handler.
 
@@ -343,6 +466,7 @@ def run_patch_tool(
     request = PatchRequest(
         xlsx_path=Path(payload.xlsx_path),
         ops=payload.ops,
+        sheet=payload.sheet,
         out_dir=Path(payload.out_dir) if payload.out_dir else None,
         out_name=payload.out_name,
         on_conflict=payload.on_conflict or on_conflict or "overwrite",
@@ -350,9 +474,56 @@ def run_patch_tool(
         dry_run=payload.dry_run,
         return_inverse_ops=payload.return_inverse_ops,
         preflight_formula_check=payload.preflight_formula_check,
+        backend=payload.backend,
     )
     result = run_patch(request, policy=policy)
-    return _to_patch_tool_output(result)
+    output = _to_patch_tool_output(result)
+    _apply_artifact_mirroring(
+        output,
+        out_path=result.out_path,
+        mirror_artifact=payload.mirror_artifact,
+        artifact_bridge_dir=artifact_bridge_dir,
+    )
+    return output
+
+
+def run_make_tool(
+    payload: MakeToolInput,
+    *,
+    policy: PathPolicy | None = None,
+    on_conflict: OnConflictPolicy | None = None,
+    artifact_bridge_dir: Path | None = None,
+) -> MakeToolOutput:
+    """Run the make tool handler.
+
+    Args:
+        payload: Tool input payload.
+        policy: Optional path policy for access control.
+        on_conflict: Optional conflict policy override.
+
+    Returns:
+        Tool output payload.
+    """
+    request = MakeRequest(
+        out_path=Path(payload.out_path),
+        ops=payload.ops,
+        sheet=payload.sheet,
+        on_conflict=payload.on_conflict or on_conflict or "overwrite",
+        auto_formula=payload.auto_formula,
+        dry_run=payload.dry_run,
+        return_inverse_ops=payload.return_inverse_ops,
+        preflight_formula_check=payload.preflight_formula_check,
+        backend=payload.backend,
+    )
+    result = run_make(request, policy=policy)
+    output = _to_make_tool_output(result)
+    _apply_artifact_mirroring(
+        output,
+        out_path=result.out_path,
+        mirror_artifact=payload.mirror_artifact,
+        artifact_bridge_dir=artifact_bridge_dir,
+    )
+    return output
 
 
 def _to_tool_output(result: ExtractResult) -> ExtractToolOutput:
@@ -464,6 +635,66 @@ def _to_validate_input_output(
     )
 
 
+def run_list_ops_tool() -> ListOpsToolOutput:
+    """Return available patch operations and their short descriptions."""
+    return ListOpsToolOutput(
+        ops=[
+            OpSummary(op=schema.op, description=schema.description)
+            for schema in list_patch_op_schemas()
+        ]
+    )
+
+
+def run_describe_op_tool(payload: DescribeOpToolInput) -> DescribeOpToolOutput:
+    """Return schema details for one patch operation.
+
+    Args:
+        payload: Tool input payload.
+
+    Returns:
+        Detailed op schema output.
+
+    Raises:
+        ValueError: If op name is unknown.
+    """
+    schema = get_patch_op_schema(payload.op)
+    if schema is None:
+        raise ValueError(
+            f"Unknown op '{payload.op}'. Use exstruct_list_ops to inspect available ops."
+        )
+    display_schema = schema_with_sheet_resolution_rules(schema)
+    return DescribeOpToolOutput(
+        op=schema.op,
+        required=display_schema.required,
+        optional=display_schema.optional,
+        constraints=display_schema.constraints,
+        example=dict(display_schema.example),
+        aliases=dict(display_schema.aliases),
+    )
+
+
+def _resolve_top_level_sheet_for_payload(data: object) -> object:
+    """Resolve top-level sheet default into operation dict payloads."""
+    return _normalize_resolve_top_level_sheet_for_payload(data)
+
+
+def _normalize_top_level_sheet(value: object) -> str | None:
+    """Normalize optional top-level sheet text."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        return None
+    candidate = value.strip()
+    if not candidate:
+        return None
+    return candidate
+
+
+def _build_missing_sheet_message(*, index: int, op_name: str) -> str:
+    """Build self-healing error for unresolved sheet selection."""
+    return _normalize_build_missing_sheet_message(index=index, op_name=op_name)
+
+
 def _to_patch_tool_output(result: PatchResult) -> PatchToolOutput:
     """Convert internal result to patch tool output.
 
@@ -480,4 +711,73 @@ def _to_patch_tool_output(result: PatchResult) -> PatchToolOutput:
         formula_issues=result.formula_issues,
         warnings=result.warnings,
         error=result.error,
+        engine=result.engine,
     )
+
+
+def _to_make_tool_output(result: PatchResult) -> MakeToolOutput:
+    """Convert internal result to make tool output.
+
+    Args:
+        result: Internal make result.
+
+    Returns:
+        Tool output payload.
+    """
+    return MakeToolOutput(
+        out_path=result.out_path,
+        patch_diff=result.patch_diff,
+        inverse_ops=result.inverse_ops,
+        formula_issues=result.formula_issues,
+        warnings=result.warnings,
+        mirrored_out_path=None,
+        error=result.error,
+        engine=result.engine,
+    )
+
+
+def _apply_artifact_mirroring(
+    output: PatchToolOutput | MakeToolOutput,
+    *,
+    out_path: str,
+    mirror_artifact: bool,
+    artifact_bridge_dir: Path | None,
+) -> None:
+    """Apply optional artifact mirroring and append warnings when needed."""
+    output.mirrored_out_path = None
+    if not mirror_artifact or output.error is not None:
+        return
+    mirrored_path, warning = _mirror_artifact(
+        source_path=Path(out_path),
+        artifact_bridge_dir=artifact_bridge_dir,
+    )
+    output.mirrored_out_path = mirrored_path
+    if warning is not None:
+        output.warnings.append(warning)
+
+
+def _mirror_artifact(
+    *, source_path: Path, artifact_bridge_dir: Path | None
+) -> tuple[str | None, str | None]:
+    """Mirror output artifact to bridge directory."""
+    if artifact_bridge_dir is None:
+        return None, "mirror_artifact=true but --artifact-bridge-dir is not configured."
+    if not source_path.exists() or not source_path.is_file():
+        return (
+            None,
+            f"mirror_artifact requested, but output file was not found: {source_path}",
+        )
+    try:
+        artifact_bridge_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        return None, f"Failed to prepare artifact bridge directory: {exc}"
+    target = artifact_bridge_dir / source_path.name
+    if target.exists():
+        target = artifact_bridge_dir / (
+            f"{source_path.stem}_{uuid4().hex[:8]}{source_path.suffix}"
+        )
+    try:
+        shutil.copy2(source_path, target)
+    except OSError as exc:
+        return None, f"Failed to mirror artifact: {exc}"
+    return str(target), None

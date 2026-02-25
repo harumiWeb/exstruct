@@ -6,7 +6,26 @@ All notable changes to this project are documented in this file. This changelog 
 
 ### Added
 
-- _No unreleased changes yet._
+- No notable changes yet.
+
+## [0.5.0] - 2026-02-24
+
+### Added
+
+- Added MCP `exstruct_make` for one-call workbook creation plus `ops` apply (`out_path` required, `ops` optional), including `.xlsx`/`.xlsm`/`.xls` support and `.xls` COM constraints.
+- Expanded MCP `exstruct_patch` with design editing operations: `draw_grid_border`, `set_bold`, `set_font_size`, `set_font_color`, `set_fill_color`, `set_dimensions`, `auto_fit_columns`, `merge_cells`, `unmerge_cells`, `set_alignment`, `set_style`, `apply_table_style`, and inverse restore op `restore_design_snapshot`.
+- Added MCP operation schema discovery tools: `exstruct_list_ops` and `exstruct_describe_op`.
+- Added MCP runtime diagnostics tool: `exstruct_get_runtime_info`.
+- Added top-level `sheet` fallback for `exstruct_patch`/`exstruct_make` (non-`add_sheet` ops), with `op.sheet` precedence when both are provided.
+- Added artifact mirroring support via `mirror_artifact` and server `--artifact-bridge-dir`.
+
+### Changed
+
+- Updated patch backend controls for MCP `exstruct_patch`/`exstruct_make`: `backend` input (`auto`/`com`/`openpyxl`) and `engine` output (`com`/`openpyxl`).
+- Updated patch backend policy: `auto` now prefers COM when available, with controlled fallback to openpyxl for `.xlsx`/`.xlsm` when COM execution fails.
+- Updated `apply_table_style` behavior: when `backend="com"` is requested, execution falls back to openpyxl with a warning.
+- Refactored MCP patch internals into layered modules (`patch.service` / `patch.engine.*` / `patch.ops.*` / `patch.runtime`) while keeping tool interfaces stable.
+- Updated MCP docs/README pages to include `exstruct_make` behavior and constraints.
 
 ## [0.4.4] - 2026-02-16
 

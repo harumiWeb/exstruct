@@ -18,12 +18,14 @@ from .extract_runner import (
 from .io import PathPolicy
 from .patch_runner import (
     FormulaIssue,
+    MakeRequest,
     PatchDiffItem,
     PatchErrorDetail,
     PatchOp,
     PatchRequest,
     PatchResult,
     PatchValue,
+    run_make,
     run_patch,
 )
 from .sheet_reader import (
@@ -40,8 +42,13 @@ from .sheet_reader import (
     read_range,
 )
 from .tools import (
+    DescribeOpToolInput,
+    DescribeOpToolOutput,
     ExtractToolInput,
     ExtractToolOutput,
+    ListOpsToolOutput,
+    MakeToolInput,
+    MakeToolOutput,
     PatchToolInput,
     PatchToolOutput,
     ReadCellsToolInput,
@@ -54,7 +61,10 @@ from .tools import (
     ReadRangeToolOutput,
     ValidateInputToolInput,
     ValidateInputToolOutput,
+    run_describe_op_tool,
     run_extract_tool,
+    run_list_ops_tool,
+    run_make_tool,
     run_patch_tool,
     run_read_cells_tool,
     run_read_formulas_tool,
@@ -69,6 +79,8 @@ from .validate_input import (
 )
 
 __all__ = [
+    "DescribeOpToolInput",
+    "DescribeOpToolOutput",
     "ExtractRequest",
     "ExtractResult",
     "ExtractOptions",
@@ -76,6 +88,10 @@ __all__ = [
     "ExtractToolOutput",
     "FormulaIssue",
     "FormulaReadItem",
+    "ListOpsToolOutput",
+    "MakeRequest",
+    "MakeToolInput",
+    "MakeToolOutput",
     "PatchDiffItem",
     "PatchErrorDetail",
     "PatchOp",
@@ -111,7 +127,11 @@ __all__ = [
     "read_json_chunk",
     "validate_input",
     "run_extract",
+    "run_describe_op_tool",
     "run_extract_tool",
+    "run_list_ops_tool",
+    "run_make",
+    "run_make_tool",
     "run_patch",
     "run_patch_tool",
     "read_cells",

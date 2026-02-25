@@ -3,10 +3,10 @@ from __future__ import annotations
 import argparse
 import functools
 import importlib
-import json
 import logging
 import os
 from pathlib import Path
+import sys
 from types import ModuleType
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -17,9 +17,20 @@ from exstruct import ExtractionMode
 
 from .extract_runner import OnConflictPolicy
 from .io import PathPolicy
+from .op_schema import build_patch_tool_mini_schema
+from .patch.normalize import (
+    build_patch_op_error_message as _normalize_build_patch_op_error_message,
+    coerce_patch_ops as _normalize_coerce_patch_ops,
+    parse_patch_op_json as _normalize_parse_patch_op_json,
+)
 from .tools import (
+    DescribeOpToolInput,
+    DescribeOpToolOutput,
     ExtractToolInput,
     ExtractToolOutput,
+    ListOpsToolOutput,
+    MakeToolInput,
+    MakeToolOutput,
     PatchToolInput,
     PatchToolOutput,
     ReadCellsToolInput,
@@ -30,9 +41,13 @@ from .tools import (
     ReadJsonChunkToolOutput,
     ReadRangeToolInput,
     ReadRangeToolOutput,
+    RuntimeInfoToolOutput,
     ValidateInputToolInput,
     ValidateInputToolOutput,
+    run_describe_op_tool,
     run_extract_tool,
+    run_list_ops_tool,
+    run_make_tool,
     run_patch_tool,
     run_read_cells_tool,
     run_read_formulas_tool,
@@ -56,6 +71,10 @@ class ServerConfig(BaseModel):
     log_file: Path | None = Field(default=None, description="Optional log file path.")
     on_conflict: OnConflictPolicy = Field(
         default="overwrite", description="Output conflict policy."
+    )
+    artifact_bridge_dir: Path | None = Field(
+        default=None,
+        description="Optional bridge directory for mirrored artifacts.",
     )
     warmup: bool = Field(default=False, description="Warm up heavy imports on start.")
 
@@ -95,7 +114,11 @@ def run_server(config: ServerConfig) -> None:
     logger.info("MCP root: %s", policy.normalize_root())
     if config.warmup:
         _warmup_exstruct()
-    app = _create_app(policy, on_conflict=config.on_conflict)
+    app = _create_app(
+        policy,
+        on_conflict=config.on_conflict,
+        artifact_bridge_dir=config.artifact_bridge_dir,
+    )
     app.run()
 
 
@@ -129,6 +152,11 @@ def _parse_args(argv: list[str] | None) -> ServerConfig:
         help="Output conflict policy (overwrite/skip/rename).",
     )
     parser.add_argument(
+        "--artifact-bridge-dir",
+        type=Path,
+        help="Optional directory to mirror generated artifacts for chat handoff.",
+    )
+    parser.add_argument(
         "--warmup",
         action="store_true",
         help="Warm up heavy imports on startup to reduce tool latency.",
@@ -140,6 +168,7 @@ def _parse_args(argv: list[str] | None) -> ServerConfig:
         log_level=args.log_level,
         log_file=args.log_file,
         on_conflict=args.on_conflict,
+        artifact_bridge_dir=args.artifact_bridge_dir,
         warmup=bool(args.warmup),
     )
 
@@ -182,7 +211,12 @@ def _warmup_exstruct() -> None:
     logger.info("Warmup completed.")
 
 
-def _create_app(policy: PathPolicy, *, on_conflict: OnConflictPolicy) -> FastMCP:
+def _create_app(
+    policy: PathPolicy,
+    *,
+    on_conflict: OnConflictPolicy,
+    artifact_bridge_dir: Path | None = None,
+) -> FastMCP:
     """Create the MCP FastMCP application.
 
     Args:
@@ -194,18 +228,29 @@ def _create_app(policy: PathPolicy, *, on_conflict: OnConflictPolicy) -> FastMCP
     from mcp.server.fastmcp import FastMCP
 
     app = FastMCP("ExStruct MCP", json_response=True)
-    _register_tools(app, policy, default_on_conflict=on_conflict)
+    _register_tools(
+        app,
+        policy,
+        default_on_conflict=on_conflict,
+        artifact_bridge_dir=artifact_bridge_dir,
+    )
     return app
 
 
 def _register_tools(
-    app: FastMCP, policy: PathPolicy, *, default_on_conflict: OnConflictPolicy
+    app: FastMCP,
+    policy: PathPolicy,
+    *,
+    default_on_conflict: OnConflictPolicy,
+    artifact_bridge_dir: Path | None = None,
 ) -> None:
     """Register MCP tools for the server.
 
     Args:
         app: FastMCP application instance.
         policy: Path policy for filesystem access.
+        default_on_conflict: Default conflict policy used when tool input omits it.
+        artifact_bridge_dir: Optional directory for artifact mirroring handoff.
     """
 
     async def _extract_tool(  # pylint: disable=redefined-builtin
@@ -426,9 +471,32 @@ def _register_tools(
     validate_tool = app.tool(name="exstruct_validate_input")
     validate_tool(_validate_input_tool)
 
+    async def _runtime_info_tool() -> RuntimeInfoToolOutput:
+        """Return runtime diagnostics for MCP path troubleshooting.
+
+        Returns:
+            Runtime root/cwd/platform and valid path examples.
+        """
+        root = policy.normalize_root()
+        return RuntimeInfoToolOutput(
+            root=str(root),
+            cwd=str(Path.cwd().resolve()),
+            platform=sys.platform,
+            path_examples={
+                "relative": "outputs/book.xlsx",
+                "absolute": str(root / "outputs" / "book.xlsx"),
+            },
+        )
+
+    runtime_info_tool = app.tool(name="exstruct_get_runtime_info")
+    runtime_info_tool(_runtime_info_tool)
+
+    _register_op_schema_tools(app)
+
     async def _patch_tool(
         xlsx_path: str,
         ops: list[dict[str, Any] | str],
+        sheet: str | None = None,
         out_dir: str | None = None,
         out_name: str | None = None,
         on_conflict: OnConflictPolicy | None = None,
@@ -436,6 +504,8 @@ def _register_tools(
         dry_run: bool = False,
         return_inverse_ops: bool = False,
         preflight_formula_check: bool = False,
+        backend: Literal["auto", "com", "openpyxl"] = "auto",
+        mirror_artifact: bool = False,
     ) -> PatchToolOutput:
         """Edit an Excel workbook by applying patch operations.
 
@@ -453,7 +523,22 @@ def _register_tools(
                 'add_sheet' (create new sheet), 'set_range_values' (bulk set
                 rectangular range), 'fill_formula' (fill formula across a
                 row/column), 'set_value_if' (conditional value update),
-                'set_formula_if' (conditional formula update).
+                'set_formula_if' (conditional formula update),
+                'draw_grid_border' (draw thin black grid border),
+                'set_bold' (apply bold style),
+                'set_font_size' (apply font size; requires font_size > 0 and exactly one of cell/range),
+                'set_font_color' (apply font color; requires color and exactly one of cell/range),
+                'set_fill_color' (apply solid fill),
+                'set_dimensions' (set row height/column width),
+                'auto_fit_columns' (auto-fit column widths with optional bounds),
+                'merge_cells' (merge a rectangular range),
+                'unmerge_cells' (unmerge ranges intersecting target),
+                'set_alignment' (set horizontal/vertical alignment and wrap_text), and
+                'set_style' (apply multiple style attributes in one op), and
+                'apply_table_style' (create table and apply Excel table style), and
+                'restore_design_snapshot' (internal inverse restore op).
+            sheet: Optional default sheet name. Used when op.sheet is omitted
+                for non-add_sheet ops. If both are set, op.sheet wins.
             out_dir: Output directory. Defaults to same directory as input.
             out_name: Output filename. Defaults to '{stem}_patched{ext}'.
             on_conflict: Conflict policy when output file exists:
@@ -465,6 +550,15 @@ def _register_tools(
             return_inverse_ops: When true, return inverse (undo) operations.
             preflight_formula_check: When true, scan formulas for errors
                 like #REF!, #NAME?, #DIV/0! before saving.
+            backend: Patch execution backend.
+                - "auto" (default): prefer COM when available; otherwise openpyxl.
+                  Uses openpyxl when dry_run/return_inverse_ops/preflight_formula_check
+                  is enabled.
+                - "com": force COM path (requires Excel COM and disallows
+                  dry_run/return_inverse_ops/preflight_formula_check).
+                - "openpyxl": force openpyxl path (.xls is not supported).
+            mirror_artifact: When true, mirror output workbook to
+                --artifact-bridge-dir after successful patch.
 
         Returns:
             Patch result with output path, applied diffs, and any warnings.
@@ -475,24 +569,175 @@ def _register_tools(
             ops=normalized_ops,
             out_dir=out_dir,
             out_name=out_name,
+            sheet=sheet,
             on_conflict=on_conflict,
             auto_formula=auto_formula,
             dry_run=dry_run,
             return_inverse_ops=return_inverse_ops,
             preflight_formula_check=preflight_formula_check,
+            backend=backend,
+            mirror_artifact=mirror_artifact,
         )
         effective_on_conflict = on_conflict or default_on_conflict
-        work = functools.partial(
-            run_patch_tool,
-            payload,
-            policy=policy,
-            on_conflict=effective_on_conflict,
-        )
+        if artifact_bridge_dir is None:
+            work = functools.partial(
+                run_patch_tool,
+                payload,
+                policy=policy,
+                on_conflict=effective_on_conflict,
+            )
+        else:
+            work = functools.partial(
+                run_patch_tool,
+                payload,
+                policy=policy,
+                on_conflict=effective_on_conflict,
+                artifact_bridge_dir=artifact_bridge_dir,
+            )
         result = cast(PatchToolOutput, await anyio.to_thread.run_sync(work))
         return result
 
+    _patch_tool.__doc__ = _build_patch_tool_description()
+
     patch_tool = app.tool(name="exstruct_patch")
     patch_tool(_patch_tool)
+
+    async def _make_tool(
+        out_path: str,
+        ops: list[dict[str, Any] | str] | None = None,
+        sheet: str | None = None,
+        on_conflict: OnConflictPolicy | None = None,
+        auto_formula: bool = False,
+        dry_run: bool = False,
+        return_inverse_ops: bool = False,
+        preflight_formula_check: bool = False,
+        backend: Literal["auto", "com", "openpyxl"] = "auto",
+        mirror_artifact: bool = False,
+    ) -> MakeToolOutput:
+        """Create a new Excel workbook and apply patch operations.
+
+        Args:
+            out_path: Output workbook path (.xlsx/.xlsm/.xls).
+            ops: Optional patch operations. Accepts object list or JSON object strings.
+            sheet: Optional default sheet name. Used when op.sheet is omitted
+                for non-add_sheet ops. If both are set, op.sheet wins.
+            on_conflict: Conflict policy when output file exists:
+                'overwrite' (replace), 'skip' (do nothing), 'rename' (auto-rename).
+                Defaults to server --on-conflict setting.
+            auto_formula: When true, values starting with '=' in set_value ops
+                are treated as formulas instead of being rejected.
+            dry_run: When true, compute diff without saving changes.
+            return_inverse_ops: When true, return inverse (undo) operations.
+            preflight_formula_check: When true, scan formulas for errors
+                like #REF!, #NAME?, #DIV/0! before saving.
+            backend: Patch execution backend.
+                - "auto" (default): prefer COM when available; otherwise openpyxl.
+                - "com": force COM path (requires Excel COM).
+                - "openpyxl": force openpyxl path (.xls is not supported).
+            mirror_artifact: When true, mirror output workbook to
+                --artifact-bridge-dir after successful make/patch.
+
+        Returns:
+            Patch-compatible result with output path, diff, and warnings.
+        """
+        normalized_ops = _coerce_patch_ops(ops or [])
+        payload = MakeToolInput(
+            out_path=out_path,
+            ops=normalized_ops,
+            sheet=sheet,
+            on_conflict=on_conflict,
+            auto_formula=auto_formula,
+            dry_run=dry_run,
+            return_inverse_ops=return_inverse_ops,
+            preflight_formula_check=preflight_formula_check,
+            backend=backend,
+            mirror_artifact=mirror_artifact,
+        )
+        effective_on_conflict = on_conflict or default_on_conflict
+        if artifact_bridge_dir is None:
+            work = functools.partial(
+                run_make_tool,
+                payload,
+                policy=policy,
+                on_conflict=effective_on_conflict,
+            )
+        else:
+            work = functools.partial(
+                run_make_tool,
+                payload,
+                policy=policy,
+                on_conflict=effective_on_conflict,
+                artifact_bridge_dir=artifact_bridge_dir,
+            )
+        result = cast(MakeToolOutput, await anyio.to_thread.run_sync(work))
+        return result
+
+    make_tool = app.tool(name="exstruct_make")
+    make_tool(_make_tool)
+
+
+def _build_patch_tool_description() -> str:
+    """Build exstruct_patch tool description with op mini schema."""
+    base_description = """
+Edit an Excel workbook by applying patch operations.
+
+Supports cell value updates, formula updates, and adding new sheets.
+Operations are applied atomically: all succeed or none are saved.
+
+Args:
+    xlsx_path: Path to the Excel workbook to edit.
+    ops: Patch operations to apply in order. Preferred format is an
+        object list (one object per operation). For compatibility with
+        clients that cannot send object arrays, JSON object strings are
+        also accepted and normalized before validation.
+    sheet: Optional default sheet name. Used when op.sheet is omitted
+        for non-add_sheet ops. If both are set, op.sheet wins.
+    out_dir: Output directory. Defaults to same directory as input.
+    out_name: Output filename. Defaults to '{stem}_patched{ext}'.
+    on_conflict: Conflict policy when output file exists:
+        'overwrite' (replace), 'skip' (do nothing), 'rename' (auto-rename).
+        Defaults to server --on-conflict setting.
+    auto_formula: When true, values starting with '=' in set_value ops
+        are treated as formulas instead of being rejected.
+    dry_run: When true, compute diff without saving changes.
+    return_inverse_ops: When true, return inverse (undo) operations.
+    preflight_formula_check: When true, scan formulas for errors
+        like #REF!, #NAME?, #DIV/0! before saving.
+    backend: Patch execution backend.
+        - "auto" (default): prefer COM when available; otherwise openpyxl.
+          Uses openpyxl when dry_run/return_inverse_ops/preflight_formula_check
+          is enabled.
+        - "com": force COM path (requires Excel COM and disallows
+          dry_run/return_inverse_ops/preflight_formula_check).
+        - "openpyxl": force openpyxl path (.xls is not supported).
+    mirror_artifact: When true, mirror output workbook to
+        --artifact-bridge-dir after successful patch.
+
+Returns:
+    Patch result with output path, applied diffs, and any warnings.
+"""
+    return f"{base_description.strip()}\n\n{build_patch_tool_mini_schema()}"
+
+
+def _register_op_schema_tools(app: FastMCP) -> None:
+    """Register schema discovery tools."""
+
+    async def _list_ops_tool() -> ListOpsToolOutput:
+        """List all patch op names with short descriptions."""
+        return run_list_ops_tool()
+
+    async def _describe_op_tool(op: str) -> DescribeOpToolOutput:
+        """Describe one patch op.
+
+        Returns required/optional fields, constraints, example, and aliases.
+        """
+        payload = DescribeOpToolInput(op=op)
+        return run_describe_op_tool(payload)
+
+    list_ops_tool = app.tool(name="exstruct_list_ops")
+    list_ops_tool(_list_ops_tool)
+    describe_op_tool = app.tool(name="exstruct_describe_op")
+    describe_op_tool(_describe_op_tool)
 
 
 def _coerce_filter(filter_data: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -521,13 +766,7 @@ def _coerce_patch_ops(ops_data: list[dict[str, Any] | str]) -> list[dict[str, An
     Raises:
         ValueError: If a string op is not valid JSON object.
     """
-    normalized_ops: list[dict[str, Any]] = []
-    for index, raw_op in enumerate(ops_data):
-        if isinstance(raw_op, dict):
-            normalized_ops.append(dict(raw_op))
-            continue
-        normalized_ops.append(_parse_patch_op_json(raw_op, index))
-    return normalized_ops
+    return _normalize_coerce_patch_ops(ops_data)
 
 
 def _parse_patch_op_json(raw_op: str, index: int) -> dict[str, Any]:
@@ -543,18 +782,7 @@ def _parse_patch_op_json(raw_op: str, index: int) -> dict[str, Any]:
     Raises:
         ValueError: If the string is not valid JSON object.
     """
-    text = raw_op.strip()
-    if not text:
-        raise ValueError(_build_patch_op_error_message(index, "empty string"))
-    try:
-        parsed = json.loads(text)
-    except json.JSONDecodeError as exc:
-        raise ValueError(_build_patch_op_error_message(index, "invalid JSON")) from exc
-    if not isinstance(parsed, dict):
-        raise ValueError(
-            _build_patch_op_error_message(index, "JSON value must be an object")
-        )
-    return cast(dict[str, Any], parsed)
+    return _normalize_parse_patch_op_json(raw_op, index=index)
 
 
 def _build_patch_op_error_message(index: int, reason: str) -> str:
@@ -567,8 +795,4 @@ def _build_patch_op_error_message(index: int, reason: str) -> str:
     Returns:
         Human-readable error message.
     """
-    example = '{"op":"set_value","sheet":"Sheet1","cell":"A1","value":"sample"}'
-    return (
-        f"Invalid patch operation at ops[{index}]: {reason}. "
-        f"Use object form like {example}."
-    )
+    return _normalize_build_patch_op_error_message(index, reason)

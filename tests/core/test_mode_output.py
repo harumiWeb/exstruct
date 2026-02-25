@@ -80,6 +80,7 @@ def test_lightモードではCOMに触れずセルとテーブルのみ(
     assert sheet.charts == []
 
 
+@pytest.mark.com  # type: ignore[misc]
 def test_standardモードはテキストなし図形を除外する(tmp_path: Path) -> None:
     _ensure_excel()
     path = tmp_path / "shapes.xlsx"
@@ -97,6 +98,7 @@ def test_standardモードはテキストなし図形を除外する(tmp_path: P
         assert s.direction is not None or s.begin_arrow_style is not None
 
 
+@pytest.mark.com  # type: ignore[misc]
 def test_verboseモードでは全図形と幅高さが出力される(tmp_path: Path) -> None:
     _ensure_excel()
     path = tmp_path / "shapes.xlsx"

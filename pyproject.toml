@@ -1,6 +1,6 @@
 [project]
 name = "exstruct"
-version = "0.4.4"
+version = "0.5.0"
 description = "Excel to structured JSON (tables, shapes, charts) for LLM/RAG pipelines"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -68,6 +68,7 @@ omit = [
     "tests/*",
     "*/test_*.py",
     "*/gen_py/*",
+    "src/exstruct/mcp/patch/engine/base.py",
 ]
 
 [tool.ruff]
@@ -136,9 +137,9 @@ ruff = "ruff check ."
 ruff-fix = "ruff check . --fix"
 mypy = "mypy src/exstruct --strict"
 precommit-run = "pre-commit run -a"
-test = "pytest -vv --cov=exstruct --cov-report=term-missing --cov-report=xml" # uv sync --extra render --extra toon
-test-unit = "pytest -vv -m \"not com and not render\" --cov=exstruct --cov-report=term-missing --cov-report=xml"
-test-com = "pytest -vv -m \"com\" --cov=exstruct --cov-report=term-missing --cov-report=xml"
+test = "pytest -vv --cov=exstruct --cov-report=term-missing --cov-report=xml --cov-fail-under=80" # uv sync --extra render --extra toon
+test-unit = "pytest -vv -m \"not com and not render\" --cov=exstruct --cov-report=term-missing --cov-report=xml --cov-fail-under=80"
+test-com = "pytest -vv -m \"com\" --cov=exstruct --cov-report=term-missing --cov-report=xml --cov-fail-under=80"
 codecov-unit = "codecov-cli upload-process -f coverage.xml -F unit -C %CODECOV_SHA% -t %CODECOV_TOKEN%"
 codecov-com = "codecov-cli upload-process -f coverage.xml -F com -C %CODECOV_SHA% -t %CODECOV_TOKEN%"
 docs = "mkdocs serve"

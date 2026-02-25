@@ -27,3 +27,7 @@ coverage.xml
 errors.txt
 htmlcov/
 .tmp_mcp_test/
+sample.md
+review.md
+
+.cocoindex_code/
