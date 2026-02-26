@@ -432,3 +432,27 @@ def test_internal_create_chart_allows_name_matching_new_default_name() -> None:
     assert diff.after is not None
     assert diff.after.kind == "chart"
     assert chart_object.Name == "Chart 1"
+
+
+def test_internal_get_com_collection_item_uses_item_fallback() -> None:
+    class _Collection:
+        def __call__(self, index: int) -> object:
+            raise TypeError("not callable in this dispatch mode")
+
+        def Item(self, index: int) -> str:  # noqa: N802
+            return f"item-{index}"
+
+    item = internal._get_com_collection_item(_Collection(), 2)
+    assert item == "item-2"
+
+
+def test_internal_get_com_collection_item_raises_on_both_paths_failure() -> None:
+    class _Collection:
+        def __call__(self, index: int) -> object:
+            raise TypeError("call failed")
+
+        def Item(self, index: int) -> object:  # noqa: N802
+            raise RuntimeError("item failed")
+
+    with pytest.raises(ValueError, match="COM collection item access failed"):
+        internal._get_com_collection_item(_Collection(), 1)

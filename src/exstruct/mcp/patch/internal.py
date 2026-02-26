@@ -1485,6 +1485,36 @@ class FormulaIssue(BaseModel):
     message: str
 
 
+def _validate_backend_feature_constraints(
+    *,
+    backend: PatchBackend,
+    ops: list[PatchOp],
+    dry_run: bool,
+    return_inverse_ops: bool,
+    preflight_formula_check: bool,
+) -> None:
+    """Validate backend-specific feature constraints for patch/make requests."""
+    has_create_chart = any(op.op == "create_chart" for op in ops)
+    if has_create_chart and backend == "openpyxl":
+        raise ValueError(
+            "create_chart is supported only on COM backend; backend='openpyxl' is not allowed."
+        )
+    if backend == "com":
+        if dry_run or return_inverse_ops or preflight_formula_check:
+            raise ValueError(
+                "backend='com' does not support dry_run, return_inverse_ops, "
+                "or preflight_formula_check."
+            )
+        if any(op.op == "restore_design_snapshot" for op in ops):
+            raise ValueError(
+                "backend='com' does not support restore_design_snapshot operation."
+            )
+    if has_create_chart and (dry_run or return_inverse_ops or preflight_formula_check):
+        raise ValueError(
+            "create_chart does not support dry_run, return_inverse_ops, or preflight_formula_check."
+        )
+
+
 class PatchRequest(BaseModel):
     """Input model for ExStruct MCP patch."""
 
@@ -1502,27 +1532,13 @@ class PatchRequest(BaseModel):
 
     @model_validator(mode="after")
     def _validate_backend_constraints(self) -> PatchRequest:
-        has_create_chart = any(op.op == "create_chart" for op in self.ops)
-        if has_create_chart and self.backend == "openpyxl":
-            raise ValueError(
-                "create_chart is supported only on COM backend; backend='openpyxl' is not allowed."
-            )
-        if self.backend == "com":
-            if self.dry_run or self.return_inverse_ops or self.preflight_formula_check:
-                raise ValueError(
-                    "backend='com' does not support dry_run, return_inverse_ops, "
-                    "or preflight_formula_check."
-                )
-            if any(op.op == "restore_design_snapshot" for op in self.ops):
-                raise ValueError(
-                    "backend='com' does not support restore_design_snapshot operation."
-                )
-        if has_create_chart and (
-            self.dry_run or self.return_inverse_ops or self.preflight_formula_check
-        ):
-            raise ValueError(
-                "create_chart does not support dry_run, return_inverse_ops, or preflight_formula_check."
-            )
+        _validate_backend_feature_constraints(
+            backend=self.backend,
+            ops=self.ops,
+            dry_run=self.dry_run,
+            return_inverse_ops=self.return_inverse_ops,
+            preflight_formula_check=self.preflight_formula_check,
+        )
         return self
 
 
@@ -1541,27 +1557,13 @@ class MakeRequest(BaseModel):
 
     @model_validator(mode="after")
     def _validate_backend_constraints(self) -> MakeRequest:
-        has_create_chart = any(op.op == "create_chart" for op in self.ops)
-        if has_create_chart and self.backend == "openpyxl":
-            raise ValueError(
-                "create_chart is supported only on COM backend; backend='openpyxl' is not allowed."
-            )
-        if self.backend == "com":
-            if self.dry_run or self.return_inverse_ops or self.preflight_formula_check:
-                raise ValueError(
-                    "backend='com' does not support dry_run, return_inverse_ops, "
-                    "or preflight_formula_check."
-                )
-            if any(op.op == "restore_design_snapshot" for op in self.ops):
-                raise ValueError(
-                    "backend='com' does not support restore_design_snapshot operation."
-                )
-        if has_create_chart and (
-            self.dry_run or self.return_inverse_ops or self.preflight_formula_check
-        ):
-            raise ValueError(
-                "create_chart does not support dry_run, return_inverse_ops, or preflight_formula_check."
-            )
+        _validate_backend_feature_constraints(
+            backend=self.backend,
+            ops=self.ops,
+            dry_run=self.dry_run,
+            return_inverse_ops=self.return_inverse_ops,
+            preflight_formula_check=self.preflight_formula_check,
+        )
         return self
 
 
@@ -3956,8 +3958,6 @@ def _existing_chart_names(
     names: set[str] = set()
     for chart_index in range(1, existing_count + 1):
         item = _get_com_collection_item(chart_collection, chart_index)
-        if item is None:
-            continue
         name_value = getattr(item, "Name", None)
         if isinstance(name_value, str):
             names.add(name_value)
@@ -3987,10 +3987,10 @@ def _apply_chart_category_range(
     series_accessor = series_collection()
     series_count = int(getattr(series_accessor, "Count", 0))
     for series_idx in range(1, series_count + 1):
-        series_item_raw = _get_com_collection_item(series_accessor, series_idx)
-        if series_item_raw is None:
-            continue
-        series_item = cast(XlwingsChartSeriesProtocol, series_item_raw)
+        series_item = cast(
+            XlwingsChartSeriesProtocol,
+            _get_com_collection_item(series_accessor, series_idx),
+        )
         series_item.XValues = sheet.range(category_range).api
 
 
@@ -4004,31 +4004,34 @@ def _apply_titles_from_data_flag(chart: object, titles_from_data: bool | None) -
     series_accessor = series_collection()
     series_count = int(getattr(series_accessor, "Count", 0))
     for series_idx in range(1, series_count + 1):
-        series_item_raw = _get_com_collection_item(series_accessor, series_idx)
-        if series_item_raw is None:
-            continue
-        series_item = cast(XlwingsChartSeriesProtocol, series_item_raw)
+        series_item = cast(
+            XlwingsChartSeriesProtocol,
+            _get_com_collection_item(series_accessor, series_idx),
+        )
         series_item.Name = f"Series {series_idx}"
 
 
-def _get_com_collection_item(collection: object, index: int) -> object | None:
+def _get_com_collection_item(collection: object, index: int) -> object:
     """Return indexed COM collection item with call/Item fallback."""
+    last_error: Exception | None = None
     collection_call: Callable[[int], object] | None = None
     if callable(collection):
         collection_call = cast(Callable[[int], object], collection)
     try:
         if collection_call is not None:
             return collection_call(index)
-    except Exception:
-        pass
+    except Exception as exc:
+        last_error = exc
     item_method = getattr(collection, "Item", None)
     if callable(item_method):
         item_callable = cast(Callable[[int], object], item_method)
         try:
             return item_callable(index)
-        except Exception:
-            return None
-    return None
+        except Exception as exc:
+            last_error = exc
+    raise ValueError(
+        f"COM collection item access failed at index {index}: {last_error!r}"
+    )
 
 
 def _apply_xlwings_restore_design_snapshot(op: PatchOp) -> PatchDiffItem:
