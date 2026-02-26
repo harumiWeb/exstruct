@@ -223,6 +223,75 @@ def test_patch_tool_input_accepts_create_chart_op() -> None:
     assert payload.ops[0].series_from_rows is False
 
 
+@pytest.mark.parametrize(
+    "chart_type",
+    ["line", "column", "bar", "area", "pie", "doughnut", "scatter", "radar"],
+)  # type: ignore[misc]
+def test_patch_tool_input_accepts_extended_create_chart_types(chart_type: str) -> None:
+    payload = PatchToolInput(
+        xlsx_path="input.xlsx",
+        ops=[
+            {
+                "op": "create_chart",
+                "sheet": "Sheet1",
+                "chart_type": chart_type,
+                "data_range": "A1:C10",
+                "anchor_cell": "E2",
+            }
+        ],
+    )
+    assert payload.ops[0].chart_type == chart_type
+
+
+@pytest.mark.parametrize(
+    ("raw_chart_type", "expected"),
+    [
+        ("column_clustered", "column"),
+        ("bar_clustered", "bar"),
+        ("xy_scatter", "scatter"),
+        ("donut", "doughnut"),
+    ],
+)  # type: ignore[misc]
+def test_patch_tool_input_normalizes_create_chart_type_aliases(
+    raw_chart_type: str, expected: str
+) -> None:
+    payload = PatchToolInput(
+        xlsx_path="input.xlsx",
+        ops=[
+            {
+                "op": "create_chart",
+                "sheet": "Sheet1",
+                "chart_type": raw_chart_type,
+                "data_range": "A1:C10",
+                "anchor_cell": "E2",
+            }
+        ],
+    )
+    assert payload.ops[0].chart_type == expected
+
+
+def test_patch_tool_input_rejects_unsupported_create_chart_type() -> None:
+    with pytest.raises(
+        ValidationError,
+        match=(
+            "chart_type must be one of: line, column, bar, area, pie, "
+            "doughnut, scatter, radar."
+        ),
+    ):
+        PatchToolInput(
+            xlsx_path="input.xlsx",
+            ops=[
+                {
+                    "op": "create_chart",
+                    "sheet": "Sheet1",
+                    "chart_type": "histogram",
+                    "data_range": "A1:C10",
+                    "anchor_cell": "E2",
+                }
+            ],
+        )
+
+
 def test_patch_tool_input_accepts_auto_fit_columns_op() -> None:
     payload = PatchToolInput(
         xlsx_path="input.xlsx",

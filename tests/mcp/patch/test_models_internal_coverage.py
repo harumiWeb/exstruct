@@ -456,3 +456,29 @@ def test_internal_get_com_collection_item_raises_on_both_paths_failure() -> None
 
     with pytest.raises(ValueError, match="COM collection item access failed"):
         internal._get_com_collection_item(_Collection(), 1)
+
+
+@pytest.mark.parametrize(
+    ("chart_type", "expected_chart_type_id"),
+    [
+        ("line", 4),
+        ("column", 51),
+        ("bar", 57),
+        ("area", 1),
+        ("pie", 5),
+        ("doughnut", -4120),
+        ("scatter", -4169),
+        ("radar", -4151),
+    ],
+)  # type: ignore[misc]
+def test_internal_resolve_chart_type_id_supports_phase1_major_types(
+    chart_type: str, expected_chart_type_id: int
+) -> None:
+    assert internal._resolve_chart_type_id(chart_type) == expected_chart_type_id
+
+
+def test_internal_resolve_chart_type_id_supports_aliases() -> None:
+    assert internal._resolve_chart_type_id("column_clustered") == 51
+    assert internal._resolve_chart_type_id("bar_clustered") == 57
+    assert internal._resolve_chart_type_id("xy_scatter") == -4169
+    assert internal._resolve_chart_type_id("donut") == -4120

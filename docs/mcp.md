@@ -298,6 +298,8 @@ This keeps MCP tool I/O stable while allowing internal module separation.
   - `backend="openpyxl"`: forces openpyxl (`.xls` is not supported).
 - `create_chart` constraints:
   - Supported only with COM backend.
+  - `chart_type` supports: `line`, `column`, `bar`, `area`, `pie`, `doughnut`, `scatter`, `radar`.
+    - Alias input is accepted: `column_clustered`, `bar_clustered`, `xy_scatter`, `donut`.
   - Rejects `dry_run`/`return_inverse_ops`/`preflight_formula_check`.
   - Cannot be combined with `apply_table_style` in one request (split into separate calls).
 - Output includes `engine` (`"com"` or `"openpyxl"`) to show which backend was actually used.

@@ -89,6 +89,8 @@ exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict re
   - 初期シート名は `Sheet1` に正規化されます
   - `.xls` は COM 必須で、`backend=openpyxl` は指定できません
 - `create_chart` は COM 専用です（`create_chart` を含むリクエストでは `backend="openpyxl"` は指定不可）。また、`dry_run` / `return_inverse_ops` / `preflight_formula_check` も指定できません。
+- `create_chart.chart_type` は `line` / `column` / `bar` / `area` / `pie` / `doughnut` / `scatter` / `radar` をサポートします。
+- `create_chart.chart_type` の alias は `column_clustered` -> `column`、`bar_clustered` -> `bar`、`xy_scatter` -> `scatter`、`donut` -> `doughnut` です。
 - `create_chart` と `apply_table_style` は1回のリクエストで同時指定できません（別リクエストに分割してください）。
 
 注意点:

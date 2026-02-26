@@ -318,6 +318,14 @@ def test_run_describe_op_tool_returns_schema_details() -> None:
     assert result.example["op"] == "set_fill_color"
 
 
+def test_run_describe_op_tool_create_chart_lists_extended_types() -> None:
+    result = tools.run_describe_op_tool(tools.DescribeOpToolInput(op="create_chart"))
+    assert (
+        "chart_type in {'line','column','bar','area','pie','doughnut','scatter','radar'}"
+        in result.constraints
+    )
+
+
 def test_run_describe_op_tool_rejects_unknown_op() -> None:
     with pytest.raises(ValueError, match="Unknown op"):
         tools.run_describe_op_tool(tools.DescribeOpToolInput(op="unknown_op"))
