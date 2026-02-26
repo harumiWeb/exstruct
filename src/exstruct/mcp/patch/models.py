@@ -14,6 +14,7 @@ from ..shared.a1 import (
     range_cell_count as _shared_range_cell_count,
     split_a1 as _shared_split_a1,
 )
+from .chart_types import SUPPORTED_CHART_TYPES_CSV, normalize_chart_type
 from .types import (
     FormulaIssueCode,
     FormulaIssueLevel,
@@ -31,7 +32,6 @@ _A1_RANGE_PATTERN = re.compile(r"^[A-Za-z]{1,3}[1-9][0-9]*:[A-Za-z]{1,3}[1-9][0-
 _HEX_COLOR_PATTERN = re.compile(r"^#?(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$")
 _COLUMN_LABEL_PATTERN = re.compile(r"^[A-Za-z]{1,3}$")
 _MAX_STYLE_TARGET_CELLS = 10_000
-_CHART_TYPE_SET = {"line", "column", "pie"}
 
 
 class BorderSideSnapshot(BaseModel):
@@ -506,7 +506,10 @@ class PatchOp(BaseModel):
     )
     chart_type: str | None = Field(
         default=None,
-        description="Chart type for create_chart: line, column, pie.",
+        description=(
+            "Chart type for create_chart: line, column, bar, area, pie, "
+            "doughnut, scatter, radar."
+        ),
     )
     data_range: str | None = Field(
         default=None,
@@ -605,9 +608,9 @@ class PatchOp(BaseModel):
     def _validate_chart_type(cls, value: str | None) -> str | None:
         if value is None:
             return None
-        normalized = value.strip().lower()
-        if normalized not in _CHART_TYPE_SET:
-            raise ValueError("chart_type must be one of: line, column, pie.")
+        normalized = normalize_chart_type(value)
+        if normalized is None:
+            raise ValueError(f"chart_type must be one of: {SUPPORTED_CHART_TYPES_CSV}.")
         return normalized
 
     @field_validator("fill_color")

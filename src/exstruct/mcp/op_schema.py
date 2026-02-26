@@ -403,7 +403,7 @@ _PATCH_OP_SCHEMA_BY_NAME: dict[str, PatchOpSchema] = {
             "series_from_rows",
         ],
         constraints=[
-            "chart_type in {'line','column','pie'}",
+            "chart_type in {'line','column','bar','area','pie','doughnut','scatter','radar'}",
             "width/height must be > 0 when provided",
             "chart_name must be unique in sheet when provided",
             "backend='openpyxl' is not supported",

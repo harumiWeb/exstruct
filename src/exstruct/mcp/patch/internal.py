@@ -26,6 +26,11 @@ from ..shared.output_path import (
     next_available_path as _shared_next_available_path,
     resolve_output_path as _shared_resolve_output_path,
 )
+from .chart_types import (
+    SUPPORTED_CHART_TYPES_CSV,
+    normalize_chart_type,
+    resolve_chart_type_id,
+)
 from .types import (
     FormulaIssueCode,
     FormulaIssueLevel,
@@ -45,7 +50,6 @@ _HEX_COLOR_PATTERN = re.compile(r"^#?(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$")
 _COLUMN_LABEL_PATTERN = re.compile(r"^[A-Za-z]{1,3}$")
 _MAX_STYLE_TARGET_CELLS = 10_000
 _SOFT_MAX_OPS_WARNING_THRESHOLD = 200
-_CHART_TYPE_SET = {"line", "column", "pie"}
 
 _XLWINGS_HORIZONTAL_ALIGN_MAP: dict[HorizontalAlignType, int] = {
     "general": -4105,
@@ -581,7 +585,10 @@ class PatchOp(BaseModel):
     )
     chart_type: str | None = Field(
         default=None,
-        description="Chart type for create_chart: line, column, pie.",
+        description=(
+            "Chart type for create_chart: line, column, bar, area, pie, "
+            "doughnut, scatter, radar."
+        ),
     )
     data_range: str | None = Field(
         default=None,
@@ -680,9 +687,9 @@ class PatchOp(BaseModel):
     def _validate_chart_type(cls, value: str | None) -> str | None:
         if value is None:
             return None
-        normalized = value.strip().lower()
-        if normalized not in _CHART_TYPE_SET:
-            raise ValueError("chart_type must be one of: line, column, pie.")
+        normalized = normalize_chart_type(value)
+        if normalized is None:
+            raise ValueError(f"chart_type must be one of: {SUPPORTED_CHART_TYPES_CSV}.")
         return normalized
 
     @field_validator("fill_color")
@@ -3887,7 +3894,9 @@ def _apply_xlwings_create_chart(
 
     chart_type_id = _resolve_chart_type_id(op.chart_type)
     if chart_type_id is None:
-        raise ValueError("create_chart chart_type must be one of: line, column, pie.")
+        raise ValueError(
+            f"create_chart chart_type must be one of: {SUPPORTED_CHART_TYPES_CSV}."
+        )
 
     sheet_api = _xlwings_sheet_api(sheet)
     anchor_left, anchor_top = _resolve_chart_anchor(sheet, op.anchor_cell)
@@ -3927,8 +3936,7 @@ def _apply_xlwings_create_chart(
 
 def _resolve_chart_type_id(chart_type: str) -> int | None:
     """Map chart type name to Excel COM chart type id."""
-    chart_type_map = {"line": 4, "column": 51, "pie": 5}
-    return chart_type_map.get(chart_type)
+    return resolve_chart_type_id(chart_type)
 
 
 def _resolve_chart_anchor(

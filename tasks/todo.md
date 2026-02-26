@@ -1,29 +1,50 @@
 ## Plan
 
-- [x] `tasks/feature_spec.md` に仕様確定版を記載
-- [x] `tasks/todo.md` に実装計画を記載
-- [x] `PatchOpType` / `PatchValueKind` に `create_chart` / `chart` を追加
-- [x] `PatchOp` モデルに `create_chart` 用フィールドとvalidatorを追加
-- [x] `specs.py` / `op_schema.py` / `list_ops` / `describe_op` を更新
-- [x] `service.py` に COM専用ガードを追加
-- [x] `internal.py` openpyxl側に `create_chart` 明示拒否を追加
-- [x] `internal.py` xlwings側に `_apply_xlwings_create_chart` を追加
-- [x] `server.py` の patch tool docstring を更新
-- [x] `docs/mcp.md` / `README.md` / `README.ja.md` / `CHANGELOG.md` を更新
+- [x] `tasks/feature_spec.md` を Phase 1 仕様へ刷新
+- [x] `tasks/todo.md` を今回実装計画に刷新
+- [x] `create_chart` の chart type 共通定義モジュールを追加（`chart_types.py`）
+- [x] `models.py` の `chart_type` validator を 8種 + alias 対応へ更新
+- [x] `internal.py` の `chart_type` validator / 実行時解決を共通定義へ統一
+- [x] `op_schema.py` の `create_chart` 制約文言を更新
+- [x] `docs/mcp.md` / `README.md` / `README.ja.md` の対応種別記載を更新
 - [x] テスト追加・更新
-- [x] `uv run pytest -m "not com and not render"` を実行
-- [x] `uv run task precommit-run` を実行
+- [x] `uv run pytest tests/mcp/test_tool_models.py tests/mcp/patch/test_models_internal_coverage.py tests/mcp/test_tools_handlers.py`
+- [x] `uv run task precommit-run`
+
+## Test Cases
+
+- [x] `create_chart` で 8 種別を受理できる
+- [x] alias 入力（`column_clustered`, `bar_clustered`, `xy_scatter`, `donut`）を正規化できる
+- [x] 未対応 `chart_type` で明示エラーになる
+- [x] `describe_op(create_chart)` が拡張後制約を返す
+- [x] `_resolve_chart_type_id` が 8 種別 + alias を期待IDへ解決できる
 
 ## Review
 
-- Summary: `create_chart` と `apply_table_style` の同時指定を `service.py` で明示拒否するガードを追加。`runtime.py` に `contains_create_chart_op` を公開し、`test_service.py` に混在オペレーション拒否テストを追加。関連ドキュメント（`docs/mcp.md` / `README.md` / `README.ja.md` / `CHANGELOG.md` / `docs/README.en.md` / `docs/README.ja.md`）を更新。
-- Risks: 実行時に mixed-op をエラー化したため、従来この組み合わせを1リクエストで投げていたクライアントは分割呼び出しが必要。
-- Follow-ups: 必要なら `docs/mcp.md` に `create_chart` 専用のサンプル（line/column/pie）を追加する。
+- Summary:
+- `create_chart` の `chart_type` を主要8種へ拡張し、alias正規化とCOM ChartType ID解決を共通モジュール化した。`models.py` / `internal.py` / `op_schema.py` / `docs` / `README` / テストを同期更新し、対象pytestとprecommit（ruff/format/mypy）を通過した。
+- Risks:
+  - COM実環境差異（Excelバージョン依存）により一部種別の表示差が出る可能性
+- Follow-ups:
+  - Phase 2: `bubble`, `stock`, `surface`, `combo` 対応
+  - Phase 2: `chart_subtype`（stacked/100/markers）設計
 
-## PR66 Review Follow-up
+## Plan (Runtime Chart Creation Test 2026-02-26)
 
-- [x] `internal.py` の COM collection アクセスを `Item` フォールバック付きに修正（`_existing_chart_names` / `_apply_chart_category_range` / `_apply_titles_from_data_flag`）
-- [x] `tests/mcp/patch/test_models_internal_coverage.py` の `create_chart` 既定名テストを強化（相互作用アサーション追加）
-- [x] `AGENTS.md` の見出し番号ずれ（4→3, 5→4, 6→5）を修正
-- [x] `models.py` と `internal.py` の chart validation 重複統合は別PR化として記録（今回PRでは見送り理由を明記）
-  - 見送り理由: 既存 `PatchOp` / `internal` 双方の validator と import 構造へ波及するため、`create_chart` の修正PRと分離して安全に実施する。
+- [x] `tasks/feature_spec.md` にランタイムテスト仕様（`exstruct_make` 入出力契約）を追記
+- [x] `drafts` 配下に 8種グラフ作成用の新規 `.xlsx` 出力パスを確定
+- [x] `exstruct_make` でテストデータ投入 + 8種 `create_chart` を実行
+- [x] 生成ファイル存在と tool レスポンスを確認
+- [x] `Review` に結果を記録
+
+## Review (Runtime Chart Creation Test 2026-02-26)
+
+- Summary:
+- `mcp__exstruct__exstruct_make`（`engine: com`）で `Charts` シートにテストデータを投入し、`line/column/bar/area/pie/doughnut/scatter/radar` の 8種を `create_chart` で作成できた。`patch_diff` で全 op が `applied`。
+- Artifact:
+  - `c:\\dev\\Python\\exstruct\\drafts\\create_chart_all_types_20260226.xlsx`
+- Verification:
+  - `drafts` 一覧に対象ファイルが存在（22.11 KB）
+  - ファイル情報の `created/modified` は 2026-02-26 22:12:45 JST
+- Risks:
+  - Excel COM 実行結果の見た目差（バージョン・環境依存）は残る

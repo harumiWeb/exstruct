@@ -111,6 +111,8 @@ Notes:
   - Initial sheet is normalized to `Sheet1`
   - `.xls` requires COM and rejects `backend=openpyxl`
 - `create_chart` is COM-only (`backend="openpyxl"` is not allowed for requests that include it), and it also rejects `dry_run` / `return_inverse_ops` / `preflight_formula_check`.
+- `create_chart.chart_type` supports `line`, `column`, `bar`, `area`, `pie`, `doughnut`, `scatter`, and `radar`.
+- `create_chart.chart_type` aliases: `column_clustered` -> `column`, `bar_clustered` -> `bar`, `xy_scatter` -> `scatter`, `donut` -> `doughnut`.
 - `create_chart` and `apply_table_style` cannot be combined in one request (split into separate calls).
 
 MCP Setup Guide for Each AI Agent:
