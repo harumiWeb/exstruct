@@ -110,6 +110,8 @@ Notes:
   - `auto` (default): prefer COM when available, otherwise openpyxl
   - `com`: force COM (rejects `dry_run` / `return_inverse_ops` / `preflight_formula_check`)
   - `openpyxl`: force openpyxl (`.xls` is not supported)
+- `create_chart` is COM-only (`backend="openpyxl"` is not allowed for requests that include it), and it also rejects `dry_run` / `return_inverse_ops` / `preflight_formula_check`.
+- `create_chart` and `apply_table_style` cannot be combined in one request (split into separate calls).
 - `exstruct_patch` response includes `engine` (`com` or `openpyxl`) to show the actual backend used. `restore_design_snapshot` remains openpyxl-only.
 - `exstruct_make` creates a new workbook and applies `ops` in one call (`out_path` required, `ops` optional).
   - Supports `.xlsx` / `.xlsm` / `.xls`

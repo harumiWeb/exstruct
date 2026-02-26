@@ -103,6 +103,8 @@ exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict re
   - `auto`（既定）: COM が使える場合は COM を優先し、不可なら openpyxl
   - `com`: COM を強制（`dry_run` / `return_inverse_ops` / `preflight_formula_check` は指定不可）
   - `openpyxl`: openpyxl を強制（`.xls` は非対応）
+- `create_chart` は COM 専用です（`create_chart` を含むリクエストでは `backend="openpyxl"` は指定不可）。また、`dry_run` / `return_inverse_ops` / `preflight_formula_check` も指定できません。
+- `create_chart` と `apply_table_style` は1回のリクエストで同時指定できません（別リクエストに分割してください）。
 - `exstruct_patch` の応答には実際に使われたバックエンドを示す `engine`（`com` / `openpyxl`）が含まれます。`restore_design_snapshot` は引き続き openpyxl 専用です。
 - `exstruct_make` は新規ブック作成と `ops` 適用を1回で実行します（`out_path` 必須、`ops` は任意）。
   - 対応拡張子: `.xlsx` / `.xlsm` / `.xls`

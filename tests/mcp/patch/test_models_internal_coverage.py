@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from typing import Any, cast
+from unittest.mock import MagicMock
 
 from pydantic import ValidationError
 import pytest
@@ -326,3 +327,132 @@ def test_internal_auto_fit_column_resolution_defaults() -> None:
     assert internal._resolve_auto_fit_columns_xlwings(
         cast(internal.XlwingsSheetProtocol, _SheetWithUsedRange()), None
     ) == ["A", "B", "C"]
+
+
+def test_internal_create_chart_honors_titles_from_data_false() -> None:
+    series_1 = MagicMock()
+    series_1.Name = "Header-A"
+    series_2 = MagicMock()
+    series_2.Name = "Header-B"
+    series_items = {1: series_1, 2: series_2}
+
+    class _SeriesCollection:
+        Count = 2
+
+        def Item(self, index: int) -> MagicMock:
+            return series_items[index]
+
+    chart = MagicMock()
+    chart.SeriesCollection = MagicMock(return_value=_SeriesCollection())
+    chart_object = MagicMock()
+    chart_object.Chart = chart
+    chart_object.Name = "Chart 1"
+
+    chart_collection = MagicMock()
+    chart_collection.Count = 0
+    chart_collection.Add.return_value = chart_object
+    chart_objects = MagicMock()
+    chart_objects.side_effect = lambda index=None: (
+        chart_collection if index is None else chart_object
+    )
+
+    anchor_range = MagicMock()
+    anchor_range.api = MagicMock(Left=10.0, Top=20.0)
+    data_range = MagicMock()
+    data_range.api = "DATA_API"
+    sheet = MagicMock()
+    sheet.api = MagicMock(ChartObjects=chart_objects)
+    sheet.range.side_effect = lambda ref: {
+        "E2": anchor_range,
+        "A1:C3": data_range,
+    }[ref]
+
+    op = internal.PatchOp(
+        op="create_chart",
+        sheet="Sheet1",
+        chart_type="line",
+        data_range="A1:C3",
+        anchor_cell="E2",
+        titles_from_data=False,
+    )
+
+    diff = internal._apply_xlwings_create_chart(
+        cast(internal.XlwingsSheetProtocol, sheet), op, index=0
+    )
+
+    chart.SetSourceData.assert_called_once_with("DATA_API")
+    assert series_1.Name == "Series 1"
+    assert series_2.Name == "Series 2"
+    assert diff.after is not None
+    assert diff.after.kind == "chart"
+
+
+def test_internal_create_chart_allows_name_matching_new_default_name() -> None:
+    chart = MagicMock()
+    chart.SeriesCollection = MagicMock(return_value=MagicMock(Count=0))
+    chart_object = MagicMock()
+    chart_object.Chart = chart
+    chart_object.Name = "Existing"
+
+    chart_collection = MagicMock()
+    chart_collection.Count = 0
+    chart_collection.Add.return_value = chart_object
+    chart_objects = MagicMock(
+        side_effect=lambda index=None: chart_collection
+        if index is None
+        else chart_object
+    )
+
+    anchor_range = MagicMock()
+    anchor_range.api = MagicMock(Left=15.0, Top=25.0)
+    data_range = MagicMock()
+    data_range.api = "DATA_API"
+    sheet = MagicMock()
+    sheet.api = MagicMock(ChartObjects=chart_objects)
+    sheet.range.side_effect = lambda ref: {
+        "D2": anchor_range,
+        "A1:B3": data_range,
+    }[ref]
+
+    op = internal.PatchOp(
+        op="create_chart",
+        sheet="Sheet1",
+        chart_type="line",
+        data_range="A1:B3",
+        anchor_cell="D2",
+        chart_name="Chart 1",
+    )
+
+    diff = internal._apply_xlwings_create_chart(
+        cast(internal.XlwingsSheetProtocol, sheet), op, index=0
+    )
+
+    chart.SetSourceData.assert_called_once_with("DATA_API")
+    chart_collection.Add.assert_called_once()
+    assert diff.after is not None
+    assert diff.after.kind == "chart"
+    assert chart_object.Name == "Chart 1"
+
+
+def test_internal_get_com_collection_item_uses_item_fallback() -> None:
+    class _Collection:
+        def __call__(self, index: int) -> object:
+            raise TypeError("not callable in this dispatch mode")
+
+        def Item(self, index: int) -> str:  # noqa: N802
+            return f"item-{index}"
+
+    item = internal._get_com_collection_item(_Collection(), 2)
+    assert item == "item-2"
+
+
+def test_internal_get_com_collection_item_raises_on_both_paths_failure() -> None:
+    class _Collection:
+        def __call__(self, index: int) -> object:
+            raise TypeError("call failed")
+
+        def Item(self, index: int) -> object:  # noqa: N802
+            raise RuntimeError("item failed")
+
+    with pytest.raises(ValueError, match="COM collection item access failed"):
+        internal._get_com_collection_item(_Collection(), 1)

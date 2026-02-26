@@ -6,7 +6,13 @@ All notable changes to this project are documented in this file. This changelog 
 
 ### Added
 
-- No notable changes yet.
+- Added explicit service-level guard for mixed backend-only patch ops:
+  `create_chart` and `apply_table_style` can no longer be combined in one request.
+
+### Changed
+
+- Updated MCP docs and README pages to document `create_chart` backend constraints
+  (COM-only, flag limitations, and incompatibility with `apply_table_style` in one request).
 
 ## [0.5.0] - 2026-02-24
 

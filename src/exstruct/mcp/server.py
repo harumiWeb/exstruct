@@ -536,6 +536,7 @@ def _register_tools(
                 'set_alignment' (set horizontal/vertical alignment and wrap_text), and
                 'set_style' (apply multiple style attributes in one op), and
                 'apply_table_style' (create table and apply Excel table style), and
+                'create_chart' (create a new chart; COM backend only), and
                 'restore_design_snapshot' (internal inverse restore op).
             sheet: Optional default sheet name. Used when op.sheet is omitted
                 for non-add_sheet ops. If both are set, op.sheet wins.
