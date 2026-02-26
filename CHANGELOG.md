@@ -6,6 +6,16 @@ All notable changes to this project are documented in this file. This changelog 
 
 ### Added
 
+- None.
+
+### Changed
+
+- None.
+
+## [0.5.1] - 2026-02-26
+
+### Added
+
 - Added explicit service-level guard for mixed backend-only patch ops:
   `create_chart` and `apply_table_style` can no longer be combined in one request.
 
