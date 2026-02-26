@@ -317,3 +317,44 @@ def test_service_run_patch_backend_auto_fallbacks_for_apply_table_style(
     assert any(
         "does not support apply_table_style" in warning for warning in result.warnings
     )
+
+
+def test_service_run_patch_rejects_create_chart_with_apply_table_style(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify mixed backend-only ops are rejected with a clear error."""
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+
+    monkeypatch.setattr(
+        patch_runtime,
+        "get_com_availability",
+        lambda: ComAvailability(available=True, reason=None),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"create_chart and apply_table_style cannot be combined",
+    ):
+        service.run_patch(
+            PatchRequest(
+                xlsx_path=input_path,
+                ops=[
+                    PatchOp(
+                        op="create_chart",
+                        sheet="Sheet1",
+                        chart_type="line",
+                        data_range="A1:B2",
+                        anchor_cell="D2",
+                    ),
+                    PatchOp(
+                        op="apply_table_style",
+                        sheet="Sheet1",
+                        range="A1:B2",
+                        style="TableStyleMedium2",
+                    ),
+                ],
+                on_conflict="rename",
+                backend="auto",
+            )
+        )

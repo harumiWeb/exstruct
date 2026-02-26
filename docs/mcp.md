@@ -277,6 +277,7 @@ This keeps MCP tool I/O stable while allowing internal module separation.
   - `set_alignment`
   - `set_style`
   - `apply_table_style`
+  - `create_chart` (COM only)
   - `restore_design_snapshot` (internal inverse op)
 - Useful flags:
   - `dry_run`: compute diff only (no file write)
@@ -295,6 +296,10 @@ This keeps MCP tool I/O stable while allowing internal module separation.
     `dry_run`/`return_inverse_ops`/`preflight_formula_check`.
     If `apply_table_style` is included, returns a warning and falls back to openpyxl.
   - `backend="openpyxl"`: forces openpyxl (`.xls` is not supported).
+- `create_chart` constraints:
+  - Supported only with COM backend.
+  - Rejects `dry_run`/`return_inverse_ops`/`preflight_formula_check`.
+  - Cannot be combined with `apply_table_style` in one request (split into separate calls).
 - Output includes `engine` (`"com"` or `"openpyxl"`) to show which backend was actually used.
 - Output includes `mirrored_out_path` when mirroring is requested and succeeds.
 - Conflict handling follows server `--on-conflict` unless overridden per tool call

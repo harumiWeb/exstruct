@@ -29,6 +29,11 @@ def contains_apply_table_style_op(ops: list[PatchOp]) -> bool:
     return _internal._contains_apply_table_style_op(cast(list[Any], ops))
 
 
+def contains_create_chart_op(ops: list[PatchOp]) -> bool:
+    """Return whether operations include create_chart."""
+    return _internal._contains_create_chart_op(cast(list[Any], ops))
+
+
 def contains_design_ops(ops: list[PatchOp]) -> bool:
     """Return whether operations include design-affecting ops."""
     return _internal._contains_design_ops(cast(list[Any], ops))
@@ -136,6 +141,7 @@ __all__ = [
     "apply_conflict_policy",
     "build_make_seed_path",
     "contains_apply_table_style_op",
+    "contains_create_chart_op",
     "contains_design_ops",
     "create_seed_workbook",
     "ensure_output_dir",

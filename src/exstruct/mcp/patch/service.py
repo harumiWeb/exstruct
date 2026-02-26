@@ -71,14 +71,7 @@ def run_patch(
     )
     warnings: list[str] = []
     runtime.append_large_ops_warning(warnings, request.ops)
-    effective_request = request
-    if request.backend in {"com", "auto"} and runtime.contains_apply_table_style_op(
-        request.ops
-    ):
-        warnings.append(
-            "backend='com' does not support apply_table_style; falling back to openpyxl."
-        )
-        effective_request = request.model_copy(update={"backend": "openpyxl"})
+    effective_request = _resolve_effective_request(request, warnings)
     if resolved_input.suffix.lower() == ".xls" and runtime.contains_design_ops(
         effective_request.ops
     ):
@@ -167,6 +160,27 @@ def run_patch(
         output_path,
         warnings,
     )
+
+
+def _resolve_effective_request(
+    request: PatchRequest,
+    warnings: list[str],
+) -> PatchRequest:
+    """Resolve request-level backend adjustments and mixed-op guards."""
+    if request.backend not in {"com", "auto"}:
+        return request
+    has_apply_table_style = runtime.contains_apply_table_style_op(request.ops)
+    if not has_apply_table_style:
+        return request
+    if runtime.contains_create_chart_op(request.ops):
+        raise ValueError(
+            "create_chart and apply_table_style cannot be combined in one patch request. "
+            "Run them in separate requests because they require different backends."
+        )
+    warnings.append(
+        "backend='com' does not support apply_table_style; falling back to openpyxl."
+    )
+    return request.model_copy(update={"backend": "openpyxl"})
 
 
 def _apply_with_openpyxl(
