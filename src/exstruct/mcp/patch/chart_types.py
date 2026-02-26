@@ -2,16 +2,24 @@ from __future__ import annotations
 
 from typing import Final
 
-CHART_TYPE_TO_COM_ID: Final[dict[str, int]] = {
-    "line": 4,
-    "column": 51,
-    "bar": 57,
-    "area": 1,
-    "pie": 5,
-    "doughnut": -4120,
-    "scatter": -4169,
-    "radar": -4151,
-}
+# Explicit ordered pairs of (chart_type, Excel COM ChartType ID).
+# This is the single source of truth; both the ordered tuple and mapping are derived from it.
+_CHART_TYPE_ENTRIES: Final[tuple[tuple[str, int], ...]] = (
+    ("line", 4),
+    ("column", 51),
+    ("bar", 57),
+    ("area", 1),
+    ("pie", 5),
+    ("doughnut", -4120),
+    ("scatter", -4169),
+    ("radar", -4151),
+)
+
+# Ordered tuple of canonical chart type names; ordering here determines error messages and docs.
+SUPPORTED_CHART_TYPES: Final[tuple[str, ...]] = tuple(t for t, _ in _CHART_TYPE_ENTRIES)
+
+# Mapping from canonical chart type to Excel COM ChartType ID.
+CHART_TYPE_TO_COM_ID: Final[dict[str, int]] = dict(_CHART_TYPE_ENTRIES)
 
 CHART_TYPE_ALIASES: Final[dict[str, str]] = {
     "column_clustered": "column",
@@ -20,7 +28,6 @@ CHART_TYPE_ALIASES: Final[dict[str, str]] = {
     "donut": "doughnut",
 }
 
-SUPPORTED_CHART_TYPES: Final[tuple[str, ...]] = tuple(CHART_TYPE_TO_COM_ID.keys())
 SUPPORTED_CHART_TYPES_SET: Final[frozenset[str]] = frozenset(SUPPORTED_CHART_TYPES)
 SUPPORTED_CHART_TYPES_CSV: Final[str] = ", ".join(SUPPORTED_CHART_TYPES)
 
