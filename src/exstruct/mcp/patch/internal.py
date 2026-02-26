@@ -426,6 +426,14 @@ class XlwingsChartObjectsCollectionProtocol(Protocol):
     def __call__(self, index: int) -> XlwingsChartObjectProtocol: ...
 
 
+@runtime_checkable
+class XlwingsChartSeriesProtocol(Protocol):
+    """Protocol for xlwings COM chart series object."""
+
+    Name: str
+    XValues: object
+
+
 class PatchOp(BaseModel):
     """Single patch operation for an Excel workbook.
 
@@ -3947,7 +3955,9 @@ def _existing_chart_names(
     existing_count = int(getattr(chart_collection, "Count", 0))
     names: set[str] = set()
     for chart_index in range(1, existing_count + 1):
-        item = chart_collection(chart_index)
+        item = _get_com_collection_item(chart_collection, chart_index)
+        if item is None:
+            continue
         name_value = getattr(item, "Name", None)
         if isinstance(name_value, str):
             names.add(name_value)
@@ -3974,9 +3984,14 @@ def _apply_chart_category_range(
     series_collection = getattr(chart, "SeriesCollection", None)
     if not callable(series_collection):
         return
-    series_count = int(series_collection().Count)
+    series_accessor = series_collection()
+    series_count = int(getattr(series_accessor, "Count", 0))
     for series_idx in range(1, series_count + 1):
-        series_collection(series_idx).XValues = sheet.range(category_range).api
+        series_item_raw = _get_com_collection_item(series_accessor, series_idx)
+        if series_item_raw is None:
+            continue
+        series_item = cast(XlwingsChartSeriesProtocol, series_item_raw)
+        series_item.XValues = sheet.range(category_range).api
 
 
 def _apply_titles_from_data_flag(chart: object, titles_from_data: bool | None) -> None:
@@ -3986,9 +4001,34 @@ def _apply_titles_from_data_flag(chart: object, titles_from_data: bool | None) -
     series_collection = getattr(chart, "SeriesCollection", None)
     if not callable(series_collection):
         return
-    series_count = int(series_collection().Count)
+    series_accessor = series_collection()
+    series_count = int(getattr(series_accessor, "Count", 0))
     for series_idx in range(1, series_count + 1):
-        series_collection(series_idx).Name = f"Series {series_idx}"
+        series_item_raw = _get_com_collection_item(series_accessor, series_idx)
+        if series_item_raw is None:
+            continue
+        series_item = cast(XlwingsChartSeriesProtocol, series_item_raw)
+        series_item.Name = f"Series {series_idx}"
+
+
+def _get_com_collection_item(collection: object, index: int) -> object | None:
+    """Return indexed COM collection item with call/Item fallback."""
+    collection_call: Callable[[int], object] | None = None
+    if callable(collection):
+        collection_call = cast(Callable[[int], object], collection)
+    try:
+        if collection_call is not None:
+            return collection_call(index)
+    except Exception:
+        pass
+    item_method = getattr(collection, "Item", None)
+    if callable(item_method):
+        item_callable = cast(Callable[[int], object], item_method)
+        try:
+            return item_callable(index)
+        except Exception:
+            return None
+    return None
 
 
 def _apply_xlwings_restore_design_snapshot(op: PatchOp) -> PatchDiffItem:

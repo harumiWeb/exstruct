@@ -335,13 +335,15 @@ def test_internal_create_chart_honors_titles_from_data_false() -> None:
     series_2 = MagicMock()
     series_2.Name = "Header-B"
     series_items = {1: series_1, 2: series_2}
-    series_collection = MagicMock()
-    series_collection.side_effect = (
-        lambda index=None: MagicMock(Count=2) if index is None else series_items[index]
-    )
+
+    class _SeriesCollection:
+        Count = 2
+
+        def Item(self, index: int) -> MagicMock:
+            return series_items[index]
 
     chart = MagicMock()
-    chart.SeriesCollection = series_collection
+    chart.SeriesCollection = MagicMock(return_value=_SeriesCollection())
     chart_object = MagicMock()
     chart_object.Chart = chart
     chart_object.Name = "Chart 1"
@@ -387,17 +389,19 @@ def test_internal_create_chart_honors_titles_from_data_false() -> None:
 
 def test_internal_create_chart_allows_name_matching_new_default_name() -> None:
     chart = MagicMock()
-    chart.SeriesCollection = MagicMock(
-        side_effect=lambda index=None: MagicMock(Count=0)
-    )
+    chart.SeriesCollection = MagicMock(return_value=MagicMock(Count=0))
     chart_object = MagicMock()
     chart_object.Chart = chart
-    chart_object.Name = "Chart 1"
+    chart_object.Name = "Existing"
 
     chart_collection = MagicMock()
     chart_collection.Count = 0
     chart_collection.Add.return_value = chart_object
-    chart_objects = MagicMock(side_effect=lambda index=None: chart_collection)
+    chart_objects = MagicMock(
+        side_effect=lambda index=None: chart_collection
+        if index is None
+        else chart_object
+    )
 
     anchor_range = MagicMock()
     anchor_range.api = MagicMock(Left=15.0, Top=25.0)
@@ -419,8 +423,12 @@ def test_internal_create_chart_allows_name_matching_new_default_name() -> None:
         chart_name="Chart 1",
     )
 
-    internal._apply_xlwings_create_chart(
+    diff = internal._apply_xlwings_create_chart(
         cast(internal.XlwingsSheetProtocol, sheet), op, index=0
     )
 
+    chart.SetSourceData.assert_called_once_with("DATA_API")
+    chart_collection.Add.assert_called_once()
+    assert diff.after is not None
+    assert diff.after.kind == "chart"
     assert chart_object.Name == "Chart 1"
