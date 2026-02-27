@@ -74,12 +74,26 @@
 
 ## Plan (COM Hardening Follow-up 2026-02-27)
 
-- [ ] `tasks/feature_spec.md` の Phase 2.1 範囲に沿って詳細仕様を確定
-- [ ] `apply_table_style` COM Add 呼び出しの互換パターンを実機ログ基準で見直し
-- [ ] `apply_table_style` の COM 例外を `error_code` 分類へ追加
-- [ ] Windows + Excel 実機で `apply_table_style` スモークケースを実行
-- [ ] `docs/mcp.md` / `README.md` / `README.ja.md` に COM前提条件と失敗時対処を追記
-- [ ] MCP向けの最小サンプル（テーブル作成 + スタイル適用）を docs に追加
+- [x] `tasks/feature_spec.md` の Phase 2.1 範囲に沿って詳細仕様を確定
+- [x] `apply_table_style` COM Add 呼び出しの互換パターンを実機ログ基準で見直し
+- [x] `apply_table_style` の COM 例外を `error_code` 分類へ追加
+- [x] Windows + Excel 実機で `apply_table_style` スモークケースを実行
+- [x] `docs/mcp.md` / `README.md` / `README.ja.md` に COM前提条件と失敗時対処を追記
+- [x] MCP向けの最小サンプル（テーブル作成 + スタイル適用）を docs に追加
+
+## Review (COM Hardening Follow-up 2026-02-27)
+
+- Summary:
+- `apply_table_style` の COM 経路で `ListObjects` 取得互換（property/callable）を追加し、`ListObjects.Add` は複数シグネチャ + source文字列フォールバックで再試行するように改善した。
+- `ListObjects` の既存テーブル範囲検出は `Address` 正規化を強化し、外部参照付き表記（例: `='[Book]Sheet'!$A$1:$B$2`）でも交差判定できるようにした。
+- Error UX:
+- `apply_table_style` 向けに `table_style_invalid` / `list_object_add_failed` / `com_api_missing` を分類対象に追加し、該当ケースの `hint` を追加した。
+- Verification:
+- `uv run pytest tests/mcp/patch/test_models_internal_coverage.py tests/mcp/patch/test_service.py` (56 passed)
+- `uv run task precommit-run` (ruff / ruff-format / mypy passed)
+- `uv run python -c \"... run_make(... backend='com' ... apply_table_style ...)\"` で `engine='com'` / `error=None` を確認
+- Artifact:
+- `c:\\dev\\Python\\exstruct\\drafts\\apply_table_style_smoke_local_20260227.xlsx`
 
 ## Plan (Review Fix: COM fallback + failed_field 2026-02-27)
 
@@ -100,3 +114,19 @@
 - `uv run task precommit-run` (ruff / ruff-format / mypy passed)
 - Risks:
 - Message-based classification still depends on stable wording; future message format changes can impact field inference.
+
+## Plan (Review Fix: ListObjects property accessor 2026-02-27)
+
+- [x] Reproduce reviewer finding in `internal.py` and confirm pre-resolution `callable` guard blocks property accessor compatibility.
+- [x] Remove early `callable` guard and delegate ListObjects resolution to `_resolve_xlwings_list_objects`.
+- [x] Add regression test to verify `_apply_xlwings_apply_table_style` succeeds when `ListObjects` is a property collection.
+- [x] Run targeted pytest and `uv run task precommit-run`.
+
+## Review (Review Fix: ListObjects property accessor 2026-02-27)
+
+- Summary:
+- Fixed `apply_table_style` COM path to support both callable/property `ListObjects` by removing the redundant early callable check.
+- Added regression test covering property-style `ListObjects` to prevent future regressions at call-site level.
+- Verification:
+- `uv run pytest tests/mcp/patch/test_models_internal_coverage.py -k "apply_table_style_accepts_property_list_objects or resolve_xlwings_list_objects_uses_collection_like_accessor"` (2 passed, 46 deselected)
+- `uv run task precommit-run` (ruff / ruff-format / mypy passed)

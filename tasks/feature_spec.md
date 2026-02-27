@@ -202,6 +202,46 @@ MCP Patch COM hardening follow-up (Phase 2.1)
 - 失敗時に `error_code` と修正ヒントで原因特定が可能
 - ドキュメントだけで COM 前提条件と制約が判断できる
 
+## Detailed Spec (Phase 2.1)
+
+### 1) `ListObjects.Add` 互換呼び出し
+
+- `apply_table_style` は COM `ListObjects.Add` を複数シグネチャで順次試行する。
+- 試行順:
+  - `Add(1, Source)`
+  - `Add(1, Source, None, 1)`
+  - `Add(1, Source, None, 1, None)`
+  - `Add(1, Source, None, 1, None, None)`
+  - `Add(SourceType=1, Source=...)`
+  - `Add(SourceType=1, Source=..., XlListObjectHasHeaders=1)`
+- `Source` は `Range API` と `A1文字列` の両方を候補にする（Excelバージョン差吸収）。
+- 全試行失敗時は `ValueError("apply_table_style failed to add table ...")` を返す。
+
+### 2) 既存テーブル範囲検出の正規化
+
+- COM `Address` 取得は複数シグネチャでフォールバックし、`$` / `=` / シート修飾を除去して比較する。
+- 例:
+  - `='[Book1.xlsx]Sales Data'!$B$2:$D$11` -> `B2:D11`
+  - `Sheet1!$A$1:$C$9` -> `A1:C9`
+- 正規化後の範囲を重複判定 (`_ranges_overlap`) に利用する。
+
+### 3) 失敗分類 (`PatchErrorDetail.error_code`)
+
+- `apply_table_style` で次を追加:
+  - `table_style_invalid` (`failed_field="style"`)
+  - `list_object_add_failed` (`failed_field="range"`)
+  - `com_api_missing` (`failed_field="range"` or `"style"`)
+- `hint` には `style` 名修正や `range` 見直し（ヘッダー含む連続範囲）を案内する。
+
+### 4) Windows + Excel スモーク検証
+
+- ツール: `exstruct_make`
+- 条件: `backend="com"`、`set_range_values` -> `apply_table_style` の2 op。
+- 成功判定:
+  - 出力 `.xlsx` が生成される
+  - `patch_diff` の `apply_table_style` が `applied`
+  - `error` が `null`
+
 ## Feature Name
 
 Patch service fallback resilience and failed_field precision (Review Fix 2026-02-27)
@@ -229,3 +269,31 @@ Patch service fallback resilience and failed_field precision (Review Fix 2026-02
 - `backend=auto` falls back to openpyxl when COM op-level exception is wrapped as `PatchOpError` with COM-runtime signal.
 - `sheet not found` classification reports `failed_field="category_range"` when message context is category range.
 - Target tests pass.
+
+## Feature Name
+
+Review Fix: apply_table_style ListObjects property accessor path (2026-02-27)
+
+## Goal
+
+- Ensure `apply_table_style` works when COM `sheet.api.ListObjects` is exposed as a property collection (non-callable).
+- Preserve callable accessor compatibility via `_resolve_xlwings_list_objects`.
+
+## Scope
+
+### In Scope
+
+- Remove pre-resolution `callable` guard in `_apply_xlwings_apply_table_style`.
+- Route all `ListObjects` resolution through `_resolve_xlwings_list_objects`.
+- Add regression test that exercises `apply_table_style` with property-style `ListObjects`.
+
+### Out of Scope
+
+- Changes to COM Add fallback sequence.
+- Changes to table style error classification.
+
+## Acceptance Criteria
+
+- `apply_table_style` does not fail early with `sheet ListObjects COM API` when `ListObjects` is a collection property.
+- Existing missing-API error behavior is preserved for truly absent `ListObjects`.
+- Target regression test passes.

@@ -354,6 +354,15 @@ Example:
 - Required: `sheet`, `range`, `style`.
 - Optional: `table_name`.
 - Fails when range intersects an existing table, or table name duplicates.
+- COM execution checklist (recommended on Windows):
+  - Microsoft Excel desktop app is installed and launchable in the current user session.
+  - Use `backend="com"` for deterministic behavior, or `backend="auto"` with COM availability.
+  - `range` includes the header row and points to one contiguous A1 range.
+  - Avoid protected sheets/workbooks and existing tables intersecting the target range.
+- Common error codes:
+  - `table_style_invalid`: `style` is not a valid Excel table style name.
+  - `list_object_add_failed`: Excel COM `ListObjects.Add(...)` failed for all compatible signatures.
+  - `com_api_missing`: required COM members such as `ListObjects.Add` are unavailable.
 
 Example:
 
@@ -367,6 +376,38 @@ Example:
       "sheet": "Sheet1",
       "range": "A1:D11",
       "style": "TableStyleMedium9",
+      "table_name": "SalesTable"
+    }
+  ]
+}
+```
+
+### `apply_table_style` minimal MCP sample (`exstruct_make`)
+
+Use this for Windows + Excel COM smoke checks when you need a reproducible minimal request.
+
+```json
+{
+  "tool": "exstruct_make",
+  "out_path": "C:\\data\\table_style_smoke.xlsx",
+  "backend": "com",
+  "ops": [
+    {
+      "op": "set_range_values",
+      "sheet": "Sheet1",
+      "range": "A1:C4",
+      "values": [
+        ["Month", "Revenue", "Cost"],
+        ["Jan", 120, 80],
+        ["Feb", 150, 90],
+        ["Mar", 140, 88]
+      ]
+    },
+    {
+      "op": "apply_table_style",
+      "sheet": "Sheet1",
+      "range": "A1:C4",
+      "style": "TableStyleMedium2",
       "table_name": "SalesTable"
     }
   ]

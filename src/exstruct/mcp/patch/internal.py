@@ -3961,10 +3961,7 @@ def _apply_xlwings_apply_table_style(
     if op.range is None or op.style is None:
         raise ValueError("apply_table_style requires range and style.")
     sheet_api = _xlwings_sheet_api(sheet)
-    list_objects_accessor = getattr(sheet_api, "ListObjects", None)
-    if not callable(list_objects_accessor):
-        raise ValueError("apply_table_style requires sheet ListObjects COM API.")
-    list_objects = list_objects_accessor()
+    list_objects = _resolve_xlwings_list_objects(sheet_api)
     _ensure_xlwings_table_range_not_intersects_existing_tables(list_objects, op.range)
     table_name = op.table_name or _next_xlwings_table_name(list_objects)
     _ensure_xlwings_table_name_available(list_objects, table_name)
@@ -3972,7 +3969,7 @@ def _apply_xlwings_apply_table_style(
     table = _xlwings_add_list_object(list_objects, source_range)
     table_any = cast(Any, table)
     table_any.Name = table_name
-    table_any.TableStyle = op.style
+    _apply_xlwings_table_style(table_any, op.style)
     return PatchDiffItem(
         op_index=index,
         op=op.op,
@@ -4063,6 +4060,37 @@ def _apply_xlwings_create_chart(
         before=None,
         after=PatchValue(kind="chart", value=chart_summary),
     )
+
+
+def _resolve_xlwings_list_objects(sheet_api: XlwingsSheetApiProtocol) -> object:
+    """Resolve ListObjects COM collection for both property and callable forms."""
+    accessor = getattr(sheet_api, "ListObjects", None)
+    if accessor is None:
+        raise ValueError("apply_table_style requires sheet ListObjects COM API.")
+    if _looks_like_xlwings_list_objects_collection(accessor):
+        return cast(object, accessor)
+    if callable(accessor):
+        callable_accessor = cast(Callable[..., object], accessor)
+        try:
+            resolved = callable_accessor()
+        except Exception as exc:
+            raise ValueError(
+                "apply_table_style failed to access sheet ListObjects COM collection."
+            ) from exc
+        if _looks_like_xlwings_list_objects_collection(resolved):
+            return resolved
+        return resolved
+    raise ValueError("apply_table_style requires sheet ListObjects COM API.")
+
+
+def _looks_like_xlwings_list_objects_collection(candidate: object) -> bool:
+    """Return True when object looks like Excel ListObjects collection."""
+    for attr_name in ("Add", "Count"):
+        try:
+            getattr(candidate, attr_name)
+        except Exception:
+            return False
+    return True
 
 
 def _resolve_chart_type_id(chart_type: str) -> int | None:
@@ -4266,16 +4294,53 @@ def _existing_xlwings_table_ranges(list_objects: object) -> list[tuple[str, str]
         table = _get_com_collection_item(list_objects, table_index)
         table_name = str(getattr(table, "Name", f"Table{table_index}"))
         table_range = getattr(table, "Range", None)
-        address_method = getattr(table_range, "Address", None)
-        if callable(address_method):
-            raw_address = str(address_method(False, False))
-        else:
-            raw_address = str(getattr(table_range, "Address", ""))
-        normalized = raw_address.replace("$", "")
-        if "!" in normalized:
-            normalized = normalized.split("!", maxsplit=1)[1]
+        raw_address = _resolve_com_range_address(table_range)
+        normalized = _normalize_table_range_address(raw_address)
         pairs.append((table_name, normalized))
     return pairs
+
+
+def _resolve_com_range_address(range_api: object | None) -> str:
+    """Resolve COM range address with fallback signatures."""
+    if range_api is None:
+        return ""
+    address_method = getattr(range_api, "Address", None)
+    if callable(address_method):
+        address_callable = cast(Callable[..., object], address_method)
+        for args in ((False, False, 1, False), (False, False), ()):
+            try:
+                resolved = str(address_callable(*args))
+            except Exception:
+                continue
+            if resolved:
+                return resolved
+    address_value = getattr(range_api, "Address", "")
+    if callable(address_value):
+        try:
+            return str(cast(Callable[[], object], address_value)())
+        except Exception:
+            return ""
+    return str(address_value)
+
+
+def _normalize_table_range_address(raw_address: str) -> str:
+    """Normalize COM table range address for overlap checks."""
+    normalized = raw_address.strip()
+    if normalized.startswith("="):
+        normalized = normalized[1:]
+    normalized = normalized.replace("$", "")
+    if "!" in normalized:
+        normalized = normalized.rsplit("!", maxsplit=1)[1]
+    normalized = normalized.strip().strip("'")
+    range_match = _SHEET_QUALIFIED_A1_RANGE_PATTERN.match(normalized)
+    if range_match is not None:
+        start = range_match.group("start").upper()
+        end = range_match.group("end").upper()
+        return f"{start}:{end}"
+    single_ref = normalized.upper()
+    if _A1_PATTERN.match(single_ref):
+        return single_ref
+    return normalized
 
 
 def _ensure_xlwings_table_range_not_intersects_existing_tables(
@@ -4315,17 +4380,77 @@ def _xlwings_add_list_object(list_objects: object, source_range_api: object) -> 
     if not callable(add_method):
         raise ValueError("apply_table_style requires ListObjects.Add COM API.")
     add_callable = cast(Callable[..., object], add_method)
-    errors: list[Exception] = []
-    for args, kwargs in (
-        ((1, source_range_api), {}),
-        ((1, source_range_api, None, 1), {}),
-        ((), {"SourceType": 1, "Source": source_range_api}),
+    errors: list[str] = []
+    for source in _xlwings_list_object_add_sources(source_range_api):
+        for args, kwargs, signature in _xlwings_list_object_add_attempts(source):
+            try:
+                return add_callable(*args, **kwargs)
+            except Exception as exc:
+                source_label = _describe_list_object_source(source)
+                errors.append(f"{signature} [{source_label}] -> {exc!r}")
+    tail = " | ".join(errors[-4:])
+    raise ValueError(
+        "apply_table_style failed to add table after COM Add signature retries. "
+        f"{tail}"
+    )
+
+
+def _xlwings_list_object_add_sources(source_range_api: object) -> list[object]:
+    """Build ListObjects.Add source variants for COM compatibility."""
+    sources: list[object] = [source_range_api]
+    address = _normalize_table_range_address(
+        _resolve_com_range_address(source_range_api)
+    )
+    if address and all(
+        not isinstance(item, str) or item != address for item in sources
     ):
+        sources.append(address)
+    return sources
+
+
+def _xlwings_list_object_add_attempts(
+    source: object,
+) -> tuple[tuple[tuple[object, ...], dict[str, object], str], ...]:
+    """Return Add call signatures tried for a given COM source."""
+    return (
+        ((1, source), {}, "Add(1, Source)"),
+        ((1, source, None, 1), {}, "Add(1, Source, None, 1)"),
+        ((1, source, None, 1, None), {}, "Add(1, Source, None, 1, None)"),
+        ((1, source, None, 1, None, None), {}, "Add(1, Source, None, 1, None, None)"),
+        ((), {"SourceType": 1, "Source": source}, "Add(SourceType=1, Source=...)"),
+        (
+            (),
+            {"SourceType": 1, "Source": source, "XlListObjectHasHeaders": 1},
+            "Add(SourceType=1, Source=..., XlListObjectHasHeaders=1)",
+        ),
+    )
+
+
+def _describe_list_object_source(source: object) -> str:
+    """Return short source label for ListObjects.Add diagnostics."""
+    if isinstance(source, str):
+        return f"address:{source}"
+    return "range_api"
+
+
+def _apply_xlwings_table_style(table: object, style_name: str) -> None:
+    """Apply table style using compatible COM attributes."""
+    table_any = cast(Any, table)
+    style_errors: list[Exception] = []
+    for attr_name in ("TableStyle", "TableStyle2"):
+        if not hasattr(table_any, attr_name):
+            continue
         try:
-            return add_callable(*args, **kwargs)
+            setattr(table_any, attr_name, style_name)
+            return
         except Exception as exc:
-            errors.append(exc)
-    raise ValueError(f"apply_table_style failed to add table: {errors[-1]!r}")
+            style_errors.append(exc)
+    if style_errors:
+        raise ValueError(
+            f"apply_table_style invalid table style: {style_name!r}. "
+            f"({style_errors[-1]!r})"
+        )
+    raise ValueError("apply_table_style requires ListObject table style COM API.")
 
 
 def _get_com_collection_item(collection: object, index: int) -> object:
@@ -4575,6 +4700,7 @@ def _build_patch_error_guidance(
     op: PatchOp, message: str
 ) -> tuple[str | None, list[str], str | None]:
     """Build structured guidance for common operation mistakes."""
+    lowered_message = message.lower()
     if op.op == "set_fill_color" and (
         "does not accept color" in message or "requires fill_color" in message
     ):
@@ -4635,6 +4761,26 @@ def _build_patch_error_guidance(
                 '"data_range":"\'Sales 2026\'!B2:C13","anchor_cell":"F2"}'
             ),
         )
+    if op.op == "apply_table_style" and "invalid table style" in lowered_message:
+        return (
+            "style には Excel の有効なテーブルスタイル名を指定してください。"
+            " 例: TableStyleMedium2 / TableStyleLight9。",
+            ["op", "sheet", "range", "style"],
+            (
+                '{"op":"apply_table_style","sheet":"Sheet1",'
+                '"range":"A1:D11","style":"TableStyleMedium2"}'
+            ),
+        )
+    if op.op == "apply_table_style" and "failed to add table" in lowered_message:
+        return (
+            "range にはヘッダー行を含む連続した A1 範囲を指定してください。"
+            " 既存テーブルとの重複や無効な参照があると失敗します。",
+            ["op", "sheet", "range", "style"],
+            (
+                '{"op":"apply_table_style","sheet":"Sheet1",'
+                '"range":"A1:D11","style":"TableStyleMedium2"}'
+            ),
+        )
     return None, [], None
 
 
@@ -4672,6 +4818,15 @@ def _classify_known_patch_error(
         ("chart_name already exists", "chart_name_conflict", "chart_name"),
         ("table name already exists", "table_name_conflict", "table_name"),
         ("intersects existing table", "table_range_intersection", "range"),
+        ("invalid table style", "table_style_invalid", "style"),
+        ("failed to add table", "list_object_add_failed", "range"),
+        ("requires listobjects.add com api", "com_api_missing", "range"),
+        (
+            "failed to access sheet listobjects com collection",
+            "com_api_missing",
+            "range",
+        ),
+        ("requires listobject table style com api", "com_api_missing", "style"),
         ("requires range and style", "invalid_parameter", "range/style"),
         ("requires chart_type", "invalid_parameter", "chart_type"),
         ("requires data_range", "invalid_parameter", "data_range"),

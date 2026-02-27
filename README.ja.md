@@ -108,6 +108,8 @@ exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict re
 - `create_chart` の `data_range` は単一範囲文字列または `list[str]`（複数系列）を受け付け、`data_range` / `category_range` ともにシート名付き範囲（`Sheet2!A1:B10`, `'Sales Data'!A1:B10`）を指定できます。
 - `create_chart` では `chart_title` / `x_axis_title` / `y_axis_title` による明示タイトル設定が可能です。
 - `create_chart` と `apply_table_style` は1回のリクエストで同時指定できません（別リクエストに分割してください）。
+- Windows で `apply_table_style` を COM で安定実行するには、デスクトップ版 Excel が起動可能で、`range` がヘッダー行を含む連続 A1 範囲であることを確認してください。
+- `exstruct_patch` のエラー詳細には `error_code` / `failed_field` / `raw_com_message` が含まれる場合があります。テーブル関連コードは `table_style_invalid` / `list_object_add_failed` / `com_api_missing` です。
 - `exstruct_patch` の応答には実際に使われたバックエンドを示す `engine`（`com` / `openpyxl`）が含まれます。`restore_design_snapshot` は引き続き openpyxl 専用です。
 - 新規ブック作成は `exstruct_make`、既存ブック編集は `exstruct_patch` を使い分けてください。
 - `exstruct_make` は新規ブック作成と `ops` 適用を1回で実行します（`out_path` 必須、`ops` は任意）。
