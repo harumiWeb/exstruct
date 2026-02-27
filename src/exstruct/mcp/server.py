@@ -542,6 +542,7 @@ def _register_tools(
                 for non-add_sheet ops. If both are set, op.sheet wins.
             out_dir: Output directory. Defaults to same directory as input.
             out_name: Output filename. Defaults to '{stem}_patched{ext}'.
+                If stem already ends with '_patched', the same name is reused.
             on_conflict: Conflict policy when output file exists:
                 'overwrite' (replace), 'skip' (do nothing), 'rename' (auto-rename).
                 Defaults to server --on-conflict setting.
@@ -695,6 +696,7 @@ Args:
         for non-add_sheet ops. If both are set, op.sheet wins.
     out_dir: Output directory. Defaults to same directory as input.
     out_name: Output filename. Defaults to '{stem}_patched{ext}'.
+        If stem already ends with '_patched', the same name is reused.
     on_conflict: Conflict policy when output file exists:
         'overwrite' (replace), 'skip' (do nothing), 'rename' (auto-rename).
         Defaults to server --on-conflict setting.

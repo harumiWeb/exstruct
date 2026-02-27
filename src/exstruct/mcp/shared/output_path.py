@@ -46,8 +46,15 @@ def normalize_output_name(
             candidate.name if candidate.suffix else f"{candidate.name}{default_suffix}"
         )
     if default_name_builder == "patched":
-        return f"{input_path.stem}_patched{default_suffix}"
+        return _build_patched_default_name(input_path.stem, default_suffix)
     return f"{input_path.stem}{default_suffix}"
+
+
+def _build_patched_default_name(stem: str, default_suffix: str) -> str:
+    """Build default patched output name without chaining `_patched` repeatedly."""
+    if stem.casefold().endswith("_patched"):
+        return f"{stem}{default_suffix}"
+    return f"{stem}_patched{default_suffix}"
 
 
 def apply_conflict_policy(

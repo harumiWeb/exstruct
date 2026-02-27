@@ -133,20 +133,23 @@
 
 ## Plan (MCP usability follow-up from Claude review 2026-02-27)
 
-- [ ] `tasks/feature_spec.md` の新規specに沿って実装順（P0/P1）を確定
-- [ ] P0: `_patched` 連鎖を止める出力名ポリシーを実装
-- [ ] P0: 出力名ポリシー変更の回帰テストを追加（`tests/mcp/shared/test_output_path.py` ほか）
-- [ ] P0: Claude連携向け `--artifact-bridge-dir` / `mirror_artifact` の利用ガイドを `docs/mcp.md` に追加
-- [ ] P1: `create_chart` + `apply_table_style` 同時指定エラーに制約理由を追加
-- [ ] P1: 同時指定時エラーメッセージの回帰テストを追加（`tests/mcp/patch/test_service.py`）
-- [ ] `uv run pytest`（対象テスト）を実行
-- [ ] `uv run task precommit-run` を実行
+- [x] `tasks/feature_spec.md` の新規specに沿って実装順（P0/P1）を確定
+- [x] P0: `_patched` 連鎖を止める出力名ポリシーを実装
+- [x] P0: 出力名ポリシー変更の回帰テストを追加（`tests/mcp/shared/test_output_path.py` ほか）
+- [x] P0: Claude連携向け `--artifact-bridge-dir` / `mirror_artifact` の利用ガイドを `docs/mcp.md` に追加
+- [x] P1: `create_chart` + `apply_table_style` 同時指定エラーに制約理由を追加
+- [x] P1: 同時指定時エラーメッセージの回帰テストを追加（`tests/mcp/patch/test_service.py`）
+- [x] `uv run pytest tests/mcp/shared/test_output_path.py tests/mcp/test_patch_runner.py tests/mcp/patch/test_service.py` を実行
+- [x] `uv run task precommit-run` を実行
 
 ## Review (MCP usability follow-up from Claude review 2026-02-27)
 
 - Summary:
-  - (pending)
+  - `_patched` 既定出力名を生成する際、入力 stem がすでに `_patched` で終わる場合は同名を再利用するように変更し、`_patched_patched` の連鎖増殖を防止した。
+  - `create_chart` + `apply_table_style` 同時指定エラーに「`create_chart` は COM 専用」「1リクエスト1バックエンド」の制約理由を明示した。
+  - `docs/mcp.md` に Claude Desktop 連携向けの artifact handoff 手順（`--artifact-bridge-dir` と `mirror_artifact=true`）を追記した。
 - Verification:
-  - (pending)
+  - `uv run pytest tests/mcp/shared/test_output_path.py tests/mcp/test_patch_runner.py tests/mcp/patch/test_service.py` (85 passed)
+  - `uv run task precommit-run` (ruff / ruff-format / mypy passed)
 - Risks:
-  - (pending)
+  - `on_conflict="skip"` かつ入力名が `*_patched` の場合、既定出力が同名になるためスキップされる（仕様どおりだが挙動理解が必要）。

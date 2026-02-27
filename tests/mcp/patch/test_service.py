@@ -396,7 +396,10 @@ def test_service_run_patch_rejects_create_chart_with_apply_table_style(
 
     with pytest.raises(
         ValueError,
-        match=r"create_chart and apply_table_style cannot be combined",
+        match=(
+            r"create_chart and apply_table_style cannot be combined.*"
+            r"create_chart is COM-only.*single backend engine"
+        ),
     ):
         service.run_patch(
             PatchRequest(

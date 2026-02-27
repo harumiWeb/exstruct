@@ -292,6 +292,8 @@ This keeps MCP tool I/O stable while allowing internal module separation.
   - `preflight_formula_check`: detect formula issues before save
   - `auto_formula`: treat `=...` in `set_value` as formula
   - `sheet`: top-level default sheet used when `op.sheet` is omitted (non-`add_sheet` only)
+  - default `out_name`: `{stem}_patched{ext}`. If input stem already ends with `_patched`,
+    ExStruct reuses the same name to avoid `_patched_patched` chaining.
   - `mirror_artifact`: copy output workbook to `--artifact-bridge-dir` on success
 - Large ops guidance:
   - `ops` over `200` still runs, but returns a warning that recommends splitting into batches.
@@ -309,7 +311,8 @@ This keeps MCP tool I/O stable while allowing internal module separation.
   - `data_range`/`category_range` support sheet-qualified form (`Sheet2!A1:B10`, `'Sales Data'!A1:B10`).
   - Optional explicit labels: `chart_title`, `x_axis_title`, `y_axis_title`.
   - Rejects `dry_run`/`return_inverse_ops`/`preflight_formula_check`.
-  - Cannot be combined with `apply_table_style` in one request (split into separate calls).
+  - Cannot be combined with `apply_table_style` in one request.
+    Reason: `create_chart` is COM-only and one patch request runs on a single backend engine.
 - Output includes `engine` (`"com"` or `"openpyxl"`) to show which backend was actually used.
 - Output includes `mirrored_out_path` when mirroring is requested and succeeds.
 - Conflict handling follows server `--on-conflict` unless overridden per tool call
@@ -492,6 +495,44 @@ Examples:
   - Mirroring runs only on success.
   - If `--artifact-bridge-dir` is not set, process still succeeds and warning is returned.
   - If copy fails, process still succeeds and warning is returned.
+
+### Claude Desktop artifact handoff recipe
+
+1. Start MCP server with `--artifact-bridge-dir`.
+2. Call `exstruct_patch` or `exstruct_make` with `mirror_artifact=true`.
+3. Read `mirrored_out_path` from tool output and pass that path to Claude for follow-up tasks.
+
+Example Claude Desktop MCP args:
+
+```json
+{
+  "command": "uvx",
+  "args": [
+    "--from",
+    "exstruct[mcp]",
+    "exstruct-mcp",
+    "--root",
+    "C:\\data",
+    "--artifact-bridge-dir",
+    "C:\\data\\artifacts",
+    "--on-conflict",
+    "overwrite"
+  ]
+}
+```
+
+Example tool call:
+
+```json
+{
+  "tool": "exstruct_patch",
+  "xlsx_path": "C:\\data\\book.xlsx",
+  "mirror_artifact": true,
+  "ops": [
+    { "op": "set_value", "sheet": "Sheet1", "cell": "A1", "value": "updated" }
+  ]
+}
+```
 
 ## Op schema discovery tools
 

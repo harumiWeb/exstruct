@@ -345,6 +345,25 @@ def test_run_patch_conflict_overwrite(
         workbook.close()
 
 
+def test_run_patch_default_output_name_does_not_chain_patched_suffix(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book_patched.xlsx"
+    _create_workbook(input_path)
+    request = PatchRequest(
+        xlsx_path=input_path,
+        ops=[PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="new")],
+    )
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.out_path == str(input_path)
+    workbook = load_workbook(result.out_path)
+    try:
+        assert workbook["Sheet1"]["A1"].value == "new"
+    finally:
+        workbook.close()
+
+
 def test_run_patch_atomicity(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _disable_com(monkeypatch)
     input_path = tmp_path / "book.xlsx"

@@ -185,6 +185,7 @@ def _resolve_effective_request(
             return request
         raise ValueError(
             "create_chart and apply_table_style cannot be combined in one patch request. "
+            "create_chart is COM-only, and a patch request runs on a single backend engine. "
             "Run them in separate requests to isolate chart and table operations."
         )
     return request

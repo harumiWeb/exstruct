@@ -35,6 +35,32 @@ def test_normalize_output_name_patched() -> None:
     )
 
 
+def test_normalize_output_name_patched_does_not_chain_suffix() -> None:
+    input_path = Path("report_patched.xlsx")
+    assert (
+        normalize_output_name(
+            input_path,
+            out_name=None,
+            default_suffix=".xlsx",
+            default_name_builder="patched",
+        )
+        == "report_patched.xlsx"
+    )
+
+
+def test_normalize_output_name_patched_case_insensitive() -> None:
+    input_path = Path("report_Patched.xlsx")
+    assert (
+        normalize_output_name(
+            input_path,
+            out_name=None,
+            default_suffix=".xlsx",
+            default_name_builder="patched",
+        )
+        == "report_Patched.xlsx"
+    )
+
+
 def test_apply_conflict_policy_rename(tmp_path: Path) -> None:
     target = tmp_path / "result.json"
     target.write_text("x", encoding="utf-8")
