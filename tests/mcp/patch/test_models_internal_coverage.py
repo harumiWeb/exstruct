@@ -278,15 +278,17 @@ def test_internal_xlwings_helpers_error_and_success_paths() -> None:
         )
 
     with pytest.raises(
-        ValueError, match="apply_table_style is supported only on openpyxl backend"
+        ValueError, match="apply_table_style requires sheet ListObjects COM API"
     ):
         internal._apply_xlwings_apply_table_style(
+            cast(internal.XlwingsSheetProtocol, known_sheet),
             internal.PatchOp(
                 op="apply_table_style",
                 sheet="Sheet1",
                 range="A1:B2",
                 style="TableStyleMedium2",
-            )
+            ),
+            index=3,
         )
 
     cell = known_sheet.range("A1")
@@ -482,3 +484,112 @@ def test_internal_resolve_chart_type_id_supports_aliases() -> None:
     assert internal._resolve_chart_type_id("bar_clustered") == 57
     assert internal._resolve_chart_type_id("xy_scatter") == -4169
     assert internal._resolve_chart_type_id("donut") == -4120
+
+
+def test_internal_create_chart_supports_multi_ranges_and_sheet_qualified_refs() -> None:
+    first_series = MagicMock()
+
+    class _SeriesCollection:
+        def __init__(self) -> None:
+            self._items: list[MagicMock] = [first_series]
+            self.Count = 1
+
+        def Item(self, index: int) -> MagicMock:  # noqa: N802
+            return self._items[index - 1]
+
+        def NewSeries(self) -> MagicMock:  # noqa: N802
+            item = MagicMock()
+            self._items.append(item)
+            self.Count = len(self._items)
+            return item
+
+    series_collection = _SeriesCollection()
+    chart = MagicMock()
+    chart.SeriesCollection = MagicMock(return_value=series_collection)
+    chart.ChartTitle = MagicMock()
+    axis_x = MagicMock()
+    axis_x.AxisTitle = MagicMock()
+    axis_y = MagicMock()
+    axis_y.AxisTitle = MagicMock()
+    chart.Axes = MagicMock(
+        side_effect=lambda axis_type: {1: axis_x, 2: axis_y}[axis_type]
+    )
+    chart_object = MagicMock()
+    chart_object.Chart = chart
+    chart_object.Name = "Chart 1"
+
+    chart_collection = MagicMock()
+    chart_collection.Count = 0
+    chart_collection.Add.return_value = chart_object
+    chart_objects = MagicMock(side_effect=lambda index=None: chart_collection)
+
+    anchor_range = MagicMock()
+    anchor_range.api = MagicMock(Left=30.0, Top=40.0)
+    chart_sheet = MagicMock()
+    chart_sheet.api = MagicMock(ChartObjects=chart_objects)
+    chart_sheet.range.side_effect = lambda ref: {"E2": anchor_range}[ref]
+
+    range_b = MagicMock()
+    range_b.api = "B_API"
+    range_c = MagicMock()
+    range_c.api = "C_API"
+    range_a = MagicMock()
+    range_a.api = "A_API"
+    data_sheet = MagicMock()
+    data_sheet.name = "Data"
+    data_sheet.range.side_effect = lambda ref: {
+        "B2:B10": range_b,
+        "C2:C10": range_c,
+        "A2:A10": range_a,
+    }[ref]
+    chart_sheet.book = MagicMock(sheets={"Data": data_sheet})
+
+    op = internal.PatchOp(
+        op="create_chart",
+        sheet="Chart",
+        chart_type="line",
+        data_range=["'Data'!B2:B10", "'Data'!C2:C10"],
+        category_range="'Data'!A2:A10",
+        anchor_cell="E2",
+        chart_title="Revenue",
+        x_axis_title="Month",
+        y_axis_title="Amount",
+    )
+
+    diff = internal._apply_xlwings_create_chart(
+        cast(internal.XlwingsSheetProtocol, chart_sheet), op, index=0
+    )
+
+    chart.SetSourceData.assert_called_once_with("B_API")
+    assert first_series.Values == "B_API"
+    assert first_series.XValues == "A_API"
+    second_series = series_collection.Item(2)
+    assert second_series.Values == "C_API"
+    assert second_series.XValues == "A_API"
+    assert axis_x.AxisTitle.Text == "Month"
+    assert axis_y.AxisTitle.Text == "Amount"
+    assert chart.ChartTitle.Text == "Revenue"
+    assert diff.after is not None
+    assert diff.after.kind == "chart"
+
+
+def test_internal_patch_op_error_adds_error_code_and_failed_field() -> None:
+    op = internal.PatchOp(
+        op="create_chart",
+        sheet="Sheet1",
+        chart_type="line",
+        data_range="A1:B2",
+        anchor_cell="D2",
+    )
+    err = internal.PatchOpError.from_op(
+        2, op, ValueError("Invalid chart range reference: bad")
+    )
+    assert err.detail.error_code == "invalid_range"
+    assert err.detail.failed_field == "data_range"
+
+
+def test_internal_classify_sheet_not_found_uses_category_failed_field() -> None:
+    classified = internal._classify_known_patch_error(
+        "create_chart sheet not found for category range reference: missing_sheet"
+    )
+    assert classified == ("sheet_not_found", "category_range")
