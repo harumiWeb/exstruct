@@ -297,3 +297,44 @@ Review Fix: apply_table_style ListObjects property accessor path (2026-02-27)
 - `apply_table_style` does not fail early with `sheet ListObjects COM API` when `ListObjects` is a collection property.
 - Existing missing-API error behavior is preserved for truly absent `ListObjects`.
 - Target regression test passes.
+
+## Feature Name
+
+MCP usability follow-up from Claude Desktop review (2026-02-27)
+
+## Goal
+
+Claude Desktop review で指摘された実運用上の摩擦を優先度順に解消し、
+Excel編集体験を壊さずに「出力ファイル運用」「ファイル受け渡し」「操作制約の理解性」を改善する。
+
+## Scope
+
+### In Scope
+
+- P0: `_patched` の連鎖増殖を防ぐ出力名ポリシー改善
+  - 既定名が既に `*_patched` のときに再度 `_patched` を重ねない
+  - 必要に応じて in-place overwrite を選びやすいオプションを追加
+- P0: Claude Desktop 向けファイル受け渡しUXの改善
+  - `--artifact-bridge-dir` と `mirror_artifact` の利用導線強化
+  - ドキュメントに「Claude連携の推奨起動例」を追加
+- P1: `create_chart` + `apply_table_style` 同時指定時のUX改善
+  - エラーメッセージに制約理由（backend/engine制約）を明示
+  - 将来的な自動分割実行に備えた実装ポイント整理
+
+### Out of Scope
+
+- `--root` 必須方針の撤廃
+- セキュリティ境界を弱めるパス制御変更
+- `create_chart` と `apply_table_style` の同時実行機能をこのフェーズで完全実装
+
+## Public API / Behavior Changes
+
+- デフォルト出力名生成の振る舞い改善（`*_patched_patched` を抑制）
+- `PatchResult` / `MakeResult` の warning 文言を改善し、ユーザーが次アクションを取りやすくする
+- ドキュメントに Claude Desktop 連携の設定例を追加
+
+## Acceptance Criteria
+
+- 同じファイルに連続パッチしても、デフォルトで `_patched` が無限に連鎖しない
+- `mirror_artifact=true` 利用時の手順が docs のみで再現できる
+- `create_chart` + `apply_table_style` の同時指定エラーで「なぜ不可か」が明示される

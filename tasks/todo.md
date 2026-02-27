@@ -130,3 +130,23 @@
 - Verification:
 - `uv run pytest tests/mcp/patch/test_models_internal_coverage.py -k "apply_table_style_accepts_property_list_objects or resolve_xlwings_list_objects_uses_collection_like_accessor"` (2 passed, 46 deselected)
 - `uv run task precommit-run` (ruff / ruff-format / mypy passed)
+
+## Plan (MCP usability follow-up from Claude review 2026-02-27)
+
+- [ ] `tasks/feature_spec.md` の新規specに沿って実装順（P0/P1）を確定
+- [ ] P0: `_patched` 連鎖を止める出力名ポリシーを実装
+- [ ] P0: 出力名ポリシー変更の回帰テストを追加（`tests/mcp/shared/test_output_path.py` ほか）
+- [ ] P0: Claude連携向け `--artifact-bridge-dir` / `mirror_artifact` の利用ガイドを `docs/mcp.md` に追加
+- [ ] P1: `create_chart` + `apply_table_style` 同時指定エラーに制約理由を追加
+- [ ] P1: 同時指定時エラーメッセージの回帰テストを追加（`tests/mcp/patch/test_service.py`）
+- [ ] `uv run pytest`（対象テスト）を実行
+- [ ] `uv run task precommit-run` を実行
+
+## Review (MCP usability follow-up from Claude review 2026-02-27)
+
+- Summary:
+  - (pending)
+- Verification:
+  - (pending)
+- Risks:
+  - (pending)
