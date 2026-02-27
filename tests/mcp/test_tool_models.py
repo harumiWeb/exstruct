@@ -223,6 +223,49 @@ def test_patch_tool_input_accepts_create_chart_op() -> None:
     assert payload.ops[0].series_from_rows is False
 
 
+def test_patch_tool_input_accepts_create_chart_multi_range_with_sheet_qualifier() -> (
+    None
+):
+    payload = PatchToolInput(
+        xlsx_path="input.xlsx",
+        ops=[
+            {
+                "op": "create_chart",
+                "sheet": "Chart",
+                "chart_type": "line",
+                "data_range": ["'Sales Data'!B2:B10", "'Sales Data'!C2:C10"],
+                "category_range": "'Sales Data'!A2:A10",
+                "anchor_cell": "E2",
+                "chart_title": "Monthly sales",
+                "x_axis_title": "Month",
+                "y_axis_title": "Amount",
+            }
+        ],
+    )
+    assert payload.ops[0].op == "create_chart"
+    assert payload.ops[0].data_range == ["'Sales Data'!B2:B10", "'Sales Data'!C2:C10"]
+    assert payload.ops[0].category_range == "'Sales Data'!A2:A10"
+    assert payload.ops[0].chart_title == "Monthly sales"
+    assert payload.ops[0].x_axis_title == "Month"
+    assert payload.ops[0].y_axis_title == "Amount"
+
+
+def test_patch_tool_input_rejects_empty_create_chart_data_range_list() -> None:
+    with pytest.raises(ValidationError, match="data_range list must not be empty"):
+        PatchToolInput(
+            xlsx_path="input.xlsx",
+            ops=[
+                {
+                    "op": "create_chart",
+                    "sheet": "Sheet1",
+                    "chart_type": "line",
+                    "data_range": [],
+                    "anchor_cell": "E2",
+                }
+            ],
+        )
+
+
 @pytest.mark.parametrize(
     "chart_type",
     ["line", "column", "bar", "area", "pie", "doughnut", "scatter", "radar"],

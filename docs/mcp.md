@@ -190,6 +190,13 @@ Examples:
 
 ## Edit flow (make/patch)
 
+### Choose make vs patch
+
+| Tool | Use when | Required path input |
+| --- | --- | --- |
+| `exstruct_make` | Create a brand-new workbook and apply initial ops in one call | `out_path` |
+| `exstruct_patch` | Edit an existing workbook (in-place style via `out_name` + `on_conflict=overwrite` is possible) | `xlsx_path` |
+
 ### New workbook flow (`exstruct_make`)
 
 1. Build patch operations (`ops`) for initial sheets/cells
@@ -291,15 +298,16 @@ This keeps MCP tool I/O stable while allowing internal module separation.
 - Backend selection:
   - `backend="auto"` (default): prefers COM when available; otherwise openpyxl.
     Also uses openpyxl when `dry_run`/`return_inverse_ops`/`preflight_formula_check` is enabled.
-    Requests including `apply_table_style` are also routed to openpyxl.
   - `backend="com"`: forces COM. Requires Excel COM and rejects
     `dry_run`/`return_inverse_ops`/`preflight_formula_check`.
-    If `apply_table_style` is included, returns a warning and falls back to openpyxl.
   - `backend="openpyxl"`: forces openpyxl (`.xls` is not supported).
 - `create_chart` constraints:
   - Supported only with COM backend.
   - `chart_type` supports: `line`, `column`, `bar`, `area`, `pie`, `doughnut`, `scatter`, `radar`.
     - Alias input is accepted: `column_clustered`, `bar_clustered`, `xy_scatter`, `donut`.
+  - `data_range` accepts either one A1 range string or an array of ranges (multi-series).
+  - `data_range`/`category_range` support sheet-qualified form (`Sheet2!A1:B10`, `'Sales Data'!A1:B10`).
+  - Optional explicit labels: `chart_title`, `x_axis_title`, `y_axis_title`.
   - Rejects `dry_run`/`return_inverse_ops`/`preflight_formula_check`.
   - Cannot be combined with `apply_table_style` in one request (split into separate calls).
 - Output includes `engine` (`"com"` or `"openpyxl"`) to show which backend was actually used.
