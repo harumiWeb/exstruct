@@ -1,3 +1,29 @@
+## Plan (PR #70 Review Follow-ups 2026-02-28)
+
+- [x] [P0] `src/exstruct/mcp/patch/internal.py` の `_resolve_xlwings_list_objects` で、callable 経路の戻り値が ListObjects 互換でない場合に即 `ValueError` を返す（discussion: r2866818472）。
+- [x] [P0] `src/exstruct/mcp/patch/service.py` の `_should_fallback_on_com_patch_error` を過剰fallbackしない条件へ修正し、`backend=auto` で入力不正を隠さない（discussion: r2866819920）。
+- [x] [P0] `src/exstruct/mcp/patch/internal.py` の `_normalize_chart_data_ranges` で各要素の正規化/空文字拒否を行う（discussion: r2866823914）。
+- [x] [P0] `tasks/feature_spec.md` の重複見出しを phase識別付きへ統一し、`MD024` を解消する（discussion: r2866823917）。
+- [x] [P1] `src/exstruct/mcp/patch/internal.py` の `_classify_known_patch_error` で、`sheet not found` の `failed_field` を曖昧時 `None` にする（discussion: r2866823915）。
+- [x] [P1] `docs/release-notes/v0.5.2.md` の画像に alt text を追加する（discussion: r2866823912）。
+- [x] [P1] `tests/mcp/test_patch_runner.py` に `result.error is None` を追加し、失敗診断を明確化する（CodeRabbit nitpick）。
+- [x] [P2] `src/exstruct/mcp/patch/internal.py` の `_xlwings_list_object_add_attempts` 戻り値を、nested tuple から型付きモデルへ置換する（CodeRabbit nitpick）。
+- [x] [P2] `src/exstruct/mcp/patch/internal.py` の chart title helper docstring を Google style に揃える（CodeRabbit nitpick）。
+- [x] `uv run pytest tests/mcp/patch/test_models_internal_coverage.py tests/mcp/patch/test_service.py tests/mcp/test_patch_runner.py`
+- [x] `uv run task precommit-run`
+
+## Review (PR #70 Review Follow-ups 2026-02-28)
+
+- Sources:
+- https://github.com/harumiWeb/exstruct/pull/70#discussion_r2866818472
+- https://github.com/harumiWeb/exstruct/pull/70#discussion_r2866819920
+- https://github.com/harumiWeb/exstruct/pull/70#discussion_r2866823912
+- https://github.com/harumiWeb/exstruct/pull/70#discussion_r2866823914
+- https://github.com/harumiWeb/exstruct/pull/70#discussion_r2866823915
+- https://github.com/harumiWeb/exstruct/pull/70#discussion_r2866823917
+- Status:
+- Completed. P0/P1/P2 を実装し、対象pytest(135 passed) と precommit(ruff/ruff-format/mypy) を通過。
+
 ## Plan (Enable COM mixed request: `create_chart` + `apply_table_style` 2026-02-28)
 
 - [x] `tasks/feature_spec.md` を同時実行対応方針（Phase 3）へ刷新

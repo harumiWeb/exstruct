@@ -125,15 +125,15 @@ MCP Patch `create_chart` major chart support (Phase 1)
 - 8種類すべての `create_chart` オペレーションが成功する
 - エラーが返らない
 
-## Feature Name
+## Feature Name (2)
 
 MCP Patch chart/table reliability improvements (Phase 2)
 
-## Goal
+## Goal (2)
 
 `exstruct_patch` / `exstruct_make` でのグラフ作成とテーブル化の実運用性を高め、AIエージェントが少ない試行回数で安定してExcel自動生成できるようにする。
 
-## Scope
+## Scope (2)
 
 ### In Scope
 
@@ -165,7 +165,7 @@ MCP Patch chart/table reliability improvements (Phase 2)
   - `failed_field: str | None`
   - `raw_com_message: str | None`
 
-## Acceptance Criteria
+## Acceptance Criteria (2)
 
 - `backend=auto/com` で `apply_table_style` が COM 経由で実行される
 - `create_chart` が `data_range: list[str]` を受理・実行できる
@@ -173,15 +173,15 @@ MCP Patch chart/table reliability improvements (Phase 2)
 - `create_chart` でタイトル/軸タイトルを明示設定できる
 - COMエラー時に `PatchErrorDetail.error_code` が設定される
 
-## Feature Name
+## Feature Name (3)
 
 MCP Patch COM hardening follow-up (Phase 2.1)
 
-## Goal
+## Goal (3)
 
 `apply_table_style` を含む COM 系処理の安定性をさらに高め、Excel バージョン差・入力差による失敗率を下げる。
 
-## Scope
+## Scope (3)
 
 ### In Scope
 
@@ -196,7 +196,7 @@ MCP Patch COM hardening follow-up (Phase 2.1)
 - `create_chart` と `apply_table_style` の同時リクエスト対応
 - openpyxl 側の機能拡張
 
-## Acceptance Criteria
+## Acceptance Criteria (3)
 
 - `apply_table_style` の COM 実行が複数 Excel 環境で再現可能に成功する
 - 失敗時に `error_code` と修正ヒントで原因特定が可能
@@ -242,16 +242,16 @@ MCP Patch COM hardening follow-up (Phase 2.1)
   - `patch_diff` の `apply_table_style` が `applied`
   - `error` が `null`
 
-## Feature Name
+## Feature Name (4)
 
 Patch service fallback resilience and failed_field precision (Review Fix 2026-02-27)
 
-## Goal
+## Goal (4)
 
 - Preserve `backend=auto` resilience by keeping COM runtime-error fallback to openpyxl.
 - Improve error diagnosis precision by classifying `sheet not found` to the correct range field.
 
-## Scope
+## Scope (4)
 
 ### In Scope
 
@@ -264,22 +264,22 @@ Patch service fallback resilience and failed_field precision (Review Fix 2026-02
 - General COM/openpyxl backend policy redesign.
 - New error codes or broad message taxonomy changes.
 
-## Acceptance Criteria
+## Acceptance Criteria (4)
 
 - `backend=auto` falls back to openpyxl when COM op-level exception is wrapped as `PatchOpError` with COM-runtime signal.
 - `sheet not found` classification reports `failed_field="category_range"` when message context is category range.
 - Target tests pass.
 
-## Feature Name
+## Feature Name (5)
 
 Review Fix: apply_table_style ListObjects property accessor path (2026-02-27)
 
-## Goal
+## Goal (5)
 
 - Ensure `apply_table_style` works when COM `sheet.api.ListObjects` is exposed as a property collection (non-callable).
 - Preserve callable accessor compatibility via `_resolve_xlwings_list_objects`.
 
-## Scope
+## Scope (5)
 
 ### In Scope
 
@@ -292,22 +292,22 @@ Review Fix: apply_table_style ListObjects property accessor path (2026-02-27)
 - Changes to COM Add fallback sequence.
 - Changes to table style error classification.
 
-## Acceptance Criteria
+## Acceptance Criteria (5)
 
 - `apply_table_style` does not fail early with `sheet ListObjects COM API` when `ListObjects` is a collection property.
 - Existing missing-API error behavior is preserved for truly absent `ListObjects`.
 - Target regression test passes.
 
-## Feature Name
+## Feature Name (6)
 
 MCP usability follow-up from Claude Desktop review (2026-02-27)
 
-## Goal
+## Goal (6)
 
 Claude Desktop review で指摘された実運用上の摩擦を優先度順に解消し、
 Excel編集体験を壊さずに「出力ファイル運用」「ファイル受け渡し」「操作制約の理解性」を改善する。
 
-## Scope
+## Scope (6)
 
 ### In Scope
 
@@ -333,17 +333,17 @@ Excel編集体験を壊さずに「出力ファイル運用」「ファイル受
 - `PatchResult` / `MakeResult` の warning 文言を改善し、ユーザーが次アクションを取りやすくする
 - ドキュメントに Claude Desktop 連携の設定例を追加
 
-## Acceptance Criteria
+## Acceptance Criteria (6)
 
 - 同じファイルに連続パッチしても、デフォルトで `_patched` が無限に連鎖しない
 - `mirror_artifact=true` 利用時の手順が docs のみで再現できる
 - `create_chart` + `apply_table_style` の同時指定エラーで「なぜ不可か」が明示される
 
-## Feature Name
+## Feature Name (7)
 
 MCP Patch COM simultaneous execution for `create_chart` + `apply_table_style` (Phase 3)
 
-## Goal
+## Goal (7)
 
 `create_chart` と `apply_table_style` を同一 `PatchRequest` で実行可能にし、
 複数リクエスト分割なしで実運用のExcel生成を完結できるようにする。
@@ -354,7 +354,7 @@ MCP Patch COM simultaneous execution for `create_chart` + `apply_table_style` (P
   「`create_chart` と `apply_table_style` の同時リクエスト不可」制約を上書きする。
 - ただし `create_chart` が COM専用である方針自体は維持する。
 
-## Scope
+## Scope (7)
 
 ### In Scope
 
@@ -408,7 +408,7 @@ MCP Patch COM simultaneous execution for `create_chart` + `apply_table_style` (P
   - `create_chart` 単体の既存制約（COM専用、dry_run不可等）が維持される。
   - `apply_table_style` 単体の openpyxl/COM 既存挙動が破壊されない。
 
-## Acceptance Criteria
+## Acceptance Criteria (7)
 
 - `create_chart` と `apply_table_style` を同一 `PatchRequest` で実行できる。
 - mixed request 実行時の `engine` は常に `com` になる。

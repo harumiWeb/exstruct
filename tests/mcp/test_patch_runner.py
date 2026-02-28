@@ -382,6 +382,7 @@ def test_run_patch_default_output_name_does_not_chain_patched_suffix(
         ops=[PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="new")],
     )
     result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.error is None
     assert result.out_path == str(input_path)
     workbook = load_workbook(result.out_path)
     try:

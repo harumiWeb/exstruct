@@ -190,9 +190,7 @@ def _should_fallback_on_com_patch_error(
     if not runtime.allow_auto_openpyxl_fallback(request, input_path):
         return False
     detail = exc.detail
-    if detail.error_code == "com_runtime_error":
-        return True
-    return detail.raw_com_message is not None
+    return detail.error_code == "com_runtime_error"
 
 
 def _apply_with_openpyxl(

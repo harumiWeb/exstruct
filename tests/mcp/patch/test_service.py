@@ -221,6 +221,67 @@ def test_service_run_patch_backend_auto_fallbacks_to_openpyxl_on_com_patch_op_er
     assert any("falling back to openpyxl" in warning for warning in result.warnings)
 
 
+def test_service_run_patch_backend_auto_does_not_fallback_on_user_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify backend=auto does not fallback for deterministic input errors."""
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+
+    monkeypatch.setattr(
+        patch_runtime,
+        "get_com_availability",
+        lambda: ComAvailability(available=True, reason=None),
+    )
+
+    def _raise_com_patch_error(
+        input_path: Path,
+        output_path: Path,
+        ops: list[PatchOp],
+        auto_formula: bool,
+    ) -> list[object]:
+        detail = patch_internal.PatchErrorDetail(
+            op_index=0,
+            op="apply_table_style",
+            sheet="Sheet1",
+            cell="A1:B3",
+            message="apply_table_style invalid table style: 'BadStyle'",
+            error_code="table_style_invalid",
+            failed_field="style",
+            raw_com_message="(-2147352567, 'Exception occurred.')",
+        )
+        raise patch_runtime.PatchOpError(detail)
+
+    def _fake_apply_openpyxl_engine(
+        request: PatchRequest,
+        input_path: Path,
+        output_path: Path,
+    ) -> OpenpyxlEngineResult:
+        raise AssertionError("openpyxl fallback should not run for user input errors")
+
+    monkeypatch.setattr(service, "apply_xlwings_engine", _raise_com_patch_error)
+    monkeypatch.setattr(service, "apply_openpyxl_engine", _fake_apply_openpyxl_engine)
+    result = service.run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[
+                PatchOp(
+                    op="apply_table_style",
+                    sheet="Sheet1",
+                    range="A1:B3",
+                    style="BadStyle",
+                )
+            ],
+            on_conflict="rename",
+            backend="auto",
+        )
+    )
+
+    assert result.engine == "com"
+    assert result.error is not None
+    assert result.error.error_code == "table_style_invalid"
+
+
 def test_service_run_patch_backend_com_does_not_fallback_on_com_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

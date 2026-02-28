@@ -375,6 +375,21 @@ def test_internal_resolve_xlwings_list_objects_uses_collection_like_accessor() -
     assert resolved is _SheetApi.ListObjects
 
 
+def test_internal_resolve_xlwings_list_objects_rejects_non_collection_callable_result() -> (
+    None
+):
+    class _SheetApi:
+        def ListObjects(self) -> object:  # noqa: N802
+            return object()
+
+    with pytest.raises(
+        ValueError, match="apply_table_style requires sheet ListObjects COM API"
+    ):
+        internal._resolve_xlwings_list_objects(
+            cast(internal.XlwingsSheetApiProtocol, _SheetApi())
+        )
+
+
 def test_internal_apply_table_style_accepts_property_list_objects() -> None:
     class _FakeTable:
         Name = ""
@@ -711,6 +726,18 @@ def test_internal_create_chart_supports_multi_ranges_and_sheet_qualified_refs() 
     assert diff.after.kind == "chart"
 
 
+def test_internal_normalize_chart_data_ranges_normalizes_each_entry() -> None:
+    normalized = internal._normalize_chart_data_ranges(
+        [" Sheet1!a1:b2 ", "'Data'!c2:d4"]
+    )
+    assert normalized == ["Sheet1!A1:B2", "'Data'!C2:D4"]
+
+
+def test_internal_normalize_chart_data_ranges_rejects_blank_entry() -> None:
+    with pytest.raises(ValueError, match="Invalid chart range reference"):
+        internal._normalize_chart_data_ranges(["   "])
+
+
 def test_internal_patch_op_error_adds_error_code_and_failed_field() -> None:
     op = internal.PatchOp(
         op="create_chart",
@@ -731,6 +758,13 @@ def test_internal_classify_sheet_not_found_uses_category_failed_field() -> None:
         "create_chart sheet not found for category range reference: missing_sheet"
     )
     assert classified == ("sheet_not_found", "category_range")
+
+
+def test_internal_classify_sheet_not_found_without_context_returns_none() -> None:
+    classified = internal._classify_known_patch_error(
+        "create_chart sheet not found for range reference: missing_sheet"
+    )
+    assert classified == ("sheet_not_found", None)
 
 
 def test_internal_patch_op_error_classifies_table_style_and_add_failures() -> None:

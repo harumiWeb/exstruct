@@ -139,6 +139,14 @@ class ColumnDimensionSnapshot(BaseModel):
     width: float | None = None
 
 
+class ListObjectAddAttempt(BaseModel):
+    """Typed COM ListObjects.Add invocation attempt."""
+
+    args: tuple[object, ...]
+    call_kwargs: dict[str, object] = Field(default_factory=dict)
+    signature: str
+
+
 class DesignSnapshot(BaseModel):
     """Serializable style/dimension snapshot for inverse restore."""
 
@@ -4094,7 +4102,7 @@ def _resolve_xlwings_list_objects(sheet_api: XlwingsSheetApiProtocol) -> object:
             ) from exc
         if _looks_like_xlwings_list_objects_collection(resolved):
             return resolved
-        return resolved
+        raise ValueError("apply_table_style requires sheet ListObjects COM API.")
     raise ValueError("apply_table_style requires sheet ListObjects COM API.")
 
 
@@ -4116,10 +4124,10 @@ def _resolve_chart_type_id(chart_type: str) -> int | None:
 def _normalize_chart_data_ranges(data_range: str | list[str]) -> list[str]:
     """Normalize create_chart data_range into a non-empty list."""
     if isinstance(data_range, str):
-        return [data_range]
+        return [_normalize_chart_range_reference(data_range)]
     if not data_range:
         raise ValueError("create_chart data_range list must not be empty.")
-    return data_range
+    return [_normalize_chart_range_reference(item) for item in data_range]
 
 
 def _resolve_chart_anchor(
@@ -4211,14 +4219,30 @@ def _apply_titles_from_data_flag(chart: object, titles_from_data: bool | None) -
 
 
 def _apply_chart_text_overrides(chart: object, op: PatchOp) -> None:
-    """Apply explicit chart title and axis title overrides when provided."""
+    """Apply explicit chart and axis title overrides.
+
+    Args:
+        chart: Target chart COM object.
+        op: Patch operation that may include explicit title fields.
+
+    Returns:
+        None.
+    """
     _set_chart_title(chart, op.chart_title)
     _set_chart_axis_title(chart, axis_type=1, text=op.x_axis_title)
     _set_chart_axis_title(chart, axis_type=2, text=op.y_axis_title)
 
 
 def _set_chart_title(chart: object, title: str | None) -> None:
-    """Set chart title text when provided."""
+    """Set chart title text when provided.
+
+    Args:
+        chart: Target chart COM object.
+        title: Title text. No-op when ``None``.
+
+    Returns:
+        None.
+    """
     if title is None:
         return
     chart_any = cast(Any, chart)
@@ -4230,7 +4254,16 @@ def _set_chart_title(chart: object, title: str | None) -> None:
 
 
 def _set_chart_axis_title(chart: object, *, axis_type: int, text: str | None) -> None:
-    """Set chart axis title text when provided."""
+    """Set chart axis title text when provided.
+
+    Args:
+        chart: Target chart COM object.
+        axis_type: Excel axis type ID (for example ``1`` for X, ``2`` for Y).
+        text: Axis title text. No-op when ``None``.
+
+    Returns:
+        None.
+    """
     if text is None:
         return
     axes_accessor = getattr(chart, "Axes", None)
@@ -4397,12 +4430,12 @@ def _xlwings_add_list_object(list_objects: object, source_range_api: object) -> 
     add_callable = cast(Callable[..., object], add_method)
     errors: list[str] = []
     for source in _xlwings_list_object_add_sources(source_range_api):
-        for args, kwargs, signature in _xlwings_list_object_add_attempts(source):
+        for attempt in _xlwings_list_object_add_attempts(source):
             try:
-                return add_callable(*args, **kwargs)
+                return add_callable(*attempt.args, **attempt.call_kwargs)
             except Exception as exc:
                 source_label = _describe_list_object_source(source)
-                errors.append(f"{signature} [{source_label}] -> {exc!r}")
+                errors.append(f"{attempt.signature} [{source_label}] -> {exc!r}")
     tail = " | ".join(errors[-4:])
     raise ValueError(
         "apply_table_style failed to add table after COM Add signature retries. "
@@ -4425,18 +4458,35 @@ def _xlwings_list_object_add_sources(source_range_api: object) -> list[object]:
 
 def _xlwings_list_object_add_attempts(
     source: object,
-) -> tuple[tuple[tuple[object, ...], dict[str, object], str], ...]:
+) -> tuple[ListObjectAddAttempt, ...]:
     """Return Add call signatures tried for a given COM source."""
     return (
-        ((1, source), {}, "Add(1, Source)"),
-        ((1, source, None, 1), {}, "Add(1, Source, None, 1)"),
-        ((1, source, None, 1, None), {}, "Add(1, Source, None, 1, None)"),
-        ((1, source, None, 1, None, None), {}, "Add(1, Source, None, 1, None, None)"),
-        ((), {"SourceType": 1, "Source": source}, "Add(SourceType=1, Source=...)"),
-        (
-            (),
-            {"SourceType": 1, "Source": source, "XlListObjectHasHeaders": 1},
-            "Add(SourceType=1, Source=..., XlListObjectHasHeaders=1)",
+        ListObjectAddAttempt(args=(1, source), signature="Add(1, Source)"),
+        ListObjectAddAttempt(
+            args=(1, source, None, 1),
+            signature="Add(1, Source, None, 1)",
+        ),
+        ListObjectAddAttempt(
+            args=(1, source, None, 1, None),
+            signature="Add(1, Source, None, 1, None)",
+        ),
+        ListObjectAddAttempt(
+            args=(1, source, None, 1, None, None),
+            signature="Add(1, Source, None, 1, None, None)",
+        ),
+        ListObjectAddAttempt(
+            args=(),
+            call_kwargs={"SourceType": 1, "Source": source},
+            signature="Add(SourceType=1, Source=...)",
+        ),
+        ListObjectAddAttempt(
+            args=(),
+            call_kwargs={
+                "SourceType": 1,
+                "Source": source,
+                "XlListObjectHasHeaders": 1,
+            },
+            signature="Add(SourceType=1, Source=..., XlListObjectHasHeaders=1)",
         ),
     )
 
@@ -4824,10 +4874,11 @@ def _classify_known_patch_error(
         )
         return "invalid_range", detected_field
     if "sheet not found" in lowered_message:
-        detected_field = (
-            "category_range" if "category" in lowered_message else "data_range"
-        )
-        return "sheet_not_found", detected_field
+        if "category_range" in lowered_message or "category range" in lowered_message:
+            return "sheet_not_found", "category_range"
+        if "data_range" in lowered_message or "data range" in lowered_message:
+            return "sheet_not_found", "data_range"
+        return "sheet_not_found", None
     matchers: tuple[tuple[str, str, str | None], ...] = (
         ("chart_type must be one of", "chart_type_invalid", "chart_type"),
         ("chart_name already exists", "chart_name_conflict", "chart_name"),
