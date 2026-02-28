@@ -4,6 +4,8 @@ from pydantic import ValidationError
 import pytest
 
 from exstruct.mcp.tools import (
+    CaptureSheetImagesToolInput,
+    CaptureSheetImagesToolOutput,
     DescribeOpToolInput,
     DescribeOpToolOutput,
     ExtractToolInput,
@@ -26,6 +28,43 @@ def test_extract_tool_input_defaults() -> None:
     assert payload.format == "json"
     assert payload.out_dir is None
     assert payload.out_name is None
+
+
+def test_capture_sheet_images_tool_input_defaults() -> None:
+    payload = CaptureSheetImagesToolInput(xlsx_path="input.xlsx")
+    assert payload.out_dir is None
+    assert payload.dpi == 144
+    assert payload.sheet is None
+    assert payload.range is None
+
+
+def test_capture_sheet_images_tool_input_rejects_invalid_dpi() -> None:
+    with pytest.raises(ValidationError):
+        CaptureSheetImagesToolInput(xlsx_path="input.xlsx", dpi=0)
+
+
+def test_capture_sheet_images_tool_input_requires_sheet_for_range() -> None:
+    with pytest.raises(ValidationError, match="sheet is required"):
+        CaptureSheetImagesToolInput(xlsx_path="input.xlsx", range="A1:B2")
+
+
+def test_capture_sheet_images_tool_input_normalizes_qualified_range() -> None:
+    payload = CaptureSheetImagesToolInput(
+        xlsx_path="input.xlsx",
+        sheet="Sheet 1",
+        range="'Sheet 1'!a1:b2",
+    )
+    assert payload.sheet == "Sheet 1"
+    assert payload.range == "A1:B2"
+
+
+def test_capture_sheet_images_tool_input_rejects_sheet_mismatch() -> None:
+    with pytest.raises(ValidationError, match="must match"):
+        CaptureSheetImagesToolInput(
+            xlsx_path="input.xlsx",
+            sheet="Sheet1",
+            range="'Sheet 2'!A1:B2",
+        )
 
 
 def test_read_json_chunk_rejects_invalid_max_bytes() -> None:
@@ -128,6 +167,12 @@ def test_patch_and_make_tool_output_defaults() -> None:
     make_output = MakeToolOutput(out_path="out.xlsx", patch_diff=[], engine="openpyxl")
     assert patch_output.mirrored_out_path is None
     assert make_output.mirrored_out_path is None
+
+
+def test_capture_sheet_images_tool_output_defaults() -> None:
+    payload = CaptureSheetImagesToolOutput(out_dir="images")
+    assert payload.image_paths == []
+    assert payload.warnings == []
 
 
 def test_patch_tool_input_accepts_design_ops() -> None:

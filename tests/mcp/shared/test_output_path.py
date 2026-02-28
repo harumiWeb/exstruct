@@ -6,6 +6,7 @@ from exstruct.mcp.shared.output_path import (
     apply_conflict_policy,
     next_available_path,
     normalize_output_name,
+    resolve_image_output_dir,
 )
 
 
@@ -73,3 +74,23 @@ def test_apply_conflict_policy_rename(tmp_path: Path) -> None:
 def test_next_available_path_no_conflict(tmp_path: Path) -> None:
     target = tmp_path / "result.json"
     assert next_available_path(target) == target
+
+
+def test_resolve_image_output_dir_defaults_to_stem_images(tmp_path: Path) -> None:
+    input_path = tmp_path / "book.xlsx"
+    resolved = resolve_image_output_dir(input_path, out_dir=None, policy=None)
+    assert resolved == (tmp_path / "book_images").resolve()
+
+
+def test_resolve_image_output_dir_appends_suffix_on_conflict(tmp_path: Path) -> None:
+    input_path = tmp_path / "book.xlsx"
+    (tmp_path / "book_images").mkdir(parents=True, exist_ok=True)
+    resolved = resolve_image_output_dir(input_path, out_dir=None, policy=None)
+    assert resolved == (tmp_path / "book_images_1").resolve()
+
+
+def test_resolve_image_output_dir_uses_out_dir_when_specified(tmp_path: Path) -> None:
+    input_path = tmp_path / "book.xlsx"
+    explicit = tmp_path / "custom_images"
+    resolved = resolve_image_output_dir(input_path, out_dir=explicit, policy=None)
+    assert resolved == explicit.resolve()

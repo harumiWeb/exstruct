@@ -6,6 +6,7 @@ so AI agents can call it safely as a tool.
 ## What it provides
 
 - Convert Excel into structured JSON (file output)
+- Export worksheet images as PNG (COM-only, optional sheet/range target)
 - Create a new workbook and apply initial ops in one call
 - Edit Excel by applying patch operations (cell/sheet updates)
 - Read large JSON outputs in chunks
@@ -61,6 +62,7 @@ exstruct-mcp --root C:\\data --log-file C:\\logs\\exstruct-mcp.log --on-conflict
 ## Tools
 
 - `exstruct_extract`
+- `exstruct_capture_sheet_images`
 - `exstruct_make`
 - `exstruct_patch`
 - `exstruct_list_ops`
@@ -71,6 +73,35 @@ exstruct-mcp --root C:\\data --log-file C:\\logs\\exstruct-mcp.log --on-conflict
 - `exstruct_read_formulas`
 - `exstruct_validate_input`
 - `exstruct_get_runtime_info`
+
+### `exstruct_capture_sheet_images` (COM only)
+
+- Purpose: export worksheet images as PNG through the existing PDF -> PNG pipeline.
+- Input:
+  - `xlsx_path` (required)
+  - `out_dir` (optional)
+  - `dpi` (default `144`, must be `>= 1`)
+  - `sheet` (optional; required when `range` is provided)
+  - `range` (optional; `A1:B2`, `Sheet1!A1:B2`, `'Sheet 1'!A1:B2`)
+- Output:
+  - `out_dir` (always returned, resolved path)
+  - `image_paths`
+  - `warnings`
+- Notes:
+  - If `out_dir` is omitted, a unique `<workbook_stem>_images` directory is created under MCP `--root`.
+  - COM/Excel desktop is required.
+
+Example:
+
+```json
+{
+  "tool": "exstruct_capture_sheet_images",
+  "xlsx_path": "C:\\data\\book.xlsx",
+  "sheet": "Sheet 1",
+  "range": "'Sheet 1'!A1:F20",
+  "dpi": 144
+}
+```
 
 ### `exstruct_extract` defaults and mode guide
 

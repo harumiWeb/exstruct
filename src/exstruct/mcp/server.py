@@ -24,6 +24,8 @@ from .patch.normalize import (
     parse_patch_op_json as _normalize_parse_patch_op_json,
 )
 from .tools import (
+    CaptureSheetImagesToolInput,
+    CaptureSheetImagesToolOutput,
     DescribeOpToolInput,
     DescribeOpToolOutput,
     ExtractToolInput,
@@ -44,6 +46,7 @@ from .tools import (
     RuntimeInfoToolOutput,
     ValidateInputToolInput,
     ValidateInputToolOutput,
+    run_capture_sheet_images_tool,
     run_describe_op_tool,
     run_extract_tool,
     run_list_ops_tool,
@@ -301,6 +304,8 @@ def _register_tools(
 
     tool = app.tool(name="exstruct_extract")
     tool(_extract_tool)
+
+    _register_capture_sheet_images_tool(app, policy=policy)
 
     async def _read_json_chunk_tool(  # pylint: disable=redefined-builtin
         out_path: str,
@@ -720,6 +725,53 @@ Returns:
     Patch result with output path, applied diffs, and any warnings.
 """
     return f"{base_description.strip()}\n\n{build_patch_tool_mini_schema()}"
+
+
+def _register_capture_sheet_images_tool(app: FastMCP, *, policy: PathPolicy) -> None:
+    """Register the sheet image capture MCP tool."""
+
+    async def _capture_sheet_images_tool(  # pylint: disable=redefined-builtin
+        xlsx_path: str,
+        out_dir: str | None = None,
+        dpi: int = 144,
+        sheet: str | None = None,
+        range: str | None = None,  # noqa: A002
+    ) -> CaptureSheetImagesToolOutput:
+        """Export worksheet images as PNG files (COM only).
+
+        Args:
+            xlsx_path: Path to the Excel workbook.
+            out_dir: Optional output directory for PNG files. When omitted, MCP
+                creates a unique directory under server `--root` using
+                `<workbook_stem>_images` with numeric suffixes as needed.
+            dpi: Rendering DPI (must be >= 1).
+            sheet: Optional target sheet name. Required when `range` is specified.
+            range: Optional A1 range (`A1:B2`) with optional sheet qualifier
+                (`Sheet1!A1:B2`, `'Sheet 1'!A1:B2`).
+
+        Returns:
+            Export result payload with resolved output directory and image paths.
+        """
+        payload = CaptureSheetImagesToolInput(
+            xlsx_path=xlsx_path,
+            out_dir=out_dir,
+            dpi=dpi,
+            sheet=sheet,
+            range=range,
+        )
+        work = functools.partial(
+            run_capture_sheet_images_tool,
+            payload,
+            policy=policy,
+        )
+        result = cast(
+            CaptureSheetImagesToolOutput,
+            await anyio.to_thread.run_sync(work),
+        )
+        return result
+
+    capture_sheet_images_tool = app.tool(name="exstruct_capture_sheet_images")
+    capture_sheet_images_tool(_capture_sheet_images_tool)
 
 
 def _register_op_schema_tools(app: FastMCP) -> None:

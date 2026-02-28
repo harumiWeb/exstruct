@@ -90,13 +90,18 @@ exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict re
 利用可能なツール:
 
 - `exstruct_extract`
+- `exstruct_capture_sheet_images`
 - `exstruct_make`
 - `exstruct_patch`
 - `exstruct_read_json_chunk`
+- `exstruct_read_range`
+- `exstruct_read_cells`
+- `exstruct_read_formulas`
 - `exstruct_validate_input`
 
 注意点:
 
+- `exstruct_capture_sheet_images` は COM 専用で、`sheet` / `range`（`A1:B2`, `Sheet1!A1:B2`, `'Sheet 1'!A1:B2`）の指定に対応します。`out_dir` 未指定時は MCP `--root` 配下に一意な `<workbook_stem>_images` ディレクトリを作成します。
 - 標準入出力の応答を汚染しないよう、ログは標準エラー出力（およびオプションで`--log-file`で指定したファイル）に出力されます。
 - WindowsのExcel環境では、標準/詳細モードでCOMを利用して、よりリッチな抽出が可能です。Windows以外ではCOMは利用できず、抽出はopenpyxlベースのフォールバック機能を使用します。
 - `exstruct_patch` は `backend` 指定をサポートします。

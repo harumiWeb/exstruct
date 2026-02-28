@@ -44,6 +44,12 @@ from .patch_runner import (
     run_make,
     run_patch,
 )
+from .render_runner import (
+    CaptureSheetImagesRequest,
+    CaptureSheetImagesResult,
+    run_capture_sheet_images,
+)
+from .shared.a1 import resolve_sheet_and_range
 from .sheet_reader import (
     CellReadItem,
     FormulaReadItem,
@@ -83,6 +89,51 @@ class ExtractToolOutput(BaseModel):
     workbook_meta: WorkbookMeta | None = None
     warnings: list[str] = Field(default_factory=list)
     engine: Literal["internal_api", "cli_subprocess"] = "internal_api"
+
+
+class CaptureSheetImagesToolInput(BaseModel):
+    """MCP tool input for sheet image capture."""
+
+    xlsx_path: str
+    out_dir: str | None = None
+    dpi: int = Field(default=144, ge=1)
+    sheet: str | None = None
+    range: str | None = None  # noqa: A003
+
+    @field_validator("sheet")
+    @classmethod
+    def _validate_sheet(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        candidate = value.strip()
+        if not candidate:
+            raise ValueError("sheet must not be empty when provided.")
+        return candidate
+
+    @field_validator("range")
+    @classmethod
+    def _validate_range(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        candidate = value.strip()
+        if not candidate:
+            raise ValueError("range must not be empty when provided.")
+        return candidate
+
+    @model_validator(mode="after")
+    def _validate_sheet_range_consistency(self) -> CaptureSheetImagesToolInput:
+        selection = resolve_sheet_and_range(self.sheet, self.range)
+        self.sheet = selection.sheet
+        self.range = selection.range_ref
+        return self
+
+
+class CaptureSheetImagesToolOutput(BaseModel):
+    """MCP tool output for sheet image capture."""
+
+    out_dir: str
+    image_paths: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
 
 class ReadJsonChunkToolInput(BaseModel):
@@ -338,6 +389,31 @@ def run_extract_tool(
     return _to_tool_output(result)
 
 
+def run_capture_sheet_images_tool(
+    payload: CaptureSheetImagesToolInput,
+    *,
+    policy: PathPolicy | None = None,
+) -> CaptureSheetImagesToolOutput:
+    """Run the sheet image capture tool handler.
+
+    Args:
+        payload: Tool input payload.
+        policy: Optional path policy for access control.
+
+    Returns:
+        Tool output payload.
+    """
+    request = CaptureSheetImagesRequest(
+        xlsx_path=Path(payload.xlsx_path),
+        out_dir=Path(payload.out_dir) if payload.out_dir else None,
+        dpi=payload.dpi,
+        sheet=payload.sheet,
+        range=payload.range,
+    )
+    result = run_capture_sheet_images(request, policy=policy)
+    return _to_capture_sheet_images_tool_output(result)
+
+
 def run_read_json_chunk_tool(
     payload: ReadJsonChunkToolInput, *, policy: PathPolicy | None = None
 ) -> ReadJsonChunkToolOutput:
@@ -540,6 +616,17 @@ def _to_tool_output(result: ExtractResult) -> ExtractToolOutput:
         workbook_meta=result.workbook_meta,
         warnings=result.warnings,
         engine=result.engine,
+    )
+
+
+def _to_capture_sheet_images_tool_output(
+    result: CaptureSheetImagesResult,
+) -> CaptureSheetImagesToolOutput:
+    """Convert internal sheet capture result to tool output."""
+    return CaptureSheetImagesToolOutput(
+        out_dir=result.out_dir,
+        image_paths=result.image_paths,
+        warnings=result.warnings,
     )
 
 

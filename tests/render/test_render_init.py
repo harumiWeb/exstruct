@@ -369,6 +369,78 @@ def test_export_sheet_images_uses_subprocess_when_enabled(
     assert written[1].name == "02_SheetB.png"
 
 
+def test_export_sheet_images_with_sheet_only(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Export only the target sheet when `sheet` is specified."""
+    xlsx = tmp_path / "input.xlsx"
+    xlsx.write_bytes(b"dummy")
+    out_dir = tmp_path / "images"
+    monkeypatch.setenv("EXSTRUCT_RENDER_SUBPROCESS", "0")
+
+    fake_pdfium = SimpleNamespace(PdfDocument=FakePdfDocument)
+    monkeypatch.setattr(render, "_require_pdfium", lambda: fake_pdfium)
+    monkeypatch.setattr(
+        render, "_require_excel_app", lambda: FakeApp(["SheetA", "SheetB"], False)
+    )
+
+    written = render.export_sheet_images(xlsx, out_dir, dpi=144, sheet="SheetB")
+
+    assert len(written) >= 1
+    assert all("SheetB" in path.name for path in written)
+    assert all("SheetA" not in path.name for path in written)
+
+
+def test_export_sheet_images_with_sheet_and_range(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Forward normalized range to plan builder when range is specified."""
+    xlsx = tmp_path / "input.xlsx"
+    xlsx.write_bytes(b"dummy")
+    out_dir = tmp_path / "images"
+    monkeypatch.setenv("EXSTRUCT_RENDER_SUBPROCESS", "0")
+
+    fake_pdfium = SimpleNamespace(PdfDocument=FakePdfDocument)
+    monkeypatch.setattr(render, "_require_pdfium", lambda: fake_pdfium)
+    monkeypatch.setattr(
+        render, "_require_excel_app", lambda: FakeApp(["SheetA", "SheetB"], False)
+    )
+
+    captured: dict[str, object] = {}
+    original = render._build_sheet_export_plan
+
+    def _capturing_plan(
+        wb: xw.Book, *, sheet: str | None = None, a1_range: str | None = None
+    ) -> list[tuple[str, render._SheetApiProtocol, str | None]]:
+        captured["sheet"] = sheet
+        captured["a1_range"] = a1_range
+        return original(wb, sheet=sheet, a1_range=a1_range)
+
+    monkeypatch.setattr(render, "_build_sheet_export_plan", _capturing_plan)
+    written = render.export_sheet_images(
+        xlsx,
+        out_dir,
+        dpi=144,
+        sheet="SheetA",
+        a1_range="a1:b2",
+    )
+
+    assert captured == {"sheet": "SheetA", "a1_range": "A1:B2"}
+    assert len(written) >= 1
+    assert written[0].name.startswith("01_SheetA")
+
+
+def test_export_sheet_images_rejects_invalid_range(tmp_path: Path) -> None:
+    """Reject invalid A1 range before render execution."""
+    with pytest.raises(ValueError, match="Invalid range reference"):
+        render.export_sheet_images(
+            tmp_path / "input.xlsx",
+            tmp_path / "images",
+            sheet="Sheet1",
+            a1_range="A1",
+        )
+
+
 def test_use_render_subprocess_env_toggle(monkeypatch: pytest.MonkeyPatch) -> None:
     """_use_render_subprocess respects the env toggle."""
     monkeypatch.setenv("EXSTRUCT_RENDER_SUBPROCESS", "1")
@@ -830,7 +902,9 @@ def test_export_sheet_images_with_app_retries_on_empty(
     monkeypatch.setattr(
         render,
         "_build_sheet_export_plan",
-        lambda _wb: [("Sheet1", cast(render._SheetApiProtocol, object()), None)],
+        lambda _wb, *, sheet=None, a1_range=None: [
+            ("Sheet1", cast(render._SheetApiProtocol, object()), None)
+        ],
     )
 
     result = render._export_sheet_images_with_app(
@@ -839,6 +913,8 @@ def test_export_sheet_images_with_app_retries_on_empty(
         tmp_path / "tmp",
         144,
         False,
+        None,
+        None,
         None,
     )
     assert len(calls) == 2

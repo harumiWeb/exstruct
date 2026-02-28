@@ -1,10 +1,31 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 import re
 
 _A1_PATTERN = re.compile(r"^[A-Za-z]{1,3}[1-9][0-9]*$")
 _A1_RANGE_PATTERN = re.compile(r"^[A-Za-z]{1,3}[1-9][0-9]*:[A-Za-z]{1,3}[1-9][0-9]*$")
 _COLUMN_LABEL_PATTERN = re.compile(r"^[A-Za-z]{1,3}$")
+_QUALIFIED_A1_RANGE_PATTERN = re.compile(
+    r"^(?:(?P<sheet>'(?:[^']|'')+'|[^'!]+)!)?"
+    r"(?P<range>[A-Za-z]{1,3}[1-9][0-9]*:[A-Za-z]{1,3}[1-9][0-9]*)$"
+)
+
+
+@dataclass(frozen=True)
+class QualifiedA1Range:
+    """Parsed A1 range with optional sheet qualifier."""
+
+    sheet: str | None
+    range_ref: str
+
+
+@dataclass(frozen=True)
+class SheetRangeSelection:
+    """Normalized sheet and range selection for render-style calls."""
+
+    sheet: str | None
+    range_ref: str | None
 
 
 def split_a1(value: str) -> tuple[str, int]:
@@ -64,6 +85,63 @@ def normalize_range(value: str) -> str:
         raise ValueError(f"Invalid range reference: {value}")
     start, end = candidate.split(":", maxsplit=1)
     return f"{start.upper()}:{end.upper()}"
+
+
+def parse_qualified_a1_range(value: str) -> QualifiedA1Range:
+    """Parse `A1:B2` with optional `Sheet!` qualifier.
+
+    Supported forms:
+    - `A1:B2`
+    - `Sheet1!A1:B2`
+    - `'Sheet 1'!A1:B2`
+    """
+    candidate = value.strip()
+    match = _QUALIFIED_A1_RANGE_PATTERN.fullmatch(candidate)
+    if match is None:
+        raise ValueError(f"Invalid range reference: {value}")
+    sheet_token = match.group("sheet")
+    parsed_sheet = _parse_sheet_token(sheet_token) if sheet_token is not None else None
+    parsed_range = normalize_range(match.group("range"))
+    return QualifiedA1Range(sheet=parsed_sheet, range_ref=parsed_range)
+
+
+def resolve_sheet_and_range(
+    sheet: str | None, range_ref: str | None
+) -> SheetRangeSelection:
+    """Normalize `sheet`/`range` and validate cross-field consistency."""
+    normalized_sheet = _normalize_optional_sheet(sheet)
+    if range_ref is None:
+        return SheetRangeSelection(sheet=normalized_sheet, range_ref=None)
+    parsed = parse_qualified_a1_range(range_ref)
+    if normalized_sheet is None:
+        raise ValueError("sheet is required when range is specified.")
+    if parsed.sheet is not None and parsed.sheet != normalized_sheet:
+        raise ValueError("sheet and range sheet qualifier must match.")
+    return SheetRangeSelection(sheet=normalized_sheet, range_ref=parsed.range_ref)
+
+
+def _normalize_optional_sheet(value: str | None) -> str | None:
+    """Normalize optional sheet name and reject blank text."""
+    if value is None:
+        return None
+    candidate = value.strip()
+    if not candidate:
+        raise ValueError("sheet must not be empty when provided.")
+    return candidate
+
+
+def _parse_sheet_token(token: str) -> str:
+    """Parse sheet token from range qualifier."""
+    candidate = token.strip()
+    if not candidate:
+        raise ValueError("Invalid sheet qualifier in range.")
+    if candidate.startswith("'") and candidate.endswith("'"):
+        inner = candidate[1:-1]
+        sheet = inner.replace("''", "'")
+        if not sheet:
+            raise ValueError("Invalid sheet qualifier in range.")
+        return sheet
+    return candidate
 
 
 def parse_range_geometry(range_ref: str) -> tuple[str, int, int]:

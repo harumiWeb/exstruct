@@ -28,6 +28,11 @@ from .patch_runner import (
     run_make,
     run_patch,
 )
+from .render_runner import (
+    CaptureSheetImagesRequest,
+    CaptureSheetImagesResult,
+    run_capture_sheet_images,
+)
 from .sheet_reader import (
     CellReadItem,
     FormulaReadItem,
@@ -42,6 +47,8 @@ from .sheet_reader import (
     read_range,
 )
 from .tools import (
+    CaptureSheetImagesToolInput,
+    CaptureSheetImagesToolOutput,
     DescribeOpToolInput,
     DescribeOpToolOutput,
     ExtractToolInput,
@@ -61,6 +68,7 @@ from .tools import (
     ReadRangeToolOutput,
     ValidateInputToolInput,
     ValidateInputToolOutput,
+    run_capture_sheet_images_tool,
     run_describe_op_tool,
     run_extract_tool,
     run_list_ops_tool,
@@ -79,6 +87,10 @@ from .validate_input import (
 )
 
 __all__ = [
+    "CaptureSheetImagesRequest",
+    "CaptureSheetImagesResult",
+    "CaptureSheetImagesToolInput",
+    "CaptureSheetImagesToolOutput",
     "DescribeOpToolInput",
     "DescribeOpToolOutput",
     "ExtractRequest",
@@ -133,6 +145,8 @@ __all__ = [
     "run_make",
     "run_make_tool",
     "run_patch",
+    "run_capture_sheet_images",
+    "run_capture_sheet_images_tool",
     "run_patch_tool",
     "read_cells",
     "read_formulas",

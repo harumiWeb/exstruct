@@ -4,6 +4,7 @@ import logging
 import multiprocessing as mp
 import os
 from pathlib import Path
+import re
 import shutil
 import tempfile
 from types import ModuleType
@@ -14,6 +15,7 @@ import xlwings as xw
 from ..errors import MissingDependencyError, RenderError
 
 logger = logging.getLogger(__name__)
+_A1_RANGE_PATTERN = re.compile(r"^[A-Za-z]{1,3}[1-9][0-9]*:[A-Za-z]{1,3}[1-9][0-9]*$")
 
 
 def _require_excel_app() -> xw.App:
@@ -77,7 +79,12 @@ def _require_pdfium() -> ModuleType:
 
 
 def export_sheet_images(
-    excel_path: str | Path, output_dir: str | Path, dpi: int = 144
+    excel_path: str | Path,
+    output_dir: str | Path,
+    dpi: int = 144,
+    *,
+    sheet: str | None = None,
+    a1_range: str | None = None,
 ) -> list[Path]:
     """
     Export each worksheet in the given Excel workbook to PNG files and return the image paths in workbook order.
@@ -90,6 +97,10 @@ def export_sheet_images(
     """
     normalized_excel_path = Path(excel_path)
     normalized_output_dir = Path(output_dir)
+    normalized_sheet = _normalize_optional_sheet(sheet)
+    normalized_range = _normalize_a1_range(a1_range) if a1_range is not None else None
+    if normalized_range is not None and normalized_sheet is None:
+        raise ValueError("sheet is required when a1_range is specified.")
     normalized_output_dir.mkdir(parents=True, exist_ok=True)
     use_subprocess = _use_render_subprocess()
     pdfium = _ensure_pdfium(use_subprocess)
@@ -104,7 +115,11 @@ def export_sheet_images(
                 dpi,
                 use_subprocess,
                 pdfium,
+                normalized_sheet,
+                normalized_range,
             )
+    except ValueError:
+        raise
     except RenderError:
         raise
     except Exception as exc:
@@ -126,6 +141,25 @@ def _sanitize_sheet_filename(name: str) -> str:
         safe_name (str): Filename-safe string derived from `name`.
     """
     return "".join("_" if c in '\\/:*?"<>|' else c for c in name).strip() or "sheet"
+
+
+def _normalize_optional_sheet(value: str | None) -> str | None:
+    """Normalize optional sheet name and reject blank values."""
+    if value is None:
+        return None
+    candidate = value.strip()
+    if not candidate:
+        raise ValueError("sheet must not be empty when provided.")
+    return candidate
+
+
+def _normalize_a1_range(value: str) -> str:
+    """Validate and normalize A1 range text."""
+    candidate = value.strip()
+    if not _A1_RANGE_PATTERN.fullmatch(candidate):
+        raise ValueError(f"Invalid range reference: {value}")
+    start, end = candidate.split(":", maxsplit=1)
+    return f"{start.upper()}:{end.upper()}"
 
 
 class _PageSetupProtocol(Protocol):
@@ -186,12 +220,30 @@ def _iter_sheet_apis(wb: xw.Book) -> list[tuple[int, str, _SheetApiProtocol]]:
 
 def _build_sheet_export_plan(
     wb: xw.Book,
+    *,
+    sheet: str | None = None,
+    a1_range: str | None = None,
 ) -> list[tuple[str, _SheetApiProtocol, str | None]]:
     """
     Build an ordered export plan mapping each worksheet to its print areas.
 
     Each returned tuple is (sheet_name, sheet_api, print_area). The list preserves workbook sheet order; for sheets with no defined print areas `print_area` is `None`, and for sheets with multiple print areas there is one tuple per area.
     """
+    if a1_range is not None and sheet is None:
+        raise ValueError("sheet is required when a1_range is specified.")
+
+    if sheet is not None:
+        selected = _find_sheet_api(wb, sheet_name=sheet)
+        if selected is None:
+            raise ValueError(f"Sheet not found: {sheet}")
+        selected_name, selected_api = selected
+        if a1_range is not None:
+            return [(selected_name, selected_api, a1_range)]
+        areas = _extract_print_areas(selected_api)
+        if not areas:
+            return [(selected_name, selected_api, None)]
+        return [(selected_name, selected_api, area) for area in areas]
+
     plan: list[tuple[str, _SheetApiProtocol, str | None]] = []
     for _, sheet_name, sheet_api in _iter_sheet_apis(wb):
         areas = _extract_print_areas(sheet_api)
@@ -201,6 +253,16 @@ def _build_sheet_export_plan(
         for area in areas:
             plan.append((sheet_name, sheet_api, area))
     return plan
+
+
+def _find_sheet_api(
+    wb: xw.Book, *, sheet_name: str
+) -> tuple[str, _SheetApiProtocol] | None:
+    """Find one worksheet by name and return its display name and API handle."""
+    for _, candidate_name, sheet_api in _iter_sheet_apis(wb):
+        if candidate_name == sheet_name:
+            return candidate_name, sheet_api
+    return None
 
 
 def _extract_print_areas(sheet_api: _SheetApiProtocol) -> list[str]:
@@ -396,6 +458,8 @@ def _export_sheet_images_with_app(
     dpi: int,
     use_subprocess: bool,
     pdfium: ModuleType | None,
+    sheet: str | None,
+    a1_range: str | None,
 ) -> list[Path]:
     """
     Export each worksheet of an Excel workbook to PNG images by exporting sheets to per-sheet PDFs and rendering those PDFs.
@@ -418,7 +482,11 @@ def _export_sheet_images_with_app(
         app = _require_excel_app()
         wb = app.books.open(str(excel_path))
         output_index = 0
-        for sheet_name, sheet_api, print_area in _build_sheet_export_plan(wb):
+        for sheet_name, sheet_api, print_area in _build_sheet_export_plan(
+            wb,
+            sheet=sheet,
+            a1_range=a1_range,
+        ):
             sheet_pdf = temp_dir / f"sheet_{output_index + 1:02d}.pdf"
             safe_name = _sanitize_sheet_filename(sheet_name)
             _export_sheet_pdf(

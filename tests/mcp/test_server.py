@@ -13,6 +13,8 @@ from exstruct.mcp.extract_runner import OnConflictPolicy
 from exstruct.mcp.io import PathPolicy
 from exstruct.mcp.patch import normalize as patch_normalize
 from exstruct.mcp.tools import (
+    CaptureSheetImagesToolInput,
+    CaptureSheetImagesToolOutput,
     DescribeOpToolOutput,
     ExtractToolInput,
     ExtractToolOutput,
@@ -370,6 +372,64 @@ def test_register_tools_returns_runtime_info(tmp_path: Path) -> None:
     assert Path(result.path_examples.absolute) == (
         tmp_path.resolve() / "outputs" / "book.xlsx"
     )
+
+
+def test_register_tools_passes_capture_sheet_images_arguments(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    app = DummyApp()
+    policy = PathPolicy(root=tmp_path)
+    calls: dict[str, tuple[object, ...]] = {}
+
+    def fake_run_capture_sheet_images_tool(
+        payload: CaptureSheetImagesToolInput,
+        *,
+        policy: PathPolicy,
+    ) -> CaptureSheetImagesToolOutput:
+        calls["capture"] = (payload, policy)
+        return CaptureSheetImagesToolOutput(
+            out_dir=str(tmp_path / "book_images"),
+            image_paths=[str(tmp_path / "book_images" / "01_Sheet1.png")],
+        )
+
+    async def fake_run_sync(func: Callable[[], object]) -> object:
+        return func()
+
+    monkeypatch.setattr(
+        server,
+        "run_capture_sheet_images_tool",
+        fake_run_capture_sheet_images_tool,
+    )
+    monkeypatch.setattr(anyio.to_thread, "run_sync", fake_run_sync)
+
+    server._register_tools(app, policy, default_on_conflict="overwrite")
+    capture_tool = cast(
+        Callable[..., Awaitable[object]],
+        app.tools["exstruct_capture_sheet_images"],
+    )
+    result = cast(
+        CaptureSheetImagesToolOutput,
+        anyio.run(
+            _call_async,
+            capture_tool,
+            {
+                "xlsx_path": "book.xlsx",
+                "out_dir": "images",
+                "dpi": 200,
+                "sheet": "Sheet 1",
+                "range": "'Sheet 1'!a1:b2",
+            },
+        ),
+    )
+    capture_call = cast(
+        tuple[CaptureSheetImagesToolInput, PathPolicy], calls["capture"]
+    )
+    assert capture_call[0].xlsx_path == "book.xlsx"
+    assert capture_call[0].out_dir == "images"
+    assert capture_call[0].dpi == 200
+    assert capture_call[0].sheet == "Sheet 1"
+    assert capture_call[0].range == "A1:B2"
+    assert result.image_paths == [str(tmp_path / "book_images" / "01_Sheet1.png")]
 
 
 def test_register_tools_returns_ops_schema_tools(tmp_path: Path) -> None:
