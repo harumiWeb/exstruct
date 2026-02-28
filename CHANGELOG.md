@@ -12,6 +12,17 @@ All notable changes to this project are documented in this file. This changelog 
 
 - None.
 
+## [0.5.2] - 2026-02-28
+
+### Fixed
+
+- Restored support for mixed `create_chart` + `apply_table_style` requests in one run when backend resolves to COM (`backend="com"` or `backend="auto"` with COM available).
+- Improved mixed-op error behavior when COM is unavailable by returning a clear COM-required message for `create_chart` + `apply_table_style` requests.
+
+### Changed
+
+- Updated MCP/README docs to reflect mixed chart+table request support and backend requirements.
+
 ## [0.5.1] - 2026-02-26
 
 ### Added

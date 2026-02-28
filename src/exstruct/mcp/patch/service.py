@@ -71,7 +71,7 @@ def run_patch(
     )
     warnings: list[str] = []
     runtime.append_large_ops_warning(warnings, request.ops)
-    effective_request = _resolve_effective_request(request, warnings)
+    effective_request = _resolve_effective_request(request)
     if resolved_input.suffix.lower() == ".xls" and runtime.contains_design_ops(
         effective_request.ops
     ):
@@ -131,6 +131,20 @@ def run_patch(
                 engine="com",
             )
         except runtime.PatchOpError as exc:
+            if _should_fallback_on_com_patch_error(
+                exc,
+                request=effective_request,
+                input_path=resolved_input,
+            ):
+                warnings.append(
+                    f"COM patch failed; falling back to openpyxl. ({exc!r})"
+                )
+                return _apply_with_openpyxl(
+                    effective_request,
+                    resolved_input,
+                    output_path,
+                    warnings,
+                )
             error = _coerce_patch_error_detail(exc.detail)
             return PatchResult(
                 out_path=str(output_path),
@@ -164,23 +178,19 @@ def run_patch(
 
 def _resolve_effective_request(
     request: PatchRequest,
-    warnings: list[str],
 ) -> PatchRequest:
-    """Resolve request-level backend adjustments and mixed-op guards."""
-    if request.backend not in {"com", "auto"}:
-        return request
-    has_apply_table_style = runtime.contains_apply_table_style_op(request.ops)
-    if not has_apply_table_style:
-        return request
-    if runtime.contains_create_chart_op(request.ops):
-        raise ValueError(
-            "create_chart and apply_table_style cannot be combined in one patch request. "
-            "Run them in separate requests because they require different backends."
-        )
-    warnings.append(
-        "backend='com' does not support apply_table_style; falling back to openpyxl."
-    )
-    return request.model_copy(update={"backend": "openpyxl"})
+    """Resolve request-level backend adjustments."""
+    return request
+
+
+def _should_fallback_on_com_patch_error(
+    exc: runtime.PatchOpError, *, request: PatchRequest, input_path: Path
+) -> bool:
+    """Return whether PatchOpError from COM path should trigger openpyxl fallback."""
+    if not runtime.allow_auto_openpyxl_fallback(request, input_path):
+        return False
+    detail = exc.detail
+    return detail.error_code == "com_runtime_error"
 
 
 def _apply_with_openpyxl(

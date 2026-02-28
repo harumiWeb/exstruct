@@ -1,3 +1,64 @@
+## Plan (PR #70 Review Follow-ups 2026-02-28)
+
+- [x] [P0] `src/exstruct/mcp/patch/internal.py` の `_resolve_xlwings_list_objects` で、callable 経路の戻り値が ListObjects 互換でない場合に即 `ValueError` を返す（discussion: r2866818472）。
+- [x] [P0] `src/exstruct/mcp/patch/service.py` の `_should_fallback_on_com_patch_error` を過剰fallbackしない条件へ修正し、`backend=auto` で入力不正を隠さない（discussion: r2866819920）。
+- [x] [P0] `src/exstruct/mcp/patch/internal.py` の `_normalize_chart_data_ranges` で各要素の正規化/空文字拒否を行う（discussion: r2866823914）。
+- [x] [P0] `tasks/feature_spec.md` の重複見出しを phase識別付きへ統一し、`MD024` を解消する（discussion: r2866823917）。
+- [x] [P1] `src/exstruct/mcp/patch/internal.py` の `_classify_known_patch_error` で、`sheet not found` の `failed_field` を曖昧時 `None` にする（discussion: r2866823915）。
+- [x] [P1] `docs/release-notes/v0.5.2.md` の画像に alt text を追加する（discussion: r2866823912）。
+- [x] [P1] `tests/mcp/test_patch_runner.py` に `result.error is None` を追加し、失敗診断を明確化する（CodeRabbit nitpick）。
+- [x] [P2] `src/exstruct/mcp/patch/internal.py` の `_xlwings_list_object_add_attempts` 戻り値を、nested tuple から型付きモデルへ置換する（CodeRabbit nitpick）。
+- [x] [P2] `src/exstruct/mcp/patch/internal.py` の chart title helper docstring を Google style に揃える（CodeRabbit nitpick）。
+- [x] `uv run pytest tests/mcp/patch/test_models_internal_coverage.py tests/mcp/patch/test_service.py tests/mcp/test_patch_runner.py`
+- [x] `uv run task precommit-run`
+
+## Review (PR #70 Review Follow-ups 2026-02-28)
+
+- Sources:
+- https://github.com/harumiWeb/exstruct/pull/70#discussion_r2866818472
+- https://github.com/harumiWeb/exstruct/pull/70#discussion_r2866819920
+- https://github.com/harumiWeb/exstruct/pull/70#discussion_r2866823912
+- https://github.com/harumiWeb/exstruct/pull/70#discussion_r2866823914
+- https://github.com/harumiWeb/exstruct/pull/70#discussion_r2866823915
+- https://github.com/harumiWeb/exstruct/pull/70#discussion_r2866823917
+- Status:
+- Completed. P0/P1/P2 を実装し、対象pytest(135 passed) と precommit(ruff/ruff-format/mypy) を通過。
+
+## Plan (Enable COM mixed request: `create_chart` + `apply_table_style` 2026-02-28)
+
+- [x] `tasks/feature_spec.md` を同時実行対応方針（Phase 3）へ刷新
+- [x] `tasks/todo.md` に本フェーズの実装計画を追加
+- [x] `service._resolve_effective_request` の mixed-op reject を撤廃
+- [x] mixed request の backend 制約を validation へ集約（`backend=openpyxl` 拒否）
+- [x] `backend=auto` + COM unavailable 時の mixed request エラーメッセージを明確化
+- [x] `tests/mcp/patch/test_service.py` に mixed request 成功/失敗ケースを追加
+- [x] `tests/mcp/test_patch_runner.py` に mixed request 入力制約テストを追加
+- [x] `docs/mcp.md` / `README.md` / `README.ja.md` の制約説明を同時実行対応へ更新
+- [x] `uv run pytest tests/mcp/patch/test_service.py tests/mcp/test_patch_runner.py`
+- [x] `uv run task precommit-run`
+
+## Test Cases (Enable COM mixed request 2026-02-28)
+
+- [x] `backend=com` で mixed request が `engine="com"` で成功する
+- [x] `backend=auto` + COM available で mixed request が `engine="com"` で成功する
+- [x] `backend=openpyxl` の mixed request が明示エラーになる
+- [x] `backend=auto` + COM unavailable の mixed request が明示エラーになる
+- [x] `create_chart` 単体制約（COM専用、dry_run不可）が維持される
+- [x] `apply_table_style` 単体挙動が退行しない
+
+## Review (Enable COM mixed request 2026-02-28)
+
+- Summary:
+- `create_chart` + `apply_table_style` の同時指定拒否を撤廃し、COM経路で同一リクエスト実行できるようにした。
+- `backend=auto` かつ COM不可時には mixed request 専用の明示エラーを返すようにした。
+- `README` / `docs` の制約文言を「同時実行可（COM時）」へ更新した。
+- Verification:
+- `uv run pytest tests/mcp/patch/test_service.py tests/mcp/test_patch_runner.py` (82 passed)
+- `uv run task precommit-run` (ruff / ruff-format / mypy passed)
+- Risks:
+- 実際のグラフ作成・テーブル化の見た目差は Excel バージョン依存で残る。
+- Follow-ups:
+
 ## Plan
 
 - [x] `tasks/feature_spec.md` を Phase 1 仕様へ刷新
@@ -48,3 +109,108 @@
   - ファイル情報の `created/modified` は 2026-02-26 22:12:45 JST
 - Risks:
   - Excel COM 実行結果の見た目差（バージョン・環境依存）は残る
+
+## Plan (Chart/Table Reliability Improvements 2026-02-27)
+
+- [x] `PatchOp.data_range` を `str | list[str]` へ拡張
+- [x] `create_chart` に `chart_title` / `x_axis_title` / `y_axis_title` を追加
+- [x] シート名付き `data_range` / `category_range` のバリデーションを追加
+- [x] `apply_table_style` の COM 実装を追加
+- [x] `service.py` の `apply_table_style -> openpyxl` 強制切替を廃止
+- [x] `PatchErrorDetail` に `error_code` / `failed_field` / `raw_com_message` を追加
+- [x] COM 実行時の op 単位例外ラップを `Exception` 全般へ拡張
+- [x] `op_schema` / `docs/mcp.md` / `README.md` / `README.ja.md` を更新
+- [x] `uv run pytest tests/mcp/test_tool_models.py tests/mcp/patch/test_models_internal_coverage.py tests/mcp/patch/test_service.py tests/mcp/test_tools_handlers.py tests/mcp/test_patch_runner.py`
+- [x] `uv run task precommit-run`
+
+## Review (Chart/Table Reliability Improvements 2026-02-27)
+
+- Summary:
+- `apply_table_style` を COM で実行できるようにし、`backend=auto/com` での openpyxl 強制フォールバックを廃止。`create_chart` は `data_range: list[str]` とシート名付き範囲、`chart_title`/`x_axis_title`/`y_axis_title` に対応。
+- Error UX:
+- COM 実行時の op 例外ラップを `Exception` 全般に拡張し、`PatchErrorDetail` へ `error_code` / `failed_field` / `raw_com_message` を追加。
+- Verification:
+- `uv run pytest tests/mcp/test_tool_models.py tests/mcp/patch/test_models_internal_coverage.py tests/mcp/patch/test_service.py tests/mcp/test_tools_handlers.py tests/mcp/test_patch_runner.py` (179 passed)
+- `uv run task precommit-run` (ruff / ruff-format / mypy passed)
+
+## Plan (COM Hardening Follow-up 2026-02-27)
+
+- [x] `tasks/feature_spec.md` の Phase 2.1 範囲に沿って詳細仕様を確定
+- [x] `apply_table_style` COM Add 呼び出しの互換パターンを実機ログ基準で見直し
+- [x] `apply_table_style` の COM 例外を `error_code` 分類へ追加
+- [x] Windows + Excel 実機で `apply_table_style` スモークケースを実行
+- [x] `docs/mcp.md` / `README.md` / `README.ja.md` に COM前提条件と失敗時対処を追記
+- [x] MCP向けの最小サンプル（テーブル作成 + スタイル適用）を docs に追加
+
+## Review (COM Hardening Follow-up 2026-02-27)
+
+- Summary:
+- `apply_table_style` の COM 経路で `ListObjects` 取得互換（property/callable）を追加し、`ListObjects.Add` は複数シグネチャ + source文字列フォールバックで再試行するように改善した。
+- `ListObjects` の既存テーブル範囲検出は `Address` 正規化を強化し、外部参照付き表記（例: `='[Book]Sheet'!$A$1:$B$2`）でも交差判定できるようにした。
+- Error UX:
+- `apply_table_style` 向けに `table_style_invalid` / `list_object_add_failed` / `com_api_missing` を分類対象に追加し、該当ケースの `hint` を追加した。
+- Verification:
+- `uv run pytest tests/mcp/patch/test_models_internal_coverage.py tests/mcp/patch/test_service.py` (56 passed)
+- `uv run task precommit-run` (ruff / ruff-format / mypy passed)
+- `uv run python -c \"... run_make(... backend='com' ... apply_table_style ...)\"` で `engine='com'` / `error=None` を確認
+- Artifact:
+- `c:\\dev\\Python\\exstruct\\drafts\\apply_table_style_smoke_local_20260227.xlsx`
+
+## Plan (Review Fix: COM fallback + failed_field 2026-02-27)
+
+- [x] Analyze reviewer findings and locate root causes in `service.py` and `internal.py`.
+- [x] Implement `backend=auto` fallback path for COM-originated `PatchOpError`.
+- [x] Fix `sheet not found` failed-field classification to support `category_range` context.
+- [x] Add regression tests in `tests/mcp/patch/test_service.py` and `tests/mcp/patch/test_models_internal_coverage.py`.
+- [x] Run targeted pytest and verify green.
+
+## Review (Review Fix: COM fallback + failed_field 2026-02-27)
+
+- Summary:
+- Restored `backend=auto` recovery by allowing fallback when COM op failures are wrapped in `PatchOpError` but still carry COM-runtime markers.
+- Corrected `sheet not found` field mapping to classify `category_range` when the message indicates category context.
+- Added focused regression tests for both behaviors.
+- Verification:
+- `uv run pytest tests/mcp/patch/test_service.py tests/mcp/patch/test_models_internal_coverage.py` (51 passed)
+- `uv run task precommit-run` (ruff / ruff-format / mypy passed)
+- Risks:
+- Message-based classification still depends on stable wording; future message format changes can impact field inference.
+
+## Plan (Review Fix: ListObjects property accessor 2026-02-27)
+
+- [x] Reproduce reviewer finding in `internal.py` and confirm pre-resolution `callable` guard blocks property accessor compatibility.
+- [x] Remove early `callable` guard and delegate ListObjects resolution to `_resolve_xlwings_list_objects`.
+- [x] Add regression test to verify `_apply_xlwings_apply_table_style` succeeds when `ListObjects` is a property collection.
+- [x] Run targeted pytest and `uv run task precommit-run`.
+
+## Review (Review Fix: ListObjects property accessor 2026-02-27)
+
+- Summary:
+- Fixed `apply_table_style` COM path to support both callable/property `ListObjects` by removing the redundant early callable check.
+- Added regression test covering property-style `ListObjects` to prevent future regressions at call-site level.
+- Verification:
+- `uv run pytest tests/mcp/patch/test_models_internal_coverage.py -k "apply_table_style_accepts_property_list_objects or resolve_xlwings_list_objects_uses_collection_like_accessor"` (2 passed, 46 deselected)
+- `uv run task precommit-run` (ruff / ruff-format / mypy passed)
+
+## Plan (MCP usability follow-up from Claude review 2026-02-27)
+
+- [x] `tasks/feature_spec.md` の新規specに沿って実装順（P0/P1）を確定
+- [x] P0: `_patched` 連鎖を止める出力名ポリシーを実装
+- [x] P0: 出力名ポリシー変更の回帰テストを追加（`tests/mcp/shared/test_output_path.py` ほか）
+- [x] P0: Claude連携向け `--artifact-bridge-dir` / `mirror_artifact` の利用ガイドを `docs/mcp.md` に追加
+- [x] P1: `create_chart` + `apply_table_style` 同時指定エラーに制約理由を追加
+- [x] P1: 同時指定時エラーメッセージの回帰テストを追加（`tests/mcp/patch/test_service.py`）
+- [x] `uv run pytest tests/mcp/shared/test_output_path.py tests/mcp/test_patch_runner.py tests/mcp/patch/test_service.py` を実行
+- [x] `uv run task precommit-run` を実行
+
+## Review (MCP usability follow-up from Claude review 2026-02-27)
+
+- Summary:
+  - `_patched` 既定出力名を生成する際、入力 stem がすでに `_patched` で終わる場合は同名を再利用するように変更し、`_patched_patched` の連鎖増殖を防止した。
+  - `create_chart` + `apply_table_style` 同時指定エラーに「`create_chart` は COM 専用」「1リクエスト1バックエンド」の制約理由を明示した。
+  - `docs/mcp.md` に Claude Desktop 連携向けの artifact handoff 手順（`--artifact-bridge-dir` と `mirror_artifact=true`）を追記した。
+- Verification:
+  - `uv run pytest tests/mcp/shared/test_output_path.py tests/mcp/test_patch_runner.py tests/mcp/patch/test_service.py` (85 passed)
+  - `uv run task precommit-run` (ruff / ruff-format / mypy passed)
+- Risks:
+  - `on_conflict="skip"` かつ入力名が `*_patched` の場合、既定出力が同名になるためスキップされる（仕様どおりだが挙動理解が必要）。

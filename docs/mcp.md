@@ -190,6 +190,13 @@ Examples:
 
 ## Edit flow (make/patch)
 
+### Choose make vs patch
+
+| Tool | Use when | Required path input |
+| --- | --- | --- |
+| `exstruct_make` | Create a brand-new workbook and apply initial ops in one call | `out_path` |
+| `exstruct_patch` | Edit an existing workbook (in-place style via `out_name` + `on_conflict=overwrite` is possible) | `xlsx_path` |
+
 ### New workbook flow (`exstruct_make`)
 
 1. Build patch operations (`ops`) for initial sheets/cells
@@ -285,23 +292,27 @@ This keeps MCP tool I/O stable while allowing internal module separation.
   - `preflight_formula_check`: detect formula issues before save
   - `auto_formula`: treat `=...` in `set_value` as formula
   - `sheet`: top-level default sheet used when `op.sheet` is omitted (non-`add_sheet` only)
+  - default `out_name`: `{stem}_patched{ext}`. If input stem already ends with `_patched`,
+    ExStruct reuses the same name to avoid `_patched_patched` chaining.
   - `mirror_artifact`: copy output workbook to `--artifact-bridge-dir` on success
 - Large ops guidance:
   - `ops` over `200` still runs, but returns a warning that recommends splitting into batches.
 - Backend selection:
   - `backend="auto"` (default): prefers COM when available; otherwise openpyxl.
     Also uses openpyxl when `dry_run`/`return_inverse_ops`/`preflight_formula_check` is enabled.
-    Requests including `apply_table_style` are also routed to openpyxl.
   - `backend="com"`: forces COM. Requires Excel COM and rejects
     `dry_run`/`return_inverse_ops`/`preflight_formula_check`.
-    If `apply_table_style` is included, returns a warning and falls back to openpyxl.
   - `backend="openpyxl"`: forces openpyxl (`.xls` is not supported).
 - `create_chart` constraints:
   - Supported only with COM backend.
   - `chart_type` supports: `line`, `column`, `bar`, `area`, `pie`, `doughnut`, `scatter`, `radar`.
     - Alias input is accepted: `column_clustered`, `bar_clustered`, `xy_scatter`, `donut`.
+  - `data_range` accepts either one A1 range string or an array of ranges (multi-series).
+  - `data_range`/`category_range` support sheet-qualified form (`Sheet2!A1:B10`, `'Sales Data'!A1:B10`).
+  - Optional explicit labels: `chart_title`, `x_axis_title`, `y_axis_title`.
   - Rejects `dry_run`/`return_inverse_ops`/`preflight_formula_check`.
-  - Cannot be combined with `apply_table_style` in one request (split into separate calls).
+  - Can be combined with `apply_table_style` in one request when backend resolves to COM.
+  - If COM is unavailable, mixed `create_chart` + `apply_table_style` requests return a COM-required error.
 - Output includes `engine` (`"com"` or `"openpyxl"`) to show which backend was actually used.
 - Output includes `mirrored_out_path` when mirroring is requested and succeeds.
 - Conflict handling follows server `--on-conflict` unless overridden per tool call
@@ -346,6 +357,15 @@ Example:
 - Required: `sheet`, `range`, `style`.
 - Optional: `table_name`.
 - Fails when range intersects an existing table, or table name duplicates.
+- COM execution checklist (recommended on Windows):
+  - Microsoft Excel desktop app is installed and launchable in the current user session.
+  - Use `backend="com"` for deterministic behavior, or `backend="auto"` with COM availability.
+  - `range` includes the header row and points to one contiguous A1 range.
+  - Avoid protected sheets/workbooks and existing tables intersecting the target range.
+- Common error codes:
+  - `table_style_invalid`: `style` is not a valid Excel table style name.
+  - `list_object_add_failed`: Excel COM `ListObjects.Add(...)` failed for all compatible signatures.
+  - `com_api_missing`: required COM members such as `ListObjects.Add` are unavailable.
 
 Example:
 
@@ -359,6 +379,38 @@ Example:
       "sheet": "Sheet1",
       "range": "A1:D11",
       "style": "TableStyleMedium9",
+      "table_name": "SalesTable"
+    }
+  ]
+}
+```
+
+### `apply_table_style` minimal MCP sample (`exstruct_make`)
+
+Use this for Windows + Excel COM smoke checks when you need a reproducible minimal request.
+
+```json
+{
+  "tool": "exstruct_make",
+  "out_path": "C:\\data\\table_style_smoke.xlsx",
+  "backend": "com",
+  "ops": [
+    {
+      "op": "set_range_values",
+      "sheet": "Sheet1",
+      "range": "A1:C4",
+      "values": [
+        ["Month", "Revenue", "Cost"],
+        ["Jan", 120, 80],
+        ["Feb", 150, 90],
+        ["Mar", 140, 88]
+      ]
+    },
+    {
+      "op": "apply_table_style",
+      "sheet": "Sheet1",
+      "range": "A1:C4",
+      "style": "TableStyleMedium2",
       "table_name": "SalesTable"
     }
   ]
@@ -443,6 +495,44 @@ Examples:
   - Mirroring runs only on success.
   - If `--artifact-bridge-dir` is not set, process still succeeds and warning is returned.
   - If copy fails, process still succeeds and warning is returned.
+
+### Claude Desktop artifact handoff recipe
+
+1. Start MCP server with `--artifact-bridge-dir`.
+2. Call `exstruct_patch` or `exstruct_make` with `mirror_artifact=true`.
+3. Read `mirrored_out_path` from tool output and pass that path to Claude for follow-up tasks.
+
+Example Claude Desktop MCP args:
+
+```json
+{
+  "command": "uvx",
+  "args": [
+    "--from",
+    "exstruct[mcp]",
+    "exstruct-mcp",
+    "--root",
+    "C:\\data",
+    "--artifact-bridge-dir",
+    "C:\\data\\artifacts",
+    "--on-conflict",
+    "overwrite"
+  ]
+}
+```
+
+Example tool call:
+
+```json
+{
+  "tool": "exstruct_patch",
+  "xlsx_path": "C:\\data\\book.xlsx",
+  "mirror_artifact": true,
+  "ops": [
+    { "op": "set_value", "sheet": "Sheet1", "cell": "A1", "value": "updated" }
+  ]
+}
+```
 
 ## Op schema discovery tools
 

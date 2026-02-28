@@ -46,6 +46,10 @@ from .types import (
 _ALLOWED_EXTENSIONS = {".xlsx", ".xlsm", ".xls"}
 _A1_PATTERN = re.compile(r"^[A-Za-z]{1,3}[1-9][0-9]*$")
 _A1_RANGE_PATTERN = re.compile(r"^[A-Za-z]{1,3}[1-9][0-9]*:[A-Za-z]{1,3}[1-9][0-9]*$")
+_SHEET_QUALIFIED_A1_RANGE_PATTERN = re.compile(
+    r"^(?P<sheet>(?:'(?:(?:[^']|'')+)'|[^!]+)!)?"
+    r"(?P<start>[A-Za-z]{1,3}[1-9][0-9]*):(?P<end>[A-Za-z]{1,3}[1-9][0-9]*)$"
+)
 _HEX_COLOR_PATTERN = re.compile(r"^#?(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$")
 _COLUMN_LABEL_PATTERN = re.compile(r"^[A-Za-z]{1,3}$")
 _MAX_STYLE_TARGET_CELLS = 10_000
@@ -133,6 +137,14 @@ class ColumnDimensionSnapshot(BaseModel):
 
     column: str
     width: float | None = None
+
+
+class ListObjectAddAttempt(BaseModel):
+    """Typed COM ListObjects.Add invocation attempt."""
+
+    args: tuple[object, ...]
+    call_kwargs: dict[str, object] = Field(default_factory=dict)
+    signature: str
 
 
 class DesignSnapshot(BaseModel):
@@ -408,6 +420,10 @@ class XlwingsSheetApiProtocol(Protocol):
 
     def Columns(self, key: str) -> XlwingsColumnApiProtocol: ...  # noqa: N802
 
+    def ChartObjects(self) -> XlwingsChartObjectsCollectionProtocol: ...  # noqa: N802
+
+    def ListObjects(self) -> object: ...  # noqa: N802
+
 
 @runtime_checkable
 class XlwingsChartObjectProtocol(Protocol):
@@ -436,6 +452,16 @@ class XlwingsChartSeriesProtocol(Protocol):
 
     Name: str
     XValues: object
+    Values: object
+
+
+@runtime_checkable
+class XlwingsChartSeriesCollectionProtocol(Protocol):
+    """Protocol for xlwings COM chart series collection."""
+
+    Count: int
+
+    def NewSeries(self) -> XlwingsChartSeriesProtocol: ...  # noqa: N802
 
 
 class PatchOp(BaseModel):
@@ -590,9 +616,12 @@ class PatchOp(BaseModel):
             "doughnut, scatter, radar."
         ),
     )
-    data_range: str | None = Field(
+    data_range: str | list[str] | None = Field(
         default=None,
-        description="Data range in A1 notation for create_chart.",
+        description=(
+            "Data range in A1 notation for create_chart. "
+            "Accepts a single range or a list of ranges."
+        ),
     )
     category_range: str | None = Field(
         default=None,
@@ -621,6 +650,18 @@ class PatchOp(BaseModel):
     series_from_rows: bool | None = Field(
         default=None,
         description="Whether chart series are oriented by rows for create_chart.",
+    )
+    chart_title: str | None = Field(
+        default=None,
+        description="Optional chart title text for create_chart.",
+    )
+    x_axis_title: str | None = Field(
+        default=None,
+        description="Optional X-axis title text for create_chart.",
+    )
+    y_axis_title: str | None = Field(
+        default=None,
+        description="Optional Y-axis title text for create_chart.",
     )
 
     @field_validator("sheet")
@@ -661,16 +702,28 @@ class PatchOp(BaseModel):
         start, end = candidate.split(":", maxsplit=1)
         return f"{start.upper()}:{end.upper()}"
 
-    @field_validator("data_range", "category_range")
+    @field_validator("data_range")
     @classmethod
-    def _validate_chart_range(cls, value: str | None) -> str | None:
+    def _validate_data_range(
+        cls, value: str | list[str] | None
+    ) -> str | list[str] | None:
         if value is None:
             return None
-        candidate = value.strip()
-        if not _A1_RANGE_PATTERN.match(candidate):
-            raise ValueError(f"Invalid chart range reference: {value}")
-        start, end = candidate.split(":", maxsplit=1)
-        return f"{start.upper()}:{end.upper()}"
+        if isinstance(value, str):
+            return _normalize_chart_range_reference(value)
+        if not value:
+            raise ValueError("data_range list must not be empty.")
+        normalized: list[str] = []
+        for item in value:
+            normalized.append(_normalize_chart_range_reference(item))
+        return normalized
+
+    @field_validator("category_range")
+    @classmethod
+    def _validate_category_range(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return _normalize_chart_range_reference(value)
 
     @field_validator("anchor_cell")
     @classmethod
@@ -732,7 +785,14 @@ class PatchOp(BaseModel):
             normalized.append(_normalize_column_identifier(column))
         return normalized
 
-    @field_validator("style", "table_name", "chart_name")
+    @field_validator(
+        "style",
+        "table_name",
+        "chart_name",
+        "chart_title",
+        "x_axis_title",
+        "y_axis_title",
+    )
     @classmethod
     def _validate_non_empty_optional_text(cls, value: str | None) -> str | None:
         if value is None:
@@ -740,7 +800,8 @@ class PatchOp(BaseModel):
         candidate = value.strip()
         if not candidate:
             raise ValueError(
-                "style/table_name/chart_name must not be empty when provided."
+                "style/table_name/chart_name/chart_title/x_axis_title/y_axis_title "
+                "must not be empty when provided."
             )
         return candidate
 
@@ -1350,6 +1411,9 @@ def _validate_no_legacy_edit_fields(
         _reject_optional_field(op_name, "height", op.height)
         _reject_optional_field(op_name, "titles_from_data", op.titles_from_data)
         _reject_optional_field(op_name, "series_from_rows", op.series_from_rows)
+        _reject_optional_field(op_name, "chart_title", op.chart_title)
+        _reject_optional_field(op_name, "x_axis_title", op.x_axis_title)
+        _reject_optional_field(op_name, "y_axis_title", op.y_axis_title)
 
 
 def _validate_no_design_fields(op: PatchOp, *, op_name: str) -> None:
@@ -1379,6 +1443,9 @@ def _validate_no_design_fields(op: PatchOp, *, op_name: str) -> None:
     _reject_optional_field(op_name, "height", op.height)
     _reject_optional_field(op_name, "titles_from_data", op.titles_from_data)
     _reject_optional_field(op_name, "series_from_rows", op.series_from_rows)
+    _reject_optional_field(op_name, "chart_title", op.chart_title)
+    _reject_optional_field(op_name, "x_axis_title", op.x_axis_title)
+    _reject_optional_field(op_name, "y_axis_title", op.y_axis_title)
 
 
 def _reject_optional_field(op_name: str, field_name: str, value: object) -> None:
@@ -1480,6 +1547,9 @@ class PatchErrorDetail(BaseModel):
     hint: str | None = None
     expected_fields: list[str] = Field(default_factory=list)
     example_op: str | None = None
+    error_code: str | None = None
+    failed_field: str | None = None
+    raw_com_message: str | None = None
 
 
 class FormulaIssue(BaseModel):
@@ -1751,12 +1821,27 @@ def _requires_openpyxl_backend(request: PatchRequest) -> bool:
     return any(op.op == "restore_design_snapshot" for op in request.ops)
 
 
+def _raise_create_chart_com_unavailable_error(
+    *,
+    has_apply_table_style: bool,
+) -> None:
+    """Raise a COM availability error for create_chart requests."""
+    if has_apply_table_style:
+        raise ValueError(
+            "create_chart + apply_table_style requests require Windows Excel COM availability in this environment."
+        )
+    raise ValueError(
+        "create_chart requires Windows Excel COM availability in this environment."
+    )
+
+
 def _select_patch_engine(
     *, request: PatchRequest, input_path: Path, com_available: bool
 ) -> PatchEngine:
     """Select concrete patch engine based on request and environment."""
     extension = input_path.suffix.lower()
     has_create_chart = _contains_create_chart_op(request.ops)
+    has_apply_table_style = _contains_apply_table_style_op(request.ops)
     if request.backend == "openpyxl":
         if has_create_chart:
             raise ValueError("create_chart is supported only on COM backend.")
@@ -1782,8 +1867,8 @@ def _select_patch_engine(
     if com_available:
         return "com"
     if has_create_chart:
-        raise ValueError(
-            "create_chart requires Windows Excel COM availability in this environment."
+        _raise_create_chart_com_unavailable_error(
+            has_apply_table_style=has_apply_table_style
         )
     return "openpyxl"
 
@@ -3054,6 +3139,18 @@ def _normalize_hex_input(value: str, *, field_name: str) -> str:
     return text if text.startswith("#") else f"#{text}"
 
 
+def _normalize_chart_range_reference(value: str) -> str:
+    """Normalize chart range reference with optional sheet qualifier."""
+    candidate = value.strip()
+    match = _SHEET_QUALIFIED_A1_RANGE_PATTERN.match(candidate)
+    if match is None:
+        raise ValueError(f"Invalid chart range reference: {value}")
+    sheet_prefix = match.group("sheet") or ""
+    start = match.group("start").upper()
+    end = match.group("end").upper()
+    return f"{sheet_prefix}{start}:{end}"
+
+
 def _normalize_hex_color(value: str) -> str:
     """Normalize HEX input into AARRGGBB form for workbook internals."""
     normalized = _normalize_hex_input(value, field_name="color/fill_color")
@@ -3500,9 +3597,11 @@ def _apply_ops_xlwings(
                     diff.append(
                         _apply_xlwings_op(workbook, sheets, op, index, auto_formula)
                     )
-                except ValueError as exc:
+                except Exception as exc:
                     raise PatchOpError.from_op(index, op, exc) from exc
             workbook.save(str(output_path))
+    except PatchOpError:
+        raise
     except ValueError:
         raise
     except Exception as exc:
@@ -3561,7 +3660,7 @@ def _apply_xlwings_extended_op(
         "unmerge_cells": lambda: _apply_xlwings_unmerge_cells(sheet, op, index),
         "set_alignment": lambda: _apply_xlwings_set_alignment(sheet, op, index),
         "set_style": lambda: _apply_xlwings_set_style(sheet, op, index),
-        "apply_table_style": lambda: _apply_xlwings_apply_table_style(op),
+        "apply_table_style": lambda: _apply_xlwings_apply_table_style(sheet, op, index),
         "create_chart": lambda: _apply_xlwings_create_chart(sheet, op, index),
         "restore_design_snapshot": lambda: _apply_xlwings_restore_design_snapshot(op),
     }
@@ -3878,9 +3977,32 @@ def _apply_xlwings_set_style(
     )
 
 
-def _apply_xlwings_apply_table_style(op: PatchOp) -> PatchDiffItem:
-    """Reject apply_table_style on COM backend."""
-    raise ValueError("apply_table_style is supported only on openpyxl backend.")
+def _apply_xlwings_apply_table_style(
+    sheet: XlwingsSheetProtocol, op: PatchOp, index: int
+) -> PatchDiffItem:
+    """Apply apply_table_style with xlwings COM API."""
+    if op.range is None or op.style is None:
+        raise ValueError("apply_table_style requires range and style.")
+    sheet_api = _xlwings_sheet_api(sheet)
+    list_objects = _resolve_xlwings_list_objects(sheet_api)
+    _ensure_xlwings_table_range_not_intersects_existing_tables(list_objects, op.range)
+    table_name = op.table_name or _next_xlwings_table_name(list_objects)
+    _ensure_xlwings_table_name_available(list_objects, table_name)
+    source_range = _resolve_chart_range_api(sheet, op.range)
+    table = _xlwings_add_list_object(list_objects, source_range)
+    table_any = cast(Any, table)
+    table_any.Name = table_name
+    _apply_xlwings_table_style(table_any, op.style)
+    return PatchDiffItem(
+        op_index=index,
+        op=op.op,
+        sheet=op.sheet,
+        cell=op.range,
+        before=None,
+        after=PatchValue(
+            kind="style", value=f"table={table_name};table_style={op.style}"
+        ),
+    )
 
 
 def _apply_xlwings_create_chart(
@@ -3913,17 +4035,46 @@ def _apply_xlwings_create_chart(
         raise ValueError("create_chart failed to acquire chart COM object.")
 
     chart.ChartType = chart_type_id
-    chart.SetSourceData(sheet.range(op.data_range).api)
-    _apply_chart_category_range(sheet, chart, op.category_range)
+    normalized_data_ranges = _normalize_chart_data_ranges(op.data_range)
+    category_range = op.category_range
+    if len(normalized_data_ranges) == 1:
+        chart.SetSourceData(_resolve_chart_range_api(sheet, normalized_data_ranges[0]))
+    else:
+        if category_range is None:
+            if len(normalized_data_ranges) < 2:
+                raise ValueError(
+                    "create_chart data_range list requires at least two ranges when "
+                    "category_range is omitted."
+                )
+            category_range = normalized_data_ranges[0]
+            value_ranges = normalized_data_ranges[1:]
+        else:
+            value_ranges = normalized_data_ranges
+        first_series_range = value_ranges[0]
+        chart.SetSourceData(_resolve_chart_range_api(sheet, first_series_range))
+        series_collection = _resolve_chart_series_collection(chart)
+        first_series = _get_com_collection_item(series_collection, 1)
+        cast(
+            XlwingsChartSeriesProtocol, first_series
+        ).Values = _resolve_chart_range_api(sheet, first_series_range)
+        for series_range in value_ranges[1:]:
+            series = series_collection.NewSeries()
+            series.Values = _resolve_chart_range_api(sheet, series_range)
+    _apply_chart_category_range(sheet, chart, category_range)
     if op.series_from_rows is not None:
         plot_by = 1 if op.series_from_rows else 2
         chart.PlotBy = plot_by
     _apply_titles_from_data_flag(chart, op.titles_from_data)
+    _apply_chart_text_overrides(chart, op)
     if op.chart_name is not None:
         chart_object.Name = op.chart_name
 
     chart_label = op.chart_name or str(getattr(chart_object, "Name", "Chart"))
-    chart_summary = f"type={op.chart_type};data={op.data_range};anchor={op.anchor_cell};name={chart_label}"
+    if isinstance(op.data_range, list):
+        data_summary = ",".join(op.data_range)
+    else:
+        data_summary = op.data_range
+    chart_summary = f"type={op.chart_type};data={data_summary};anchor={op.anchor_cell};name={chart_label}"
     return PatchDiffItem(
         op_index=index,
         op=op.op,
@@ -3934,9 +4085,49 @@ def _apply_xlwings_create_chart(
     )
 
 
+def _resolve_xlwings_list_objects(sheet_api: XlwingsSheetApiProtocol) -> object:
+    """Resolve ListObjects COM collection for both property and callable forms."""
+    accessor = getattr(sheet_api, "ListObjects", None)
+    if accessor is None:
+        raise ValueError("apply_table_style requires sheet ListObjects COM API.")
+    if _looks_like_xlwings_list_objects_collection(accessor):
+        return cast(object, accessor)
+    if callable(accessor):
+        callable_accessor = cast(Callable[..., object], accessor)
+        try:
+            resolved = callable_accessor()
+        except Exception as exc:
+            raise ValueError(
+                "apply_table_style failed to access sheet ListObjects COM collection."
+            ) from exc
+        if _looks_like_xlwings_list_objects_collection(resolved):
+            return resolved
+        raise ValueError("apply_table_style requires sheet ListObjects COM API.")
+    raise ValueError("apply_table_style requires sheet ListObjects COM API.")
+
+
+def _looks_like_xlwings_list_objects_collection(candidate: object) -> bool:
+    """Return True when object looks like Excel ListObjects collection."""
+    for attr_name in ("Add", "Count"):
+        try:
+            getattr(candidate, attr_name)
+        except Exception:
+            return False
+    return True
+
+
 def _resolve_chart_type_id(chart_type: str) -> int | None:
     """Map chart type name to Excel COM chart type id."""
     return resolve_chart_type_id(chart_type)
+
+
+def _normalize_chart_data_ranges(data_range: str | list[str]) -> list[str]:
+    """Normalize create_chart data_range into a non-empty list."""
+    if isinstance(data_range, str):
+        return [_normalize_chart_range_reference(data_range)]
+    if not data_range:
+        raise ValueError("create_chart data_range list must not be empty.")
+    return [_normalize_chart_range_reference(item) for item in data_range]
 
 
 def _resolve_chart_anchor(
@@ -3955,6 +4146,16 @@ def _resolve_chart_objects(
     if not callable(chart_objects):
         raise ValueError("create_chart requires sheet ChartObjects COM API.")
     return cast(Callable[[], XlwingsChartObjectsCollectionProtocol], chart_objects)
+
+
+def _resolve_chart_series_collection(
+    chart: object,
+) -> XlwingsChartSeriesCollectionProtocol:
+    """Return series collection for a chart COM object."""
+    series_collection = getattr(chart, "SeriesCollection", None)
+    if not callable(series_collection):
+        raise ValueError("create_chart requires chart SeriesCollection COM API.")
+    return cast(XlwingsChartSeriesCollectionProtocol, series_collection())
 
 
 def _existing_chart_names(
@@ -3989,17 +4190,15 @@ def _apply_chart_category_range(
     """Apply category range to all chart series when provided."""
     if category_range is None:
         return
-    series_collection = getattr(chart, "SeriesCollection", None)
-    if not callable(series_collection):
-        return
-    series_accessor = series_collection()
+    series_accessor = _resolve_chart_series_collection(chart)
     series_count = int(getattr(series_accessor, "Count", 0))
+    category_range_api = _resolve_chart_range_api(sheet, category_range)
     for series_idx in range(1, series_count + 1):
         series_item = cast(
             XlwingsChartSeriesProtocol,
             _get_com_collection_item(series_accessor, series_idx),
         )
-        series_item.XValues = sheet.range(category_range).api
+        series_item.XValues = category_range_api
 
 
 def _apply_titles_from_data_flag(chart: object, titles_from_data: bool | None) -> None:
@@ -4017,6 +4216,306 @@ def _apply_titles_from_data_flag(chart: object, titles_from_data: bool | None) -
             _get_com_collection_item(series_accessor, series_idx),
         )
         series_item.Name = f"Series {series_idx}"
+
+
+def _apply_chart_text_overrides(chart: object, op: PatchOp) -> None:
+    """Apply explicit chart and axis title overrides.
+
+    Args:
+        chart: Target chart COM object.
+        op: Patch operation that may include explicit title fields.
+
+    Returns:
+        None.
+    """
+    _set_chart_title(chart, op.chart_title)
+    _set_chart_axis_title(chart, axis_type=1, text=op.x_axis_title)
+    _set_chart_axis_title(chart, axis_type=2, text=op.y_axis_title)
+
+
+def _set_chart_title(chart: object, title: str | None) -> None:
+    """Set chart title text when provided.
+
+    Args:
+        chart: Target chart COM object.
+        title: Title text. No-op when ``None``.
+
+    Returns:
+        None.
+    """
+    if title is None:
+        return
+    chart_any = cast(Any, chart)
+    chart_any.HasTitle = True
+    chart_title = getattr(chart_any, "ChartTitle", None)
+    if chart_title is None:
+        return
+    cast(Any, chart_title).Text = title
+
+
+def _set_chart_axis_title(chart: object, *, axis_type: int, text: str | None) -> None:
+    """Set chart axis title text when provided.
+
+    Args:
+        chart: Target chart COM object.
+        axis_type: Excel axis type ID (for example ``1`` for X, ``2`` for Y).
+        text: Axis title text. No-op when ``None``.
+
+    Returns:
+        None.
+    """
+    if text is None:
+        return
+    axes_accessor = getattr(chart, "Axes", None)
+    if not callable(axes_accessor):
+        return
+    try:
+        axis = axes_accessor(axis_type)
+    except Exception:
+        return
+    axis_any = cast(Any, axis)
+    axis_any.HasTitle = True
+    axis_title = getattr(axis, "AxisTitle", None)
+    if axis_title is None:
+        return
+    cast(Any, axis_title).Text = text
+
+
+def _resolve_chart_range_api(sheet: XlwingsSheetProtocol, range_ref: str) -> object:
+    """Resolve chart source/category range API with optional sheet qualifier."""
+    target_sheet_name, target_range = _split_chart_range_reference(range_ref)
+    target_sheet = (
+        _resolve_sheet_by_name_for_chart_range(sheet, target_sheet_name)
+        if target_sheet_name is not None
+        else sheet
+    )
+    return target_sheet.range(target_range).api
+
+
+def _split_chart_range_reference(range_ref: str) -> tuple[str | None, str]:
+    """Split chart range into optional sheet name and local range."""
+    normalized = _normalize_chart_range_reference(range_ref)
+    match = _SHEET_QUALIFIED_A1_RANGE_PATTERN.match(normalized)
+    if match is None:
+        raise ValueError(f"Invalid chart range reference: {range_ref}")
+    sheet_prefix = match.group("sheet")
+    start = match.group("start").upper()
+    end = match.group("end").upper()
+    local_range = f"{start}:{end}"
+    if sheet_prefix is None:
+        return None, local_range
+    sheet_token = sheet_prefix[:-1]
+    if sheet_token.startswith("'") and sheet_token.endswith("'"):
+        return sheet_token[1:-1].replace("''", "'"), local_range
+    return sheet_token, local_range
+
+
+def _resolve_sheet_by_name_for_chart_range(
+    current_sheet: XlwingsSheetProtocol, sheet_name: str
+) -> XlwingsSheetProtocol:
+    """Resolve target sheet by name for sheet-qualified chart ranges."""
+    workbook = getattr(current_sheet, "book", None)
+    if workbook is None:
+        raise ValueError("create_chart requires sheet.book for sheet-qualified ranges.")
+    sheets = getattr(workbook, "sheets", None)
+    if sheets is None:
+        raise ValueError(
+            "create_chart requires workbook.sheets for sheet-qualified ranges."
+        )
+    try:
+        return cast(XlwingsSheetProtocol, sheets[sheet_name])
+    except Exception:
+        try:
+            for candidate in cast(list[XlwingsSheetProtocol], list(sheets)):
+                if candidate.name == sheet_name:
+                    return candidate
+        except Exception:
+            pass
+    raise ValueError(f"create_chart sheet not found for range reference: {sheet_name}")
+
+
+def _existing_xlwings_table_ranges(list_objects: object) -> list[tuple[str, str]]:
+    """Collect existing COM table names and ranges."""
+    table_count = int(getattr(list_objects, "Count", 0))
+    pairs: list[tuple[str, str]] = []
+    for table_index in range(1, table_count + 1):
+        table = _get_com_collection_item(list_objects, table_index)
+        table_name = str(getattr(table, "Name", f"Table{table_index}"))
+        table_range = getattr(table, "Range", None)
+        raw_address = _resolve_com_range_address(table_range)
+        normalized = _normalize_table_range_address(raw_address)
+        pairs.append((table_name, normalized))
+    return pairs
+
+
+def _resolve_com_range_address(range_api: object | None) -> str:
+    """Resolve COM range address with fallback signatures."""
+    if range_api is None:
+        return ""
+    address_method = getattr(range_api, "Address", None)
+    if callable(address_method):
+        address_callable = cast(Callable[..., object], address_method)
+        for args in ((False, False, 1, False), (False, False), ()):
+            try:
+                resolved = str(address_callable(*args))
+            except Exception:
+                continue
+            if resolved:
+                return resolved
+    address_value = getattr(range_api, "Address", "")
+    if callable(address_value):
+        try:
+            return str(cast(Callable[[], object], address_value)())
+        except Exception:
+            return ""
+    return str(address_value)
+
+
+def _normalize_table_range_address(raw_address: str) -> str:
+    """Normalize COM table range address for overlap checks."""
+    normalized = raw_address.strip()
+    if normalized.startswith("="):
+        normalized = normalized[1:]
+    normalized = normalized.replace("$", "")
+    if "!" in normalized:
+        normalized = normalized.rsplit("!", maxsplit=1)[1]
+    normalized = normalized.strip().strip("'")
+    range_match = _SHEET_QUALIFIED_A1_RANGE_PATTERN.match(normalized)
+    if range_match is not None:
+        start = range_match.group("start").upper()
+        end = range_match.group("end").upper()
+        return f"{start}:{end}"
+    single_ref = normalized.upper()
+    if _A1_PATTERN.match(single_ref):
+        return single_ref
+    return normalized
+
+
+def _ensure_xlwings_table_range_not_intersects_existing_tables(
+    list_objects: object, target_range: str
+) -> None:
+    """Raise when target range intersects with an existing COM table range."""
+    for table_name, existing_range in _existing_xlwings_table_ranges(list_objects):
+        if not existing_range:
+            continue
+        if _ranges_overlap(target_range, existing_range):
+            raise ValueError(
+                "apply_table_style range intersects existing table "
+                f"'{table_name}' ({existing_range})."
+            )
+
+
+def _ensure_xlwings_table_name_available(list_objects: object, table_name: str) -> None:
+    """Raise when table name already exists in COM tables."""
+    existing_names = {name for name, _ in _existing_xlwings_table_ranges(list_objects)}
+    if table_name in existing_names:
+        raise ValueError(f"Table name already exists: {table_name}")
+
+
+def _next_xlwings_table_name(list_objects: object) -> str:
+    """Generate next available table name for COM tables."""
+    existing_names = {name for name, _ in _existing_xlwings_table_ranges(list_objects)}
+    for index in range(1, 10_000):
+        candidate = f"Table{index}"
+        if candidate not in existing_names:
+            return candidate
+    raise RuntimeError("Failed to generate unique table name.")
+
+
+def _xlwings_add_list_object(list_objects: object, source_range_api: object) -> object:
+    """Create COM ListObject with a robust Add-call fallback sequence."""
+    add_method = getattr(list_objects, "Add", None)
+    if not callable(add_method):
+        raise ValueError("apply_table_style requires ListObjects.Add COM API.")
+    add_callable = cast(Callable[..., object], add_method)
+    errors: list[str] = []
+    for source in _xlwings_list_object_add_sources(source_range_api):
+        for attempt in _xlwings_list_object_add_attempts(source):
+            try:
+                return add_callable(*attempt.args, **attempt.call_kwargs)
+            except Exception as exc:
+                source_label = _describe_list_object_source(source)
+                errors.append(f"{attempt.signature} [{source_label}] -> {exc!r}")
+    tail = " | ".join(errors[-4:])
+    raise ValueError(
+        "apply_table_style failed to add table after COM Add signature retries. "
+        f"{tail}"
+    )
+
+
+def _xlwings_list_object_add_sources(source_range_api: object) -> list[object]:
+    """Build ListObjects.Add source variants for COM compatibility."""
+    sources: list[object] = [source_range_api]
+    address = _normalize_table_range_address(
+        _resolve_com_range_address(source_range_api)
+    )
+    if address and all(
+        not isinstance(item, str) or item != address for item in sources
+    ):
+        sources.append(address)
+    return sources
+
+
+def _xlwings_list_object_add_attempts(
+    source: object,
+) -> tuple[ListObjectAddAttempt, ...]:
+    """Return Add call signatures tried for a given COM source."""
+    return (
+        ListObjectAddAttempt(args=(1, source), signature="Add(1, Source)"),
+        ListObjectAddAttempt(
+            args=(1, source, None, 1),
+            signature="Add(1, Source, None, 1)",
+        ),
+        ListObjectAddAttempt(
+            args=(1, source, None, 1, None),
+            signature="Add(1, Source, None, 1, None)",
+        ),
+        ListObjectAddAttempt(
+            args=(1, source, None, 1, None, None),
+            signature="Add(1, Source, None, 1, None, None)",
+        ),
+        ListObjectAddAttempt(
+            args=(),
+            call_kwargs={"SourceType": 1, "Source": source},
+            signature="Add(SourceType=1, Source=...)",
+        ),
+        ListObjectAddAttempt(
+            args=(),
+            call_kwargs={
+                "SourceType": 1,
+                "Source": source,
+                "XlListObjectHasHeaders": 1,
+            },
+            signature="Add(SourceType=1, Source=..., XlListObjectHasHeaders=1)",
+        ),
+    )
+
+
+def _describe_list_object_source(source: object) -> str:
+    """Return short source label for ListObjects.Add diagnostics."""
+    if isinstance(source, str):
+        return f"address:{source}"
+    return "range_api"
+
+
+def _apply_xlwings_table_style(table: object, style_name: str) -> None:
+    """Apply table style using compatible COM attributes."""
+    table_any = cast(Any, table)
+    style_errors: list[Exception] = []
+    for attr_name in ("TableStyle", "TableStyle2"):
+        if not hasattr(table_any, attr_name):
+            continue
+        try:
+            setattr(table_any, attr_name, style_name)
+            return
+        except Exception as exc:
+            style_errors.append(exc)
+    if style_errors:
+        raise ValueError(
+            f"apply_table_style invalid table style: {style_name!r}. "
+            f"({style_errors[-1]!r})"
+        )
+    raise ValueError("apply_table_style requires ListObject table style COM API.")
 
 
 def _get_com_collection_item(collection: object, index: int) -> object:
@@ -4241,16 +4740,23 @@ class PatchOpError(ValueError):
     @classmethod
     def from_op(cls, index: int, op: PatchOp, exc: Exception) -> PatchOpError:
         """Build a PatchOpError from an op and exception."""
-        hint, expected_fields, example_op = _build_patch_error_guidance(op, str(exc))
+        message = str(exc)
+        hint, expected_fields, example_op = _build_patch_error_guidance(op, message)
+        error_code, failed_field, raw_com_message = _classify_patch_error(
+            op, message, exc
+        )
         detail = PatchErrorDetail(
             op_index=index,
             op=op.op,
             sheet=op.sheet,
             cell=op.cell,
-            message=str(exc),
+            message=message,
             hint=hint,
             expected_fields=expected_fields,
             example_op=example_op,
+            error_code=error_code,
+            failed_field=failed_field,
+            raw_com_message=raw_com_message,
         )
         return cls(detail)
 
@@ -4259,6 +4765,7 @@ def _build_patch_error_guidance(
     op: PatchOp, message: str
 ) -> tuple[str | None, list[str], str | None]:
     """Build structured guidance for common operation mistakes."""
+    lowered_message = message.lower()
     if op.op == "set_fill_color" and (
         "does not accept color" in message or "requires fill_color" in message
     ):
@@ -4299,4 +4806,110 @@ def _build_patch_error_guidance(
                 '"bold":true,"fill_color":"#D9E1F2","horizontal_align":"center"}'
             ),
         )
+    if op.op == "create_chart" and "Invalid chart range reference" in message:
+        return (
+            "create_chart の data_range/category_range は A1 範囲または "
+            "'Sheet Name'!A1:B10 形式で指定してください。",
+            ["op", "sheet", "chart_type", "data_range", "anchor_cell"],
+            (
+                '{"op":"create_chart","sheet":"Sheet1","chart_type":"line",'
+                '"data_range":["Sheet1!B2:B13","Sheet1!C2:C13"],"anchor_cell":"F2"}'
+            ),
+        )
+    if op.op == "create_chart" and "sheet not found" in message.lower():
+        return (
+            "指定したシート名が存在しません。シート名の大文字小文字・スペース・"
+            "引用符（'Sheet Name'）を確認してください。",
+            ["data_range/category_range"],
+            (
+                '{"op":"create_chart","sheet":"Sheet1","chart_type":"line",'
+                '"data_range":"\'Sales 2026\'!B2:C13","anchor_cell":"F2"}'
+            ),
+        )
+    if op.op == "apply_table_style" and "invalid table style" in lowered_message:
+        return (
+            "style には Excel の有効なテーブルスタイル名を指定してください。"
+            " 例: TableStyleMedium2 / TableStyleLight9。",
+            ["op", "sheet", "range", "style"],
+            (
+                '{"op":"apply_table_style","sheet":"Sheet1",'
+                '"range":"A1:D11","style":"TableStyleMedium2"}'
+            ),
+        )
+    if op.op == "apply_table_style" and "failed to add table" in lowered_message:
+        return (
+            "range にはヘッダー行を含む連続した A1 範囲を指定してください。"
+            " 既存テーブルとの重複や無効な参照があると失敗します。",
+            ["op", "sheet", "range", "style"],
+            (
+                '{"op":"apply_table_style","sheet":"Sheet1",'
+                '"range":"A1:D11","style":"TableStyleMedium2"}'
+            ),
+        )
     return None, [], None
+
+
+def _classify_patch_error(
+    op: PatchOp, message: str, exc: Exception
+) -> tuple[str, str | None, str | None]:
+    """Classify operation error into a structured code and likely field."""
+    lowered = message.lower()
+    raw_com_message = _extract_raw_com_message(exc)
+    classified = _classify_known_patch_error(lowered)
+    if classified is not None:
+        error_code, failed_field = classified
+        return error_code, failed_field, raw_com_message
+    if raw_com_message is not None:
+        return "com_runtime_error", None, raw_com_message
+    return "operation_failed", None, raw_com_message
+
+
+def _classify_known_patch_error(
+    lowered_message: str,
+) -> tuple[str, str | None] | None:
+    """Classify non-COM patch errors using deterministic string patterns."""
+    if "invalid chart range reference" in lowered_message:
+        detected_field = (
+            "category_range" if "category" in lowered_message else "data_range"
+        )
+        return "invalid_range", detected_field
+    if "sheet not found" in lowered_message:
+        if "category_range" in lowered_message or "category range" in lowered_message:
+            return "sheet_not_found", "category_range"
+        if "data_range" in lowered_message or "data range" in lowered_message:
+            return "sheet_not_found", "data_range"
+        return "sheet_not_found", None
+    matchers: tuple[tuple[str, str, str | None], ...] = (
+        ("chart_type must be one of", "chart_type_invalid", "chart_type"),
+        ("chart_name already exists", "chart_name_conflict", "chart_name"),
+        ("table name already exists", "table_name_conflict", "table_name"),
+        ("intersects existing table", "table_range_intersection", "range"),
+        ("invalid table style", "table_style_invalid", "style"),
+        ("failed to add table", "list_object_add_failed", "range"),
+        ("requires listobjects.add com api", "com_api_missing", "range"),
+        (
+            "failed to access sheet listobjects com collection",
+            "com_api_missing",
+            "range",
+        ),
+        ("requires listobject table style com api", "com_api_missing", "style"),
+        ("requires range and style", "invalid_parameter", "range/style"),
+        ("requires chart_type", "invalid_parameter", "chart_type"),
+        ("requires data_range", "invalid_parameter", "data_range"),
+        ("requires anchor_cell", "invalid_parameter", "anchor_cell"),
+    )
+    for needle, error_code, failed_field in matchers:
+        if needle in lowered_message:
+            return error_code, failed_field
+    return None
+
+
+def _extract_raw_com_message(exc: Exception) -> str | None:
+    """Extract raw COM exception text when applicable."""
+    class_name = exc.__class__.__name__.lower()
+    message = str(exc)
+    if "com_error" in class_name:
+        return message
+    if "hresult" in message.lower() or "-2147" in message:
+        return message
+    return None

@@ -29,6 +29,10 @@ from .types import (
 
 _A1_PATTERN = re.compile(r"^[A-Za-z]{1,3}[1-9][0-9]*$")
 _A1_RANGE_PATTERN = re.compile(r"^[A-Za-z]{1,3}[1-9][0-9]*:[A-Za-z]{1,3}[1-9][0-9]*$")
+_SHEET_QUALIFIED_A1_RANGE_PATTERN = re.compile(
+    r"^(?P<sheet>(?:'(?:(?:[^']|'')+)'|[^!]+)!)?"
+    r"(?P<start>[A-Za-z]{1,3}[1-9][0-9]*):(?P<end>[A-Za-z]{1,3}[1-9][0-9]*)$"
+)
 _HEX_COLOR_PATTERN = re.compile(r"^#?(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$")
 _COLUMN_LABEL_PATTERN = re.compile(r"^[A-Za-z]{1,3}$")
 _MAX_STYLE_TARGET_CELLS = 10_000
@@ -511,9 +515,12 @@ class PatchOp(BaseModel):
             "doughnut, scatter, radar."
         ),
     )
-    data_range: str | None = Field(
+    data_range: str | list[str] | None = Field(
         default=None,
-        description="Data range in A1 notation for create_chart.",
+        description=(
+            "Data range in A1 notation for create_chart. "
+            "Accepts a single range or a list of ranges."
+        ),
     )
     category_range: str | None = Field(
         default=None,
@@ -542,6 +549,18 @@ class PatchOp(BaseModel):
     series_from_rows: bool | None = Field(
         default=None,
         description="Whether chart series are oriented by rows for create_chart.",
+    )
+    chart_title: str | None = Field(
+        default=None,
+        description="Optional chart title text for create_chart.",
+    )
+    x_axis_title: str | None = Field(
+        default=None,
+        description="Optional X-axis title text for create_chart.",
+    )
+    y_axis_title: str | None = Field(
+        default=None,
+        description="Optional Y-axis title text for create_chart.",
     )
 
     @field_validator("sheet")
@@ -582,16 +601,28 @@ class PatchOp(BaseModel):
         start, end = candidate.split(":", maxsplit=1)
         return f"{start.upper()}:{end.upper()}"
 
-    @field_validator("data_range", "category_range")
+    @field_validator("data_range")
     @classmethod
-    def _validate_chart_range(cls, value: str | None) -> str | None:
+    def _validate_data_range(
+        cls, value: str | list[str] | None
+    ) -> str | list[str] | None:
         if value is None:
             return None
-        candidate = value.strip()
-        if not _A1_RANGE_PATTERN.match(candidate):
-            raise ValueError(f"Invalid chart range reference: {value}")
-        start, end = candidate.split(":", maxsplit=1)
-        return f"{start.upper()}:{end.upper()}"
+        if isinstance(value, str):
+            return _normalize_chart_range_reference(value)
+        if not value:
+            raise ValueError("data_range list must not be empty.")
+        normalized: list[str] = []
+        for item in value:
+            normalized.append(_normalize_chart_range_reference(item))
+        return normalized
+
+    @field_validator("category_range")
+    @classmethod
+    def _validate_category_range(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return _normalize_chart_range_reference(value)
 
     @field_validator("anchor_cell")
     @classmethod
@@ -653,7 +684,14 @@ class PatchOp(BaseModel):
             normalized.append(_normalize_column_identifier(column))
         return normalized
 
-    @field_validator("style", "table_name", "chart_name")
+    @field_validator(
+        "style",
+        "table_name",
+        "chart_name",
+        "chart_title",
+        "x_axis_title",
+        "y_axis_title",
+    )
     @classmethod
     def _validate_non_empty_optional_text(cls, value: str | None) -> str | None:
         if value is None:
@@ -661,7 +699,8 @@ class PatchOp(BaseModel):
         candidate = value.strip()
         if not candidate:
             raise ValueError(
-                "style/table_name/chart_name must not be empty when provided."
+                "style/table_name/chart_name/chart_title/x_axis_title/y_axis_title "
+                "must not be empty when provided."
             )
         return candidate
 
@@ -1271,6 +1310,9 @@ def _validate_no_legacy_edit_fields(
         _reject_optional_field(op_name, "height", op.height)
         _reject_optional_field(op_name, "titles_from_data", op.titles_from_data)
         _reject_optional_field(op_name, "series_from_rows", op.series_from_rows)
+        _reject_optional_field(op_name, "chart_title", op.chart_title)
+        _reject_optional_field(op_name, "x_axis_title", op.x_axis_title)
+        _reject_optional_field(op_name, "y_axis_title", op.y_axis_title)
 
 
 def _validate_no_design_fields(op: PatchOp, *, op_name: str) -> None:
@@ -1300,6 +1342,9 @@ def _validate_no_design_fields(op: PatchOp, *, op_name: str) -> None:
     _reject_optional_field(op_name, "height", op.height)
     _reject_optional_field(op_name, "titles_from_data", op.titles_from_data)
     _reject_optional_field(op_name, "series_from_rows", op.series_from_rows)
+    _reject_optional_field(op_name, "chart_title", op.chart_title)
+    _reject_optional_field(op_name, "x_axis_title", op.x_axis_title)
+    _reject_optional_field(op_name, "y_axis_title", op.y_axis_title)
 
 
 def _reject_optional_field(op_name: str, field_name: str, value: object) -> None:
@@ -1401,6 +1446,9 @@ class PatchErrorDetail(BaseModel):
     hint: str | None = None
     expected_fields: list[str] = Field(default_factory=list)
     example_op: str | None = None
+    error_code: str | None = None
+    failed_field: str | None = None
+    raw_com_message: str | None = None
 
 
 class FormulaIssue(BaseModel):
@@ -1519,6 +1567,18 @@ class PatchResult(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     error: PatchErrorDetail | None = None
     engine: PatchEngine
+
+
+def _normalize_chart_range_reference(value: str) -> str:
+    """Normalize chart range reference with optional sheet qualifier."""
+    candidate = value.strip()
+    match = _SHEET_QUALIFIED_A1_RANGE_PATTERN.match(candidate)
+    if match is None:
+        raise ValueError(f"Invalid chart range reference: {value}")
+    sheet_prefix = match.group("sheet") or ""
+    start = match.group("start").upper()
+    end = match.group("end").upper()
+    return f"{sheet_prefix}{start}:{end}"
 
 
 def _normalize_hex_input(value: str, *, field_name: str) -> str:

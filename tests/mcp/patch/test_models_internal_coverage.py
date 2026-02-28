@@ -278,15 +278,17 @@ def test_internal_xlwings_helpers_error_and_success_paths() -> None:
         )
 
     with pytest.raises(
-        ValueError, match="apply_table_style is supported only on openpyxl backend"
+        ValueError, match="apply_table_style requires sheet ListObjects COM API"
     ):
         internal._apply_xlwings_apply_table_style(
+            cast(internal.XlwingsSheetProtocol, known_sheet),
             internal.PatchOp(
                 op="apply_table_style",
                 sheet="Sheet1",
                 range="A1:B2",
                 style="TableStyleMedium2",
-            )
+            ),
+            index=3,
         )
 
     cell = known_sheet.range("A1")
@@ -327,6 +329,159 @@ def test_internal_auto_fit_column_resolution_defaults() -> None:
     assert internal._resolve_auto_fit_columns_xlwings(
         cast(internal.XlwingsSheetProtocol, _SheetWithUsedRange()), None
     ) == ["A", "B", "C"]
+
+
+def test_internal_xlwings_add_list_object_retries_with_headers_keyword() -> None:
+    class _ListObjects:
+        def __init__(self) -> None:
+            self.calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
+
+        def Add(self, *args: object, **kwargs: object) -> object:  # noqa: N802
+            self.calls.append((args, kwargs))
+            if kwargs.get("XlListObjectHasHeaders") == 1:
+                return {"status": "ok"}
+            raise RuntimeError("header mode required")
+
+    list_objects = _ListObjects()
+    source_range_api = MagicMock()
+    source_range_api.Address.return_value = "$A$1:$B$3"
+
+    created = internal._xlwings_add_list_object(
+        list_objects=list_objects,
+        source_range_api=source_range_api,
+    )
+
+    assert created == {"status": "ok"}
+    assert any("XlListObjectHasHeaders" in kwargs for _, kwargs in list_objects.calls)
+
+
+def test_internal_resolve_xlwings_list_objects_uses_collection_like_accessor() -> None:
+    class _ListObjectsAccessor:
+        Count = 0
+
+        @staticmethod
+        def Add(*args: object, **kwargs: object) -> object:  # noqa: N802
+            return {"status": "unused"}
+
+        def __call__(self) -> object:
+            raise RuntimeError("must not call accessor when collection-like")
+
+    class _SheetApi:
+        ListObjects = _ListObjectsAccessor()
+
+    resolved = internal._resolve_xlwings_list_objects(
+        cast(internal.XlwingsSheetApiProtocol, _SheetApi())
+    )
+    assert resolved is _SheetApi.ListObjects
+
+
+def test_internal_resolve_xlwings_list_objects_rejects_non_collection_callable_result() -> (
+    None
+):
+    class _SheetApi:
+        def ListObjects(self) -> object:  # noqa: N802
+            return object()
+
+    with pytest.raises(
+        ValueError, match="apply_table_style requires sheet ListObjects COM API"
+    ):
+        internal._resolve_xlwings_list_objects(
+            cast(internal.XlwingsSheetApiProtocol, _SheetApi())
+        )
+
+
+def test_internal_apply_table_style_accepts_property_list_objects() -> None:
+    class _FakeTable:
+        Name = ""
+        TableStyle = ""
+
+    class _FakeListObjects:
+        Count = 0
+
+        def __init__(self) -> None:
+            self.add_calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
+            self.created_table: _FakeTable | None = None
+
+        def Add(self, *args: object, **kwargs: object) -> object:  # noqa: N802
+            self.add_calls.append((args, kwargs))
+            table = _FakeTable()
+            self.created_table = table
+            return table
+
+    class _FakeRangeApi:
+        @staticmethod
+        def Address(*args: object) -> str:  # noqa: ARG004
+            return "$A$1:$B$3"
+
+    class _FakeRange:
+        api = _FakeRangeApi()
+
+    class _FakeSheetApi:
+        ListObjects = _FakeListObjects()
+
+    class _FakeSheet:
+        name = "Sheet1"
+        api = _FakeSheetApi()
+
+        def range(self, ref: str) -> _FakeRange:
+            assert ref == "A1:B3"
+            return _FakeRange()
+
+    diff = internal._apply_xlwings_apply_table_style(
+        cast(internal.XlwingsSheetProtocol, _FakeSheet()),
+        internal.PatchOp(
+            op="apply_table_style",
+            sheet="Sheet1",
+            range="A1:B3",
+            style="TableStyleMedium2",
+        ),
+        index=0,
+    )
+
+    assert diff.after is not None
+    assert diff.after.value == "table=Table1;table_style=TableStyleMedium2"
+    assert _FakeSheetApi.ListObjects.add_calls
+    assert _FakeSheetApi.ListObjects.created_table is not None
+    assert _FakeSheetApi.ListObjects.created_table.Name == "Table1"
+    assert _FakeSheetApi.ListObjects.created_table.TableStyle == "TableStyleMedium2"
+
+
+def test_internal_xlwings_add_list_object_falls_back_to_address_source() -> None:
+    class _ListObjects:
+        def __init__(self) -> None:
+            self.calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
+
+        def Add(self, *args: object, **kwargs: object) -> object:  # noqa: N802
+            self.calls.append((args, kwargs))
+            source = kwargs.get("Source")
+            if source is None and len(args) >= 2:
+                source = args[1]
+            if isinstance(source, str):
+                return {"status": "address-ok"}
+            raise RuntimeError("source must be A1 string")
+
+    list_objects = _ListObjects()
+    source_range_api = MagicMock()
+    source_range_api.Address.return_value = "$C$2:$E$9"
+
+    created = internal._xlwings_add_list_object(
+        list_objects=list_objects,
+        source_range_api=source_range_api,
+    )
+
+    assert created == {"status": "address-ok"}
+    assert any(
+        isinstance(kwargs.get("Source"), str)
+        or (len(args) >= 2 and isinstance(args[1], str))
+        for args, kwargs in list_objects.calls
+    )
+
+
+def test_internal_normalize_table_range_address_handles_external_notation() -> None:
+    normalized = internal._normalize_table_range_address(
+        "='[Book1.xlsx]Sales Data'!$B$2:$D$11"
+    )
+    assert normalized == "B2:D11"
 
 
 def test_internal_create_chart_honors_titles_from_data_false() -> None:
@@ -482,3 +637,155 @@ def test_internal_resolve_chart_type_id_supports_aliases() -> None:
     assert internal._resolve_chart_type_id("bar_clustered") == 57
     assert internal._resolve_chart_type_id("xy_scatter") == -4169
     assert internal._resolve_chart_type_id("donut") == -4120
+
+
+def test_internal_create_chart_supports_multi_ranges_and_sheet_qualified_refs() -> None:
+    first_series = MagicMock()
+
+    class _SeriesCollection:
+        def __init__(self) -> None:
+            self._items: list[MagicMock] = [first_series]
+            self.Count = 1
+
+        def Item(self, index: int) -> MagicMock:  # noqa: N802
+            return self._items[index - 1]
+
+        def NewSeries(self) -> MagicMock:  # noqa: N802
+            item = MagicMock()
+            self._items.append(item)
+            self.Count = len(self._items)
+            return item
+
+    series_collection = _SeriesCollection()
+    chart = MagicMock()
+    chart.SeriesCollection = MagicMock(return_value=series_collection)
+    chart.ChartTitle = MagicMock()
+    axis_x = MagicMock()
+    axis_x.AxisTitle = MagicMock()
+    axis_y = MagicMock()
+    axis_y.AxisTitle = MagicMock()
+    chart.Axes = MagicMock(
+        side_effect=lambda axis_type: {1: axis_x, 2: axis_y}[axis_type]
+    )
+    chart_object = MagicMock()
+    chart_object.Chart = chart
+    chart_object.Name = "Chart 1"
+
+    chart_collection = MagicMock()
+    chart_collection.Count = 0
+    chart_collection.Add.return_value = chart_object
+    chart_objects = MagicMock(side_effect=lambda index=None: chart_collection)
+
+    anchor_range = MagicMock()
+    anchor_range.api = MagicMock(Left=30.0, Top=40.0)
+    chart_sheet = MagicMock()
+    chart_sheet.api = MagicMock(ChartObjects=chart_objects)
+    chart_sheet.range.side_effect = lambda ref: {"E2": anchor_range}[ref]
+
+    range_b = MagicMock()
+    range_b.api = "B_API"
+    range_c = MagicMock()
+    range_c.api = "C_API"
+    range_a = MagicMock()
+    range_a.api = "A_API"
+    data_sheet = MagicMock()
+    data_sheet.name = "Data"
+    data_sheet.range.side_effect = lambda ref: {
+        "B2:B10": range_b,
+        "C2:C10": range_c,
+        "A2:A10": range_a,
+    }[ref]
+    chart_sheet.book = MagicMock(sheets={"Data": data_sheet})
+
+    op = internal.PatchOp(
+        op="create_chart",
+        sheet="Chart",
+        chart_type="line",
+        data_range=["'Data'!B2:B10", "'Data'!C2:C10"],
+        category_range="'Data'!A2:A10",
+        anchor_cell="E2",
+        chart_title="Revenue",
+        x_axis_title="Month",
+        y_axis_title="Amount",
+    )
+
+    diff = internal._apply_xlwings_create_chart(
+        cast(internal.XlwingsSheetProtocol, chart_sheet), op, index=0
+    )
+
+    chart.SetSourceData.assert_called_once_with("B_API")
+    assert first_series.Values == "B_API"
+    assert first_series.XValues == "A_API"
+    second_series = series_collection.Item(2)
+    assert second_series.Values == "C_API"
+    assert second_series.XValues == "A_API"
+    assert axis_x.AxisTitle.Text == "Month"
+    assert axis_y.AxisTitle.Text == "Amount"
+    assert chart.ChartTitle.Text == "Revenue"
+    assert diff.after is not None
+    assert diff.after.kind == "chart"
+
+
+def test_internal_normalize_chart_data_ranges_normalizes_each_entry() -> None:
+    normalized = internal._normalize_chart_data_ranges(
+        [" Sheet1!a1:b2 ", "'Data'!c2:d4"]
+    )
+    assert normalized == ["Sheet1!A1:B2", "'Data'!C2:D4"]
+
+
+def test_internal_normalize_chart_data_ranges_rejects_blank_entry() -> None:
+    with pytest.raises(ValueError, match="Invalid chart range reference"):
+        internal._normalize_chart_data_ranges(["   "])
+
+
+def test_internal_patch_op_error_adds_error_code_and_failed_field() -> None:
+    op = internal.PatchOp(
+        op="create_chart",
+        sheet="Sheet1",
+        chart_type="line",
+        data_range="A1:B2",
+        anchor_cell="D2",
+    )
+    err = internal.PatchOpError.from_op(
+        2, op, ValueError("Invalid chart range reference: bad")
+    )
+    assert err.detail.error_code == "invalid_range"
+    assert err.detail.failed_field == "data_range"
+
+
+def test_internal_classify_sheet_not_found_uses_category_failed_field() -> None:
+    classified = internal._classify_known_patch_error(
+        "create_chart sheet not found for category range reference: missing_sheet"
+    )
+    assert classified == ("sheet_not_found", "category_range")
+
+
+def test_internal_classify_sheet_not_found_without_context_returns_none() -> None:
+    classified = internal._classify_known_patch_error(
+        "create_chart sheet not found for range reference: missing_sheet"
+    )
+    assert classified == ("sheet_not_found", None)
+
+
+def test_internal_patch_op_error_classifies_table_style_and_add_failures() -> None:
+    op = internal.PatchOp(
+        op="apply_table_style",
+        sheet="Sheet1",
+        range="A1:D10",
+        style="BadStyle",
+    )
+    style_error = internal.PatchOpError.from_op(
+        1, op, ValueError("apply_table_style invalid table style: 'BadStyle'")
+    )
+    assert style_error.detail.error_code == "table_style_invalid"
+    assert style_error.detail.failed_field == "style"
+
+    add_error = internal.PatchOpError.from_op(
+        1,
+        op,
+        ValueError(
+            "apply_table_style failed to add table after COM Add signature retries."
+        ),
+    )
+    assert add_error.detail.error_code == "list_object_add_failed"
+    assert add_error.detail.failed_field == "range"

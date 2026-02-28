@@ -181,6 +181,32 @@ def test_patch_request_backend_openpyxl_rejects_create_chart() -> None:
         )
 
 
+def test_patch_request_backend_openpyxl_rejects_mixed_chart_and_table() -> None:
+    with pytest.raises(
+        ValidationError,
+        match=r"create_chart is supported only on COM backend",
+    ):
+        PatchRequest(
+            xlsx_path=Path("book.xlsx"),
+            ops=[
+                PatchOp(
+                    op="create_chart",
+                    sheet="Sheet1",
+                    chart_type="line",
+                    data_range="A1:B3",
+                    anchor_cell="D2",
+                ),
+                PatchOp(
+                    op="apply_table_style",
+                    sheet="Sheet1",
+                    range="A1:B3",
+                    style="TableStyleMedium2",
+                ),
+            ],
+            backend="openpyxl",
+        )
+
+
 def test_run_patch_add_sheet_and_set_value(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -338,6 +364,26 @@ def test_run_patch_conflict_overwrite(
     request = PatchRequest(xlsx_path=input_path, ops=ops, on_conflict="overwrite")
     result = run_patch(request, policy=PathPolicy(root=tmp_path))
     assert result.out_path == str(default_out)
+    workbook = load_workbook(result.out_path)
+    try:
+        assert workbook["Sheet1"]["A1"].value == "new"
+    finally:
+        workbook.close()
+
+
+def test_run_patch_default_output_name_does_not_chain_patched_suffix(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _disable_com(monkeypatch)
+    input_path = tmp_path / "book_patched.xlsx"
+    _create_workbook(input_path)
+    request = PatchRequest(
+        xlsx_path=input_path,
+        ops=[PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="new")],
+    )
+    result = run_patch(request, policy=PathPolicy(root=tmp_path))
+    assert result.error is None
+    assert result.out_path == str(input_path)
     workbook = load_workbook(result.out_path)
     try:
         assert workbook["Sheet1"]["A1"].value == "new"
