@@ -1,0 +1,2670 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://harumiweb.github.io/exstruct/generated/models/">
+      
+      
+        <link rel="prev" href="../../api/">
+      
+      
+        <link rel="next" href="../../schemas/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+    
+    
+      
+        <title>Data Models (generated) - ExStruct</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#data-models" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ExStruct" class="md-header__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ExStruct
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Data Models (generated)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ExStruct" class="md-nav__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ExStruct
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Models (generated)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Models (generated)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#arrow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arrow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#baseshape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BaseShape
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cellrow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CellRow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chart
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chartseries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ChartSeries
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#colorsoptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ColorsOptions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#destinationoptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DestinationOptions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#filteroptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FilterOptions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#formatoptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FormatOptions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mergedcells" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MergedCells
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#outputoptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OutputOptions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#printarea" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PrintArea
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#printareaview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PrintAreaView
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shape
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sheetdata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SheetData
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#smartart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SmartArt
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#smartartnode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SmartArtNode
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workbookdata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WorkbookData
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JSON Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concept/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept / Why ExStruct?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.5.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.5.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.5.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.4.4/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.4.4
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.4.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.4.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.7/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.7
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.6/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.5/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.5
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.90
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.80/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.80
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.71/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.71
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.70/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.70
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.61/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.61
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.60/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.60
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Read Me
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../README.en/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (EN)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../README.ja/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (JA)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../license-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    License Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#arrow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arrow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#baseshape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BaseShape
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cellrow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CellRow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chart
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chartseries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ChartSeries
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#colorsoptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ColorsOptions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#destinationoptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DestinationOptions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#filteroptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FilterOptions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#formatoptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FormatOptions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mergedcells" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MergedCells
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#outputoptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OutputOptions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#printarea" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PrintArea
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#printareaview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PrintAreaView
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shape
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sheetdata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SheetData
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#smartart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SmartArt
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#smartartnode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SmartArtNode
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workbookdata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WorkbookData
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<!-- Auto-generated by scripts/gen_model_docs.py; do not edit by hand. -->
+<h1 id="data-models">Data Models<a class="headerlink" href="#data-models" title="Permanent link">&para;</a></h1>
+<h2 id="arrow">Arrow<a class="headerlink" href="#arrow" title="Permanent link">&para;</a></h2>
+<p>Connector shape metadata.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>begin_arrow_style</code></td>
+<td><code>int \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Arrow style enum for the start of a connector.</td>
+</tr>
+<tr>
+<td><code>begin_id</code></td>
+<td><code>int \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Shape id at the start of a connector (ConnectorFormat.BeginConnectedShape).</td>
+</tr>
+<tr>
+<td><code>direction</code></td>
+<td><code>Literal['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'] \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Connector direction (compass heading).</td>
+</tr>
+<tr>
+<td><code>end_arrow_style</code></td>
+<td><code>int \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Arrow style enum for the end of a connector.</td>
+</tr>
+<tr>
+<td><code>end_id</code></td>
+<td><code>int \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Shape id at the end of a connector (ConnectorFormat.EndConnectedShape).</td>
+</tr>
+<tr>
+<td><code>h</code></td>
+<td><code>int \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Shape height (None if unknown).</td>
+</tr>
+<tr>
+<td><code>id</code></td>
+<td><code>int \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Sequential shape id within the sheet (if applicable).</td>
+</tr>
+<tr>
+<td><code>kind</code></td>
+<td><code>Literal['arrow']</code></td>
+<td>No</td>
+<td>'arrow'</td>
+<td>Shape kind.</td>
+</tr>
+<tr>
+<td><code>l</code></td>
+<td><code>int</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Left offset (Excel units).</td>
+</tr>
+<tr>
+<td><code>rotation</code></td>
+<td><code>float \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Rotation angle in degrees.</td>
+</tr>
+<tr>
+<td><code>t</code></td>
+<td><code>int</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Top offset (Excel units).</td>
+</tr>
+<tr>
+<td><code>text</code></td>
+<td><code>str</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Visible text content of the shape.</td>
+</tr>
+<tr>
+<td><code>w</code></td>
+<td><code>int \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Shape width (None if unknown).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="baseshape">BaseShape<a class="headerlink" href="#baseshape" title="Permanent link">&para;</a></h2>
+<p>Common shape metadata (position, size, text, and styling).</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>h</code></td>
+<td><code>int \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Shape height (None if unknown).</td>
+</tr>
+<tr>
+<td><code>id</code></td>
+<td><code>int \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Sequential shape id within the sheet (if applicable).</td>
+</tr>
+<tr>
+<td><code>l</code></td>
+<td><code>int</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Left offset (Excel units).</td>
+</tr>
+<tr>
+<td><code>rotation</code></td>
+<td><code>float \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Rotation angle in degrees.</td>
+</tr>
+<tr>
+<td><code>t</code></td>
+<td><code>int</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Top offset (Excel units).</td>
+</tr>
+<tr>
+<td><code>text</code></td>
+<td><code>str</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Visible text content of the shape.</td>
+</tr>
+<tr>
+<td><code>w</code></td>
+<td><code>int \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Shape width (None if unknown).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="cellrow">CellRow<a class="headerlink" href="#cellrow" title="Permanent link">&para;</a></h2>
+<p>A single row of cells with optional hyperlinks.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>c</code></td>
+<td><code>dict[str, int \| float \| str]</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Column index (string) to cell value map.</td>
+</tr>
+<tr>
+<td><code>links</code></td>
+<td><code>dict[str, str] \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Optional hyperlinks per column index.</td>
+</tr>
+<tr>
+<td><code>r</code></td>
+<td><code>int</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Row index (1-based).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="chart">Chart<a class="headerlink" href="#chart" title="Permanent link">&para;</a></h2>
+<p>Chart metadata including series and layout.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>chart_type</code></td>
+<td><code>str</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Chart type (e.g., Column, Line).</td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td><code>str \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Extraction error detail if any.</td>
+</tr>
+<tr>
+<td><code>h</code></td>
+<td><code>int \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Chart height (None if unknown).</td>
+</tr>
+<tr>
+<td><code>l</code></td>
+<td><code>int</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Left offset (Excel units).</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td><code>str</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Chart name.</td>
+</tr>
+<tr>
+<td><code>series</code></td>
+<td><code>list[ChartSeries]</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Series included in the chart.</td>
+</tr>
+<tr>
+<td><code>t</code></td>
+<td><code>int</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Top offset (Excel units).</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td><code>str \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Chart title.</td>
+</tr>
+<tr>
+<td><code>w</code></td>
+<td><code>int \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Chart width (None if unknown).</td>
+</tr>
+<tr>
+<td><code>y_axis_range</code></td>
+<td><code>list[float]</code></td>
+<td>No</td>
+<td><factory></td>
+<td>Y-axis range [min, max] when available.</td>
+</tr>
+<tr>
+<td><code>y_axis_title</code></td>
+<td><code>str</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Y-axis title.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="chartseries">ChartSeries<a class="headerlink" href="#chartseries" title="Permanent link">&para;</a></h2>
+<p>Series metadata for a chart.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td><code>str</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Series display name.</td>
+</tr>
+<tr>
+<td><code>name_range</code></td>
+<td><code>str \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Range reference for the series name.</td>
+</tr>
+<tr>
+<td><code>x_range</code></td>
+<td><code>str \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Range reference for X axis values.</td>
+</tr>
+<tr>
+<td><code>y_range</code></td>
+<td><code>str \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Range reference for Y axis values.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="colorsoptions">ColorsOptions<a class="headerlink" href="#colorsoptions" title="Permanent link">&para;</a></h2>
+<p>Color extraction options.</p>
+<p>Examples:
+    &gt;&gt;&gt; ColorsOptions(
+    ...     include_default_background=False,
+    ...     ignore_colors=["#FFFFFF", "AD3815", "theme:1:0.2", "indexed:64", "auto"],
+    ... )</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ignore_colors</code></td>
+<td><code>list[str]</code></td>
+<td>No</td>
+<td><factory></td>
+<td>List of color keys to ignore.</td>
+</tr>
+<tr>
+<td><code>include_default_background</code></td>
+<td><code>bool</code></td>
+<td>No</td>
+<td>False</td>
+<td>Include default (white) backgrounds.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="destinationoptions">DestinationOptions<a class="headerlink" href="#destinationoptions" title="Permanent link">&para;</a></h2>
+<p>Destinations for optional side outputs.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>auto_page_breaks_dir</code></td>
+<td><code>str \| Path \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Directory to write auto page-break files.</td>
+</tr>
+<tr>
+<td><code>print_areas_dir</code></td>
+<td><code>str \| Path \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Directory to write per-print-area files.</td>
+</tr>
+<tr>
+<td><code>sheets_dir</code></td>
+<td><code>str \| Path \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Directory to write per-sheet files.</td>
+</tr>
+<tr>
+<td><code>stream</code></td>
+<td><code>TextIO \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Stream override for primary output (stdout/file).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="filteroptions">FilterOptions<a class="headerlink" href="#filteroptions" title="Permanent link">&para;</a></h2>
+<p>Include/exclude filters for output.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>include_auto_print_areas</code></td>
+<td><code>bool</code></td>
+<td>No</td>
+<td>False</td>
+<td>Include COM-computed auto page-break areas.</td>
+</tr>
+<tr>
+<td><code>include_chart_size</code></td>
+<td><code>bool \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Include chart size; None -&gt; auto (verbose=True, others=False).</td>
+</tr>
+<tr>
+<td><code>include_charts</code></td>
+<td><code>bool</code></td>
+<td>No</td>
+<td>True</td>
+<td>Include charts.</td>
+</tr>
+<tr>
+<td><code>include_merged_cells</code></td>
+<td><code>bool</code></td>
+<td>No</td>
+<td>True</td>
+<td>Include merged cell ranges.</td>
+</tr>
+<tr>
+<td><code>include_print_areas</code></td>
+<td><code>bool \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Include print areas; None -&gt; auto (light=False, others=True).</td>
+</tr>
+<tr>
+<td><code>include_rows</code></td>
+<td><code>bool</code></td>
+<td>No</td>
+<td>True</td>
+<td>Include cell rows.</td>
+</tr>
+<tr>
+<td><code>include_shape_size</code></td>
+<td><code>bool \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Include shape size; None -&gt; auto (verbose=True, others=False).</td>
+</tr>
+<tr>
+<td><code>include_shapes</code></td>
+<td><code>bool</code></td>
+<td>No</td>
+<td>True</td>
+<td>Include shapes.</td>
+</tr>
+<tr>
+<td><code>include_tables</code></td>
+<td><code>bool</code></td>
+<td>No</td>
+<td>True</td>
+<td>Include table candidate ranges.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="formatoptions">FormatOptions<a class="headerlink" href="#formatoptions" title="Permanent link">&para;</a></h2>
+<p>Formatting options for serialization.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fmt</code></td>
+<td><code>Literal['json', 'yaml', 'yml', 'toon']</code></td>
+<td>No</td>
+<td>'json'</td>
+<td>Serialization format.</td>
+</tr>
+<tr>
+<td><code>indent</code></td>
+<td><code>int \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Indent width for JSON (defaults to 2 when pretty is True).</td>
+</tr>
+<tr>
+<td><code>pretty</code></td>
+<td><code>bool</code></td>
+<td>No</td>
+<td>False</td>
+<td>Pretty-print JSON output.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="mergedcells">MergedCells<a class="headerlink" href="#mergedcells" title="Permanent link">&para;</a></h2>
+<p>Compressed merged cell ranges using schema + items.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>items</code></td>
+<td><code>list[tuple[int, int, int, int, str]]</code></td>
+<td>No</td>
+<td><factory></td>
+<td>Merged cell items as (r1, c1, r2, c2, v) tuples where rows are 1-based and columns are 0-based.</td>
+</tr>
+<tr>
+<td><code>schema_</code></td>
+<td><code>list[Literal['r1', 'c1', 'r2', 'c2', 'v']]</code></td>
+<td>No</td>
+<td><factory></td>
+<td>Ordered field names for each item.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="outputoptions">OutputOptions<a class="headerlink" href="#outputoptions" title="Permanent link">&para;</a></h2>
+<p>Output-time options for ExStructEngine.</p>
+<ul>
+<li>format: serialization format/indent.</li>
+<li>filters: include/exclude flags (rows/shapes/charts/tables/print_areas, size flags).</li>
+<li>destinations: side outputs (per-sheet, per-print-area, stream override).</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>destinations</code></td>
+<td><code>DestinationOptions</code></td>
+<td>No</td>
+<td><factory></td>
+<td>Side output destinations.</td>
+</tr>
+<tr>
+<td><code>filters</code></td>
+<td><code>FilterOptions</code></td>
+<td>No</td>
+<td><factory></td>
+<td>Include/exclude flags.</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td><code>FormatOptions</code></td>
+<td>No</td>
+<td><factory></td>
+<td>Formatting options.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="printarea">PrintArea<a class="headerlink" href="#printarea" title="Permanent link">&para;</a></h2>
+<p>Cell coordinate bounds for a print area.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>c1</code></td>
+<td><code>int</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Start column (0-based).</td>
+</tr>
+<tr>
+<td><code>c2</code></td>
+<td><code>int</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>End column (0-based, inclusive).</td>
+</tr>
+<tr>
+<td><code>r1</code></td>
+<td><code>int</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Start row (1-based).</td>
+</tr>
+<tr>
+<td><code>r2</code></td>
+<td><code>int</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>End row (1-based, inclusive).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="printareaview">PrintAreaView<a class="headerlink" href="#printareaview" title="Permanent link">&para;</a></h2>
+<p>Slice of a sheet restricted to a print area (manual or auto).</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>area</code></td>
+<td><code>PrintArea</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Print area bounds.</td>
+</tr>
+<tr>
+<td><code>book_name</code></td>
+<td><code>str</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Workbook name owning the area.</td>
+</tr>
+<tr>
+<td><code>charts</code></td>
+<td><code>list[Chart]</code></td>
+<td>No</td>
+<td><factory></td>
+<td>Charts overlapping the area.</td>
+</tr>
+<tr>
+<td><code>rows</code></td>
+<td><code>list[CellRow]</code></td>
+<td>No</td>
+<td><factory></td>
+<td>Rows within the area bounds.</td>
+</tr>
+<tr>
+<td><code>shapes</code></td>
+<td><code>list[Shape \| Arrow \| SmartArt]</code></td>
+<td>No</td>
+<td><factory></td>
+<td>Shapes overlapping the area.</td>
+</tr>
+<tr>
+<td><code>sheet_name</code></td>
+<td><code>str</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Sheet name owning the area.</td>
+</tr>
+<tr>
+<td><code>table_candidates</code></td>
+<td><code>list[str]</code></td>
+<td>No</td>
+<td><factory></td>
+<td>Table candidates intersecting the area.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="shape">Shape<a class="headerlink" href="#shape" title="Permanent link">&para;</a></h2>
+<p>Normal shape metadata.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>h</code></td>
+<td><code>int \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Shape height (None if unknown).</td>
+</tr>
+<tr>
+<td><code>id</code></td>
+<td><code>int \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Sequential shape id within the sheet (if applicable).</td>
+</tr>
+<tr>
+<td><code>kind</code></td>
+<td><code>Literal['shape']</code></td>
+<td>No</td>
+<td>'shape'</td>
+<td>Shape kind.</td>
+</tr>
+<tr>
+<td><code>l</code></td>
+<td><code>int</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Left offset (Excel units).</td>
+</tr>
+<tr>
+<td><code>rotation</code></td>
+<td><code>float \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Rotation angle in degrees.</td>
+</tr>
+<tr>
+<td><code>t</code></td>
+<td><code>int</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Top offset (Excel units).</td>
+</tr>
+<tr>
+<td><code>text</code></td>
+<td><code>str</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Visible text content of the shape.</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td><code>str \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Excel shape type name.</td>
+</tr>
+<tr>
+<td><code>w</code></td>
+<td><code>int \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Shape width (None if unknown).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="sheetdata">SheetData<a class="headerlink" href="#sheetdata" title="Permanent link">&para;</a></h2>
+<p>Structured data for a single sheet.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>auto_print_areas</code></td>
+<td><code>list[PrintArea]</code></td>
+<td>No</td>
+<td><factory></td>
+<td>COM-computed auto page-break areas.</td>
+</tr>
+<tr>
+<td><code>charts</code></td>
+<td><code>list[Chart]</code></td>
+<td>No</td>
+<td><factory></td>
+<td>Charts detected on the sheet.</td>
+</tr>
+<tr>
+<td><code>colors_map</code></td>
+<td><code>dict[str, list[tuple[int, int]]]</code></td>
+<td>No</td>
+<td><factory></td>
+<td>Mapping of hex color codes to lists of (row, column) tuples where row is 1-based and column is 0-based.</td>
+</tr>
+<tr>
+<td><code>formulas_map</code></td>
+<td><code>dict[str, list[tuple[int, int]]]</code></td>
+<td>No</td>
+<td><factory></td>
+<td>Mapping of formula strings to lists of (row, column) tuples where row is 1-based and column is 0-based.</td>
+</tr>
+<tr>
+<td><code>merged_cells</code></td>
+<td><code>MergedCells \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Merged cell ranges on the sheet.</td>
+</tr>
+<tr>
+<td><code>merged_ranges</code></td>
+<td><code>list[str]</code></td>
+<td>No</td>
+<td><factory></td>
+<td>Merged ranges in A1 notation (e.g., 'A1:C3'). Used in alpha_col-oriented output.</td>
+</tr>
+<tr>
+<td><code>print_areas</code></td>
+<td><code>list[PrintArea]</code></td>
+<td>No</td>
+<td><factory></td>
+<td>User-defined print areas.</td>
+</tr>
+<tr>
+<td><code>rows</code></td>
+<td><code>list[CellRow]</code></td>
+<td>No</td>
+<td><factory></td>
+<td>Extracted rows with cell values and links.</td>
+</tr>
+<tr>
+<td><code>shapes</code></td>
+<td><code>list[Shape \| Arrow \| SmartArt]</code></td>
+<td>No</td>
+<td><factory></td>
+<td>Shapes detected on the sheet.</td>
+</tr>
+<tr>
+<td><code>table_candidates</code></td>
+<td><code>list[str]</code></td>
+<td>No</td>
+<td><factory></td>
+<td>Cell ranges likely representing tables.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="smartart">SmartArt<a class="headerlink" href="#smartart" title="Permanent link">&para;</a></h2>
+<p>SmartArt shape metadata with nested nodes.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>h</code></td>
+<td><code>int \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Shape height (None if unknown).</td>
+</tr>
+<tr>
+<td><code>id</code></td>
+<td><code>int \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Sequential shape id within the sheet (if applicable).</td>
+</tr>
+<tr>
+<td><code>kind</code></td>
+<td><code>Literal['smartart']</code></td>
+<td>No</td>
+<td>'smartart'</td>
+<td>Shape kind.</td>
+</tr>
+<tr>
+<td><code>l</code></td>
+<td><code>int</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Left offset (Excel units).</td>
+</tr>
+<tr>
+<td><code>layout</code></td>
+<td><code>str</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>SmartArt layout name.</td>
+</tr>
+<tr>
+<td><code>nodes</code></td>
+<td><code>list[SmartArtNode]</code></td>
+<td>No</td>
+<td><factory></td>
+<td>Root nodes of SmartArt tree.</td>
+</tr>
+<tr>
+<td><code>rotation</code></td>
+<td><code>float \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Rotation angle in degrees.</td>
+</tr>
+<tr>
+<td><code>t</code></td>
+<td><code>int</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Top offset (Excel units).</td>
+</tr>
+<tr>
+<td><code>text</code></td>
+<td><code>str</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Visible text content of the shape.</td>
+</tr>
+<tr>
+<td><code>w</code></td>
+<td><code>int \| None</code></td>
+<td>No</td>
+<td>None</td>
+<td>Shape width (None if unknown).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="smartartnode">SmartArtNode<a class="headerlink" href="#smartartnode" title="Permanent link">&para;</a></h2>
+<p>Node of SmartArt hierarchy.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kids</code></td>
+<td><code>list[SmartArtNode]</code></td>
+<td>No</td>
+<td><factory></td>
+<td>Child nodes.</td>
+</tr>
+<tr>
+<td><code>text</code></td>
+<td><code>str</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Visible text for the node.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="workbookdata">WorkbookData<a class="headerlink" href="#workbookdata" title="Permanent link">&para;</a></h2>
+<p>Workbook-level container with per-sheet data.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>book_name</code></td>
+<td><code>str</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Workbook file name (no path).</td>
+</tr>
+<tr>
+<td><code>sheets</code></td>
+<td><code>dict[str, SheetData]</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Mapping of sheet name to SheetData.</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

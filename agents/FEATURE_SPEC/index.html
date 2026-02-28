@@ -1,0 +1,1977 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://harumiweb.github.io/exstruct/agents/FEATURE_SPEC/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+    
+    
+      
+        <title>Feature Spec for AI Agent - ExStruct</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#feature-spec-for-ai-agent" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ExStruct" class="md-header__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ExStruct
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Feature Spec for AI Agent
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ExStruct" class="md-nav__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ExStruct
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../generated/models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Models (generated)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JSON Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concept/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept / Why ExStruct?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.5.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.5.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.5.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.4.4/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.4.4
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.4.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.4.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.7/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.7
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.6/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.5/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.5
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.90
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.80/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.80
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.71/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.71
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.70/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.70
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.61/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.61
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.60/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.60
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Read Me
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../README.en/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (EN)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../README.ja/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (JA)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../license-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    License Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#feature-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature Name
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        背景
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        目的
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        スコープ
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="スコープ">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#in-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In Scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#out-of-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Out of Scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ターゲットアーキテクチャ
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        モジュール責務
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        依存ルール
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        互換性要件
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        非機能要件
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acceptance-criteria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        受け入れ条件（Acceptance Criteria）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="受け入れ条件（Acceptance Criteria）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ac-01" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AC-01 モジュール分離
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ac-02" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AC-02 正規化一元化
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ac-03" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AC-03 重複削減
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ac-04" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AC-04 互換性維持
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ac-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AC-05 品質ゲート
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        テスト方針
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        リスクと対策
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feature-name_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature Name
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        背景
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        目的
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        スコープ
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="スコープ">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#in-scope_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In Scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#out-of-scope_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Out of Scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        実装方針
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        公開API/インターフェース変更
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acceptance-criteria_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        受け入れ基準（Acceptance Criteria）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        リスクと対策
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feature-name_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature Name
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_16" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        背景
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_17" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        目的
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_18" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        対応方針（指摘分類）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="対応方針（指摘分類）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#p0-pr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        P0: 同PRで必ず対応
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#p1-pr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        P1: 同PRで実施する低リスク改善
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#p2-epic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        P2: 別Epicへ分離（今回は設計判断のみ）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_19" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        スコープ
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="スコープ">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#in-scope_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In Scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#out-of-scope_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Out of Scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acceptance-criteria_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        受け入れ基準（Acceptance Criteria）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        リスクと対策
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="feature-spec-for-ai-agent">Feature Spec for AI Agent<a class="headerlink" href="#feature-spec-for-ai-agent" title="Permanent link">&para;</a></h1>
+<h2 id="feature-name">Feature Name<a class="headerlink" href="#feature-name" title="Permanent link">&para;</a></h2>
+<p>MCP Patch Architecture Refactor (Phase 1)</p>
+<h2 id="_1">背景<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<p><code>src/exstruct/mcp/patch_runner.py</code> は 3,500 行超の単一モジュールとなっており、以下が混在している。</p>
+<ol>
+<li>ドメインモデル定義（<code>PatchOp</code>, <code>PatchRequest</code>, <code>PatchResult</code>）</li>
+<li>入力検証（op 別バリデーション）</li>
+<li>実行制御（engine 選択、fallback、warning 集約）</li>
+<li>backend 実装（openpyxl/xlwings）</li>
+<li>共通ユーティリティ（A1 変換、path 競合処理、色変換）</li>
+</ol>
+<p>この状態は、保守性・拡張性・テスト容易性を低下させるため、責務分離を行う。</p>
+<h2 id="_2">目的<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<ol>
+<li><code>patch_runner.py</code> を薄いファサードへ縮退する。</li>
+<li>patch 機能を「モデル」「正規化/検証」「実行制御」「backend 実装」に分離する。</li>
+<li><code>server.py</code> と <code>patch_runner.py</code> に分散した patch op 正規化を共通化する。</li>
+<li>重複ユーティリティ（A1、出力 path 競合処理）を共通化する。</li>
+<li>公開 API 互換を維持しつつ、段階的に移行可能な構造にする。</li>
+</ol>
+<h2 id="_3">スコープ<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<h3 id="in-scope">In Scope<a class="headerlink" href="#in-scope" title="Permanent link">&para;</a></h3>
+<ol>
+<li><code>src/exstruct/mcp/patch/</code> 配下の新規モジュール導入</li>
+<li><code>patch_runner.py</code> のファサード化</li>
+<li>patch op 正規化の共通化</li>
+<li>A1 変換・出力 path 解決の共通ユーティリティ化</li>
+<li>既存テストの責務別再配置と追加</li>
+</ol>
+<h3 id="out-of-scope">Out of Scope<a class="headerlink" href="#out-of-scope" title="Permanent link">&para;</a></h3>
+<ol>
+<li>新しい patch op の追加</li>
+<li>MCP 外部 API の仕様変更</li>
+<li>大規模なディレクトリ再編（<code>mcp</code> 全体の再設計）</li>
+<li><code>.xls</code> サポート方針の変更</li>
+</ol>
+<h2 id="_4">ターゲットアーキテクチャ<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<pre><code class="language-text">src/exstruct/mcp/
+  patch/
+    __init__.py
+    types.py
+    models.py
+    specs.py
+    normalize.py
+    validate.py
+    service.py
+    engine/
+      base.py
+      openpyxl_engine.py
+      xlwings_engine.py
+    ops/
+      common.py
+      openpyxl_ops.py
+      xlwings_ops.py
+  shared/
+    a1.py
+    output_path.py
+</code></pre>
+<h2 id="_5">モジュール責務<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
+<ol>
+<li><code>patch/types.py</code></li>
+<li><code>PatchOpType</code>, <code>PatchBackend</code>, <code>PatchEngine</code>, <code>PatchStatus</code> 等の型定義</li>
+<li><code>patch/models.py</code></li>
+<li><code>PatchOp</code>, <code>PatchRequest</code>, <code>MakeRequest</code>, <code>PatchResult</code> と snapshot 系モデル</li>
+<li><code>patch/specs.py</code></li>
+<li>op ごとの required/optional/constraints/aliases を単一管理</li>
+<li><code>patch/normalize.py</code></li>
+<li>top-level <code>sheet</code> 適用</li>
+<li>alias 正規化（<code>name</code>, <code>row</code>, <code>col</code>, <code>horizontal</code>, <code>vertical</code>, <code>color</code> など）</li>
+<li><code>patch/validate.py</code></li>
+<li><code>PatchOp</code> の整合性チェック（spec ベース）</li>
+<li><code>patch/service.py</code></li>
+<li><code>run_patch</code> / <code>run_make</code> のオーケストレーション</li>
+<li>engine 選択・fallback・warning/error 組み立て</li>
+<li><code>patch/engine/*</code></li>
+<li>backend ごとの workbook 編集と保存責務</li>
+<li><code>patch/ops/*</code></li>
+<li>op 適用ロジック（backend 別）</li>
+<li><code>shared/a1.py</code></li>
+<li>A1 解析、列変換、範囲展開の共通関数</li>
+<li><code>shared/output_path.py</code></li>
+<li><code>on_conflict</code>、<code>rename</code>、出力先決定の共通関数</li>
+</ol>
+<h2 id="_6">依存ルール<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<ol>
+<li><code>server.py</code> は patch 実装詳細に依存しない。</li>
+<li><code>op_schema.py</code> は <code>patch_runner.py</code> ではなく <code>patch/specs.py</code> / <code>patch/types.py</code> に依存する。</li>
+<li><code>tools.py</code> は <code>patch/service.py</code> と <code>patch/models.py</code> のみを利用する。</li>
+<li>backend 実装は <code>service.py</code> への逆依存を禁止する。</li>
+<li>共通関数は <code>shared/*</code> に集約し、重複実装を禁止する。</li>
+</ol>
+<h2 id="_7">互換性要件<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
+<ol>
+<li>既存の公開 import は維持する（<code>exstruct.mcp.patch_runner</code> 経由の主要シンボル）。</li>
+<li>MCP tool I/F は変更しない（入力・出力 JSON 互換）。</li>
+<li>既存 warning/error メッセージは可能な限り維持する。</li>
+<li>既存テスト（<code>tests/mcp/test_patch_runner.py</code> ほか）を通す。</li>
+</ol>
+<h2 id="_8">非機能要件<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
+<ol>
+<li>mypy strict: エラー 0</li>
+<li>Ruff (E, W, F, I, B, UP, N, C90): エラー 0</li>
+<li>循環依存 0</li>
+<li>1 モジュール 1 責務を優先し、巨大関数を分割する</li>
+<li>新規関数/クラスは Google スタイル docstring を付与する</li>
+</ol>
+<h2 id="acceptance-criteria">受け入れ条件（Acceptance Criteria）<a class="headerlink" href="#acceptance-criteria" title="Permanent link">&para;</a></h2>
+<h3 id="ac-01">AC-01 モジュール分離<a class="headerlink" href="#ac-01" title="Permanent link">&para;</a></h3>
+<ol>
+<li><code>patch_runner.py</code> がファサード化され、実装詳細の大半が <code>patch/</code> 配下へ移動している。</li>
+</ol>
+<h3 id="ac-02">AC-02 正規化一元化<a class="headerlink" href="#ac-02" title="Permanent link">&para;</a></h3>
+<ol>
+<li>patch op alias 正規化ロジックが単一モジュールに集約され、<code>server.py</code> と <code>tools.py</code> から再利用される。</li>
+</ol>
+<h3 id="ac-03">AC-03 重複削減<a class="headerlink" href="#ac-03" title="Permanent link">&para;</a></h3>
+<ol>
+<li>A1 変換の重複実装が除去され、<code>shared/a1.py</code> に統一される。</li>
+<li>出力 path 競合処理の重複実装が除去され、<code>shared/output_path.py</code> に統一される。</li>
+</ol>
+<h3 id="ac-04">AC-04 互換性維持<a class="headerlink" href="#ac-04" title="Permanent link">&para;</a></h3>
+<ol>
+<li>既存の MCP ツール呼び出しが回帰なく動作する。</li>
+<li>既存 patch/make 関連テストが通過する。</li>
+</ol>
+<h3 id="ac-05">AC-05 品質ゲート<a class="headerlink" href="#ac-05" title="Permanent link">&para;</a></h3>
+<ol>
+<li><code>uv run task precommit-run</code> が成功する。</li>
+</ol>
+<h2 id="_9">テスト方針<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
+<ol>
+<li>既存テストの回帰確認</li>
+<li><code>tests/mcp/test_patch_runner.py</code></li>
+<li><code>tests/mcp/test_make_runner.py</code></li>
+<li><code>tests/mcp/test_server.py</code></li>
+<li><code>tests/mcp/test_tools_handlers.py</code></li>
+<li>新規テスト追加</li>
+<li><code>tests/mcp/patch/test_normalize.py</code></li>
+<li><code>tests/mcp/patch/test_service.py</code></li>
+<li><code>tests/mcp/shared/test_a1.py</code></li>
+<li><code>tests/mcp/shared/test_output_path.py</code></li>
+</ol>
+<h2 id="_10">リスクと対策<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
+<ol>
+<li>リスク: 分割中に import 互換が崩れる</li>
+<li>対策: <code>patch_runner.py</code> で再エクスポートを維持し、段階移行する</li>
+<li>リスク: warning/error 文言差分でテストが壊れる</li>
+<li>対策: 既存文言互換を維持し、必要時は差分を明示してテスト更新する</li>
+<li>リスク: engine 分離時の挙動差</li>
+<li>対策: backend ごとの回帰テストを先に固定してから移行する</li>
+</ol>
+<hr />
+<h2 id="feature-name_1">Feature Name<a class="headerlink" href="#feature-name_1" title="Permanent link">&para;</a></h2>
+<p>MCP Coverage Recovery (Post-Refactor)</p>
+<h2 id="_11">背景<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
+<p>MCP 大規模リファクタリング後、全体カバレッジが 80% から 78.24% に低下した。
+<code>coverage.xml</code> の未実行行は 1,654 行で、うち <code>src/exstruct/mcp/*</code> が 1,176 行（71.1%）を占める。</p>
+<p>主因:
+1. <code>src/exstruct/mcp/patch/internal.py</code>（59.42%, 806 miss）
+2. <code>src/exstruct/mcp/patch/models.py</code>（77.74%, 181 miss）
+3. <code>src/exstruct/mcp/server.py</code>（70.17%, 71 miss）</p>
+<h2 id="_12">目的<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h2>
+<ol>
+<li>全体カバレッジを 80%以上へ回復し維持する。</li>
+<li>低下要因モジュールをテストで直接改善する。</li>
+<li><code>omit</code> 依存の見かけ上の回復は行わない。</li>
+</ol>
+<h2 id="_13">スコープ<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h2>
+<h3 id="in-scope_1">In Scope<a class="headerlink" href="#in-scope_1" title="Permanent link">&para;</a></h3>
+<ol>
+<li><code>tests/mcp/patch/*</code> の拡張（models/internal/service中心）</li>
+<li><code>tests/mcp/test_server.py</code> の未カバー分岐追加</li>
+<li><code>tests/mcp/test_sheet_reader.py</code> / <code>tests/mcp/test_chunk_reader.py</code> の境界ケース追加</li>
+<li>CI ゲート設定の強化（<code>--cov-fail-under=80</code> と patch coverage 80%）</li>
+<li>追記ドキュメント（本仕様・タスク・テスト要件）</li>
+</ol>
+<h3 id="out-of-scope_1">Out of Scope<a class="headerlink" href="#out-of-scope_1" title="Permanent link">&para;</a></h3>
+<ol>
+<li>patch op の新規機能追加</li>
+<li>公開 API 仕様変更</li>
+<li>大規模ディレクトリ再編</li>
+</ol>
+<h2 id="_14">実装方針<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h2>
+<ol>
+<li><code>patch/models.py</code> の validator 分岐を <code>pytest.mark.parametrize</code> で網羅する。</li>
+<li><code>patch/internal.py</code> の openpyxl/xlwings 分岐、エラー分岐、保存可否分岐を網羅する。</li>
+<li><code>server.py</code> の alias 正規化・A1 パース・エラーメッセージ経路を網羅する。</li>
+<li><code>sheet_reader.py</code> / <code>chunk_reader.py</code> の境界ケースを追加する。</li>
+<li>CI を「全体80%未満で失敗」「変更行80%未満で失敗」にする。</li>
+</ol>
+<h2 id="api">公開API/インターフェース変更<a class="headerlink" href="#api" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Python 公開 API の変更は行わない。</li>
+<li>CI インターフェースとして以下を追加・変更する。</li>
+<li>テスト実行コマンドに <code>--cov-fail-under=80</code> を追加する。</li>
+<li>Codecov <code>patch</code> ステータス目標を <code>80%</code> に設定する。</li>
+</ol>
+<h2 id="acceptance-criteria_1">受け入れ基準（Acceptance Criteria）<a class="headerlink" href="#acceptance-criteria_1" title="Permanent link">&para;</a></h2>
+<ol>
+<li><code>uv run pytest -m "not com and not render" --cov=exstruct --cov-report=xml --cov-fail-under=80</code> が成功する。</li>
+<li><code>coverage.xml</code> の全体 line-rate が 80%以上である。</li>
+<li>Codecov patch coverage の required status が 80%以上である。</li>
+<li><code>patch/internal.py</code>, <code>patch/models.py</code>, <code>server.py</code> の line-rate が現状より改善している。</li>
+<li><code>uv run task precommit-run</code> が成功する（mypy strict / Ruff 含む）。</li>
+</ol>
+<h2 id="_15">リスクと対策<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h2>
+<ol>
+<li>リスク: <code>patch/internal.py</code> の分岐が多く工数が膨らむ。
+   対策: 失敗系を <code>parametrize</code> 化し、網羅効率を最大化する。</li>
+<li>リスク: CI ゲート強化で一時的に失敗が増える。
+   対策: 不足テストを同PRで同時投入する。</li>
+<li>リスク: 互換レイヤー除外に後退する。
+   対策: 恒久除外を禁止し、必要時は別承認で期限付き措置とする。</li>
+</ol>
+<hr />
+<h2 id="feature-name_2">Feature Name<a class="headerlink" href="#feature-name_2" title="Permanent link">&para;</a></h2>
+<p>PR #65 Review Follow-up (Stabilization)</p>
+<h2 id="_16">背景<a class="headerlink" href="#_16" title="Permanent link">&para;</a></h2>
+<p>2026-02-24 時点で PR #65 には GitHub 上で未解決レビュー指摘が残っている。
+主要な論点は次の 3 系統。</p>
+<ol>
+<li>機能不具合: <code>backend="auto"</code> かつ <code>apply_table_style</code> で COM が選択されると失敗する。</li>
+<li>ドキュメント不整合: <code>legacy_runner</code> 参照や alias 許容/禁止の記述が実装と一致しない。</li>
+<li>設計改善提案: BaseModel 境界、tuple/dict 返却、Protocol 整理、A1戻り値モデル化など。</li>
+</ol>
+<h2 id="_17">目的<a class="headerlink" href="#_17" title="Permanent link">&para;</a></h2>
+<ol>
+<li>マージ阻害となる不具合・矛盾（P0）を優先解消する。</li>
+<li>低リスクで回収できる品質改善（P1）を同PRで解消する。</li>
+<li>変更波及の大きい設計変更（P2）は別Epicへ分離し、短期安定性を優先する。</li>
+</ol>
+<h2 id="_18">対応方針（指摘分類）<a class="headerlink" href="#_18" title="Permanent link">&para;</a></h2>
+<h3 id="p0-pr">P0: 同PRで必ず対応<a class="headerlink" href="#p0-pr" title="Permanent link">&para;</a></h3>
+<ol>
+<li><code>src/exstruct/mcp/patch/service.py</code></li>
+<li><code>apply_table_style</code> を含む場合、<code>backend="auto"</code> でも openpyxl 側へルーティングする。</li>
+<li><code>docs/agents/LEGACY_DEPENDENCY_INVENTORY.md</code></li>
+<li>削除済み <code>legacy_runner.py</code> 前提の記述を現行構成へ修正する。</li>
+<li><code>docs/mcp.md</code></li>
+<li>Mistake catalog と alias 仕様の矛盾（<code>color</code>, <code>horizontal</code>, <code>vertical</code>）を解消する。</li>
+</ol>
+<h3 id="p1-pr">P1: 同PRで実施する低リスク改善<a class="headerlink" href="#p1-pr" title="Permanent link">&para;</a></h3>
+<ol>
+<li><code>src/exstruct/mcp/server.py</code></li>
+<li>未使用・重複の正規化 helper 群を削除し、<code>patch.normalize</code> への一元化を明確化する。</li>
+<li>Docstring 指摘</li>
+<li>変更差分内で欠落している docstring を追加し、品質ゲートの指摘ノイズを減らす。</li>
+<li><code>src/exstruct/mcp/server.py::_register_tools</code></li>
+<li>追加済み引数（<code>default_on_conflict</code>, <code>artifact_bridge_dir</code>）を docstring に反映する。</li>
+<li><code>src/exstruct/mcp/patch/engine/openpyxl_engine.py</code> / <code>src/exstruct/mcp/patch/ops/openpyxl_ops.py</code></li>
+<li>openpyxl engine の構造化戻り値を tuple から <code>BaseModel</code>（<code>OpenpyxlEngineResult</code>）へ統一する。</li>
+<li><code>tests/mcp/patch/test_service.py</code></li>
+<li>新規追加テスト・helper の docstring を Google スタイルで補完する。</li>
+</ol>
+<h3 id="p2-epic">P2: 別Epicへ分離（今回は設計判断のみ）<a class="headerlink" href="#p2-epic" title="Permanent link">&para;</a></h3>
+<ol>
+<li><code>patch/__init__.py</code> 公開 API 方針</li>
+<li>正規化 helper を公開し続けるか、内部化するかを決定する。</li>
+<li><code>shared/a1.py</code> 戻り値の BaseModel 化と呼び出し側移行。</li>
+<li><code>patch/internal.py</code> の外部ライブラリ境界（<code>Any</code> 受け + 内部正規化）再設計。</li>
+</ol>
+<h2 id="_19">スコープ<a class="headerlink" href="#_19" title="Permanent link">&para;</a></h2>
+<h3 id="in-scope_2">In Scope<a class="headerlink" href="#in-scope_2" title="Permanent link">&para;</a></h3>
+<ol>
+<li>P0 の不具合修正とドキュメント整合。</li>
+<li>P1 の低リスクなコード整理・docstring 修正。</li>
+<li>P2 の設計判断結果をタスク化し、別Epicへ登録。</li>
+</ol>
+<h3 id="out-of-scope_2">Out of Scope<a class="headerlink" href="#out-of-scope_2" title="Permanent link">&para;</a></h3>
+<ol>
+<li>P2 の大規模設計変更の実装完了。</li>
+<li>公開 API の破壊的変更。</li>
+<li>リリース範囲を拡大する新機能追加。</li>
+</ol>
+<h2 id="acceptance-criteria_2">受け入れ基準（Acceptance Criteria）<a class="headerlink" href="#acceptance-criteria_2" title="Permanent link">&para;</a></h2>
+<ol>
+<li><code>backend="auto"</code> + <code>apply_table_style</code> が Windows/COM 環境でも失敗しない。</li>
+<li><code>LEGACY_DEPENDENCY_INVENTORY.md</code> と <code>docs/mcp.md</code> の記述が現行実装と一致する。</li>
+<li>PR #65 の P0 指摘が GitHub 上で解消済みになる。</li>
+<li>P1 指摘は対応完了、または理由付きで deferred が明記される。</li>
+<li><code>uv run task precommit-run</code> が成功する。</li>
+</ol>
+<h2 id="_20">リスクと対策<a class="headerlink" href="#_20" title="Permanent link">&para;</a></h2>
+<ol>
+<li>リスク: P1 範囲が膨張し、P0 対応が遅延する。</li>
+<li>対策: P0 完了前は P2 由来変更を着手しない。</li>
+<li>リスク: 設計変更を同PRに混在させ、回帰リスクが上がる。</li>
+<li>対策: P2 は issue 化して別PRへ分離する。</li>
+<li>リスク: docstring 修正が大量化してレビュー負荷が上がる。</li>
+<li>対策: 変更差分に限定して優先対応し、残件は別タスクへ切り出す。</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,2985 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://harumiweb.github.io/exstruct/mcp/">
+      
+      
+        <link rel="prev" href="../cli/">
+      
+      
+        <link rel="next" href="../concept/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+    
+    
+      
+        <title>MCP Server - ExStruct</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#mcp-server" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ExStruct" class="md-header__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ExStruct
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              MCP Server
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ExStruct" class="md-nav__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ExStruct
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generated/models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Models (generated)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JSON Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Server
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-provides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it provides
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Installation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-1-using-uvx-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 1: Using uvx (recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-2-traditional-pip-install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 2: Traditional pip install
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-3-development-version-from-git" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 3: Development version from Git
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#start-stdio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Start (stdio)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Start (stdio)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key options
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tools
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tools">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#exstruct_extract-defaults-and-mode-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        exstruct_extract defaults and mode guide
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start-for-agents-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick start for agents (recommended)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#basic-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#direct-read-tools-a1-oriented" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Direct read tools (A1-oriented)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chunking-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chunking guide
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chunking guide">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#retry-guide-by-errorwarning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retry guide by error/warning
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cursor-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cursor example
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#edit-flow-makepatch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edit flow (make/patch)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Edit flow (make/patch)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#choose-make-vs-patch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choose make vs patch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#new-workbook-flow-exstruct_make" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New workbook flow (exstruct_make)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exstruct_make-highlights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        exstruct_make highlights
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internal-implementation-note" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Internal implementation note
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#edit-flow-patch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edit flow (patch)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Edit flow (patch)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#exstruct_patch-highlights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        exstruct_patch highlights
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#set_style-quick-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        set_style quick guide
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apply_table_style-quick-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        apply_table_style quick guide
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apply_table_style-minimal-mcp-sample-exstruct_make" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        apply_table_style minimal MCP sample (exstruct_make)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#auto_fit_columns-quick-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        auto_fit_columns quick guide
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#color-fields-color-fill_color" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Color fields (color / fill_color)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#alias-and-shorthand-inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alias and shorthand inputs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mirror-artifact-handoff" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mirror artifact handoff
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#claude-desktop-artifact-handoff-recipe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claude Desktop artifact handoff recipe
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#op-schema-discovery-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Op schema discovery tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mistake-catalog-error-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mistake catalog (error -&gt; fix)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mistake catalog (error -&gt; fix)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#in-place-overwrite-recipe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In-place overwrite recipe
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runtime-info-tool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runtime info tool
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ai-agent-configuration-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AI agent configuration examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="AI agent configuration examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-uvx-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using uvx (recommended)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Using uvx (recommended)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#claude-desktop-github-copilot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claude Desktop / GitHub Copilot
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#codex" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codex
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-pip-install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using pip install
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Using pip install">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#codex_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codex
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#github-copilot-claude-desktop-gemini-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GitHub Copilot / Claude Desktop / Gemini CLI
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operational-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operational notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concept/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept / Why ExStruct?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.5.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.5.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.5.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.4.4/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.4.4
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.4.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.4.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.3.7/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.7
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.3.6/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.3.5/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.5
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.3.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.3.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.3.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.2.90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.90
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.2.80/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.80
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.2.71/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.71
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.2.70/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.70
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.2.61/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.61
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/v0.2.60/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.60
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Read Me
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../README.en/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (EN)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../README.ja/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (JA)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../license-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    License Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-provides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it provides
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Installation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-1-using-uvx-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 1: Using uvx (recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-2-traditional-pip-install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 2: Traditional pip install
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-3-development-version-from-git" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 3: Development version from Git
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#start-stdio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Start (stdio)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Start (stdio)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key options
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tools
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tools">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#exstruct_extract-defaults-and-mode-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        exstruct_extract defaults and mode guide
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start-for-agents-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick start for agents (recommended)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#basic-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#direct-read-tools-a1-oriented" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Direct read tools (A1-oriented)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chunking-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chunking guide
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chunking guide">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#retry-guide-by-errorwarning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retry guide by error/warning
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cursor-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cursor example
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#edit-flow-makepatch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edit flow (make/patch)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Edit flow (make/patch)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#choose-make-vs-patch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choose make vs patch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#new-workbook-flow-exstruct_make" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New workbook flow (exstruct_make)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exstruct_make-highlights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        exstruct_make highlights
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internal-implementation-note" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Internal implementation note
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#edit-flow-patch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edit flow (patch)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Edit flow (patch)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#exstruct_patch-highlights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        exstruct_patch highlights
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#set_style-quick-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        set_style quick guide
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apply_table_style-quick-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        apply_table_style quick guide
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apply_table_style-minimal-mcp-sample-exstruct_make" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        apply_table_style minimal MCP sample (exstruct_make)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#auto_fit_columns-quick-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        auto_fit_columns quick guide
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#color-fields-color-fill_color" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Color fields (color / fill_color)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#alias-and-shorthand-inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alias and shorthand inputs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mirror-artifact-handoff" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mirror artifact handoff
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#claude-desktop-artifact-handoff-recipe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claude Desktop artifact handoff recipe
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#op-schema-discovery-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Op schema discovery tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mistake-catalog-error-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mistake catalog (error -&gt; fix)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mistake catalog (error -&gt; fix)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#in-place-overwrite-recipe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In-place overwrite recipe
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runtime-info-tool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runtime info tool
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ai-agent-configuration-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AI agent configuration examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="AI agent configuration examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-uvx-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using uvx (recommended)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Using uvx (recommended)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#claude-desktop-github-copilot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claude Desktop / GitHub Copilot
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#codex" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codex
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-pip-install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using pip install
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Using pip install">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#codex_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codex
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#github-copilot-claude-desktop-gemini-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GitHub Copilot / Claude Desktop / Gemini CLI
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operational-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operational notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="mcp-server">MCP Server<a class="headerlink" href="#mcp-server" title="Permanent link">&para;</a></h1>
+<p>This guide explains how to run ExStruct as an MCP (Model Context Protocol) server
+so AI agents can call it safely as a tool.</p>
+<h2 id="what-it-provides">What it provides<a class="headerlink" href="#what-it-provides" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Convert Excel into structured JSON (file output)</li>
+<li>Create a new workbook and apply initial ops in one call</li>
+<li>Edit Excel by applying patch operations (cell/sheet updates)</li>
+<li>Read large JSON outputs in chunks</li>
+<li>Read A1 ranges / specific cells / formulas directly from extracted JSON</li>
+<li>Pre-validate input files</li>
+</ul>
+<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
+<h3 id="option-1-using-uvx-recommended">Option 1: Using uvx (recommended)<a class="headerlink" href="#option-1-using-uvx-recommended" title="Permanent link">&para;</a></h3>
+<p>No installation required! Run directly with uvx:</p>
+<pre><code class="language-bash">uvx --from 'exstruct[mcp]' exstruct-mcp --root C:\data
+</code></pre>
+<p>Benefits:
+- No <code>pip install</code> needed
+- Automatic dependency management<br />
+- Environment isolation
+- Easy version pinning: <code>uvx --from 'exstruct[mcp]==0.4.4' exstruct-mcp</code></p>
+<h3 id="option-2-traditional-pip-install">Option 2: Traditional pip install<a class="headerlink" href="#option-2-traditional-pip-install" title="Permanent link">&para;</a></h3>
+<pre><code class="language-bash">pip install exstruct[mcp]
+</code></pre>
+<h3 id="option-3-development-version-from-git">Option 3: Development version from Git<a class="headerlink" href="#option-3-development-version-from-git" title="Permanent link">&para;</a></h3>
+<pre><code class="language-bash">uvx --from 'exstruct[mcp] @ git+https://github.com/harumiWeb/exstruct.git@main' exstruct-mcp --root .
+</code></pre>
+<p><strong>Note:</strong> When using Git URLs, the <code>[mcp]</code> extra must be explicitly included in the dependency specification.</p>
+<h2 id="start-stdio">Start (stdio)<a class="headerlink" href="#start-stdio" title="Permanent link">&para;</a></h2>
+<pre><code class="language-bash">exstruct-mcp --root C:\\data --log-file C:\\logs\\exstruct-mcp.log --on-conflict rename
+</code></pre>
+<h3 id="key-options">Key options<a class="headerlink" href="#key-options" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>--root</code>: Allowed root directory (required)</li>
+<li><code>--deny-glob</code>: Deny glob patterns (repeatable)</li>
+<li><code>--log-level</code>: <code>DEBUG</code> / <code>INFO</code> / <code>WARNING</code> / <code>ERROR</code></li>
+<li><code>--log-file</code>: Log file path (stderr is still used by default)</li>
+<li><code>--on-conflict</code>: Output conflict policy (<code>overwrite</code> / <code>skip</code> / <code>rename</code>)</li>
+<li><code>--artifact-bridge-dir</code>: Directory used by <code>mirror_artifact=true</code> to copy output files</li>
+<li><code>--warmup</code>: Preload heavy imports to reduce first-call latency</li>
+</ul>
+<h2 id="tools">Tools<a class="headerlink" href="#tools" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>exstruct_extract</code></li>
+<li><code>exstruct_make</code></li>
+<li><code>exstruct_patch</code></li>
+<li><code>exstruct_list_ops</code></li>
+<li><code>exstruct_describe_op</code></li>
+<li><code>exstruct_read_json_chunk</code></li>
+<li><code>exstruct_read_range</code></li>
+<li><code>exstruct_read_cells</code></li>
+<li><code>exstruct_read_formulas</code></li>
+<li><code>exstruct_validate_input</code></li>
+<li><code>exstruct_get_runtime_info</code></li>
+</ul>
+<h3 id="exstruct_extract-defaults-and-mode-guide"><code>exstruct_extract</code> defaults and mode guide<a class="headerlink" href="#exstruct_extract-defaults-and-mode-guide" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>options.alpha_col</code> defaults to <code>true</code> in MCP (column keys become <code>A</code>, <code>B</code>, ...).</li>
+<li>Set <code>options.alpha_col=false</code> if you need legacy 0-based numeric string keys.</li>
+<li><code>mode</code> is an extraction detail level (not sheet scope):</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>When to use</th>
+<th>Main output characteristics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>light</code></td>
+<td>Fast, structure-first extraction</td>
+<td>cells + table candidates + print areas</td>
+</tr>
+<tr>
+<td><code>standard</code></td>
+<td>Default for most agent flows</td>
+<td>balanced detail and size</td>
+</tr>
+<tr>
+<td><code>verbose</code></td>
+<td>Need the richest metadata</td>
+<td>adds links/maps and richer metadata</td>
+</tr>
+</tbody>
+</table>
+<h2 id="quick-start-for-agents-recommended">Quick start for agents (recommended)<a class="headerlink" href="#quick-start-for-agents-recommended" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Validate file readability with <code>exstruct_validate_input</code></li>
+<li>Run <code>exstruct_extract</code> with <code>mode="standard"</code></li>
+<li>Read the result with <code>exstruct_read_json_chunk</code> using <code>sheet</code> and <code>max_bytes</code></li>
+</ol>
+<p>Example sequence:</p>
+<pre><code class="language-json">{ &quot;tool&quot;: &quot;exstruct_validate_input&quot;, &quot;xlsx_path&quot;: &quot;C:\\data\\book.xlsx&quot; }
+</code></pre>
+<pre><code class="language-json">{ &quot;tool&quot;: &quot;exstruct_extract&quot;, &quot;xlsx_path&quot;: &quot;C:\\data\\book.xlsx&quot;, &quot;mode&quot;: &quot;standard&quot;, &quot;format&quot;: &quot;json&quot; }
+</code></pre>
+<pre><code class="language-json">{ &quot;tool&quot;: &quot;exstruct_read_json_chunk&quot;, &quot;out_path&quot;: &quot;C:\\data\\book.json&quot;, &quot;sheet&quot;: &quot;Sheet1&quot;, &quot;max_bytes&quot;: 50000 }
+</code></pre>
+<p>If path behavior is unclear, inspect runtime info first:</p>
+<pre><code class="language-json">{ &quot;tool&quot;: &quot;exstruct_get_runtime_info&quot; }
+</code></pre>
+<p>When a path is outside <code>--root</code>, the error message also recommends
+<code>exstruct_get_runtime_info</code> with a relative path example.</p>
+<h2 id="basic-flow">Basic flow<a class="headerlink" href="#basic-flow" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Call <code>exstruct_extract</code> to generate the output JSON file</li>
+<li>Use <code>exstruct_read_json_chunk</code> to read only the parts you need</li>
+</ol>
+<h2 id="direct-read-tools-a1-oriented">Direct read tools (A1-oriented)<a class="headerlink" href="#direct-read-tools-a1-oriented" title="Permanent link">&para;</a></h2>
+<p>Use these tools when you already know the target addresses and want faster,
+less verbose reads than chunk traversal.</p>
+<ul>
+<li><code>exstruct_read_range</code></li>
+<li>Read a rectangular A1 range (example: <code>A1:G10</code>)</li>
+<li>Optional: <code>include_formulas</code>, <code>include_empty</code>, <code>max_cells</code></li>
+<li><code>exstruct_read_cells</code></li>
+<li>Read specific cells in one call (example: <code>["J98", "J124"]</code>)</li>
+<li>Optional: <code>include_formulas</code></li>
+<li><code>exstruct_read_formulas</code></li>
+<li>Read formulas only (optionally restricted by A1 range)</li>
+<li>Optional: <code>include_values</code></li>
+</ul>
+<p>Examples:</p>
+<pre><code class="language-json">{
+  &quot;tool&quot;: &quot;exstruct_read_range&quot;,
+  &quot;out_path&quot;: &quot;C:\\data\\book.json&quot;,
+  &quot;sheet&quot;: &quot;Data&quot;,
+  &quot;range&quot;: &quot;A1:G10&quot;
+}
+</code></pre>
+<pre><code class="language-json">{
+  &quot;tool&quot;: &quot;exstruct_read_cells&quot;,
+  &quot;out_path&quot;: &quot;C:\\data\\book.json&quot;,
+  &quot;sheet&quot;: &quot;Data&quot;,
+  &quot;addresses&quot;: [&quot;J98&quot;, &quot;J124&quot;]
+}
+</code></pre>
+<pre><code class="language-json">{
+  &quot;tool&quot;: &quot;exstruct_read_formulas&quot;,
+  &quot;out_path&quot;: &quot;C:\\data\\book.json&quot;,
+  &quot;sheet&quot;: &quot;Data&quot;,
+  &quot;range&quot;: &quot;J2:J201&quot;,
+  &quot;include_values&quot;: true
+}
+</code></pre>
+<h2 id="chunking-guide">Chunking guide<a class="headerlink" href="#chunking-guide" title="Permanent link">&para;</a></h2>
+<h3 id="key-parameters">Key parameters<a class="headerlink" href="#key-parameters" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>sheet</code>: target sheet name. Strongly recommended when workbook has multiple sheets.</li>
+<li><code>max_bytes</code>: chunk size budget in bytes. Start at <code>50_000</code>; increase (for example <code>120_000</code>) if chunks are too small.</li>
+<li><code>filter.rows</code>: <code>[start, end]</code> (1-based, inclusive).</li>
+<li><code>filter.cols</code>: <code>[start, end]</code> (1-based, inclusive). Works for both numeric keys (<code>"0"</code>, <code>"1"</code>) and alpha keys (<code>"A"</code>, <code>"B"</code>).</li>
+<li><code>cursor</code>: pagination cursor (<code>next_cursor</code> from the previous response).</li>
+</ul>
+<h3 id="retry-guide-by-errorwarning">Retry guide by error/warning<a class="headerlink" href="#retry-guide-by-errorwarning" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Message</th>
+<th>Meaning</th>
+<th>Next action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Output is too large...</code></td>
+<td>Whole JSON cannot fit in one response</td>
+<td>Retry with <code>sheet</code>, or narrow with <code>filter.rows</code>/<code>filter.cols</code></td>
+</tr>
+<tr>
+<td><code>Sheet is required when multiple sheets exist...</code></td>
+<td>Workbook has multiple sheets and target is ambiguous</td>
+<td>Pick one value from <code>workbook_meta.sheet_names</code> and set <code>sheet</code></td>
+</tr>
+<tr>
+<td><code>Base payload exceeds max_bytes...</code></td>
+<td>Even metadata-only payload is larger than <code>max_bytes</code></td>
+<td>Increase <code>max_bytes</code></td>
+</tr>
+<tr>
+<td><code>max_bytes too small...</code></td>
+<td>Row payload is too large for the current size</td>
+<td>Increase <code>max_bytes</code>, or narrow row/col filters</td>
+</tr>
+</tbody>
+</table>
+<h3 id="cursor-example">Cursor example<a class="headerlink" href="#cursor-example" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Call without <code>cursor</code></li>
+<li>If response has <code>next_cursor</code>, call again with that cursor</li>
+<li>Repeat until <code>next_cursor</code> is <code>null</code></li>
+</ol>
+<h2 id="edit-flow-makepatch">Edit flow (make/patch)<a class="headerlink" href="#edit-flow-makepatch" title="Permanent link">&para;</a></h2>
+<h3 id="choose-make-vs-patch">Choose make vs patch<a class="headerlink" href="#choose-make-vs-patch" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Use when</th>
+<th>Required path input</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>exstruct_make</code></td>
+<td>Create a brand-new workbook and apply initial ops in one call</td>
+<td><code>out_path</code></td>
+</tr>
+<tr>
+<td><code>exstruct_patch</code></td>
+<td>Edit an existing workbook (in-place style via <code>out_name</code> + <code>on_conflict=overwrite</code> is possible)</td>
+<td><code>xlsx_path</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="new-workbook-flow-exstruct_make">New workbook flow (<code>exstruct_make</code>)<a class="headerlink" href="#new-workbook-flow-exstruct_make" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Build patch operations (<code>ops</code>) for initial sheets/cells</li>
+<li>Call <code>exstruct_make</code> with <code>out_path</code></li>
+<li>Re-run <code>exstruct_extract</code> to verify results if needed</li>
+</ol>
+<h3 id="exstruct_make-highlights"><code>exstruct_make</code> highlights<a class="headerlink" href="#exstruct_make-highlights" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Creates a new workbook and applies <code>ops</code> in one call</li>
+<li><code>out_path</code> is required</li>
+<li><code>ops</code> is optional (empty list is allowed)</li>
+<li>Supported output extensions: <code>.xlsx</code>, <code>.xlsm</code>, <code>.xls</code></li>
+<li>Initial sheet behavior:</li>
+<li>default is <code>Sheet1</code></li>
+<li>when <code>sheet</code> is specified and the same name is not created by <code>add_sheet</code>,
+    the initial sheet is created with that <code>sheet</code> name</li>
+<li>when <code>add_sheet</code> creates the same name, initial sheet remains <code>Sheet1</code></li>
+<li>Reuses patch pipeline, so <code>patch_diff</code>/<code>error</code> shape is compatible with <code>exstruct_patch</code></li>
+<li>Supports the same extended flags as <code>exstruct_patch</code>:</li>
+<li><code>dry_run</code></li>
+<li><code>return_inverse_ops</code></li>
+<li><code>preflight_formula_check</code></li>
+<li><code>auto_formula</code></li>
+<li><code>backend</code></li>
+<li><code>sheet</code> (top-level default sheet for non-<code>add_sheet</code> ops)</li>
+<li><code>.xls</code> constraints:</li>
+<li>requires Windows Excel COM</li>
+<li>rejects <code>backend="openpyxl"</code></li>
+<li>rejects <code>dry_run</code>/<code>return_inverse_ops</code>/<code>preflight_formula_check</code></li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-json">{
+  &quot;tool&quot;: &quot;exstruct_make&quot;,
+  &quot;out_path&quot;: &quot;C:\\data\\new_book.xlsx&quot;,
+  &quot;ops&quot;: [
+    { &quot;op&quot;: &quot;add_sheet&quot;, &quot;sheet&quot;: &quot;Data&quot; },
+    { &quot;op&quot;: &quot;set_value&quot;, &quot;sheet&quot;: &quot;Data&quot;, &quot;cell&quot;: &quot;A1&quot;, &quot;value&quot;: &quot;hello&quot; }
+  ]
+}
+</code></pre>
+<h3 id="internal-implementation-note">Internal implementation note<a class="headerlink" href="#internal-implementation-note" title="Permanent link">&para;</a></h3>
+<p>The patch implementation is layered to keep compatibility while enabling refactoring:</p>
+<ul>
+<li><code>exstruct.mcp.patch_runner</code>: compatibility facade (existing import path)</li>
+<li><code>exstruct.mcp.patch.service</code>: patch/make orchestration</li>
+<li><code>exstruct.mcp.patch.engine.*</code>: backend execution boundaries (openpyxl/com)</li>
+<li><code>exstruct.mcp.patch.runtime</code>: runtime utilities (path/backend selection)</li>
+<li><code>exstruct.mcp.patch.ops.*</code>: backend-specific op application entrypoints</li>
+</ul>
+<p>This keeps MCP tool I/O stable while allowing internal module separation.</p>
+<h2 id="edit-flow-patch">Edit flow (patch)<a class="headerlink" href="#edit-flow-patch" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Inspect workbook structure with <code>exstruct_extract</code> (and <code>exstruct_read_json_chunk</code> if needed)</li>
+<li>Build patch operations (<code>ops</code>) for target cells/sheets</li>
+<li>Call <code>exstruct_patch</code> to apply edits</li>
+<li>Re-run <code>exstruct_extract</code> to verify results if needed</li>
+</ol>
+<h3 id="exstruct_patch-highlights"><code>exstruct_patch</code> highlights<a class="headerlink" href="#exstruct_patch-highlights" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Atomic apply: all operations succeed, or no changes are saved</li>
+<li><code>ops</code> accepts an object list as the canonical form.
+  For compatibility, JSON object strings in <code>ops</code> are also accepted and normalized.</li>
+<li>Supports:</li>
+<li><code>set_value</code></li>
+<li><code>set_formula</code></li>
+<li><code>add_sheet</code></li>
+<li><code>set_range_values</code></li>
+<li><code>fill_formula</code></li>
+<li><code>set_value_if</code></li>
+<li><code>set_formula_if</code></li>
+<li><code>draw_grid_border</code></li>
+<li><code>set_bold</code></li>
+<li><code>set_font_size</code></li>
+<li><code>set_font_color</code></li>
+<li><code>set_fill_color</code></li>
+<li><code>set_dimensions</code></li>
+<li><code>auto_fit_columns</code></li>
+<li><code>merge_cells</code></li>
+<li><code>unmerge_cells</code></li>
+<li><code>set_alignment</code></li>
+<li><code>set_style</code></li>
+<li><code>apply_table_style</code></li>
+<li><code>create_chart</code> (COM only)</li>
+<li><code>restore_design_snapshot</code> (internal inverse op)</li>
+<li>Useful flags:</li>
+<li><code>dry_run</code>: compute diff only (no file write)</li>
+<li><code>return_inverse_ops</code>: return undo operations</li>
+<li><code>preflight_formula_check</code>: detect formula issues before save</li>
+<li><code>auto_formula</code>: treat <code>=...</code> in <code>set_value</code> as formula</li>
+<li><code>sheet</code>: top-level default sheet used when <code>op.sheet</code> is omitted (non-<code>add_sheet</code> only)</li>
+<li>default <code>out_name</code>: <code>{stem}_patched{ext}</code>. If input stem already ends with <code>_patched</code>,
+    ExStruct reuses the same name to avoid <code>_patched_patched</code> chaining.</li>
+<li><code>mirror_artifact</code>: copy output workbook to <code>--artifact-bridge-dir</code> on success</li>
+<li>Large ops guidance:</li>
+<li><code>ops</code> over <code>200</code> still runs, but returns a warning that recommends splitting into batches.</li>
+<li>Backend selection:</li>
+<li><code>backend="auto"</code> (default): prefers COM when available; otherwise openpyxl.
+    Also uses openpyxl when <code>dry_run</code>/<code>return_inverse_ops</code>/<code>preflight_formula_check</code> is enabled.</li>
+<li><code>backend="com"</code>: forces COM. Requires Excel COM and rejects
+    <code>dry_run</code>/<code>return_inverse_ops</code>/<code>preflight_formula_check</code>.</li>
+<li><code>backend="openpyxl"</code>: forces openpyxl (<code>.xls</code> is not supported).</li>
+<li><code>create_chart</code> constraints:</li>
+<li>Supported only with COM backend.</li>
+<li><code>chart_type</code> supports: <code>line</code>, <code>column</code>, <code>bar</code>, <code>area</code>, <code>pie</code>, <code>doughnut</code>, <code>scatter</code>, <code>radar</code>.<ul>
+<li>Alias input is accepted: <code>column_clustered</code>, <code>bar_clustered</code>, <code>xy_scatter</code>, <code>donut</code>.</li>
+</ul>
+</li>
+<li><code>data_range</code> accepts either one A1 range string or an array of ranges (multi-series).</li>
+<li><code>data_range</code>/<code>category_range</code> support sheet-qualified form (<code>Sheet2!A1:B10</code>, <code>'Sales Data'!A1:B10</code>).</li>
+<li>Optional explicit labels: <code>chart_title</code>, <code>x_axis_title</code>, <code>y_axis_title</code>.</li>
+<li>Rejects <code>dry_run</code>/<code>return_inverse_ops</code>/<code>preflight_formula_check</code>.</li>
+<li>Can be combined with <code>apply_table_style</code> in one request when backend resolves to COM.</li>
+<li>If COM is unavailable, mixed <code>create_chart</code> + <code>apply_table_style</code> requests return a COM-required error.</li>
+<li>Output includes <code>engine</code> (<code>"com"</code> or <code>"openpyxl"</code>) to show which backend was actually used.</li>
+<li>Output includes <code>mirrored_out_path</code> when mirroring is requested and succeeds.</li>
+<li>Conflict handling follows server <code>--on-conflict</code> unless overridden per tool call</li>
+<li><code>restore_design_snapshot</code> remains openpyxl-only.</li>
+<li>Sheet resolution order:</li>
+<li><code>op.sheet</code> is used when present</li>
+<li>otherwise top-level <code>sheet</code> is used for non-<code>add_sheet</code> ops</li>
+<li><code>add_sheet</code> still requires explicit <code>op.sheet</code> (or alias <code>name</code>)</li>
+</ul>
+<h3 id="set_style-quick-guide"><code>set_style</code> quick guide<a class="headerlink" href="#set_style-quick-guide" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Purpose: apply multiple style fields in one op.</li>
+<li>Target: exactly one of <code>cell</code> or <code>range</code>.</li>
+<li>Need at least one style field: <code>bold</code>, <code>font_size</code>, <code>color</code>, <code>fill_color</code>,
+  <code>horizontal_align</code>, <code>vertical_align</code>, <code>wrap_text</code>.</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-json">{
+  &quot;tool&quot;: &quot;exstruct_patch&quot;,
+  &quot;xlsx_path&quot;: &quot;C:\\data\\book.xlsx&quot;,
+  &quot;ops&quot;: [
+    {
+      &quot;op&quot;: &quot;set_style&quot;,
+      &quot;sheet&quot;: &quot;Sheet1&quot;,
+      &quot;range&quot;: &quot;A1:D1&quot;,
+      &quot;bold&quot;: true,
+      &quot;color&quot;: &quot;#FFFFFF&quot;,
+      &quot;fill_color&quot;: &quot;#1F3864&quot;,
+      &quot;horizontal_align&quot;: &quot;center&quot;,
+      &quot;vertical_align&quot;: &quot;center&quot;,
+      &quot;wrap_text&quot;: true
+    }
+  ]
+}
+</code></pre>
+<h3 id="apply_table_style-quick-guide"><code>apply_table_style</code> quick guide<a class="headerlink" href="#apply_table_style-quick-guide" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Purpose: create a table and apply an Excel table style in one op.</li>
+<li>Required: <code>sheet</code>, <code>range</code>, <code>style</code>.</li>
+<li>Optional: <code>table_name</code>.</li>
+<li>Fails when range intersects an existing table, or table name duplicates.</li>
+<li>COM execution checklist (recommended on Windows):</li>
+<li>Microsoft Excel desktop app is installed and launchable in the current user session.</li>
+<li>Use <code>backend="com"</code> for deterministic behavior, or <code>backend="auto"</code> with COM availability.</li>
+<li><code>range</code> includes the header row and points to one contiguous A1 range.</li>
+<li>Avoid protected sheets/workbooks and existing tables intersecting the target range.</li>
+<li>Common error codes:</li>
+<li><code>table_style_invalid</code>: <code>style</code> is not a valid Excel table style name.</li>
+<li><code>list_object_add_failed</code>: Excel COM <code>ListObjects.Add(...)</code> failed for all compatible signatures.</li>
+<li><code>com_api_missing</code>: required COM members such as <code>ListObjects.Add</code> are unavailable.</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-json">{
+  &quot;tool&quot;: &quot;exstruct_patch&quot;,
+  &quot;xlsx_path&quot;: &quot;C:\\data\\book.xlsx&quot;,
+  &quot;ops&quot;: [
+    {
+      &quot;op&quot;: &quot;apply_table_style&quot;,
+      &quot;sheet&quot;: &quot;Sheet1&quot;,
+      &quot;range&quot;: &quot;A1:D11&quot;,
+      &quot;style&quot;: &quot;TableStyleMedium9&quot;,
+      &quot;table_name&quot;: &quot;SalesTable&quot;
+    }
+  ]
+}
+</code></pre>
+<h3 id="apply_table_style-minimal-mcp-sample-exstruct_make"><code>apply_table_style</code> minimal MCP sample (<code>exstruct_make</code>)<a class="headerlink" href="#apply_table_style-minimal-mcp-sample-exstruct_make" title="Permanent link">&para;</a></h3>
+<p>Use this for Windows + Excel COM smoke checks when you need a reproducible minimal request.</p>
+<pre><code class="language-json">{
+  &quot;tool&quot;: &quot;exstruct_make&quot;,
+  &quot;out_path&quot;: &quot;C:\\data\\table_style_smoke.xlsx&quot;,
+  &quot;backend&quot;: &quot;com&quot;,
+  &quot;ops&quot;: [
+    {
+      &quot;op&quot;: &quot;set_range_values&quot;,
+      &quot;sheet&quot;: &quot;Sheet1&quot;,
+      &quot;range&quot;: &quot;A1:C4&quot;,
+      &quot;values&quot;: [
+        [&quot;Month&quot;, &quot;Revenue&quot;, &quot;Cost&quot;],
+        [&quot;Jan&quot;, 120, 80],
+        [&quot;Feb&quot;, 150, 90],
+        [&quot;Mar&quot;, 140, 88]
+      ]
+    },
+    {
+      &quot;op&quot;: &quot;apply_table_style&quot;,
+      &quot;sheet&quot;: &quot;Sheet1&quot;,
+      &quot;range&quot;: &quot;A1:C4&quot;,
+      &quot;style&quot;: &quot;TableStyleMedium2&quot;,
+      &quot;table_name&quot;: &quot;SalesTable&quot;
+    }
+  ]
+}
+</code></pre>
+<h3 id="auto_fit_columns-quick-guide"><code>auto_fit_columns</code> quick guide<a class="headerlink" href="#auto_fit_columns-quick-guide" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Purpose: auto-fit column widths and optionally clamp with min/max bounds.</li>
+<li>Required: <code>sheet</code>.</li>
+<li>Optional: <code>columns</code>, <code>min_width</code>, <code>max_width</code>.</li>
+<li><code>columns</code> supports Excel letters and numeric indexes (for example <code>["A", 2]</code>).</li>
+<li>If <code>columns</code> is omitted, used columns are targeted.</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-json">{
+  &quot;tool&quot;: &quot;exstruct_patch&quot;,
+  &quot;xlsx_path&quot;: &quot;C:\\data\\book.xlsx&quot;,
+  &quot;ops&quot;: [
+    {
+      &quot;op&quot;: &quot;auto_fit_columns&quot;,
+      &quot;sheet&quot;: &quot;Sheet1&quot;,
+      &quot;columns&quot;: [&quot;A&quot;, 2],
+      &quot;min_width&quot;: 8,
+      &quot;max_width&quot;: 40
+    }
+  ]
+}
+</code></pre>
+<h3 id="color-fields-color-fill_color">Color fields (<code>color</code> / <code>fill_color</code>)<a class="headerlink" href="#color-fields-color-fill_color" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>set_font_color</code> uses <code>color</code> (font color only)</li>
+<li><code>set_fill_color</code> uses <code>fill_color</code> (background fill only)</li>
+<li>Accepted formats for both fields:</li>
+<li><code>RRGGBB</code></li>
+<li><code>AARRGGBB</code></li>
+<li><code>#RRGGBB</code></li>
+<li><code>#AARRGGBB</code></li>
+<li>Values are normalized internally to uppercase with leading <code>#</code>.</li>
+</ul>
+<p>Examples:</p>
+<pre><code class="language-json">{
+  &quot;tool&quot;: &quot;exstruct_patch&quot;,
+  &quot;xlsx_path&quot;: &quot;C:\\data\\book.xlsx&quot;,
+  &quot;ops&quot;: [
+    { &quot;op&quot;: &quot;set_font_color&quot;, &quot;sheet&quot;: &quot;Sheet1&quot;, &quot;cell&quot;: &quot;A1&quot;, &quot;color&quot;: &quot;1f4e79&quot; },
+    { &quot;op&quot;: &quot;set_fill_color&quot;, &quot;sheet&quot;: &quot;Sheet1&quot;, &quot;range&quot;: &quot;A1:C1&quot;, &quot;fill_color&quot;: &quot;CC336699&quot; }
+  ]
+}
+</code></pre>
+<h3 id="alias-and-shorthand-inputs">Alias and shorthand inputs<a class="headerlink" href="#alias-and-shorthand-inputs" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>add_sheet</code>: <code>name</code> is accepted as an alias of <code>sheet</code></li>
+<li><code>set_dimensions</code>:</li>
+<li><code>row</code> -&gt; <code>rows</code></li>
+<li><code>col</code> -&gt; <code>columns</code></li>
+<li><code>height</code> -&gt; <code>row_height</code></li>
+<li><code>width</code> -&gt; <code>column_width</code></li>
+<li><code>columns</code> accepts both letters (<code>"A"</code>, <code>"AA"</code>) and positive indexes (<code>1</code>, <code>2</code>, ...)</li>
+<li><code>draw_grid_border</code>: <code>range</code> shorthand is accepted and normalized to
+  <code>base_cell</code> + <code>row_count</code> + <code>col_count</code></li>
+<li><code>set_alignment</code>:</li>
+<li><code>horizontal</code> -&gt; <code>horizontal_align</code></li>
+<li><code>vertical</code> -&gt; <code>vertical_align</code></li>
+<li><code>set_fill_color</code>:</li>
+<li><code>color</code> -&gt; <code>fill_color</code></li>
+<li>Relative <code>out_path</code> for <code>exstruct_make</code> is resolved from MCP <code>--root</code>.</li>
+</ul>
+<h3 id="mirror-artifact-handoff">Mirror artifact handoff<a class="headerlink" href="#mirror-artifact-handoff" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>exstruct_patch</code> / <code>exstruct_make</code> input:</li>
+<li><code>mirror_artifact</code> (default: <code>false</code>)</li>
+<li>Output:</li>
+<li><code>mirrored_out_path</code> (<code>null</code> when not mirrored)</li>
+<li>Behavior:</li>
+<li>Mirroring runs only on success.</li>
+<li>If <code>--artifact-bridge-dir</code> is not set, process still succeeds and warning is returned.</li>
+<li>If copy fails, process still succeeds and warning is returned.</li>
+</ul>
+<h3 id="claude-desktop-artifact-handoff-recipe">Claude Desktop artifact handoff recipe<a class="headerlink" href="#claude-desktop-artifact-handoff-recipe" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Start MCP server with <code>--artifact-bridge-dir</code>.</li>
+<li>Call <code>exstruct_patch</code> or <code>exstruct_make</code> with <code>mirror_artifact=true</code>.</li>
+<li>Read <code>mirrored_out_path</code> from tool output and pass that path to Claude for follow-up tasks.</li>
+</ol>
+<p>Example Claude Desktop MCP args:</p>
+<pre><code class="language-json">{
+  &quot;command&quot;: &quot;uvx&quot;,
+  &quot;args&quot;: [
+    &quot;--from&quot;,
+    &quot;exstruct[mcp]&quot;,
+    &quot;exstruct-mcp&quot;,
+    &quot;--root&quot;,
+    &quot;C:\\data&quot;,
+    &quot;--artifact-bridge-dir&quot;,
+    &quot;C:\\data\\artifacts&quot;,
+    &quot;--on-conflict&quot;,
+    &quot;overwrite&quot;
+  ]
+}
+</code></pre>
+<p>Example tool call:</p>
+<pre><code class="language-json">{
+  &quot;tool&quot;: &quot;exstruct_patch&quot;,
+  &quot;xlsx_path&quot;: &quot;C:\\data\\book.xlsx&quot;,
+  &quot;mirror_artifact&quot;: true,
+  &quot;ops&quot;: [
+    { &quot;op&quot;: &quot;set_value&quot;, &quot;sheet&quot;: &quot;Sheet1&quot;, &quot;cell&quot;: &quot;A1&quot;, &quot;value&quot;: &quot;updated&quot; }
+  ]
+}
+</code></pre>
+<h2 id="op-schema-discovery-tools">Op schema discovery tools<a class="headerlink" href="#op-schema-discovery-tools" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>exstruct_list_ops</code></li>
+<li>Returns available op names and short descriptions.</li>
+<li><code>exstruct_describe_op</code></li>
+<li>Input: <code>op</code></li>
+<li>Output: <code>required</code>, <code>optional</code>, <code>constraints</code>, <code>example</code>, <code>aliases</code></li>
+</ul>
+<p>Examples:</p>
+<pre><code class="language-json">{ &quot;tool&quot;: &quot;exstruct_list_ops&quot; }
+</code></pre>
+<pre><code class="language-json">{ &quot;tool&quot;: &quot;exstruct_describe_op&quot;, &quot;op&quot;: &quot;set_fill_color&quot; }
+</code></pre>
+<h2 id="mistake-catalog-error-fix">Mistake catalog (error -&gt; fix)<a class="headerlink" href="#mistake-catalog-error-fix" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Wrong (conflicting alias and canonical field):</li>
+<li><code>{"op":"set_fill_color","sheet":"Sheet1","cell":"A1","color":"#D9E1F2","fill_color":"#FFFFFF"}</code></li>
+<li>Correct:</li>
+<li>
+<p><code>{"op":"set_fill_color","sheet":"Sheet1","cell":"A1","fill_color":"#D9E1F2"}</code></p>
+</li>
+<li>
+<p>Wrong (conflicting alias and canonical field):</p>
+</li>
+<li><code>{"op":"set_alignment","sheet":"Sheet1","cell":"A1","horizontal":"center","horizontal_align":"left"}</code></li>
+<li>Correct:</li>
+<li>
+<p><code>{"op":"set_alignment","sheet":"Sheet1","cell":"A1","horizontal_align":"center","vertical_align":"center"}</code></p>
+</li>
+<li>
+<p>Note:</p>
+</li>
+<li><code>color</code> (<code>set_fill_color</code>) and <code>horizontal</code>/<code>vertical</code> (<code>set_alignment</code>) are accepted aliases.</li>
+<li>Canonical fields (<code>fill_color</code>, <code>horizontal_align</code>, <code>vertical_align</code>) are recommended.</li>
+</ul>
+<h3 id="in-place-overwrite-recipe">In-place overwrite recipe<a class="headerlink" href="#in-place-overwrite-recipe" title="Permanent link">&para;</a></h3>
+<p>To overwrite the original workbook path explicitly:</p>
+<ol>
+<li>set <code>out_name</code> to the same filename as the input workbook</li>
+<li>set <code>on_conflict</code> to <code>overwrite</code></li>
+<li>keep <code>out_dir</code> empty (or set it to the same directory)</li>
+</ol>
+<p>Example:</p>
+<pre><code class="language-json">{
+  &quot;tool&quot;: &quot;exstruct_patch&quot;,
+  &quot;xlsx_path&quot;: &quot;C:\\data\\book.xlsx&quot;,
+  &quot;out_name&quot;: &quot;book.xlsx&quot;,
+  &quot;on_conflict&quot;: &quot;overwrite&quot;,
+  &quot;ops&quot;: [
+    { &quot;op&quot;: &quot;set_value&quot;, &quot;sheet&quot;: &quot;Sheet1&quot;, &quot;cell&quot;: &quot;A1&quot;, &quot;value&quot;: &quot;updated&quot; }
+  ]
+}
+</code></pre>
+<h3 id="runtime-info-tool">Runtime info tool<a class="headerlink" href="#runtime-info-tool" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>exstruct_get_runtime_info</code> returns:</li>
+<li><code>root</code></li>
+<li><code>cwd</code></li>
+<li><code>platform</code></li>
+<li><code>path_examples</code> (<code>relative</code> and <code>absolute</code>)</li>
+</ul>
+<p>Example response (shape):</p>
+<pre><code class="language-json">{
+  &quot;root&quot;: &quot;C:\\data&quot;,
+  &quot;cwd&quot;: &quot;C:\\Users\\agent\\workspace&quot;,
+  &quot;platform&quot;: &quot;win32&quot;,
+  &quot;path_examples&quot;: {
+    &quot;relative&quot;: &quot;outputs/book.xlsx&quot;,
+    &quot;absolute&quot;: &quot;C:\\data\\outputs\\book.xlsx&quot;
+  }
+}
+</code></pre>
+<h2 id="ai-agent-configuration-examples">AI agent configuration examples<a class="headerlink" href="#ai-agent-configuration-examples" title="Permanent link">&para;</a></h2>
+<h3 id="using-uvx-recommended">Using uvx (recommended)<a class="headerlink" href="#using-uvx-recommended" title="Permanent link">&para;</a></h3>
+<h4 id="claude-desktop-github-copilot">Claude Desktop / GitHub Copilot<a class="headerlink" href="#claude-desktop-github-copilot" title="Permanent link">&para;</a></h4>
+<pre><code class="language-json">{
+  &quot;mcpServers&quot;: {
+    &quot;exstruct&quot;: {
+      &quot;command&quot;: &quot;uvx&quot;,
+      &quot;args&quot;: [
+        &quot;--from&quot;,
+        &quot;exstruct[mcp]&quot;,
+        &quot;exstruct-mcp&quot;,
+        &quot;--root&quot;,
+        &quot;C:\\data&quot;,
+        &quot;--log-file&quot;,
+        &quot;C:\\logs\\exstruct-mcp.log&quot;,
+        &quot;--on-conflict&quot;,
+        &quot;rename&quot;
+      ]
+    }
+  }
+}
+</code></pre>
+<h4 id="codex">Codex<a class="headerlink" href="#codex" title="Permanent link">&para;</a></h4>
+<pre><code class="language-toml">[mcp_servers.exstruct]
+command = &quot;uvx&quot;
+args = [
+  &quot;--from&quot;,
+  &quot;exstruct[mcp]&quot;,
+  &quot;exstruct-mcp&quot;,
+  &quot;--root&quot;,
+  &quot;C:\\data&quot;,
+  &quot;--log-file&quot;,
+  &quot;C:\\logs\\exstruct-mcp.log&quot;,
+  &quot;--on-conflict&quot;,
+  &quot;rename&quot;
+]
+</code></pre>
+<h3 id="using-pip-install">Using pip install<a class="headerlink" href="#using-pip-install" title="Permanent link">&para;</a></h3>
+<h4 id="codex_1">Codex<a class="headerlink" href="#codex_1" title="Permanent link">&para;</a></h4>
+<p><code>~/.codex/config.toml</code></p>
+<pre><code class="language-toml">[mcp_servers.exstruct]
+command = &quot;exstruct-mcp&quot;
+args = [&quot;--root&quot;, &quot;C:\\data&quot;, &quot;--log-file&quot;, &quot;C:\\logs\\exstruct-mcp.log&quot;, &quot;--on-conflict&quot;, &quot;rename&quot;]
+</code></pre>
+<h4 id="github-copilot-claude-desktop-gemini-cli">GitHub Copilot / Claude Desktop / Gemini CLI<a class="headerlink" href="#github-copilot-claude-desktop-gemini-cli" title="Permanent link">&para;</a></h4>
+<p>Register an MCP server with a command + args in your MCP settings:</p>
+<pre><code class="language-json">{
+  &quot;mcpServers&quot;: {
+    &quot;exstruct&quot;: {
+      &quot;command&quot;: &quot;exstruct-mcp&quot;,
+      &quot;args&quot;: [&quot;--root&quot;, &quot;C:\\data&quot;]
+    }
+  }
+}
+</code></pre>
+<h2 id="operational-notes">Operational notes<a class="headerlink" href="#operational-notes" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Logs go to stderr (and optionally <code>--log-file</code>) to avoid contaminating stdio responses.</li>
+<li>On Windows with Excel, standard/verbose can use COM for richer extraction.
+  On non-Windows, COM is unavailable and openpyxl-based fallbacks are used.</li>
+<li>For large outputs, use <code>read_json_chunk</code> to avoid hitting client limits.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

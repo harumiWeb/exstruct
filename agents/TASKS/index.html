@@ -1,0 +1,1727 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://harumiweb.github.io/exstruct/agents/TASKS/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+    
+    
+      
+        <title>Task List - ExStruct</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#task-list" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ExStruct" class="md-header__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ExStruct
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Task List
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ExStruct" class="md-nav__button md-logo" aria-label="ExStruct" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ExStruct
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../generated/models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Models (generated)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JSON Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concept/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept / Why ExStruct?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.5.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.5.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.5.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.4.4/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.4.4
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.4.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.4.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.7/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.7
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.6/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.5/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.5
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.3.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.3.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.90
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.80/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.80
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.71/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.71
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.70/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.70
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.61/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.61
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/v0.2.60/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.2.60
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Read Me
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../README.en/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (EN)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../README.ja/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Me (JA)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../license-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    License Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#epic-mcp-patch-architecture-refactor-phase-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Epic: MCP Patch Architecture Refactor (Phase 1)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0. 事前準備と合意
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 共通ユーティリティ抽出（低リスク先行）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-patch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. patch ドメイン分離（型とモデル）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 正規化と仕様メタデータの一元化
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. サービス層と backend 分離
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. テスト再配置と追加
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. ドキュメント更新
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. 品質ゲート
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-phase-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. レガシー実装完全廃止（Phase 2）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        優先順位
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        マイルストーン（推奨）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#epic-mcp-coverage-recovery-post-refactor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Epic: MCP Coverage Recovery (Post-Refactor)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0. 現状固定と差分計測
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-patchmodelspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. patch/models.py 分岐網羅
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-patchinternalpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. patch/internal.py 分岐網羅
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-serverpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. server.py 未カバー経路の補完
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-reader" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Reader系の境界ケース補完
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-ci" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. CIゲート強化
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 検証
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#epic-pr-65-review-follow-up-stabilization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Epic: PR #65 Review Follow-up (Stabilization)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0-github-mcp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0. レビュー棚卸し（GitHub MCP）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-p0" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. P0: 機能不具合修正
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-p0" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. P0: ドキュメント整合修正
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-p1-pr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. P1: 低リスク品質改善（同PR）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-p2-epic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. P2: 別Epicへ分離する設計課題
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 検証とクローズ
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="task-list">Task List<a class="headerlink" href="#task-list" title="Permanent link">&para;</a></h1>
+<p>未完了: <code>[ ]</code> / 完了: <code>[x]</code></p>
+<h2 id="epic-mcp-patch-architecture-refactor-phase-1">Epic: MCP Patch Architecture Refactor (Phase 1)<a class="headerlink" href="#epic-mcp-patch-architecture-refactor-phase-1" title="Permanent link">&para;</a></h2>
+<h2 id="0">0. 事前準備と合意<a class="headerlink" href="#0" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <code>FEATURE_SPEC.md</code> と本タスクの整合性確認</li>
+<li>[x] 既存公開 API（import 経路・MCP I/F）の互換条件を明文化</li>
+<li>[x] 回帰対象テスト群の確定（patch/make/server/tools）</li>
+</ul>
+<p>完了条件:
+- [x] 仕様・互換条件・テスト対象がレビューで承認されている</p>
+<h2 id="1">1. 共通ユーティリティ抽出（低リスク先行）<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <code>src/exstruct/mcp/shared/a1.py</code> を追加</li>
+<li>[x] A1/列変換関数を <code>patch_runner.py</code>・<code>server.py</code> から移設</li>
+<li>[x] <code>src/exstruct/mcp/shared/output_path.py</code> を追加</li>
+<li>[x] 出力 path 解決/競合処理を <code>patch_runner.py</code>・<code>extract_runner.py</code> から移設</li>
+<li>[x] 既存呼び出し元を共通ユーティリティ利用へ置換</li>
+</ul>
+<p>完了条件:
+- [x] A1 と output path の重複実装が削除されている
+- [x] 関連テストが回帰なしで通る</p>
+<h2 id="2-patch">2. patch ドメイン分離（型とモデル）<a class="headerlink" href="#2-patch" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <code>src/exstruct/mcp/patch/types.py</code> を追加</li>
+<li>[x] <code>PatchOpType</code> ほか patch 共通型を移設</li>
+<li>[x] <code>src/exstruct/mcp/patch/models.py</code> を追加</li>
+<li>[x] <code>PatchOp</code> / <code>PatchRequest</code> / <code>MakeRequest</code> / <code>PatchResult</code> と snapshot モデルを移設</li>
+<li>[x] <code>patch_runner.py</code> から新モジュールを再エクスポート</li>
+</ul>
+<p>完了条件:
+- [x] モデルが <code>patch_runner.py</code> 以外からも直接利用可能
+- [x] <code>patch_runner.py</code> のモデル定義が削減されている</p>
+<h2 id="3">3. 正規化と仕様メタデータの一元化<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <code>src/exstruct/mcp/patch/specs.py</code> を追加</li>
+<li>[x] op ごとの required/optional/constraints/aliases を集約</li>
+<li>[x] <code>src/exstruct/mcp/patch/normalize.py</code> を追加</li>
+<li>[x] top-level <code>sheet</code> 解決と alias 正規化を移設</li>
+<li>[x] <code>server.py</code> の <code>_coerce_patch_ops</code> 系を共通ロジック利用へ置換</li>
+<li>[x] <code>tools.py</code> の top-level <code>sheet</code> 解決を共通ロジック利用へ置換</li>
+<li>[x] <code>op_schema.py</code> の <code>PatchOpType</code> 依存を <code>patch/specs.py</code> / <code>patch/types.py</code> へ変更</li>
+</ul>
+<p>完了条件:
+- [x] patch op 正規化実装が単一ソース化されている
+- [x] <code>server.py</code> と <code>tools.py</code> の重複ロジックが削減されている</p>
+<h2 id="4-backend">4. サービス層と backend 分離<a class="headerlink" href="#4-backend" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <code>src/exstruct/mcp/patch/service.py</code> を追加</li>
+<li>[x] <code>run_patch</code> / <code>run_make</code> のオーケストレーションを移設</li>
+<li>[x] <code>src/exstruct/mcp/patch/engine/base.py</code> を追加（engine protocol）</li>
+<li>[x] <code>openpyxl</code> 実装を <code>engine/openpyxl_engine.py</code> へ移設</li>
+<li>[x] <code>xlwings</code> 実装を <code>engine/xlwings_engine.py</code> へ移設</li>
+<li>[x] 必要に応じて op 実装を <code>patch/ops/*</code> へ分離</li>
+<li>[x] <code>patch_runner.py</code> を薄いファサードへ縮退</li>
+</ul>
+<p>完了条件:
+- [x] <code>patch_runner.py</code> の主責務が公開互換維持のみになっている
+- [x] engine 分岐/実装が <code>service.py</code> と <code>engine/*</code> に分離されている</p>
+<h2 id="5">5. テスト再配置と追加<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <code>tests/mcp/patch/test_normalize.py</code> を追加</li>
+<li>[x] <code>tests/mcp/patch/test_service.py</code> を追加</li>
+<li>[x] <code>tests/mcp/shared/test_a1.py</code> を追加</li>
+<li>[x] <code>tests/mcp/shared/test_output_path.py</code> を追加</li>
+<li>[x] 既存テストを責務別に分割（必要箇所のみ）</li>
+<li>[x] <code>tests/mcp/test_patch_runner.py</code> の互換観点テストを維持</li>
+</ul>
+<p>完了条件:
+- [x] 新規分割モジュールに直接対応するテストが存在する
+- [x] 既存互換テストが通る</p>
+<h2 id="6">6. ドキュメント更新<a class="headerlink" href="#6" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <code>docs/agents/ARCHITECTURE.md</code> に新構成を反映</li>
+<li>[x] <code>docs/agents/DATA_MODEL.md</code> の patch モデル参照先を更新</li>
+<li>[x] 必要に応じて <code>docs/mcp.md</code> の内部実装説明を更新</li>
+</ul>
+<p>完了条件:
+- [x] 参照先のコードパスが現行構成と一致している</p>
+<h2 id="7">7. 品質ゲート<a class="headerlink" href="#7" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <code>uv run task precommit-run</code> 実行</li>
+<li>[x] 失敗時は修正して再実行</li>
+<li>[x] 変更差分の自己レビュー（責務分離・循環依存・互換性）</li>
+</ul>
+<p>完了条件:
+- [x] mypy strict: 0 エラー
+- [x] Ruff: 0 エラー
+- [x] テスト: 全て成功</p>
+<h2 id="8-phase-2">8. レガシー実装完全廃止（Phase 2）<a class="headerlink" href="#8-phase-2" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <code>src/exstruct/mcp/patch/legacy_runner.py</code> 依存の棚卸し（import/呼び出し元を全列挙）</li>
+<li>[x] <code>patch/service.py</code> / <code>patch/engine/*</code> の <code>legacy_runner</code> 依存を新モジュール群へ置換</li>
+<li>[x] <code>patch/models.py</code> の <code>patch_runner</code> 経由 import を廃止し、実体モデル定義へ移行</li>
+<li>[x] <code>patch_runner.py</code> の monkeypatch 互換レイヤを段階的に削除（必要な公開 API は維持）</li>
+<li>[x] <code>tests/mcp/test_patch_runner.py</code> の私有関数前提テストを責務別テストへ移管</li>
+<li>[x] <code>src/exstruct/mcp/patch/ops/*</code> を導入し、op 実装を backend 別に分離</li>
+<li>[x] <code>legacy_runner.py</code> を削除し、不要な再エクスポートを整理</li>
+<li>[x] 互換性要件を満たしたまま <code>uv run task precommit-run</code> と回帰テストを再通過</li>
+</ul>
+<p>完了条件:
+- [x] <code>legacy_runner.py</code> がリポジトリから削除されている
+- [x] <code>patch_runner.py</code> が公開 API の薄い入口のみを保持している
+- [x] patch 実装の依存方向が <code>service -&gt; engine/ops</code> に一本化されている
+- [x] 既存 MCP I/F 互換とテスト成功が維持されている</p>
+<h2 id="_1">優先順位<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<ol>
+<li>P0: 1, 2, 3</li>
+<li>P1: 4, 5</li>
+<li>P2: 6, 7, 8</li>
+</ol>
+<h2 id="_2">マイルストーン（推奨）<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<ol>
+<li>M1: 共通ユーティリティ抽出完了（Task 1）</li>
+<li>M2: ドメイン/正規化分離完了（Task 2-3）</li>
+<li>M3: service/engine 分離完了（Task 4）</li>
+<li>M4: テスト・ドキュメント・品質ゲート完了（Task 5-7）</li>
+<li>M5: レガシー実装完全廃止完了（Task 8）</li>
+</ol>
+<hr />
+<h2 id="epic-mcp-coverage-recovery-post-refactor">Epic: MCP Coverage Recovery (Post-Refactor)<a class="headerlink" href="#epic-mcp-coverage-recovery-post-refactor" title="Permanent link">&para;</a></h2>
+<h2 id="0_1">0. 現状固定と差分計測<a class="headerlink" href="#0_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <code>coverage.xml</code> を基準値として保存（78.24% / miss 1,654）</li>
+<li>[x] 低下主因3ファイルの未実行行を記録（internal/models/server）</li>
+<li>[ ] 改善後比較用コマンドを固定化</li>
+<li>[ ] 完了条件: before/after の比較表が作成されている</li>
+</ul>
+<h2 id="1-patchmodelspy">1. <code>patch/models.py</code> 分岐網羅<a class="headerlink" href="#1-patchmodelspy" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <code>PatchOp</code> 各 validator の失敗系を <code>parametrize</code> で追加</li>
+<li>[x] alias競合・必須不足・型不正・範囲不正のケースを追加</li>
+<li>[x] <code>set_style</code> / <code>set_alignment</code> / <code>set_dimensions</code> の境界値ケースを追加</li>
+<li>[ ] 完了条件: <code>models.py</code> の未実行行を大幅削減（目安 80+ 行カバー）</li>
+</ul>
+<h2 id="2-patchinternalpy">2. <code>patch/internal.py</code> 分岐網羅<a class="headerlink" href="#2-patchinternalpy" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[ ] openpyxl 適用系（成功/失敗/skip）を fixtureベースで追加</li>
+<li>[ ] <code>dry_run</code> / <code>preflight_formula_check</code> / <code>return_inverse_ops</code> の分岐を追加</li>
+<li>[x] unsupported op / sheet not found / range shape mismatch を網羅</li>
+<li>[ ] conflict policy（overwrite/rename/skip）の分岐を網羅</li>
+<li>[ ] 完了条件: <code>internal.py</code> の未実行行を大幅削減（目安 250+ 行カバー）</li>
+</ul>
+<h2 id="3-serverpy">3. <code>server.py</code> 未カバー経路の補完<a class="headerlink" href="#3-serverpy" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] alias正規化 helper のエラー経路テストを追加</li>
+<li>[x] draw_grid_border range shorthand の不正入力テストを追加</li>
+<li>[x] patch op JSON parse の例外文言テストを追加</li>
+<li>[ ] 完了条件: <code>server.py</code> の line-rate を有意改善（目安 +10pt 以上）</li>
+</ul>
+<h2 id="4-reader">4. Reader系の境界ケース補完<a class="headerlink" href="#4-reader" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <code>test_sheet_reader.py</code> に invalid range / empty result / boundary を追加</li>
+<li>[x] <code>test_chunk_reader.py</code> に cursor/filter/max_bytes 境界テストを追加</li>
+<li>[ ] 完了条件: <code>sheet_reader.py</code> と <code>chunk_reader.py</code> の未実行行を削減</li>
+</ul>
+<h2 id="5-ci">5. CIゲート強化<a class="headerlink" href="#5-ci" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] テストコマンドに <code>--cov-fail-under=80</code> を追加</li>
+<li>[x] <code>codecov.yml</code> の patch target を <code>80%</code> に設定</li>
+<li>[ ] PR時に project/patch 両ステータスを required として運用</li>
+<li>[ ] 完了条件: 80% 未満のPRがCIで確実に失敗する</li>
+</ul>
+<h2 id="6_1">6. 検証<a class="headerlink" href="#6_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <code>uv run task precommit-run</code> 実行</li>
+<li>[ ] <code>uv run pytest -m "not com and not render" --cov=exstruct --cov-report=xml --cov-fail-under=80</code> 実行</li>
+<li>[x] <code>uv run coverage report -m</code> で改善確認</li>
+<li>[ ] 完了条件: 全体80%以上、主要低下ファイルの改善、静的解析0エラー</li>
+</ul>
+<hr />
+<h2 id="epic-pr-65-review-follow-up-stabilization">Epic: PR #65 Review Follow-up (Stabilization)<a class="headerlink" href="#epic-pr-65-review-follow-up-stabilization" title="Permanent link">&para;</a></h2>
+<h2 id="0-github-mcp">0. レビュー棚卸し（GitHub MCP）<a class="headerlink" href="#0-github-mcp" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] PR #65 の unresolved review threads を一覧化（2026-02-24基準）</li>
+<li>[x] 指摘を <code>P0（即対応）/P1（同PR対応）/P2（別Epic）</code> に分類</li>
+<li>[x] 分類結果を <code>FEATURE_SPEC.md</code> と同期</li>
+</ul>
+<p>完了条件:
+- [x] 指摘一覧・優先度・対応方針が文書化されている</p>
+<h2 id="1-p0">1. P0: 機能不具合修正<a class="headerlink" href="#1-p0" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <code>src/exstruct/mcp/patch/service.py</code> で <code>apply_table_style</code> を含む <code>backend="auto"</code> 要求を openpyxl へルーティング</li>
+<li>[x] Windows/COM 有効時の回帰テストを追加（<code>tests/mcp/patch/test_service.py</code>）</li>
+<li>[x] 既存 <code>backend="com"</code> fallback との挙動差分がないことを確認</li>
+</ul>
+<p>完了条件:
+- [x] <code>apply_table_style</code> が <code>backend="auto"</code> で失敗しない
+- [x] 追加テストが安定して通る</p>
+<h2 id="2-p0">2. P0: ドキュメント整合修正<a class="headerlink" href="#2-p0" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <code>docs/agents/LEGACY_DEPENDENCY_INVENTORY.md</code> の <code>legacy_runner</code> 前提記述を現行実装へ更新</li>
+<li>[x] <code>docs/mcp.md</code> Mistake catalog の alias 記述矛盾（<code>color</code> / <code>horizontal</code> / <code>vertical</code>）を解消</li>
+<li>[x] ドキュメント内の参照パス整合を再確認</li>
+</ul>
+<p>完了条件:
+- [x] 指摘対象ドキュメントが実装仕様と一致している</p>
+<h2 id="3-p1-pr">3. P1: 低リスク品質改善（同PR）<a class="headerlink" href="#3-p1-pr" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <code>src/exstruct/mcp/server.py</code> の重複・未使用正規化 helper 群を削除し <code>patch.normalize</code> に一本化</li>
+<li>[x] <code>_register_tools</code> docstring に <code>default_on_conflict</code> / <code>artifact_bridge_dir</code> を追記</li>
+<li>[x] 変更差分内の docstring 欠落を補完（テスト含む）</li>
+<li>[x] <code>src/exstruct/mcp/patch/engine/openpyxl_engine.py</code> / <code>patch/ops/openpyxl_ops.py</code> の戻り値を <code>OpenpyxlEngineResult</code>（BaseModel）へ統一</li>
+<li>[x] <code>src/exstruct/mcp/patch/service.py</code> の openpyxl 呼び出しを結果モデル参照へ更新</li>
+<li>[x] <code>tests/mcp/patch/test_service.py</code> の新規 helper/テストに Google スタイル docstring を追加</li>
+</ul>
+<p>完了条件:
+- [x] 重複ロジック削減後も既存テストが回帰しない
+- [x] docstring 指摘の主要残件が解消される
+- [x] openpyxl engine 境界の tuple 返却が解消される</p>
+<h2 id="4-p2-epic">4. P2: 別Epicへ分離する設計課題<a class="headerlink" href="#4-p2-epic" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[ ] <code>patch/__init__.py</code> 公開API（正規化 helper 公開の是非）を設計判断</li>
+<li>[ ] <code>shared/a1.py</code> 戻り値モデル化と呼び出し側移行を別PRタスク化</li>
+<li>[ ] <code>patch/internal.py</code> の外部境界型（<code>Any</code> + 正規化）再設計を別PRタスク化</li>
+</ul>
+<p>完了条件:
+- [ ] 各課題に owner / 期限 / 受け入れ基準が付与された別タスクが起票済み</p>
+<h2 id="5_1">5. 検証とクローズ<a class="headerlink" href="#5_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <code>uv run task precommit-run</code> 実行</li>
+<li>[x] 必要テスト（patch/service/server/docs 関連）を実行</li>
+<li>[x] GitHub 上で P0 指摘を resolve、P1/P2 は方針コメントを残す</li>
+</ul>
+<p>完了条件:
+- [x] P0 が全て完了し、PR #65 のマージ阻害が解消されている</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
