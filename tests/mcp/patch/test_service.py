@@ -381,10 +381,10 @@ def test_service_run_patch_backend_auto_prefers_com_for_apply_table_style(
     assert calls["com"] is True
 
 
-def test_service_run_patch_rejects_create_chart_with_apply_table_style(
+def test_service_run_patch_allows_create_chart_with_apply_table_style_on_com(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Verify mixed backend-only ops are rejected with a clear error."""
+    """Verify mixed chart/table ops run on COM backend."""
     input_path = tmp_path / "book.xlsx"
     _create_workbook(input_path)
 
@@ -394,11 +394,131 @@ def test_service_run_patch_rejects_create_chart_with_apply_table_style(
         lambda: ComAvailability(available=True, reason=None),
     )
 
+    calls: dict[str, object] = {}
+
+    def _fake_apply_xlwings_engine(
+        input_path: Path,
+        output_path: Path,
+        ops: list[PatchOp],
+        auto_formula: bool,
+    ) -> list[object]:
+        calls["engine"] = "com"
+        calls["ops"] = [op.op for op in ops]
+        return []
+
+    def _fake_apply_openpyxl_engine(
+        request: PatchRequest,
+        input_path: Path,
+        output_path: Path,
+    ) -> OpenpyxlEngineResult:
+        raise AssertionError(
+            "openpyxl backend should not be called for mixed create_chart/apply_table_style"
+        )
+
+    monkeypatch.setattr(service, "apply_xlwings_engine", _fake_apply_xlwings_engine)
+    monkeypatch.setattr(service, "apply_openpyxl_engine", _fake_apply_openpyxl_engine)
+    result = service.run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[
+                PatchOp(
+                    op="create_chart",
+                    sheet="Sheet1",
+                    chart_type="line",
+                    data_range="A1:B2",
+                    anchor_cell="D2",
+                ),
+                PatchOp(
+                    op="apply_table_style",
+                    sheet="Sheet1",
+                    range="A1:B2",
+                    style="TableStyleMedium2",
+                ),
+            ],
+            on_conflict="rename",
+            backend="auto",
+        )
+    )
+
+    assert result.error is None
+    assert result.engine == "com"
+    assert calls["engine"] == "com"
+    assert calls["ops"] == ["create_chart", "apply_table_style"]
+
+
+def test_service_run_patch_allows_mixed_request_on_backend_com(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify backend=com runs mixed chart/table ops on COM."""
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+
+    monkeypatch.setattr(
+        patch_runtime,
+        "get_com_availability",
+        lambda: ComAvailability(available=True, reason=None),
+    )
+
+    calls: dict[str, object] = {}
+
+    def _fake_apply_xlwings_engine(
+        input_path: Path,
+        output_path: Path,
+        ops: list[PatchOp],
+        auto_formula: bool,
+    ) -> list[object]:
+        calls["engine"] = "com"
+        calls["ops"] = [op.op for op in ops]
+        return []
+
+    monkeypatch.setattr(service, "apply_xlwings_engine", _fake_apply_xlwings_engine)
+    result = service.run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[
+                PatchOp(
+                    op="create_chart",
+                    sheet="Sheet1",
+                    chart_type="line",
+                    data_range="A1:B2",
+                    anchor_cell="D2",
+                ),
+                PatchOp(
+                    op="apply_table_style",
+                    sheet="Sheet1",
+                    range="A1:B2",
+                    style="TableStyleMedium2",
+                ),
+            ],
+            on_conflict="rename",
+            backend="com",
+        )
+    )
+
+    assert result.error is None
+    assert result.engine == "com"
+    assert calls["engine"] == "com"
+    assert calls["ops"] == ["create_chart", "apply_table_style"]
+
+
+def test_service_run_patch_mixed_request_requires_com_when_auto_unavailable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify mixed chart/table ops fail clearly when COM is unavailable."""
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+
+    monkeypatch.setattr(
+        patch_runtime,
+        "get_com_availability",
+        lambda: ComAvailability(available=False, reason="not available"),
+    )
+
     with pytest.raises(
         ValueError,
         match=(
-            r"create_chart and apply_table_style cannot be combined.*"
-            r"create_chart is COM-only.*single backend engine"
+            r"create_chart \+ apply_table_style requests require "
+            r"Windows Excel COM availability"
         ),
     ):
         service.run_patch(

@@ -179,15 +179,7 @@ def run_patch(
 def _resolve_effective_request(
     request: PatchRequest,
 ) -> PatchRequest:
-    """Resolve request-level backend adjustments and mixed-op guards."""
-    if runtime.contains_create_chart_op(request.ops):
-        if not runtime.contains_apply_table_style_op(request.ops):
-            return request
-        raise ValueError(
-            "create_chart and apply_table_style cannot be combined in one patch request. "
-            "create_chart is COM-only, and a patch request runs on a single backend engine. "
-            "Run them in separate requests to isolate chart and table operations."
-        )
+    """Resolve request-level backend adjustments."""
     return request
 
 

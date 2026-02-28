@@ -114,7 +114,7 @@ Notes:
 - `create_chart` `chart_type` supports: `line`, `column`, `bar`, `area`, `pie`, `doughnut`, `scatter`, `radar` (aliases: `column_clustered`, `bar_clustered`, `xy_scatter`, `donut`).
 - `create_chart` `data_range` accepts either one range string or `list[str]` (multi-series), and `data_range` / `category_range` both support sheet-qualified ranges (`Sheet2!A1:B10`, `'Sales Data'!A1:B10`).
 - `create_chart` supports optional explicit labels: `chart_title`, `x_axis_title`, `y_axis_title`.
-- `create_chart` and `apply_table_style` cannot be combined in one request (split into separate calls).
+- `create_chart` and `apply_table_style` can be combined in one request when the backend resolves to COM (`backend="com"` or `backend="auto"` with COM available).
 - For stable `apply_table_style` COM runs on Windows, ensure desktop Excel is installed/runnable and the target `range` is a contiguous header-included A1 range.
 - `exstruct_patch` error detail may include `error_code` / `failed_field` / `raw_com_message`; table-related codes include `table_style_invalid`, `list_object_add_failed`, and `com_api_missing`.
 - `exstruct_patch` response includes `engine` (`com` or `openpyxl`) to show the actual backend used. `restore_design_snapshot` remains openpyxl-only.

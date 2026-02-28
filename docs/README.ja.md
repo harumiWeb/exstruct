@@ -91,7 +91,7 @@ exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict re
 - `create_chart` は COM 専用です（`create_chart` を含むリクエストでは `backend="openpyxl"` は指定不可）。また、`dry_run` / `return_inverse_ops` / `preflight_formula_check` も指定できません。
 - `create_chart.chart_type` は `line` / `column` / `bar` / `area` / `pie` / `doughnut` / `scatter` / `radar` をサポートします。
 - `create_chart.chart_type` の alias は `column_clustered` -> `column`、`bar_clustered` -> `bar`、`xy_scatter` -> `scatter`、`donut` -> `doughnut` です。
-- `create_chart` と `apply_table_style` は1回のリクエストで同時指定できません（別リクエストに分割してください）。
+- `create_chart` と `apply_table_style` は、バックエンドが COM に解決される場合（`backend="com"` または COM 利用可能な `backend="auto"`）は1回のリクエストで同時指定できます。
 
 注意点:
 

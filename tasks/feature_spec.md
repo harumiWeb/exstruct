@@ -338,3 +338,80 @@ Excel編集体験を壊さずに「出力ファイル運用」「ファイル受
 - 同じファイルに連続パッチしても、デフォルトで `_patched` が無限に連鎖しない
 - `mirror_artifact=true` 利用時の手順が docs のみで再現できる
 - `create_chart` + `apply_table_style` の同時指定エラーで「なぜ不可か」が明示される
+
+## Feature Name
+
+MCP Patch COM simultaneous execution for `create_chart` + `apply_table_style` (Phase 3)
+
+## Goal
+
+`create_chart` と `apply_table_style` を同一 `PatchRequest` で実行可能にし、
+複数リクエスト分割なしで実運用のExcel生成を完結できるようにする。
+
+## Background / Supersedes
+
+- 本フェーズは、過去フェーズで定義していた
+  「`create_chart` と `apply_table_style` の同時リクエスト不可」制約を上書きする。
+- ただし `create_chart` が COM専用である方針自体は維持する。
+
+## Scope
+
+### In Scope
+
+- `ops` に `create_chart` と `apply_table_style` が同時に含まれる場合を許可する。
+- mixed request は op記述順を保ったまま単一COM実行で処理する。
+- `backend=auto` では、mixed request 時に COM が利用可能なら COM を選択する。
+- `backend=com` では mixed request を通常ケースとして許可する。
+- mixed request の失敗時に `PatchErrorDetail` で原因特定しやすいメッセージを返す。
+- `op_schema` / `docs/mcp.md` / `README(.ja).md` の仕様文言を同時更新する。
+
+### Out of Scope
+
+- openpyxl での `create_chart` 実装（`create_chart` のCOM専用は維持）
+- mixed request の自動分割実行（1リクエストを内部で2リクエスト化）
+- `create_chart` の `dry_run` / `return_inverse_ops` / `preflight_formula_check` 対応
+
+## Behavior Policy
+
+- mixed request (`create_chart` + `apply_table_style`) は **COM専用** とする。
+- `backend=openpyxl` で mixed request が渡された場合は入力検証エラーとする。
+- `backend=auto` で COM 不可の場合は明示エラーとする（openpyxlフォールバックしない）。
+  - 理由: `create_chart` 自体が openpyxl 非対応のため。
+
+## Public API / Type Changes
+
+- `PatchOp` / `PatchRequest` の型追加は不要（既存型のまま対応可能）。
+- 変更はバリデーション・実行ポリシーとメッセージの挙動差分のみ。
+
+## Implementation Points
+
+- `src/exstruct/mcp/patch/service.py`
+  - mixed-op reject ガードを撤廃し、mixed request を通常処理へ流す。
+- `src/exstruct/mcp/patch/models.py` / `src/exstruct/mcp/patch/internal.py`
+  - mixed request の backend 制約を validation に明示反映する。
+- `src/exstruct/mcp/patch/runtime.py`
+  - mixed request 時のエンジン選択・fallback条件を `create_chart` 制約と整合させる。
+- `tests/mcp/patch/test_service.py`
+  - mixed request 許可ケース（`backend=auto/com`）と COM不可ケースを追加する。
+- `tests/mcp/test_patch_runner.py`
+  - mixed request の入力制約テスト（`backend=openpyxl` 拒否など）を追加する。
+
+## Tests
+
+- 成功系:
+  - `backend=com`: mixed request が `engine="com"` で成功する。
+  - `backend=auto` + COM available: mixed request が `engine="com"` で成功する。
+- 失敗系:
+  - `backend=openpyxl`: mixed request は明示エラーになる。
+  - `backend=auto` + COM unavailable: mixed request は明示エラーになる。
+- 回帰:
+  - `create_chart` 単体の既存制約（COM専用、dry_run不可等）が維持される。
+  - `apply_table_style` 単体の openpyxl/COM 既存挙動が破壊されない。
+
+## Acceptance Criteria
+
+- `create_chart` と `apply_table_style` を同一 `PatchRequest` で実行できる。
+- mixed request 実行時の `engine` は常に `com` になる。
+- mixed request で openpyxl に誤フォールバックしない。
+- エラー時に「COM必須」と「なぜ失敗したか」が文言から判別できる。
+- 追加テストと `uv run task precommit-run` が通過する。

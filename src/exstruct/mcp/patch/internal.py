@@ -1813,12 +1813,27 @@ def _requires_openpyxl_backend(request: PatchRequest) -> bool:
     return any(op.op == "restore_design_snapshot" for op in request.ops)
 
 
+def _raise_create_chart_com_unavailable_error(
+    *,
+    has_apply_table_style: bool,
+) -> None:
+    """Raise a COM availability error for create_chart requests."""
+    if has_apply_table_style:
+        raise ValueError(
+            "create_chart + apply_table_style requests require Windows Excel COM availability in this environment."
+        )
+    raise ValueError(
+        "create_chart requires Windows Excel COM availability in this environment."
+    )
+
+
 def _select_patch_engine(
     *, request: PatchRequest, input_path: Path, com_available: bool
 ) -> PatchEngine:
     """Select concrete patch engine based on request and environment."""
     extension = input_path.suffix.lower()
     has_create_chart = _contains_create_chart_op(request.ops)
+    has_apply_table_style = _contains_apply_table_style_op(request.ops)
     if request.backend == "openpyxl":
         if has_create_chart:
             raise ValueError("create_chart is supported only on COM backend.")
@@ -1844,8 +1859,8 @@ def _select_patch_engine(
     if com_available:
         return "com"
     if has_create_chart:
-        raise ValueError(
-            "create_chart requires Windows Excel COM availability in this environment."
+        _raise_create_chart_com_unavailable_error(
+            has_apply_table_style=has_apply_table_style
         )
     return "openpyxl"
 

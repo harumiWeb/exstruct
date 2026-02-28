@@ -107,7 +107,7 @@ exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict re
 - `create_chart` の `chart_type` は `line` / `column` / `bar` / `area` / `pie` / `doughnut` / `scatter` / `radar` に対応します（エイリアス: `column_clustered` / `bar_clustered` / `xy_scatter` / `donut`）。
 - `create_chart` の `data_range` は単一範囲文字列または `list[str]`（複数系列）を受け付け、`data_range` / `category_range` ともにシート名付き範囲（`Sheet2!A1:B10`, `'Sales Data'!A1:B10`）を指定できます。
 - `create_chart` では `chart_title` / `x_axis_title` / `y_axis_title` による明示タイトル設定が可能です。
-- `create_chart` と `apply_table_style` は1回のリクエストで同時指定できません（別リクエストに分割してください）。
+- `create_chart` と `apply_table_style` は、バックエンドが COM に解決される場合（`backend="com"` または COM 利用可能な `backend="auto"`）は1回のリクエストで同時指定できます。
 - Windows で `apply_table_style` を COM で安定実行するには、デスクトップ版 Excel が起動可能で、`range` がヘッダー行を含む連続 A1 範囲であることを確認してください。
 - `exstruct_patch` のエラー詳細には `error_code` / `failed_field` / `raw_com_message` が含まれる場合があります。テーブル関連コードは `table_style_invalid` / `list_object_add_failed` / `com_api_missing` です。
 - `exstruct_patch` の応答には実際に使われたバックエンドを示す `engine`（`com` / `openpyxl`）が含まれます。`restore_design_snapshot` は引き続き openpyxl 専用です。

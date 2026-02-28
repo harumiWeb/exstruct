@@ -311,8 +311,8 @@ This keeps MCP tool I/O stable while allowing internal module separation.
   - `data_range`/`category_range` support sheet-qualified form (`Sheet2!A1:B10`, `'Sales Data'!A1:B10`).
   - Optional explicit labels: `chart_title`, `x_axis_title`, `y_axis_title`.
   - Rejects `dry_run`/`return_inverse_ops`/`preflight_formula_check`.
-  - Cannot be combined with `apply_table_style` in one request.
-    Reason: `create_chart` is COM-only and one patch request runs on a single backend engine.
+  - Can be combined with `apply_table_style` in one request when backend resolves to COM.
+  - If COM is unavailable, mixed `create_chart` + `apply_table_style` requests return a COM-required error.
 - Output includes `engine` (`"com"` or `"openpyxl"`) to show which backend was actually used.
 - Output includes `mirrored_out_path` when mirroring is requested and succeeds.
 - Conflict handling follows server `--on-conflict` unless overridden per tool call

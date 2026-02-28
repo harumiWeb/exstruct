@@ -1,3 +1,38 @@
+## Plan (Enable COM mixed request: `create_chart` + `apply_table_style` 2026-02-28)
+
+- [x] `tasks/feature_spec.md` を同時実行対応方針（Phase 3）へ刷新
+- [x] `tasks/todo.md` に本フェーズの実装計画を追加
+- [x] `service._resolve_effective_request` の mixed-op reject を撤廃
+- [x] mixed request の backend 制約を validation へ集約（`backend=openpyxl` 拒否）
+- [x] `backend=auto` + COM unavailable 時の mixed request エラーメッセージを明確化
+- [x] `tests/mcp/patch/test_service.py` に mixed request 成功/失敗ケースを追加
+- [x] `tests/mcp/test_patch_runner.py` に mixed request 入力制約テストを追加
+- [x] `docs/mcp.md` / `README.md` / `README.ja.md` の制約説明を同時実行対応へ更新
+- [x] `uv run pytest tests/mcp/patch/test_service.py tests/mcp/test_patch_runner.py`
+- [x] `uv run task precommit-run`
+
+## Test Cases (Enable COM mixed request 2026-02-28)
+
+- [x] `backend=com` で mixed request が `engine="com"` で成功する
+- [x] `backend=auto` + COM available で mixed request が `engine="com"` で成功する
+- [x] `backend=openpyxl` の mixed request が明示エラーになる
+- [x] `backend=auto` + COM unavailable の mixed request が明示エラーになる
+- [x] `create_chart` 単体制約（COM専用、dry_run不可）が維持される
+- [x] `apply_table_style` 単体挙動が退行しない
+
+## Review (Enable COM mixed request 2026-02-28)
+
+- Summary:
+- `create_chart` + `apply_table_style` の同時指定拒否を撤廃し、COM経路で同一リクエスト実行できるようにした。
+- `backend=auto` かつ COM不可時には mixed request 専用の明示エラーを返すようにした。
+- `README` / `docs` の制約文言を「同時実行可（COM時）」へ更新した。
+- Verification:
+- `uv run pytest tests/mcp/patch/test_service.py tests/mcp/test_patch_runner.py` (82 passed)
+- `uv run task precommit-run` (ruff / ruff-format / mypy passed)
+- Risks:
+- 実際のグラフ作成・テーブル化の見た目差は Excel バージョン依存で残る。
+- Follow-ups:
+
 ## Plan
 
 - [x] `tasks/feature_spec.md` を Phase 1 仕様へ刷新
