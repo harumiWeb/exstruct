@@ -855,6 +855,9 @@ def _start_render_worker_process(request_path: Path) -> _WorkerProcessProtocol:
         str(request_path),
     ]
     try:
+        # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
+        # Safe by construction: `request_path` is created in TemporaryDirectory(),
+        # and argv is passed as a list with shell disabled.
         return cast(
             _WorkerProcessProtocol,
             subprocess.Popen(
