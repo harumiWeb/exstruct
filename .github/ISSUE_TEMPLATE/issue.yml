@@ -1,8 +1,5 @@
 name: General issue
 description: Bug report, question, or discussion about ExStruct
-title: ""
-labels: []
-assignees: []
 
 body:
   - type: markdown
