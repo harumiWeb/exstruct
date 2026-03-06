@@ -105,6 +105,14 @@ def test_parse_args_with_options(tmp_path: Path) -> None:
 def test_get_capture_sheet_images_timeout_seconds(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Validate timeout env parsing for capture sheet images tool.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+
+    Returns:
+        None.
+    """
     monkeypatch.delenv("EXSTRUCT_MCP_CAPTURE_SHEET_IMAGES_TIMEOUT_SEC", raising=False)
     assert server._get_capture_sheet_images_timeout_seconds() == 120.0
 
@@ -400,6 +408,15 @@ def test_register_tools_returns_runtime_info(tmp_path: Path) -> None:
 def test_register_tools_passes_capture_sheet_images_arguments(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    """Verify capture tool wiring and payload normalization.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        tmp_path: Temporary directory fixture.
+
+    Returns:
+        None.
+    """
     app = DummyApp()
     policy = PathPolicy(root=tmp_path)
     calls: dict[str, tuple[object, ...]] = {}
@@ -466,6 +483,15 @@ def test_register_tools_passes_capture_sheet_images_arguments(
 def test_register_tools_capture_sheet_images_timeout(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    """Raise timeout with configured seconds for capture tool execution.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        tmp_path: Temporary directory fixture.
+
+    Returns:
+        None.
+    """
     app = DummyApp()
     policy = PathPolicy(root=tmp_path)
 
@@ -509,6 +535,15 @@ def test_register_tools_capture_sheet_images_timeout(
 def test_register_tools_capture_sheet_images_propagates_runner_error(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    """Propagate generic capture runner errors from server tool.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        tmp_path: Temporary directory fixture.
+
+    Returns:
+        None.
+    """
     app = DummyApp()
     policy = PathPolicy(root=tmp_path)
 
@@ -550,6 +585,15 @@ def test_register_tools_capture_sheet_images_propagates_runner_error(
 def test_register_tools_capture_sheet_images_propagates_stage_aware_error(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    """Propagate stage-aware capture runner failures from server tool.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        tmp_path: Temporary directory fixture.
+
+    Returns:
+        None.
+    """
     app = DummyApp()
     policy = PathPolicy(root=tmp_path)
 
@@ -1377,6 +1421,15 @@ def test_register_tools_passes_patch_extended_flags(
 
 
 def test_run_server_sets_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Set required default env vars when starting the server.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        tmp_path: Temporary directory fixture.
+
+    Returns:
+        None.
+    """
     monkeypatch.delenv("EXSTRUCT_BORDER_CLUSTER_BACKEND", raising=False)
     monkeypatch.delenv("EXSTRUCT_RENDER_SUBPROCESS", raising=False)
     created: dict[str, object] = {}
@@ -1415,6 +1468,15 @@ def test_run_server_preserves_existing_render_subprocess_env(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
+    """Preserve existing render subprocess env value on server start.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        tmp_path: Temporary directory fixture.
+
+    Returns:
+        None.
+    """
     created: dict[str, object] = {}
 
     def fake_import() -> None:

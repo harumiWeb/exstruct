@@ -96,6 +96,20 @@ def _format_error(exc: Exception) -> str:
     return type(exc).__name__
 
 
+def _write_failure_result_best_effort(result_path: Path, error_message: str) -> None:
+    """Write failure payload and log secondary errors to stderr."""
+    try:
+        _write_result(result_path, RenderWorkerResult.failure(error_message))
+    except Exception as write_error:  # pragma: no cover - defensive path
+        print(
+            (
+                "Failed to write worker error payload to "
+                f"{result_path!s}: {_format_error(write_error)}"
+            ),
+            file=sys.stderr,
+        )
+
+
 def _infer_result_path_from_request_file(request_file: Path | None) -> Path | None:
     """Infer result path from request payload when full parsing fails."""
     if request_file is None:
@@ -153,18 +167,11 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:  # pragma: no cover - validated by parent-side tests
         error_message = _format_error(exc)
         if request is not None:
-            _write_result(
-                request.result_path, RenderWorkerResult.failure(error_message)
-            )
+            _write_failure_result_best_effort(request.result_path, error_message)
         else:
             inferred_result_path = _infer_result_path_from_request_file(request_file)
             if inferred_result_path is not None:
-                try:
-                    _write_result(
-                        inferred_result_path, RenderWorkerResult.failure(error_message)
-                    )
-                except Exception:
-                    pass
+                _write_failure_result_best_effort(inferred_result_path, error_message)
         print(error_message, file=sys.stderr)
         return 1
 

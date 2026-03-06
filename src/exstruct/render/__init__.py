@@ -567,7 +567,7 @@ def _export_sheet_images_with_app(
                 dpi,
                 use_subprocess,
             )
-            if not sheet_paths:
+            if not sheet_paths and a1_range is None:
                 _export_sheet_pdf(
                     sheet_api,
                     sheet_pdf,
@@ -868,24 +868,24 @@ def _run_render_worker_subprocess(
 
 def _start_render_worker_process(request_path: Path) -> _WorkerProcessProtocol:
     """Spawn standalone worker process."""
-    command = [
-        sys.executable,
-        "-m",
-        "exstruct.render.subprocess_worker",
-        "--request-file",
-        str(request_path),
-    ]
     try:
-        # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
-        # Safe by construction: `request_path` is created in TemporaryDirectory(),
-        # and argv is passed as a list with shell disabled.
+        # nosemgrep
+        # Safe by construction: worker module and argv structure are fixed,
+        # `request_path` is created by this process under TemporaryDirectory.
         return cast(
             _WorkerProcessProtocol,
-            subprocess.Popen(
-                command,
+            subprocess.Popen(  # nosec B603
+                [
+                    sys.executable,
+                    "-m",
+                    "exstruct.render.subprocess_worker",
+                    "--request-file",
+                    str(request_path),
+                ],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
                 text=True,
+                shell=False,
             ),
         )
     except OSError as exc:
@@ -980,6 +980,9 @@ def _read_worker_result(result_path: Path) -> _RenderWorkerResult:
         raise RenderError(
             "Failed to render PDF pages: stage=result payload must be JSON object."
         )
+    error = payload.get("error")
+    if isinstance(error, str):
+        return _RenderWorkerResult.failure(error)
     paths = payload.get("paths")
     if isinstance(paths, list):
         normalized_paths: list[str] = []
@@ -988,9 +991,6 @@ def _read_worker_result(result_path: Path) -> _RenderWorkerResult:
                 normalized_paths.append(path)
         if len(normalized_paths) == len(paths):
             return _RenderWorkerResult.success(normalized_paths)
-    error = payload.get("error")
-    if isinstance(error, str):
-        return _RenderWorkerResult.failure(error)
     raise RenderError(
         "Failed to render PDF pages: stage=result payload missing "
         "required `paths` or `error`."

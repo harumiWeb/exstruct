@@ -304,7 +304,7 @@
 - [x] `.github/workflows/ruff-check.yml` の third-party action を commit SHA pin に変更
 - [x] `scripts/codacy_issues.py` の partial executable path (B607) を解消
 - [x] `uv run task precommit-run` を実行して回帰確認
-- [x] Codacy issues を再取得して解消確認
+- [x] Codacy issues を再取得し、リモート再解析待ちであることを確認
 
 ## Codacy Repository Issue Remediation Review
 
@@ -350,3 +350,49 @@
   - `uv run task precommit-run` -> ruff / ruff-format / mypy passed
 - Residual risks:
   - P2 docstring sweep と Codecov 方針は引き続きフォローが必要。
+
+## PR #74 Codacy CI Fix Plan (2026-03-06)
+
+- [x] `python scripts/codacy_issues.py --pr 74 --min-level Warning` を実行し、PR #74 の Codacy 指摘を特定
+- [x] `tasks/feature_spec.md` に対象指摘の修正仕様を追記
+- [x] 指摘対象ファイルを最小差分で修正
+- [x] `uv run pytest` の対象テストを実行し、回帰がないことを確認
+- [x] `uv run task precommit-run` を実行し、静的解析を通す
+- [x] Codacy issues を再取得し、リモート再解析待ちであることを確認
+
+## PR #74 Codacy CI Fix Review
+
+- Summary:
+  - `src/exstruct/render/subprocess_worker.py` の `except ...: pass` を廃止し、失敗結果書き込み失敗時も stderr に明示出力する実装へ変更（Bandit B110 対応）。
+  - `src/exstruct/render/__init__.py` の worker 起動 `Popen` 呼び出しに対し、安全前提コメントを整理し、`nosec B603` と `nosemgrep` を適用した。
+  - `docs/license-guide.md` と `.github/workflows/ruff-check.yml` は現行ワークスペース上で既に指摘状態が解消済みであることを確認。
+- Verification:
+  - `uv run pytest tests/render/test_subprocess_worker.py tests/render/test_render_init.py -q` -> 44 passed
+  - `uv run task precommit-run` -> ruff / ruff-format / mypy passed
+  - `python scripts/codacy_issues.py --pr 74 --min-level Warning` を再実行（API結果は 11 件のまま）
+- Residual risks:
+  - Codacy API が返す PR #74 issue はリモート解析結果依存のため、ローカル修正反映前の古い結果が残っている可能性がある。
+
+## PR #74 Additional Review Round 2 Plan (2026-03-06)
+
+- [x] 追加 CodeRabbit コメントを取得し、未対応指摘のみを抽出
+- [x] `tasks/feature_spec.md` に今回の修正仕様（fallback条件・worker result解釈・仕様文言整合）を追記
+- [x] `src/exstruct/render/__init__.py` の fallback 条件と `_read_worker_result` を修正
+- [x] `tests/mcp/test_server.py` に capture/server 系テストの Google-style docstring を追加
+- [x] `tasks/feature_spec.md` / `tasks/todo.md` / `docs/license-guide.md` の文言整合を更新
+- [x] `uv run pytest tests/render/test_render_init.py tests/mcp/test_server.py -q` を実行
+- [x] `uv run task precommit-run` を実行
+
+## PR #74 Additional Review Round 2 Review
+
+- Summary:
+  - `src/exstruct/render/__init__.py` で targeted range (`a1_range`) 指定時は `ignore_print_areas=True` fallback を行わないように修正した。
+  - `_read_worker_result` を `error` 優先で解釈するよう変更し、`{"paths": [], "error": "..."}` を失敗として扱うようにした。
+  - `tests/render/test_render_init.py` に上記2点の回帰テストを追加した。
+  - `tests/mcp/test_server.py` の capture/server 関連テストに Google-style docstring を追加した。
+  - `tasks/feature_spec.md` / `tasks/todo.md` / `docs/license-guide.md` の文言を追加レビュー指摘に合わせて整合した。
+- Verification:
+  - `uv run pytest tests/render/test_render_init.py tests/mcp/test_server.py -q` -> 84 passed
+  - `uv run task precommit-run` -> ruff / ruff-format / mypy passed
+- Residual risks:
+  - Codacy の PR issue 一覧はリモート再解析完了まで旧結果を返す可能性がある。

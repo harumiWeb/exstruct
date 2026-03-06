@@ -918,6 +918,27 @@ def test_wait_for_worker_result_reports_result_stage_after_exit(
         )
 
 
+def test_read_worker_result_prioritizes_error_field(tmp_path: Path) -> None:
+    """Treat payload as failure when `error` is present.
+
+    Args:
+        tmp_path: Temporary directory fixture.
+
+    Returns:
+        None.
+    """
+    result_path = tmp_path / "result.json"
+    result_path.write_text(
+        json.dumps({"paths": [], "error": "worker failed"}),
+        encoding="utf-8",
+    )
+
+    result = render._read_worker_result(result_path)
+
+    assert result.error == "worker failed"
+    assert result.paths == []
+
+
 def test_get_render_subprocess_timeout_seconds(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1275,6 +1296,72 @@ def test_export_sheet_images_with_app_retries_on_empty(
     )
     assert len(calls) == 2
     assert result
+
+
+def test_export_sheet_images_with_app_skips_retry_for_targeted_range(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Do not run print-area fallback for targeted range exports.
+
+    Args:
+        tmp_path: Temporary directory fixture.
+        monkeypatch: Pytest monkeypatch fixture.
+
+    Returns:
+        None.
+    """
+    render_calls: list[int] = []
+    export_calls: list[bool] = []
+
+    def _fake_render(
+        _pdfium: ModuleType | None,
+        _pdf_path: Path,
+        _output_dir: Path,
+        _sheet_index: int,
+        _safe_name: str,
+        _dpi: int,
+        _use_subprocess: bool,
+    ) -> list[Path]:
+        render_calls.append(1)
+        return []
+
+    def _fake_export(
+        _sheet_api: render._SheetApiProtocol,
+        _pdf_path: Path,
+        *,
+        ignore_print_areas: bool,
+        print_area: str | None = None,
+    ) -> None:
+        _ = print_area
+        export_calls.append(ignore_print_areas)
+
+    monkeypatch.setattr(render, "_render_sheet_images", _fake_render)
+    monkeypatch.setattr(
+        render, "_require_excel_app", lambda: FakeApp(["Sheet1"], False)
+    )
+    monkeypatch.setattr(render, "_export_sheet_pdf", _fake_export)
+    monkeypatch.setattr(
+        render,
+        "_build_sheet_export_plan",
+        lambda _wb, *, sheet=None, a1_range=None: [
+            ("Sheet1", cast(render._SheetApiProtocol, object()), None)
+        ],
+    )
+
+    result = render._export_sheet_images_with_app(
+        tmp_path / "in.xlsx",
+        tmp_path / "out",
+        tmp_path / "tmp",
+        144,
+        False,
+        None,
+        "Sheet1",
+        "A1:B2",
+    )
+
+    assert result == []
+    assert len(render_calls) == 1
+    assert export_calls == [False]
 
 
 def test_page_index_from_suffix_handles_multi_digits() -> None:
