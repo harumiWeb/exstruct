@@ -4,13 +4,22 @@ All notable changes to this project are documented in this file. This changelog 
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-03-03
+
 ### Added
 
-- None.
+- Added a dedicated render worker entrypoint (`python -m exstruct.render.subprocess_worker`) for `capture_sheet_images` subprocess mode, decoupled from parent `__main__` restoration.
 
 ### Changed
 
-- None.
+- MCP runtime now defaults `EXSTRUCT_RENDER_SUBPROCESS=1` after profile comparison runs showed stable behavior in both modes (`63/63` success for `0` and `1` under MCP-equivalent timeout handling); set `EXSTRUCT_RENDER_SUBPROCESS=0` to force in-process rendering.
+- Marked MCP `exstruct_capture_sheet_images` as Experimental in docs, including recommended timeout/runtime settings.
+- Updated MCP/README docs with subprocess timeout tuning and stage-aware error guidance (`startup`/`join`/`result`/`worker`), including `EXSTRUCT_RENDER_SUBPROCESS_STARTUP_TIMEOUT_SEC`.
+
+### Fixed
+
+- Fixed subprocess render wait ordering to prioritize result receipt before join wait, preventing false timeout failures after successful worker output.
+- Fixed opaque subprocess failures by returning actionable stage-aware render errors with stderr snippets where available.
 
 ## [0.5.2] - 2026-02-28
 

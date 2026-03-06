@@ -12,6 +12,10 @@ from exstruct.mcp.chunk_reader import (
 )
 from exstruct.mcp.extract_runner import ExtractRequest, ExtractResult
 from exstruct.mcp.patch_runner import MakeRequest, PatchRequest, PatchResult
+from exstruct.mcp.render_runner import (
+    CaptureSheetImagesRequest,
+    CaptureSheetImagesResult,
+)
 from exstruct.mcp.sheet_reader import (
     ReadCellsRequest,
     ReadCellsResult,
@@ -59,6 +63,48 @@ def test_run_extract_tool_uses_default_on_conflict(
     request = captured["request"]
     assert isinstance(request, ExtractRequest)
     assert request.on_conflict == "rename"
+
+
+def test_run_capture_sheet_images_tool_builds_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Build and forward capture request with normalized path and range fields.
+
+    Args:
+        monkeypatch: Fixture for replacing capture runner dependency.
+
+    Returns:
+        None.
+    """
+    captured: dict[str, object] = {}
+
+    def _fake_run_capture(
+        request: CaptureSheetImagesRequest, *, policy: object | None = None
+    ) -> CaptureSheetImagesResult:
+        captured["request"] = request
+        return CaptureSheetImagesResult(
+            out_dir="images",
+            image_paths=["images/01_Sheet1.png"],
+        )
+
+    monkeypatch.setattr(tools, "run_capture_sheet_images", _fake_run_capture)
+    payload = tools.CaptureSheetImagesToolInput(
+        xlsx_path="input.xlsx",
+        out_dir="images",
+        dpi=200,
+        sheet="Sheet 1",
+        range="'Sheet 1'!a1:b2",
+    )
+    result = tools.run_capture_sheet_images_tool(payload)
+    request = captured["request"]
+    assert isinstance(request, CaptureSheetImagesRequest)
+    assert request.xlsx_path == Path("input.xlsx")
+    assert request.out_dir == Path("images")
+    assert request.dpi == 200
+    assert request.sheet == "Sheet 1"
+    assert request.range == "A1:B2"
+    assert result.out_dir == "images"
+    assert result.image_paths == ["images/01_Sheet1.png"]
 
 
 def test_run_read_json_chunk_tool_builds_request(

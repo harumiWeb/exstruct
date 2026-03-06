@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import json
 import os
 import re
+import shutil
 import subprocess  # nosec B404 - used for fixed git commands only
 import sys
 from typing import Any, cast
@@ -208,6 +209,18 @@ def build_pr_issues_url(
     )
 
 
+def resolve_git_executable() -> str | None:
+    """Resolve an absolute executable path for git.
+
+    Returns:
+        Absolute path to git executable, or None when unavailable.
+    """
+    git_path = shutil.which("git")
+    if git_path is None:
+        return None
+    return os.path.abspath(git_path)
+
+
 def get_git_origin_url() -> str | None:
     """
     Get the Git remote "origin" URL for the current repository, or None when it cannot be determined.
@@ -215,10 +228,14 @@ def get_git_origin_url() -> str | None:
     Returns:
         origin_url (str | None): The remote URL configured for 'origin' if the current directory is inside a Git work tree and the origin URL is available; `None` if not inside a Git repository, if the origin is not set, or on error.
     """
+    git_executable = resolve_git_executable()
+    if git_executable is None:
+        return None
+
     # git repo check
     try:
         result = subprocess.run(
-            ["git", "rev-parse", "--is-inside-work-tree"],
+            [git_executable, "rev-parse", "--is-inside-work-tree"],
             capture_output=True,
             text=True,
             check=False,
@@ -226,7 +243,7 @@ def get_git_origin_url() -> str | None:
         if result.returncode != 0 or not result.stdout.strip():
             return None
         result = subprocess.run(
-            ["git", "remote", "get-url", "origin"],
+            [git_executable, "remote", "get-url", "origin"],
             capture_output=True,
             text=True,
             check=False,

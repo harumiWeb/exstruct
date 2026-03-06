@@ -90,13 +90,23 @@ exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict re
 利用可能なツール:
 
 - `exstruct_extract`
+- `exstruct_capture_sheet_images`
 - `exstruct_make`
 - `exstruct_patch`
 - `exstruct_read_json_chunk`
+- `exstruct_read_range`
+- `exstruct_read_cells`
+- `exstruct_read_formulas`
 - `exstruct_validate_input`
 
 注意点:
 
+- `exstruct_capture_sheet_images` は COM 専用（Experimental）で、`sheet` / `range`（`A1:B2`, `Sheet1!A1:B2`, `'Sheet 1'!A1:B2`）の指定に対応します。`out_dir` 未指定時は MCP `--root` 配下に一意な `<workbook_stem>_images` ディレクトリを作成します。
+- MCP サーバー起動時は `EXSTRUCT_RENDER_SUBPROCESS=1` が既定（`setdefault`）です。同一プロセスで実行したい場合は、起動前に `EXSTRUCT_RENDER_SUBPROCESS=0` を明示指定してください。
+- `exstruct_capture_sheet_images` のタイムアウト調整: `EXSTRUCT_MCP_CAPTURE_SHEET_IMAGES_TIMEOUT_SEC`（ツール全体）, `EXSTRUCT_RENDER_SUBPROCESS_STARTUP_TIMEOUT_SEC`（worker 起動）, `EXSTRUCT_RENDER_SUBPROCESS_JOIN_TIMEOUT_SEC`（主待機予算）, `EXSTRUCT_RENDER_SUBPROCESS_RESULT_TIMEOUT_SEC`（終了後の結果待ち猶予）。
+- サブプロセス失敗は `stage=startup|join|result|worker` の形で返るため、起動失敗・タイムアウト・worker 側失敗を切り分けできます。
+- `EXSTRUCT_RENDER_SUBPROCESS=1` のトレードオフ: サブプロセス起動/同期オーバーヘッドと、worker 側のモジュール解決依存が増えます。
+- `EXSTRUCT_RENDER_SUBPROCESS=0` のトレードオフ: クラッシュ分離が弱くなり、長時間稼働時のメモリ圧迫リスクが上がります。
 - 標準入出力の応答を汚染しないよう、ログは標準エラー出力（およびオプションで`--log-file`で指定したファイル）に出力されます。
 - WindowsのExcel環境では、標準/詳細モードでCOMを利用して、よりリッチな抽出が可能です。Windows以外ではCOMは利用できず、抽出はopenpyxlベースのフォールバック機能を使用します。
 - `exstruct_patch` は `backend` 指定をサポートします。

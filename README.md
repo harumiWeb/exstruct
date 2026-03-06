@@ -93,6 +93,7 @@ exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict re
 Available tools:
 
 - `exstruct_extract`
+- `exstruct_capture_sheet_images`
 - `exstruct_make`
 - `exstruct_patch`
 - `exstruct_read_json_chunk`
@@ -104,6 +105,12 @@ Available tools:
 Notes:
 
 - In MCP, `exstruct_extract` defaults to `options.alpha_col=true` (column keys: `A`, `B`, ...). Set `options.alpha_col=false` for legacy 0-based numeric string keys.
+- `exstruct_capture_sheet_images` is COM-only (Experimental) and supports optional `sheet` / `range` targeting (`A1:B2`, `Sheet1!A1:B2`, `'Sheet 1'!A1:B2`). When `out_dir` is omitted, it creates a unique `<workbook_stem>_images` directory under MCP `--root`.
+- MCP server startup sets `EXSTRUCT_RENDER_SUBPROCESS=1` by default (`setdefault`). If you prefer in-process rendering, set `EXSTRUCT_RENDER_SUBPROCESS=0` before launching the server.
+- Timeout tuning for `exstruct_capture_sheet_images`: `EXSTRUCT_MCP_CAPTURE_SHEET_IMAGES_TIMEOUT_SEC` (tool timeout), `EXSTRUCT_RENDER_SUBPROCESS_STARTUP_TIMEOUT_SEC` (worker startup), `EXSTRUCT_RENDER_SUBPROCESS_JOIN_TIMEOUT_SEC` (primary wait budget), `EXSTRUCT_RENDER_SUBPROCESS_RESULT_TIMEOUT_SEC` (post-exit grace).
+- Subprocess errors are stage-aware (`stage=startup|join|result|worker`) so MCP clients can distinguish bootstrap failures vs timeout vs worker-side rendering errors.
+- Trade-off of `EXSTRUCT_RENDER_SUBPROCESS=1`: subprocess startup/coordination overhead and dependency on worker-side module resolution.
+- Trade-off of `EXSTRUCT_RENDER_SUBPROCESS=0`: less crash isolation and higher memory pressure risk in long-running processes.
 - Logs go to stderr (and optionally `--log-file`) to avoid contaminating stdio responses.
 - On Windows with Excel, standard/verbose can use COM for richer extraction. On non-Windows, COM is unavailable and extraction uses openpyxl-based fallbacks.
 - `exstruct_patch` supports `backend` selection:

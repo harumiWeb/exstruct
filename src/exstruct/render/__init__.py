@@ -1,19 +1,29 @@
 from __future__ import annotations
 
+import json
 import logging
-import multiprocessing as mp
+import math
 import os
 from pathlib import Path
+import re
 import shutil
+import subprocess  # nosec B404 - subprocess is required for fixed worker launch only
+import sys
 import tempfile
+import time
 from types import ModuleType
 from typing import Protocol, cast
 
+from pydantic import BaseModel, Field
 import xlwings as xw
 
 from ..errors import MissingDependencyError, RenderError
 
 logger = logging.getLogger(__name__)
+_A1_RANGE_PATTERN = re.compile(r"^[A-Za-z]{1,3}[1-9][0-9]*:[A-Za-z]{1,3}[1-9][0-9]*$")
+_DEFAULT_RENDER_SUBPROCESS_STARTUP_TIMEOUT_SECONDS = 5.0
+_DEFAULT_RENDER_SUBPROCESS_JOIN_TIMEOUT_SECONDS = 120.0
+_DEFAULT_RENDER_SUBPROCESS_RESULT_TIMEOUT_SECONDS = 5.0
 
 
 def _require_excel_app() -> xw.App:
@@ -77,7 +87,12 @@ def _require_pdfium() -> ModuleType:
 
 
 def export_sheet_images(
-    excel_path: str | Path, output_dir: str | Path, dpi: int = 144
+    excel_path: str | Path,
+    output_dir: str | Path,
+    dpi: int = 144,
+    *,
+    sheet: str | None = None,
+    a1_range: str | None = None,
 ) -> list[Path]:
     """
     Export each worksheet in the given Excel workbook to PNG files and return the image paths in workbook order.
@@ -90,6 +105,10 @@ def export_sheet_images(
     """
     normalized_excel_path = Path(excel_path)
     normalized_output_dir = Path(output_dir)
+    normalized_sheet = _normalize_optional_sheet(sheet)
+    normalized_range = _normalize_a1_range(a1_range) if a1_range is not None else None
+    if normalized_range is not None and normalized_sheet is None:
+        raise ValueError("sheet is required when a1_range is specified.")
     normalized_output_dir.mkdir(parents=True, exist_ok=True)
     use_subprocess = _use_render_subprocess()
     pdfium = _ensure_pdfium(use_subprocess)
@@ -104,7 +123,11 @@ def export_sheet_images(
                 dpi,
                 use_subprocess,
                 pdfium,
+                normalized_sheet,
+                normalized_range,
             )
+    except ValueError:
+        raise
     except RenderError:
         raise
     except Exception as exc:
@@ -126,6 +149,25 @@ def _sanitize_sheet_filename(name: str) -> str:
         safe_name (str): Filename-safe string derived from `name`.
     """
     return "".join("_" if c in '\\/:*?"<>|' else c for c in name).strip() or "sheet"
+
+
+def _normalize_optional_sheet(value: str | None) -> str | None:
+    """Normalize optional sheet name and reject blank values."""
+    if value is None:
+        return None
+    candidate = value.strip()
+    if not candidate:
+        raise ValueError("sheet must not be empty when provided.")
+    return candidate
+
+
+def _normalize_a1_range(value: str) -> str:
+    """Validate and normalize A1 range text."""
+    candidate = value.strip()
+    if not _A1_RANGE_PATTERN.fullmatch(candidate):
+        raise ValueError(f"Invalid range reference: {value}")
+    start, end = candidate.split(":", maxsplit=1)
+    return f"{start.upper()}:{end.upper()}"
 
 
 class _PageSetupProtocol(Protocol):
@@ -151,6 +193,46 @@ class _SheetApiProtocol(Protocol):
             **kwargs (object): Additional keyword arguments forwarded to the underlying Excel COM ExportAsFixedFormat call.
         """
         ...
+
+
+class _WorkerProcessProtocol(Protocol):
+    """Protocol for subprocess.Popen-like worker processes."""
+
+    returncode: int | None
+
+    def poll(self) -> int | None:
+        """Return process exit code or None if still running."""
+
+    def wait(self, timeout: float | None = None) -> int:
+        """Wait for process completion and return exit code."""
+
+    def terminate(self) -> None:
+        """Request graceful worker termination."""
+
+    def kill(self) -> None:
+        """Force kill worker process."""
+
+    def communicate(
+        self, timeout: float | None = None
+    ) -> tuple[str | None, str | None]:
+        """Read process stdio streams."""
+
+
+class _RenderWorkerResult(BaseModel):
+    """Structured worker result payload for PDF-to-PNG rendering."""
+
+    paths: list[str] = Field(default_factory=list)
+    error: str | None = None
+
+    @classmethod
+    def success(cls, paths: list[str]) -> _RenderWorkerResult:
+        """Create a success result with written image paths."""
+        return cls(paths=paths, error=None)
+
+    @classmethod
+    def failure(cls, message: str) -> _RenderWorkerResult:
+        """Create a failure result with an error message."""
+        return cls(paths=[], error=message)
 
 
 def _iter_sheet_apis(wb: xw.Book) -> list[tuple[int, str, _SheetApiProtocol]]:
@@ -186,12 +268,30 @@ def _iter_sheet_apis(wb: xw.Book) -> list[tuple[int, str, _SheetApiProtocol]]:
 
 def _build_sheet_export_plan(
     wb: xw.Book,
+    *,
+    sheet: str | None = None,
+    a1_range: str | None = None,
 ) -> list[tuple[str, _SheetApiProtocol, str | None]]:
     """
     Build an ordered export plan mapping each worksheet to its print areas.
 
     Each returned tuple is (sheet_name, sheet_api, print_area). The list preserves workbook sheet order; for sheets with no defined print areas `print_area` is `None`, and for sheets with multiple print areas there is one tuple per area.
     """
+    if a1_range is not None and sheet is None:
+        raise ValueError("sheet is required when a1_range is specified.")
+
+    if sheet is not None:
+        selected = _find_sheet_api(wb, sheet_name=sheet)
+        if selected is None:
+            raise ValueError(f"Sheet not found: {sheet}")
+        selected_name, selected_api = selected
+        if a1_range is not None:
+            return [(selected_name, selected_api, a1_range)]
+        areas = _extract_print_areas(selected_api)
+        if not areas:
+            return [(selected_name, selected_api, None)]
+        return [(selected_name, selected_api, area) for area in areas]
+
     plan: list[tuple[str, _SheetApiProtocol, str | None]] = []
     for _, sheet_name, sheet_api in _iter_sheet_apis(wb):
         areas = _extract_print_areas(sheet_api)
@@ -201,6 +301,16 @@ def _build_sheet_export_plan(
         for area in areas:
             plan.append((sheet_name, sheet_api, area))
     return plan
+
+
+def _find_sheet_api(
+    wb: xw.Book, *, sheet_name: str
+) -> tuple[str, _SheetApiProtocol] | None:
+    """Find one worksheet by name and return its display name and API handle."""
+    for _, candidate_name, sheet_api in _iter_sheet_apis(wb):
+        if candidate_name == sheet_name:
+            return candidate_name, sheet_api
+    return None
 
 
 def _extract_print_areas(sheet_api: _SheetApiProtocol) -> list[str]:
@@ -338,6 +448,7 @@ def _export_sheet_pdf(
         ignore_print_areas (bool): If True, request that Excel ignore sheet print areas during export.
         print_area (str | None): Optional print area string to apply for this export; if None, the sheet's current print area is left unchanged.
     """
+    start_time = time.perf_counter()
     original_print_area: object | None = None
     page_setup = None
     if print_area is not None:
@@ -350,6 +461,12 @@ def _export_sheet_pdf(
             logger.debug("Failed to set PrintArea. (%r)", exc)
             page_setup = None
     try:
+        logger.debug(
+            "render-stage=export_pdf.start path=%s ignore_print_areas=%s has_print_area=%s",
+            pdf_path,
+            ignore_print_areas,
+            print_area is not None,
+        )
         sheet_api.ExportAsFixedFormat(
             0, str(pdf_path), IgnorePrintAreas=ignore_print_areas
         )
@@ -368,6 +485,13 @@ def _export_sheet_pdf(
                 page_setup.PrintArea = original_print_area
             except Exception as exc:
                 logger.debug("Failed to restore PrintArea. (%r)", exc)
+    elapsed_seconds = time.perf_counter() - start_time
+    logger.debug(
+        "render-stage=export_pdf.done path=%s elapsed_sec=%.3f exists=%s",
+        pdf_path,
+        elapsed_seconds,
+        pdf_path.exists(),
+    )
 
 
 def _ensure_pdfium(use_subprocess: bool) -> ModuleType | None:
@@ -396,6 +520,8 @@ def _export_sheet_images_with_app(
     dpi: int,
     use_subprocess: bool,
     pdfium: ModuleType | None,
+    sheet: str | None,
+    a1_range: str | None,
 ) -> list[Path]:
     """
     Export each worksheet of an Excel workbook to PNG images by exporting sheets to per-sheet PDFs and rendering those PDFs.
@@ -416,9 +542,14 @@ def _export_sheet_images_with_app(
     wb: xw.Book | None = None
     try:
         app = _require_excel_app()
+        app.display_alerts = False
         wb = app.books.open(str(excel_path))
         output_index = 0
-        for sheet_name, sheet_api, print_area in _build_sheet_export_plan(wb):
+        for sheet_name, sheet_api, print_area in _build_sheet_export_plan(
+            wb,
+            sheet=sheet,
+            a1_range=a1_range,
+        ):
             sheet_pdf = temp_dir / f"sheet_{output_index + 1:02d}.pdf"
             safe_name = _sanitize_sheet_filename(sheet_name)
             _export_sheet_pdf(
@@ -436,7 +567,7 @@ def _export_sheet_images_with_app(
                 dpi,
                 use_subprocess,
             )
-            if not sheet_paths:
+            if not sheet_paths and a1_range is None:
                 _export_sheet_pdf(
                     sheet_api,
                     sheet_pdf,
@@ -543,6 +674,64 @@ def _use_render_subprocess() -> bool:
     return os.getenv("EXSTRUCT_RENDER_SUBPROCESS", "1").lower() not in {"0", "false"}
 
 
+def _get_render_subprocess_join_timeout_seconds() -> float:
+    """Read and validate subprocess join timeout from environment."""
+    return _get_positive_timeout_seconds(
+        "EXSTRUCT_RENDER_SUBPROCESS_JOIN_TIMEOUT_SEC",
+        _DEFAULT_RENDER_SUBPROCESS_JOIN_TIMEOUT_SECONDS,
+    )
+
+
+def _get_render_subprocess_startup_timeout_seconds() -> float:
+    """Read and validate subprocess startup timeout from environment."""
+    return _get_positive_timeout_seconds(
+        "EXSTRUCT_RENDER_SUBPROCESS_STARTUP_TIMEOUT_SEC",
+        _DEFAULT_RENDER_SUBPROCESS_STARTUP_TIMEOUT_SECONDS,
+    )
+
+
+def _get_render_subprocess_result_timeout_seconds() -> float:
+    """Read and validate subprocess result timeout from environment."""
+    return _get_positive_timeout_seconds(
+        "EXSTRUCT_RENDER_SUBPROCESS_RESULT_TIMEOUT_SEC",
+        _DEFAULT_RENDER_SUBPROCESS_RESULT_TIMEOUT_SECONDS,
+    )
+
+
+def _get_positive_timeout_seconds(env_name: str, default_value: float) -> float:
+    """Read a positive timeout (seconds) from environment or return default."""
+    raw_value = os.getenv(env_name)
+    if raw_value is None:
+        return default_value
+    try:
+        parsed = float(raw_value)
+    except ValueError:
+        logger.warning(
+            "Invalid %s=%r. Falling back to %.1fs.",
+            env_name,
+            raw_value,
+            default_value,
+        )
+        return default_value
+    if not math.isfinite(parsed):
+        logger.warning(
+            "Non-finite %s=%r. Falling back to %.1fs.",
+            env_name,
+            raw_value,
+            default_value,
+        )
+        return default_value
+    if parsed <= 0:
+        logger.warning(
+            "Non-positive %s=%r. Falling back to %.1fs.",
+            env_name,
+            raw_value,
+            default_value,
+        )
+        return default_value
+    return parsed
+
+
 def _render_pdf_pages_in_process(
     pdfium: ModuleType,
     pdf_path: Path,
@@ -576,61 +765,293 @@ def _render_pdf_pages_subprocess(
     dpi: int,
 ) -> list[Path]:
     """Render PDF pages to PNGs in a subprocess for memory isolation."""
-    ctx = mp.get_context("spawn")
-    queue: mp.Queue[dict[str, list[str] | str]] = ctx.Queue()
-    process = ctx.Process(
-        target=_render_pdf_pages_worker,
-        args=(pdf_path, output_dir, sheet_index, safe_name, dpi, queue),
+    start_time = time.perf_counter()
+    startup_timeout_seconds = _get_render_subprocess_startup_timeout_seconds()
+    join_timeout_seconds = _get_render_subprocess_join_timeout_seconds()
+    result_timeout_seconds = _get_render_subprocess_result_timeout_seconds()
+    logger.info(
+        "render-stage=subprocess.start pdf=%s out_dir=%s sheet_index=%d dpi=%d "
+        "startup_timeout_sec=%.1f join_timeout_sec=%.1f result_timeout_sec=%.1f",
+        pdf_path,
+        output_dir,
+        sheet_index,
+        dpi,
+        startup_timeout_seconds,
+        join_timeout_seconds,
+        result_timeout_seconds,
     )
-    process.start()
-    process.join()
-    result = _get_subprocess_result(queue)
-    if process.exitcode != 0 or "error" in result:
-        message = result.get("error", "subprocess failed")
-        raise RenderError(f"Failed to render PDF pages: {message}")
-    paths = result.get("paths", [])
+    result = _run_render_worker_subprocess(
+        pdf_path,
+        output_dir,
+        sheet_index,
+        safe_name,
+        dpi,
+        startup_timeout_seconds=startup_timeout_seconds,
+        result_timeout_seconds=result_timeout_seconds,
+        join_timeout_seconds=join_timeout_seconds,
+    )
+    if result.error is not None:
+        message = result.error or "subprocess failed"
+        raise RenderError(f"Failed to render PDF pages: stage=worker {message}")
+    paths = result.paths
+    elapsed_seconds = time.perf_counter() - start_time
+    logger.info(
+        "render-stage=subprocess.done pdf=%s output_count=%d elapsed_sec=%.3f",
+        pdf_path,
+        len(paths),
+        elapsed_seconds,
+    )
     return [Path(path) for path in paths]
 
 
-def _get_subprocess_result(
-    queue: mp.Queue[dict[str, list[str] | str]],
-) -> dict[str, list[str] | str]:
-    """Fetch the worker result from the queue with a timeout."""
-    try:
-        return queue.get(timeout=5)
-    except Exception as exc:
-        return {"error": f"subprocess did not return results ({exc})"}
-
-
-def _render_pdf_pages_worker(
+def _run_render_worker_subprocess(
     pdf_path: Path,
     output_dir: Path,
     sheet_index: int,
     safe_name: str,
     dpi: int,
-    queue: mp.Queue[dict[str, list[str] | str]],
-) -> None:
-    """Worker process to render PDF pages into PNG files."""
-    try:
-        import pypdfium2 as pdfium
-
-        scale = dpi / 72.0
-        output_dir.mkdir(parents=True, exist_ok=True)
-        written: list[str] = []
-        with pdfium.PdfDocument(str(pdf_path)) as pdf:
-            for page_index in range(len(pdf)):
-                page = pdf[page_index]
-                bitmap = page.render(scale=scale)
-                pil_image = bitmap.to_pil()
-                page_suffix = f"_p{page_index + 1:02d}" if page_index > 0 else ""
-                img_path = (
-                    output_dir / f"{sheet_index + 1:02d}_{safe_name}{page_suffix}.png"
+    *,
+    startup_timeout_seconds: float,
+    result_timeout_seconds: float,
+    join_timeout_seconds: float,
+) -> _RenderWorkerResult:
+    """Start render worker subprocess and return one result payload."""
+    with tempfile.TemporaryDirectory() as td:
+        temp_dir = Path(td)
+        request_path = temp_dir / "request.json"
+        started_path = temp_dir / "started.txt"
+        result_path = temp_dir / "result.json"
+        request_payload = {
+            "pdf_path": str(pdf_path),
+            "output_dir": str(output_dir),
+            "sheet_index": sheet_index,
+            "safe_name": safe_name,
+            "dpi": dpi,
+            "started_path": str(started_path),
+            "result_path": str(result_path),
+        }
+        request_path.write_text(
+            json.dumps(request_payload, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        process = _start_render_worker_process(request_path)
+        try:
+            _wait_for_worker_startup(
+                process,
+                started_path=started_path,
+                timeout_seconds=startup_timeout_seconds,
+            )
+            join_timeout_deadline = time.perf_counter() + join_timeout_seconds
+            result = _wait_for_worker_result(
+                process,
+                result_path=result_path,
+                join_timeout_deadline=join_timeout_deadline,
+                join_timeout_seconds=join_timeout_seconds,
+                post_exit_timeout_seconds=result_timeout_seconds,
+            )
+            join_timeout_budget = _remaining_timeout_seconds(join_timeout_deadline)
+            join_succeeded = _wait_for_worker_join(
+                process,
+                timeout_seconds=join_timeout_budget,
+            )
+            if not join_succeeded:
+                logger.warning(
+                    "render-stage=join.timeout exitcode=%s timeout_sec=%.1f",
+                    process.returncode,
+                    join_timeout_budget,
                 )
-                pil_image.save(img_path, format="PNG", dpi=(dpi, dpi))
-                written.append(str(img_path))
-        queue.put({"paths": written})
+            return result
+        except RenderError:
+            _terminate_worker_process(process)
+            raise
+
+
+def _start_render_worker_process(request_path: Path) -> _WorkerProcessProtocol:
+    """Spawn standalone worker process."""
+    try:
+        # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
+        # Safe by construction: worker module and argv structure are fixed,
+        # `request_path` is created by this process under TemporaryDirectory.
+        return cast(
+            _WorkerProcessProtocol,
+            subprocess.Popen(  # nosec B603  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
+                [
+                    sys.executable,
+                    "-m",
+                    "exstruct.render.subprocess_worker",
+                    "--request-file",
+                    str(request_path),
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True,
+                shell=False,
+            ),
+        )
+    except OSError as exc:
+        raise RenderError(
+            f"Failed to render PDF pages: stage=startup failed to start worker ({exc})"
+        ) from exc
+
+
+def _wait_for_worker_startup(
+    process: _WorkerProcessProtocol,
+    *,
+    started_path: Path,
+    timeout_seconds: float,
+) -> None:
+    """Wait until worker bootstrap marker appears."""
+    deadline = time.perf_counter() + timeout_seconds
+    while True:
+        if started_path.exists():
+            return
+        if process.poll() is not None:
+            detail = _read_worker_stderr(process)
+            raise RenderError(
+                "Failed to render PDF pages: stage=startup worker exited before "
+                f"initialization (exitcode={process.returncode}).{detail}"
+            )
+        if time.perf_counter() >= deadline:
+            raise RenderError(
+                "Failed to render PDF pages: stage=startup timed out "
+                f"after {timeout_seconds:.1f}s."
+            )
+        time.sleep(0.05)
+
+
+def _wait_for_worker_result(
+    process: _WorkerProcessProtocol,
+    *,
+    result_path: Path,
+    join_timeout_deadline: float,
+    join_timeout_seconds: float,
+    post_exit_timeout_seconds: float,
+) -> _RenderWorkerResult:
+    """Wait for worker result file using join timeout as primary upper bound."""
+    while True:
+        if result_path.exists():
+            return _read_worker_result(result_path)
+        if process.poll() is not None:
+            return _wait_for_result_after_exit(
+                process,
+                result_path=result_path,
+                timeout_seconds=post_exit_timeout_seconds,
+                join_timeout_deadline=join_timeout_deadline,
+            )
+        if time.perf_counter() >= join_timeout_deadline:
+            raise RenderError(
+                "Failed to render PDF pages: stage=join timed out "
+                f"after {join_timeout_seconds:.1f}s."
+            )
+        time.sleep(0.05)
+
+
+def _wait_for_result_after_exit(
+    process: _WorkerProcessProtocol,
+    *,
+    result_path: Path,
+    timeout_seconds: float,
+    join_timeout_deadline: float,
+) -> _RenderWorkerResult:
+    """Wait briefly for result file after worker process has exited."""
+    result_deadline = time.perf_counter() + timeout_seconds
+    deadline = min(result_deadline, join_timeout_deadline)
+    while True:
+        if result_path.exists():
+            return _read_worker_result(result_path)
+        if time.perf_counter() >= deadline:
+            detail = _read_worker_stderr(process)
+            raise RenderError(
+                "Failed to render PDF pages: stage=result worker exited without "
+                f"result payload (exitcode={process.returncode}).{detail}"
+            )
+        time.sleep(0.05)
+
+
+def _read_worker_result(result_path: Path) -> _RenderWorkerResult:
+    """Read and validate worker JSON result payload."""
+    try:
+        payload = json.loads(result_path.read_text(encoding="utf-8"))
     except Exception as exc:
-        queue.put({"error": str(exc)})
+        raise RenderError(
+            "Failed to render PDF pages: stage=result " f"invalid payload ({exc})."
+        ) from exc
+    if not isinstance(payload, dict):
+        raise RenderError(
+            "Failed to render PDF pages: stage=result payload must be JSON object."
+        )
+    error = payload.get("error")
+    if isinstance(error, str):
+        return _RenderWorkerResult.failure(error)
+    paths = payload.get("paths")
+    if isinstance(paths, list):
+        normalized_paths: list[str] = []
+        for path in paths:
+            if isinstance(path, str):
+                normalized_paths.append(path)
+        if len(normalized_paths) == len(paths):
+            return _RenderWorkerResult.success(normalized_paths)
+    raise RenderError(
+        "Failed to render PDF pages: stage=result payload missing "
+        "required `paths` or `error`."
+    )
+
+
+def _wait_for_worker_join(
+    process: _WorkerProcessProtocol,
+    *,
+    timeout_seconds: float,
+) -> bool:
+    """Wait for worker termination after result is received."""
+    if process.poll() is not None:
+        return True
+    if timeout_seconds <= 0:
+        _terminate_worker_process(process)
+        return False
+    try:
+        process.wait(timeout=timeout_seconds)
+        return True
+    except subprocess.TimeoutExpired:
+        _terminate_worker_process(process)
+        return False
+
+
+def _remaining_timeout_seconds(deadline: float) -> float:
+    """Return remaining timeout seconds from absolute deadline."""
+    return max(0.0, deadline - time.perf_counter())
+
+
+def _terminate_worker_process(process: _WorkerProcessProtocol) -> None:
+    """Terminate hung worker process with bounded fallback."""
+    if process.poll() is not None:
+        return
+    process.terminate()
+    try:
+        process.wait(timeout=2.0)
+        return
+    except subprocess.TimeoutExpired:
+        pass
+    process.kill()
+    try:
+        process.wait(timeout=1.0)
+    except subprocess.TimeoutExpired:
+        logger.warning(
+            "render-stage=cleanup.kill-timeout returncode=%s", process.returncode
+        )
+
+
+def _read_worker_stderr(process: _WorkerProcessProtocol) -> str:
+    """Read worker stderr snippet for diagnostics."""
+    try:
+        _stdout, stderr = process.communicate(timeout=0.2)
+    except Exception:
+        return ""
+    if not stderr:
+        return ""
+    cleaned = stderr.strip()
+    if not cleaned:
+        return ""
+    return f" stderr={cleaned[:240]}"
 
 
 __all__ = ["export_pdf", "export_sheet_images"]

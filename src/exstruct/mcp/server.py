@@ -4,6 +4,7 @@ import argparse
 import functools
 import importlib
 import logging
+import math
 import os
 from pathlib import Path
 import sys
@@ -24,6 +25,8 @@ from .patch.normalize import (
     parse_patch_op_json as _normalize_parse_patch_op_json,
 )
 from .tools import (
+    CaptureSheetImagesToolInput,
+    CaptureSheetImagesToolOutput,
     DescribeOpToolInput,
     DescribeOpToolOutput,
     ExtractToolInput,
@@ -44,6 +47,7 @@ from .tools import (
     RuntimeInfoToolOutput,
     ValidateInputToolInput,
     ValidateInputToolOutput,
+    run_capture_sheet_images_tool,
     run_describe_op_tool,
     run_extract_tool,
     run_list_ops_tool,
@@ -60,6 +64,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     from mcp.server.fastmcp import FastMCP
 
 logger = logging.getLogger(__name__)
+_DEFAULT_CAPTURE_SHEET_IMAGES_TIMEOUT_SECONDS = 120.0
 
 
 class ServerConfig(BaseModel):
@@ -105,9 +110,14 @@ def run_server(config: ServerConfig) -> None:
         config: Server configuration.
     """
     os.environ.setdefault("EXSTRUCT_BORDER_CLUSTER_BACKEND", "python")
+    os.environ.setdefault("EXSTRUCT_RENDER_SUBPROCESS", "1")
     logger.info(
         "Border cluster backend set to %s for MCP.",
         os.getenv("EXSTRUCT_BORDER_CLUSTER_BACKEND"),
+    )
+    logger.info(
+        "Render subprocess mode for MCP set to %s.",
+        os.getenv("EXSTRUCT_RENDER_SUBPROCESS"),
     )
     _import_mcp()
     policy = PathPolicy(root=config.root, deny_globs=config.deny_globs)
@@ -301,6 +311,8 @@ def _register_tools(
 
     tool = app.tool(name="exstruct_extract")
     tool(_extract_tool)
+
+    _register_capture_sheet_images_tool(app, policy=policy)
 
     async def _read_json_chunk_tool(  # pylint: disable=redefined-builtin
         out_path: str,
@@ -720,6 +732,98 @@ Returns:
     Patch result with output path, applied diffs, and any warnings.
 """
     return f"{base_description.strip()}\n\n{build_patch_tool_mini_schema()}"
+
+
+def _register_capture_sheet_images_tool(app: FastMCP, *, policy: PathPolicy) -> None:
+    """Register the sheet image capture MCP tool."""
+
+    async def _capture_sheet_images_tool(  # pylint: disable=redefined-builtin
+        xlsx_path: str,
+        out_dir: str | None = None,
+        dpi: int = 144,
+        sheet: str | None = None,
+        range: str | None = None,  # noqa: A002
+    ) -> CaptureSheetImagesToolOutput:
+        """Export worksheet images as PNG files (COM only).
+
+        Args:
+            xlsx_path: Path to the Excel workbook.
+            out_dir: Optional output directory for PNG files. When omitted, MCP
+                creates a unique directory under server `--root` using
+                `<workbook_stem>_images` with numeric suffixes as needed.
+            dpi: Rendering DPI (must be >= 1).
+            sheet: Optional target sheet name. Required only when `range` is
+                unqualified (for example, `A1:B2`).
+            range: Optional A1 range (`A1:B2`) with optional sheet qualifier
+                (`Sheet1!A1:B2`, `'Sheet 1'!A1:B2`).
+
+        Returns:
+            Export result payload with resolved output directory and image paths.
+        """
+        payload = CaptureSheetImagesToolInput(
+            xlsx_path=xlsx_path,
+            out_dir=out_dir,
+            dpi=dpi,
+            sheet=sheet,
+            range=range,
+        )
+        work = functools.partial(
+            run_capture_sheet_images_tool,
+            payload,
+            policy=policy,
+        )
+        timeout_seconds = _get_capture_sheet_images_timeout_seconds()
+        try:
+            with anyio.fail_after(timeout_seconds):
+                result = cast(
+                    CaptureSheetImagesToolOutput,
+                    await anyio.to_thread.run_sync(work, abandon_on_cancel=True),
+                )
+        except TimeoutError as exc:
+            raise TimeoutError(
+                "capture_sheet_images timed out after "
+                f"{timeout_seconds:.1f}s. "
+                "Adjust workbook/range size or increase "
+                "EXSTRUCT_MCP_CAPTURE_SHEET_IMAGES_TIMEOUT_SEC."
+            ) from exc
+        return result
+
+    capture_sheet_images_tool = app.tool(name="exstruct_capture_sheet_images")
+    capture_sheet_images_tool(_capture_sheet_images_tool)
+
+
+def _get_capture_sheet_images_timeout_seconds() -> float:
+    """Return capture timeout seconds from environment."""
+    raw_value = os.getenv("EXSTRUCT_MCP_CAPTURE_SHEET_IMAGES_TIMEOUT_SEC")
+    if raw_value is None:
+        return _DEFAULT_CAPTURE_SHEET_IMAGES_TIMEOUT_SECONDS
+    try:
+        parsed = float(raw_value)
+    except ValueError:
+        logger.warning(
+            "Invalid EXSTRUCT_MCP_CAPTURE_SHEET_IMAGES_TIMEOUT_SEC=%r. "
+            "Falling back to %.1fs.",
+            raw_value,
+            _DEFAULT_CAPTURE_SHEET_IMAGES_TIMEOUT_SECONDS,
+        )
+        return _DEFAULT_CAPTURE_SHEET_IMAGES_TIMEOUT_SECONDS
+    if not math.isfinite(parsed):
+        logger.warning(
+            "Non-finite EXSTRUCT_MCP_CAPTURE_SHEET_IMAGES_TIMEOUT_SEC=%r. "
+            "Falling back to %.1fs.",
+            raw_value,
+            _DEFAULT_CAPTURE_SHEET_IMAGES_TIMEOUT_SECONDS,
+        )
+        return _DEFAULT_CAPTURE_SHEET_IMAGES_TIMEOUT_SECONDS
+    if parsed <= 0:
+        logger.warning(
+            "Non-positive EXSTRUCT_MCP_CAPTURE_SHEET_IMAGES_TIMEOUT_SEC=%r. "
+            "Falling back to %.1fs.",
+            raw_value,
+            _DEFAULT_CAPTURE_SHEET_IMAGES_TIMEOUT_SECONDS,
+        )
+        return _DEFAULT_CAPTURE_SHEET_IMAGES_TIMEOUT_SECONDS
+    return parsed
 
 
 def _register_op_schema_tools(app: FastMCP) -> None:

@@ -90,3 +90,50 @@ def next_available_path(path: Path) -> Path:
         if not candidate.exists():
             return candidate
     raise RuntimeError(f"Failed to resolve unique path for {path}")
+
+
+def resolve_image_output_dir(
+    input_path: Path,
+    *,
+    out_dir: Path | None,
+    policy: PathPolicy | None,
+) -> Path:
+    """Resolve output directory for sheet image export.
+
+    If `out_dir` is omitted, a unique `<stem>_images` directory is created
+    under MCP root (or input parent when policy is not provided).
+    """
+    if out_dir is not None:
+        return policy.ensure_allowed(out_dir) if policy else out_dir.resolve()
+    base_dir = policy.normalize_root() if policy else input_path.parent.resolve()
+    candidate = (base_dir / f"{input_path.stem}_images").resolve()
+    if policy is not None:
+        candidate = policy.ensure_allowed(candidate)
+    return next_available_directory(candidate, policy=policy)
+
+
+def next_available_directory(path: Path, *, policy: PathPolicy | None) -> Path:
+    """Reserve and return a unique directory path with numeric suffix when needed."""
+    reserved = _reserve_directory(path)
+    if reserved is not None:
+        if policy is not None:
+            policy.ensure_allowed(reserved)
+        return reserved
+    stem = path.name
+    for idx in range(1, 10_000):
+        candidate = path.with_name(f"{stem}_{idx}")
+        if policy is not None:
+            candidate = policy.ensure_allowed(candidate)
+        reserved = _reserve_directory(candidate)
+        if reserved is not None:
+            return reserved
+    raise RuntimeError(f"Failed to resolve unique path for {path}")
+
+
+def _reserve_directory(path: Path) -> Path | None:
+    """Create one directory atomically and return path when successful."""
+    try:
+        path.mkdir(parents=True, exist_ok=False)
+    except FileExistsError:
+        return None
+    return path.resolve()

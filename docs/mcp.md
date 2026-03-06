@@ -6,6 +6,7 @@ so AI agents can call it safely as a tool.
 ## What it provides
 
 - Convert Excel into structured JSON (file output)
+- Export worksheet images as PNG (COM-only, optional sheet/range target)
 - Create a new workbook and apply initial ops in one call
 - Edit Excel by applying patch operations (cell/sheet updates)
 - Read large JSON outputs in chunks
@@ -61,6 +62,7 @@ exstruct-mcp --root C:\\data --log-file C:\\logs\\exstruct-mcp.log --on-conflict
 ## Tools
 
 - `exstruct_extract`
+- `exstruct_capture_sheet_images`
 - `exstruct_make`
 - `exstruct_patch`
 - `exstruct_list_ops`
@@ -71,6 +73,50 @@ exstruct-mcp --root C:\\data --log-file C:\\logs\\exstruct-mcp.log --on-conflict
 - `exstruct_read_formulas`
 - `exstruct_validate_input`
 - `exstruct_get_runtime_info`
+
+### `exstruct_capture_sheet_images` (COM only, Experimental)
+
+- Purpose: export worksheet images as PNG through the existing PDF -> PNG pipeline.
+- Input:
+  - `xlsx_path` (required)
+  - `out_dir` (optional)
+  - `dpi` (default `144`, must be `>= 1`)
+  - `sheet` (optional; required when `range` is provided)
+  - `range` (optional; `A1:B2`, `Sheet1!A1:B2`, `'Sheet 1'!A1:B2`)
+- Output:
+  - `out_dir` (always returned, resolved path)
+  - `image_paths`
+  - `warnings`
+- Notes:
+  - If `out_dir` is omitted, a unique `<workbook_stem>_images` directory is created under MCP `--root`.
+  - COM/Excel desktop is required.
+  - This tool is currently shipped as `experimental` in MCP deployments.
+  - MCP server runtime defaults `EXSTRUCT_RENDER_SUBPROCESS=1` via `setdefault` (subprocess PDF->PNG). If you prefer in-process rendering, set `EXSTRUCT_RENDER_SUBPROCESS=0` explicitly before starting the server.
+  - Timeout tuning:
+    - `EXSTRUCT_MCP_CAPTURE_SHEET_IMAGES_TIMEOUT_SEC` (default `120`)
+    - `EXSTRUCT_RENDER_SUBPROCESS_STARTUP_TIMEOUT_SEC` (default `5`)
+    - `EXSTRUCT_RENDER_SUBPROCESS_JOIN_TIMEOUT_SEC` (default `120`)
+    - `EXSTRUCT_RENDER_SUBPROCESS_RESULT_TIMEOUT_SEC` (default `5`)
+  - Stage-aware errors are returned from render subprocess mode:
+    - `stage=startup`: worker bootstrap/import/startup failed.
+    - `stage=join`: timed out while worker remained alive.
+    - `stage=result`: worker exited but result payload was missing/invalid.
+    - `stage=worker`: worker returned an explicit rendering failure.
+  - Trade-offs:
+    - `EXSTRUCT_RENDER_SUBPROCESS=0`: lower crash isolation and potentially higher long-running process memory pressure.
+    - `EXSTRUCT_RENDER_SUBPROCESS=1`: requires `sys.executable` + `exstruct` module resolution in the worker process.
+
+Example:
+
+```json
+{
+  "tool": "exstruct_capture_sheet_images",
+  "xlsx_path": "C:\\data\\book.xlsx",
+  "sheet": "Sheet 1",
+  "range": "'Sheet 1'!A1:F20",
+  "dpi": 144
+}
+```
 
 ### `exstruct_extract` defaults and mode guide
 

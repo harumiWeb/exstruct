@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 import importlib
 import logging
+import os
 from pathlib import Path
 from typing import Any, cast
 
@@ -13,6 +14,8 @@ from exstruct.mcp.extract_runner import OnConflictPolicy
 from exstruct.mcp.io import PathPolicy
 from exstruct.mcp.patch import normalize as patch_normalize
 from exstruct.mcp.tools import (
+    CaptureSheetImagesToolInput,
+    CaptureSheetImagesToolOutput,
     DescribeOpToolOutput,
     ExtractToolInput,
     ExtractToolOutput,
@@ -97,6 +100,36 @@ def test_parse_args_with_options(tmp_path: Path) -> None:
     assert config.on_conflict == "rename"
     assert config.artifact_bridge_dir == bridge_dir
     assert config.warmup is True
+
+
+def test_get_capture_sheet_images_timeout_seconds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Validate timeout env parsing for capture sheet images tool.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+
+    Returns:
+        None.
+    """
+    monkeypatch.delenv("EXSTRUCT_MCP_CAPTURE_SHEET_IMAGES_TIMEOUT_SEC", raising=False)
+    assert server._get_capture_sheet_images_timeout_seconds() == 120.0
+
+    monkeypatch.setenv("EXSTRUCT_MCP_CAPTURE_SHEET_IMAGES_TIMEOUT_SEC", "45")
+    assert server._get_capture_sheet_images_timeout_seconds() == 45.0
+
+    monkeypatch.setenv("EXSTRUCT_MCP_CAPTURE_SHEET_IMAGES_TIMEOUT_SEC", "0")
+    assert server._get_capture_sheet_images_timeout_seconds() == 120.0
+
+    monkeypatch.setenv("EXSTRUCT_MCP_CAPTURE_SHEET_IMAGES_TIMEOUT_SEC", "NaN")
+    assert server._get_capture_sheet_images_timeout_seconds() == 120.0
+
+    monkeypatch.setenv("EXSTRUCT_MCP_CAPTURE_SHEET_IMAGES_TIMEOUT_SEC", "inf")
+    assert server._get_capture_sheet_images_timeout_seconds() == 120.0
+
+    monkeypatch.setenv("EXSTRUCT_MCP_CAPTURE_SHEET_IMAGES_TIMEOUT_SEC", "-inf")
+    assert server._get_capture_sheet_images_timeout_seconds() == 120.0
 
 
 def test_import_mcp_missing(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -370,6 +403,233 @@ def test_register_tools_returns_runtime_info(tmp_path: Path) -> None:
     assert Path(result.path_examples.absolute) == (
         tmp_path.resolve() / "outputs" / "book.xlsx"
     )
+
+
+def test_register_tools_passes_capture_sheet_images_arguments(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Verify capture tool wiring and payload normalization.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        tmp_path: Temporary directory fixture.
+
+    Returns:
+        None.
+    """
+    app = DummyApp()
+    policy = PathPolicy(root=tmp_path)
+    calls: dict[str, tuple[object, ...]] = {}
+
+    def fake_run_capture_sheet_images_tool(
+        payload: CaptureSheetImagesToolInput,
+        *,
+        policy: PathPolicy,
+    ) -> CaptureSheetImagesToolOutput:
+        calls["capture"] = (payload, policy)
+        return CaptureSheetImagesToolOutput(
+            out_dir=str(tmp_path / "book_images"),
+            image_paths=[str(tmp_path / "book_images" / "01_Sheet1.png")],
+        )
+
+    run_sync_args: dict[str, object] = {}
+
+    async def fake_run_sync(
+        func: Callable[[], object],
+        *,
+        abandon_on_cancel: bool = False,
+    ) -> object:
+        run_sync_args["abandon_on_cancel"] = abandon_on_cancel
+        return func()
+
+    monkeypatch.setattr(
+        server,
+        "run_capture_sheet_images_tool",
+        fake_run_capture_sheet_images_tool,
+    )
+    monkeypatch.setattr(anyio.to_thread, "run_sync", fake_run_sync)
+
+    server._register_tools(app, policy, default_on_conflict="overwrite")
+    capture_tool = cast(
+        Callable[..., Awaitable[object]],
+        app.tools["exstruct_capture_sheet_images"],
+    )
+    result = cast(
+        CaptureSheetImagesToolOutput,
+        anyio.run(
+            _call_async,
+            capture_tool,
+            {
+                "xlsx_path": "book.xlsx",
+                "out_dir": "images",
+                "dpi": 200,
+                "sheet": "Sheet 1",
+                "range": "'Sheet 1'!a1:b2",
+            },
+        ),
+    )
+    capture_call = cast(
+        tuple[CaptureSheetImagesToolInput, PathPolicy], calls["capture"]
+    )
+    assert capture_call[0].xlsx_path == "book.xlsx"
+    assert capture_call[0].out_dir == "images"
+    assert capture_call[0].dpi == 200
+    assert capture_call[0].sheet == "Sheet 1"
+    assert capture_call[0].range == "A1:B2"
+    assert run_sync_args["abandon_on_cancel"] is True
+    assert result.image_paths == [str(tmp_path / "book_images" / "01_Sheet1.png")]
+
+
+def test_register_tools_capture_sheet_images_timeout(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Raise timeout with configured seconds for capture tool execution.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        tmp_path: Temporary directory fixture.
+
+    Returns:
+        None.
+    """
+    app = DummyApp()
+    policy = PathPolicy(root=tmp_path)
+
+    def fake_run_capture_sheet_images_tool(
+        payload: CaptureSheetImagesToolInput,
+        *,
+        policy: PathPolicy,
+    ) -> CaptureSheetImagesToolOutput:
+        _ = payload
+        _ = policy
+        return CaptureSheetImagesToolOutput(out_dir=str(tmp_path), image_paths=[])
+
+    async def fake_run_sync(
+        func: Callable[[], object],
+        *,
+        abandon_on_cancel: bool = False,
+    ) -> object:
+        _ = func
+        _ = abandon_on_cancel
+        raise TimeoutError("tool timed out")
+
+    monkeypatch.setattr(
+        server,
+        "run_capture_sheet_images_tool",
+        fake_run_capture_sheet_images_tool,
+    )
+    monkeypatch.setattr(anyio.to_thread, "run_sync", fake_run_sync)
+    monkeypatch.setattr(
+        server, "_get_capture_sheet_images_timeout_seconds", lambda: 3.0
+    )
+
+    server._register_tools(app, policy, default_on_conflict="overwrite")
+    capture_tool = cast(
+        Callable[..., Awaitable[object]],
+        app.tools["exstruct_capture_sheet_images"],
+    )
+    with pytest.raises(TimeoutError, match="capture_sheet_images timed out after 3.0s"):
+        anyio.run(_call_async, capture_tool, {"xlsx_path": "book.xlsx"})
+
+
+def test_register_tools_capture_sheet_images_propagates_runner_error(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Propagate generic capture runner errors from server tool.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        tmp_path: Temporary directory fixture.
+
+    Returns:
+        None.
+    """
+    app = DummyApp()
+    policy = PathPolicy(root=tmp_path)
+
+    def fake_run_capture_sheet_images_tool(
+        payload: CaptureSheetImagesToolInput,
+        *,
+        policy: PathPolicy,
+    ) -> CaptureSheetImagesToolOutput:
+        _ = payload
+        _ = policy
+        raise ValueError(
+            "Failed to render PDF pages: subprocess timed out after 120.0s."
+        )
+
+    async def fake_run_sync(
+        func: Callable[[], object],
+        *,
+        abandon_on_cancel: bool = False,
+    ) -> object:
+        _ = abandon_on_cancel
+        return func()
+
+    monkeypatch.setattr(
+        server,
+        "run_capture_sheet_images_tool",
+        fake_run_capture_sheet_images_tool,
+    )
+    monkeypatch.setattr(anyio.to_thread, "run_sync", fake_run_sync)
+
+    server._register_tools(app, policy, default_on_conflict="overwrite")
+    capture_tool = cast(
+        Callable[..., Awaitable[object]],
+        app.tools["exstruct_capture_sheet_images"],
+    )
+    with pytest.raises(ValueError, match="subprocess timed out"):
+        anyio.run(_call_async, capture_tool, {"xlsx_path": "book.xlsx"})
+
+
+def test_register_tools_capture_sheet_images_propagates_stage_aware_error(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Propagate stage-aware capture runner failures from server tool.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        tmp_path: Temporary directory fixture.
+
+    Returns:
+        None.
+    """
+    app = DummyApp()
+    policy = PathPolicy(root=tmp_path)
+
+    def fake_run_capture_sheet_images_tool(
+        payload: CaptureSheetImagesToolInput,
+        *,
+        policy: PathPolicy,
+    ) -> CaptureSheetImagesToolOutput:
+        _ = payload
+        _ = policy
+        raise ValueError(
+            "Failed to render PDF pages: stage=startup worker exited before initialization."
+        )
+
+    async def fake_run_sync(
+        func: Callable[[], object],
+        *,
+        abandon_on_cancel: bool = False,
+    ) -> object:
+        _ = abandon_on_cancel
+        return func()
+
+    monkeypatch.setattr(
+        server,
+        "run_capture_sheet_images_tool",
+        fake_run_capture_sheet_images_tool,
+    )
+    monkeypatch.setattr(anyio.to_thread, "run_sync", fake_run_sync)
+
+    server._register_tools(app, policy, default_on_conflict="overwrite")
+    capture_tool = cast(
+        Callable[..., Awaitable[object]],
+        app.tools["exstruct_capture_sheet_images"],
+    )
+    with pytest.raises(ValueError, match="stage=startup"):
+        anyio.run(_call_async, capture_tool, {"xlsx_path": "book.xlsx"})
 
 
 def test_register_tools_returns_ops_schema_tools(tmp_path: Path) -> None:
@@ -1161,6 +1421,17 @@ def test_register_tools_passes_patch_extended_flags(
 
 
 def test_run_server_sets_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Set required default env vars when starting the server.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        tmp_path: Temporary directory fixture.
+
+    Returns:
+        None.
+    """
+    monkeypatch.delenv("EXSTRUCT_BORDER_CLUSTER_BACKEND", raising=False)
+    monkeypatch.delenv("EXSTRUCT_RENDER_SUBPROCESS", raising=False)
     created: dict[str, object] = {}
 
     def fake_import() -> None:
@@ -1189,6 +1460,52 @@ def test_run_server_sets_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     assert created["ran"] is True
     assert created["on_conflict"] == "overwrite"
     assert created["artifact_bridge_dir"] is None
+    assert os.getenv("EXSTRUCT_BORDER_CLUSTER_BACKEND") == "python"
+    assert os.getenv("EXSTRUCT_RENDER_SUBPROCESS") == "1"
+
+
+def test_run_server_preserves_existing_render_subprocess_env(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Preserve existing render subprocess env value on server start.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        tmp_path: Temporary directory fixture.
+
+    Returns:
+        None.
+    """
+    created: dict[str, object] = {}
+
+    def fake_import() -> None:
+        created["imported"] = True
+
+    class _App:
+        def run(self) -> None:
+            created["ran"] = True
+
+    def fake_create_app(
+        policy: PathPolicy,
+        *,
+        on_conflict: OnConflictPolicy,
+        artifact_bridge_dir: Path | None = None,
+    ) -> _App:
+        created["policy"] = policy
+        created["on_conflict"] = on_conflict
+        created["artifact_bridge_dir"] = artifact_bridge_dir
+        return _App()
+
+    monkeypatch.setenv("EXSTRUCT_RENDER_SUBPROCESS", "0")
+    monkeypatch.setattr(server, "_import_mcp", fake_import)
+    monkeypatch.setattr(server, "_create_app", fake_create_app)
+    config = server.ServerConfig(root=tmp_path)
+
+    server.run_server(config)
+
+    assert created["ran"] is True
+    assert os.getenv("EXSTRUCT_RENDER_SUBPROCESS") == "0"
 
 
 def test_configure_logging_with_file(
