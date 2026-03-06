@@ -9,7 +9,7 @@ from .pipeline import resolve_extraction_inputs, run_extraction_pipeline
 
 def extract_workbook(  # noqa: C901
     file_path: str | Path,
-    mode: Literal["light", "standard", "verbose"] = "standard",
+    mode: Literal["light", "libreoffice", "standard", "verbose"] = "standard",
     *,
     include_cell_links: bool | None = None,
     include_print_areas: bool | None = None,
@@ -28,7 +28,7 @@ def extract_workbook(  # noqa: C901
 
     Parameters:
         file_path (str | Path): Path to the workbook file.
-        mode (Literal['light', 'standard', 'verbose']): Extraction mode that controls detail level.
+        mode (Literal['light', 'libreoffice', 'standard', 'verbose']): Extraction mode that controls detail level.
         include_cell_links (bool | None): Include cell hyperlinks; `None` uses mode defaults.
         include_print_areas (bool | None): Include print areas; `None` defaults to True.
         include_auto_page_breaks (bool): Include automatic page break information.
@@ -43,7 +43,7 @@ def extract_workbook(  # noqa: C901
         WorkbookData: The extracted workbook representation.
 
     Raises:
-        ValueError: If `mode` is not one of "light", "standard", or "verbose".
+        ValueError: If `mode` is not one of "light", "libreoffice", "standard", or "verbose".
     """
     inputs = resolve_extraction_inputs(
         file_path,

@@ -28,6 +28,17 @@ class BaseShape(BaseModel):
     rotation: float | None = Field(
         default=None, description="Rotation angle in degrees."
     )
+    provenance: Literal["excel_com", "libreoffice_uno"] | None = Field(
+        default=None, description="Backend provenance for this shape."
+    )
+    approximation_level: Literal["direct", "heuristic", "partial"] | None = Field(
+        default=None,
+        description="How directly the backend could determine this shape metadata.",
+    )
+    confidence: float | None = Field(
+        default=None,
+        description="Best-effort confidence score between 0.0 and 1.0.",
+    )
 
 
 class Shape(BaseShape):
@@ -144,6 +155,17 @@ class Chart(BaseModel):
     t: int = Field(description="Top offset (Excel units).")
     error: str | None = Field(
         default=None, description="Extraction error detail if any."
+    )
+    provenance: Literal["excel_com", "libreoffice_uno"] | None = Field(
+        default=None, description="Backend provenance for this chart."
+    )
+    approximation_level: Literal["direct", "heuristic", "partial"] | None = Field(
+        default=None,
+        description="How directly the backend could determine this chart metadata.",
+    )
+    confidence: float | None = Field(
+        default=None,
+        description="Best-effort confidence score between 0.0 and 1.0.",
     )
 
 

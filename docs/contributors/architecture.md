@@ -6,7 +6,7 @@ This page is intended for contributors who:
 
 - want to extend ExStruct internals
 - want to add new extraction targets (shapes, SmartArt, comments, etc.)
-- want to extend backends (Openpyxl / COM / future XML)
+- want to extend backends (Openpyxl / COM / LibreOffice / future XML)
 - want to submit a PR but are unsure where to make changes
 
 ---
@@ -16,7 +16,9 @@ This page is intended for contributors who:
 ```text
 src/exstruct/core/
 ├── pipeline.py        # Orchestrates the overall flow
-├── backend.py         # Backend abstraction (Protocol)
+├── backends/          # Backend abstractions and runtime-specific adapters
+├── libreoffice.py     # LibreOffice runtime/session helper
+├── ooxml_drawing.py   # OOXML drawing/chart parser for best-effort rich extraction
 ├── openpyxl_backend.py
 ├── com_backend.py
 ├── modeling.py        # Final data integration
@@ -72,7 +74,7 @@ Backends are for **pure extraction**:
 
 Only Modeling merges backend results into one **semantic structure**.
 
-- combine Openpyxl + COM results
+- combine Openpyxl + COM / LibreOffice results
 - normalize coordinates, directions, and types
 - fill missing data
 
@@ -108,7 +110,7 @@ Only Modeling merges backend results into one **semantic structure**.
 
 ---
 
-## Case 2: Add a new Backend (e.g., XML backend)
+## Case 2: Add a new Backend (e.g., XML or LibreOffice backend)
 
 ### Steps
 
@@ -141,7 +143,7 @@ Only Modeling merges backend results into one **semantic structure**.
 
 ## Fallback Rules
 
-- COM being unavailable is **normal**
+- COM or LibreOffice runtime being unavailable is **normal**
 - fallback is not an exception
 - always provide a `FallbackReason`
 
@@ -149,6 +151,11 @@ Only Modeling merges backend results into one **semantic structure**.
 log_fallback(
     reason=FallbackReason.COM_UNAVAILABLE,
     message="COM backend not available"
+)
+
+log_fallback(
+    reason=FallbackReason.LIBREOFFICE_UNAVAILABLE,
+    message="LibreOffice backend not available"
 )
 ```
 

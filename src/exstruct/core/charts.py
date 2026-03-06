@@ -169,7 +169,8 @@ def parse_series_formula(formula: str) -> dict[str, str | None] | None:
 
 
 def get_charts(
-    sheet: xw.Sheet, mode: Literal["light", "standard", "verbose"] = "standard"
+    sheet: xw.Sheet,
+    mode: Literal["light", "libreoffice", "standard", "verbose"] = "standard",
 ) -> list[Chart]:
     """Parse charts in a sheet into Chart models; failed charts carry an error field."""
     charts: list[Chart] = []
@@ -238,6 +239,9 @@ def get_charts(
                 l=int(ch.left),
                 t=int(ch.top),
                 error=error,
+                provenance="excel_com",
+                approximation_level="direct",
+                confidence=1.0,
             )
         )
     return charts

@@ -121,14 +121,14 @@ class OpenpyxlBackend:
         self,
         sheet_name: str,
         *,
-        mode: Literal["light", "standard", "verbose"] = "standard",
+        mode: Literal["light", "libreoffice", "standard", "verbose"] = "standard",
     ) -> list[str]:
         """
         Detects table candidate ranges within the specified worksheet.
 
         Parameters:
             sheet_name (str): Name of the worksheet to analyze for table candidates.
-            mode (Literal["light", "standard", "verbose"]): Extraction mode, used to
+            mode (Literal["light", "libreoffice", "standard", "verbose"]): Extraction mode, used to
                 adjust scan limits in openpyxl-based detection.
 
         Returns:

@@ -421,6 +421,9 @@ def get_shapes_with_position(  # noqa: C901
                         else None,
                         layout=_get_smartart_layout_name(smartart_obj),
                         nodes=_extract_smartart_nodes(smartart_obj),
+                        provenance="excel_com",
+                        approximation_level="direct",
+                        confidence=1.0,
                     )
                 elif is_relationship_geom:
                     shape_obj = Arrow(
@@ -434,6 +437,9 @@ def get_shapes_with_position(  # noqa: C901
                         h=int(shp.height)
                         if mode == "verbose" or shape_type_str == "Group"
                         else None,
+                        provenance="excel_com",
+                        approximation_level="direct",
+                        confidence=1.0,
                     )
                 else:
                     shape_obj = Shape(
@@ -448,6 +454,9 @@ def get_shapes_with_position(  # noqa: C901
                         if mode == "verbose" or shape_type_str == "Group"
                         else None,
                         type=type_label,
+                        provenance="excel_com",
+                        approximation_level="direct",
+                        confidence=1.0,
                     )
                 if excel_name:
                     if shape_id is not None:

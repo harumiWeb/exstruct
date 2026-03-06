@@ -127,8 +127,15 @@ Example:
 | Mode | When to use | Main output characteristics |
 |---|---|---|
 | `light` | Fast, structure-first extraction | cells + table candidates + print areas |
-| `standard` | Default for most agent flows | balanced detail and size |
-| `verbose` | Need the richest metadata | adds links/maps and richer metadata |
+| `libreoffice` | Best-effort rich extraction without Excel COM | `light` + merged cells + shapes + connectors + charts |
+| `standard` | Default for Windows + Excel agent flows | balanced COM-backed detail and size |
+| `verbose` | Need the richest COM metadata | adds links/maps and richer metadata |
+
+Notes:
+
+- `libreoffice` is available for `.xlsx/.xlsm` only.
+- `libreoffice` is best-effort and not a strict subset of COM output.
+- `libreoffice` does not render PDFs/PNGs and does not compute auto page-break areas in v1.
 
 ## Quick start for agents (recommended)
 

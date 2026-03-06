@@ -5,6 +5,7 @@ from pathlib import Path
 from _pytest.monkeypatch import MonkeyPatch
 from openpyxl import Workbook
 
+from exstruct.core.libreoffice import LibreOfficeUnavailableError
 from exstruct.core.pipeline import resolve_extraction_inputs, run_extraction_pipeline
 from exstruct.errors import FallbackReason
 
@@ -125,6 +126,81 @@ def test_pipeline_fallback_com_pipeline_failed(
 
     assert result.state.fallback_reason == FallbackReason.COM_PIPELINE_FAILED
     assert result.state.com_attempted is True
+    sheet = result.workbook.sheets["Sheet1"]
+    assert sheet.shapes == []
+    assert sheet.charts == []
+    assert sheet.rows
+
+
+def test_pipeline_fallback_libreoffice_unavailable(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    path = tmp_path / "book.xlsx"
+    _make_basic_book(path)
+
+    def _raise(**_kwargs: object) -> object:
+        raise LibreOfficeUnavailableError("missing soffice")
+
+    monkeypatch.setattr("exstruct.core.pipeline.resolve_rich_backend", _raise)
+
+    inputs = resolve_extraction_inputs(
+        path,
+        mode="libreoffice",
+        include_cell_links=False,
+        include_print_areas=True,
+        include_auto_page_breaks=False,
+        include_colors_map=False,
+        include_default_background=False,
+        ignore_colors=None,
+        include_formulas_map=None,
+        include_merged_cells=None,
+        include_merged_values_in_rows=True,
+    )
+    result = run_extraction_pipeline(inputs)
+
+    assert result.state.fallback_reason == FallbackReason.LIBREOFFICE_UNAVAILABLE
+    sheet = result.workbook.sheets["Sheet1"]
+    assert sheet.shapes == []
+    assert sheet.charts == []
+    assert sheet.rows
+
+
+def test_pipeline_fallback_libreoffice_pipeline_failed(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    path = tmp_path / "book.xlsx"
+    _make_basic_book(path)
+
+    class _Backend:
+        def extract_shapes(self, *, mode: str) -> dict[str, list[object]]:
+            _ = mode
+            raise RuntimeError("boom")
+
+        def extract_charts(self, *, mode: str) -> dict[str, list[object]]:
+            _ = mode
+            return {}
+
+    monkeypatch.setattr(
+        "exstruct.core.pipeline.resolve_rich_backend",
+        lambda **_kwargs: _Backend(),
+    )
+
+    inputs = resolve_extraction_inputs(
+        path,
+        mode="libreoffice",
+        include_cell_links=False,
+        include_print_areas=True,
+        include_auto_page_breaks=False,
+        include_colors_map=False,
+        include_default_background=False,
+        ignore_colors=None,
+        include_formulas_map=None,
+        include_merged_cells=None,
+        include_merged_values_in_rows=True,
+    )
+    result = run_extraction_pipeline(inputs)
+
+    assert result.state.fallback_reason == FallbackReason.LIBREOFFICE_PIPELINE_FAILED
     sheet = result.workbook.sheets["Sheet1"]
     assert sheet.shapes == []
     assert sheet.charts == []

@@ -12,13 +12,13 @@ ExStruct reads Excel workbooks and outputs structured data (cells, table candida
 ## Features
 
 - **Excel → Structured JSON**: cells, shapes, charts, smartart, table candidates, print areas/views, and auto page-break areas per sheet.
-- **Output modes**: `light` (cells + table candidates + print areas; no COM, shapes/charts empty), `standard` (texted shapes + arrows, charts, smartart, merged cell ranges, print areas), `verbose` (all shapes with width/height, charts with size, merged cell ranges, print areas). Verbose also emits cell hyperlinks and `colors_map`. Size output is flag-controlled.
+- **Output modes**: `light` (cells + table candidates + print areas; no rich backend), `libreoffice` (best-effort non-COM extraction for `.xlsx/.xlsm`; adds merged cells, shapes, connectors, and charts when the LibreOffice runtime is available), `standard` (texted shapes + arrows, charts, smartart, merged cell ranges, print areas via Excel COM), `verbose` (all shapes with width/height, charts with size, merged cell ranges, print areas). Verbose also emits cell hyperlinks and `colors_map`. Size output is flag-controlled.
 - **Formula map extraction**: emits `formulas_map` (formula string -> cell coordinates) via openpyxl/COM; enabled by default in `verbose` or via `include_formulas_map`.
 - **Auto page-break export (COM only)**: capture Excel-computed auto page breaks and write per-area JSON/YAML/TOON when requested (CLI option appears only when COM is available).
 - **Formats**: JSON (compact by default, `--pretty` available), YAML, TOON (optional dependencies).
 - **Table detection tuning**: adjust heuristics at runtime via API.
 - **CLI rendering** (Excel required): optional PDF and per-sheet PNGs.
-- **Graceful fallback**: if Excel COM is unavailable, extraction falls back to cells + table candidates without crashing.
+- **Graceful fallback**: if Excel COM or the LibreOffice runtime is unavailable, extraction falls back to cells + table candidates + print areas without crashing.
 
 ## Benchmark
 
@@ -44,7 +44,7 @@ Optional extras:
 
 Platform note:
 
-- Full extraction (shapes/charts) targets Windows + Excel (COM via xlwings). On other platforms, use `mode=light` to get cells + `table_candidates`.
+- Full COM extraction (shapes/charts) targets Windows + Excel (COM via xlwings). On Linux/macOS/server environments, prefer `mode=libreoffice` for best-effort rich extraction or `mode=light` for minimal extraction. `.xls` is not supported in `mode=libreoffice`.
 
 ## Quick Start (CLI)
 
@@ -58,6 +58,7 @@ exstruct input.xlsx --auto-page-breaks-dir auto_areas/  # COM only; option appea
 exstruct input.xlsx --print-areas-dir areas/  # split per print area (if any)
 exstruct input.xlsx --alpha-col           # output column keys as A, B, ..., AA
 exstruct input.xlsx --mode light           # cells + table candidates only
+exstruct input.xlsx --mode libreoffice     # best-effort shapes/connectors/charts without COM
 exstruct input.xlsx --pdf --image          # PDF and PNGs (Excel required)
 ```
 
@@ -112,7 +113,9 @@ Notes:
 - Trade-off of `EXSTRUCT_RENDER_SUBPROCESS=1`: subprocess startup/coordination overhead and dependency on worker-side module resolution.
 - Trade-off of `EXSTRUCT_RENDER_SUBPROCESS=0`: less crash isolation and higher memory pressure risk in long-running processes.
 - Logs go to stderr (and optionally `--log-file`) to avoid contaminating stdio responses.
-- On Windows with Excel, standard/verbose can use COM for richer extraction. On non-Windows, COM is unavailable and extraction uses openpyxl-based fallbacks.
+- On Windows with Excel, `standard`/`verbose` use COM for the richest extraction.
+- On Linux/macOS/server environments, `libreoffice` is the best-effort rich mode. It is not a strict subset of COM output: shapes/connectors/charts are reconstructed from LibreOffice + OOXML metadata and can differ in fidelity.
+- `libreoffice` does not render PDFs/PNGs and does not compute auto page-break areas in v1.
 - `exstruct_patch` supports `backend` selection:
   - `auto` (default): prefer COM when available, otherwise openpyxl
   - `com`: force COM (rejects `dry_run` / `return_inverse_ops` / `preflight_formula_check`)

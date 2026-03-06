@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import xlwings as xw
 
@@ -15,8 +15,10 @@ from ..cells import (
     extract_sheet_colors_map_com,
     extract_sheet_formulas_map_com,
 )
+from ..charts import get_charts
 from ..ranges import parse_range_zero_based
-from .base import MergedCellData, PrintAreaData
+from ..shapes import get_shapes_with_position
+from .base import ChartData, MergedCellData, PrintAreaData, RichBackend, ShapeData
 
 logger = logging.getLogger(__name__)
 
@@ -182,6 +184,26 @@ class ComBackend:
     def extract_merged_cells(self) -> MergedCellData:
         """Extract merged cell ranges via COM (not implemented)."""
         raise NotImplementedError("COM merged cell extraction is not implemented.")
+
+
+@dataclass(frozen=True)
+class ComRichBackend(RichBackend):
+    """Protocol adapter for COM-based shape and chart extraction."""
+
+    workbook: xw.Book
+
+    def extract_shapes(
+        self, *, mode: Literal["libreoffice", "standard", "verbose"]
+    ) -> ShapeData:
+        return get_shapes_with_position(self.workbook, mode=mode)
+
+    def extract_charts(
+        self, *, mode: Literal["libreoffice", "standard", "verbose"]
+    ) -> ChartData:
+        chart_data: ChartData = {}
+        for sheet in self.workbook.sheets:
+            chart_data[sheet.name] = get_charts(sheet, mode=mode)
+        return chart_data
 
 
 def _parse_print_area_range(range_str: str) -> tuple[int, int, int, int] | None:

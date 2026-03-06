@@ -43,7 +43,7 @@ _DEFAULT_BACKGROUND_HEX = "FFFFFF"
 _XL_COLOR_NONE = -4142
 _BORDER_CLUSTER_BACKEND_ENV = "EXSTRUCT_BORDER_CLUSTER_BACKEND"
 
-ExtractionMode = Literal["light", "standard", "verbose"]
+ExtractionMode = Literal["light", "libreoffice", "standard", "verbose"]
 
 
 # Use dataclasses for lightweight models
@@ -150,7 +150,7 @@ def _resolve_table_scan_limits(
     """Resolve effective scan limits for table detection.
 
     Args:
-        mode: Extraction mode (light/standard/verbose).
+        mode: Extraction mode (light/libreoffice/standard/verbose).
         scan_limits: Optional explicit limits override.
 
     Returns:
@@ -158,7 +158,7 @@ def _resolve_table_scan_limits(
     """
     if scan_limits is not None:
         return scan_limits
-    if mode in {"standard", "verbose"}:
+    if mode in {"libreoffice", "standard", "verbose"}:
         return _DEFAULT_TABLE_SCAN_LIMITS.scaled(1.5)
     return _DEFAULT_TABLE_SCAN_LIMITS
 

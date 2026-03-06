@@ -20,7 +20,7 @@ from .io import (
 from .models import SheetData, WorkbookData, convert_workbook_keys_to_alpha
 from .render import export_pdf, export_sheet_images
 
-ExtractionMode = Literal["light", "standard", "verbose"]
+ExtractionMode = Literal["light", "libreoffice", "standard", "verbose"]
 
 
 class TableParams(TypedDict, total=False):
@@ -64,8 +64,9 @@ class StructOptions:
     Extraction-time options for ExStructEngine.
 
     Attributes:
-        mode: Extraction mode. One of "light", "standard", "verbose".
+        mode: Extraction mode. One of "light", "libreoffice", "standard", "verbose".
               - light: cells + table candidates only (no COM, shapes/charts empty)
+              - libreoffice: best-effort non-COM mode using the LibreOffice backend
               - standard: texted shapes + arrows + charts (if COM available)
               - verbose: all shapes (width/height), charts, table candidates
         table_params: Optional dict passed to `set_table_detection_params(**table_params)`
@@ -188,7 +189,7 @@ class ExStructEngine:
         - OutputOptions: serialization format/pretty-print, include/exclude filters, per-sheet/per-print-area output dirs, etc.
         - Main methods:
             extract(path, mode=None) -> WorkbookData
-                - Modes: light/standard/verbose
+                - Modes: light/libreoffice/standard/verbose
                 - light: COM-free; cells + tables + print areas only (shapes/charts empty)
             serialize(workbook, ...) -> str
                 - Applies include_* filters, then serializes
@@ -377,7 +378,7 @@ class ExStructEngine:
         Parameters:
             file_path (str | Path): Path to the .xlsx/.xlsm/.xls file to extract.
             mode (ExtractionMode | None): Extraction mode to use; if None the engine's configured mode is used.
-                Modes: "light", "standard", "verbose".
+                Modes: "light", "libreoffice", "standard", "verbose".
 
         Returns:
             WorkbookData: Normalized workbook data extracted from the file.

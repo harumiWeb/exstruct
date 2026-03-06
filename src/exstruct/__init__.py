@@ -93,7 +93,7 @@ __all__ = [
 ]
 
 
-ExtractionMode = Literal["light", "standard", "verbose"]
+ExtractionMode = Literal["light", "libreoffice", "standard", "verbose"]
 
 
 def extract(
@@ -104,7 +104,7 @@ def extract(
 
     Parameters:
         file_path (str | Path): Path to the workbook file (.xlsx, .xlsm, .xls).
-        mode (ExtractionMode): Extraction detail level. "light" includes cells and table detection only (no COM, shapes/charts empty; print areas via openpyxl). "standard" includes texted shapes, arrows, charts (COM if available) and print areas. "verbose" also includes shape/chart sizes, cell link map, colors map, and formulas map.
+        mode (ExtractionMode): Extraction detail level. "light" includes cells and table detection only (no COM, shapes/charts empty; print areas via openpyxl). "libreoffice" is a best-effort non-COM mode that adds merged cells, shapes, connectors, and charts when the LibreOffice backend is available. "standard" includes texted shapes, arrows, charts (COM if available) and print areas. "verbose" also includes shape/chart sizes, cell link map, colors map, and formulas map.
         alpha_col: When True, convert CellRow column keys to Excel-style ABC names (A, B, ..., Z, AA, ...) instead of 0-based numeric strings.
 
     Returns:
@@ -342,7 +342,7 @@ def process_excel(
         image: True to also output PNGs (requires Excel + COM + pypdfium2).
         pdf: True to also output PDF (requires Excel + COM + pypdfium2).
         dpi: DPI for image output.
-        mode: light/standard/verbose (same meaning as `extract`).
+        mode: light/libreoffice/standard/verbose (same meaning as `extract`).
         pretty: Pretty-print JSON.
         indent: JSON indent width.
         sheets_dir: Directory to write per-sheet files (string or Path).

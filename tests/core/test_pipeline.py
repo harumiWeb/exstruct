@@ -198,6 +198,28 @@ def test_resolve_extraction_inputs_defaults(tmp_path: Path) -> None:
     assert inputs.include_merged_cells is True
 
 
+def test_resolve_extraction_inputs_defaults_for_libreoffice(tmp_path: Path) -> None:
+    inputs = resolve_extraction_inputs(
+        tmp_path / "book.xlsx",
+        mode="libreoffice",
+        include_cell_links=None,
+        include_print_areas=None,
+        include_auto_page_breaks=False,
+        include_colors_map=None,
+        include_default_background=True,
+        ignore_colors=None,
+        include_formulas_map=None,
+        include_merged_cells=None,
+        include_merged_values_in_rows=True,
+    )
+    assert inputs.include_cell_links is False
+    assert inputs.include_print_areas is True
+    assert inputs.include_colors_map is False
+    assert inputs.include_formulas_map is False
+    assert inputs.include_default_background is False
+    assert inputs.include_merged_cells is True
+
+
 def test_resolve_extraction_inputs_forces_merged_cells_when_excluding_values(
     tmp_path: Path,
 ) -> None:
@@ -250,6 +272,23 @@ def test_resolve_extraction_inputs_warns_on_xls_formulas(
     )
     assert inputs.use_com_for_formulas is True
     assert calls
+
+
+def test_resolve_extraction_inputs_rejects_xls_for_libreoffice(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="not supported in libreoffice mode"):
+        resolve_extraction_inputs(
+            tmp_path / "book.xls",
+            mode="libreoffice",
+            include_cell_links=None,
+            include_print_areas=None,
+            include_auto_page_breaks=False,
+            include_colors_map=None,
+            include_default_background=False,
+            ignore_colors=None,
+            include_formulas_map=None,
+            include_merged_cells=None,
+            include_merged_values_in_rows=True,
+        )
 
 
 def test_resolve_extraction_inputs_sets_ignore_colors(tmp_path: Path) -> None:

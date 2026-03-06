@@ -20,7 +20,9 @@ from ..models import (
     SmartArt,
     WorkbookData,
 )
-from .backends.com_backend import ComBackend
+from .backends.base import RichBackend
+from .backends.com_backend import ComBackend, ComRichBackend
+from .backends.libreoffice_backend import LibreOfficeRichBackend
 from .backends.openpyxl_backend import OpenpyxlBackend
 from .cells import (
     MergedCellRange,
@@ -30,12 +32,13 @@ from .cells import (
     warn_once,
 )
 from .charts import get_charts
+from .libreoffice import LibreOfficeUnavailableError
 from .logging_utils import log_fallback
 from .modeling import SheetRawData, WorkbookRawData, build_workbook_data
 from .shapes import get_shapes_with_position
 from .workbook import xlwings_workbook
 
-ExtractionMode = Literal["light", "standard", "verbose"]
+ExtractionMode = Literal["light", "libreoffice", "standard", "verbose"]
 CellData = dict[str, list[CellRow]]
 PrintAreaData = dict[str, list[PrintArea]]
 MergedCellData = dict[str, list[MergedCellRange]]
@@ -51,7 +54,7 @@ class ExtractionInputs:
 
     Attributes:
         file_path: Path to the Excel workbook.
-        mode: Extraction mode (light/standard/verbose).
+        mode: Extraction mode (light/libreoffice/standard/verbose).
         include_cell_links: Whether to include cell hyperlinks.
         include_print_areas: Whether to include print areas.
         include_auto_page_breaks: Whether to include auto page breaks.
@@ -217,11 +220,17 @@ def resolve_extraction_inputs(
     Raises:
         ValueError: If an unsupported mode is provided.
     """
-    allowed_modes: set[str] = {"light", "standard", "verbose"}
+    allowed_modes: set[str] = {"light", "libreoffice", "standard", "verbose"}
     if mode not in allowed_modes:
         raise ValueError(f"Unsupported mode: {mode}")
 
     normalized_file_path = file_path if isinstance(file_path, Path) else Path(file_path)
+    file_suffix = normalized_file_path.suffix.lower()
+    if mode == "libreoffice" and file_suffix == ".xls":
+        raise ValueError(
+            ".xls is not supported in libreoffice mode; use COM-backed "
+            "standard/verbose or convert to .xlsx"
+        )
     resolved_cell_links = (
         include_cell_links if include_cell_links is not None else mode == "verbose"
     )
@@ -240,7 +249,6 @@ def resolve_extraction_inputs(
     resolved_formulas_map = (
         include_formulas_map if include_formulas_map is not None else mode == "verbose"
     )
-    file_suffix = normalized_file_path.suffix.lower()
     use_com_for_formulas = resolved_formulas_map and file_suffix == ".xls"
     if use_com_for_formulas:
         warn_once(
@@ -280,12 +288,12 @@ def build_pipeline_plan(inputs: ExtractionInputs) -> PipelinePlan:
         inputs (ExtractionInputs): Resolved extraction configuration (including mode and COM/formulas flags).
 
     Returns:
-        PipelinePlan: Plan containing ordered `pre_com_steps`, ordered `com_steps`, and `use_com` set to true when the pipeline should use COM (when `mode` is not "light" or `use_com_for_formulas` is true).
+        PipelinePlan: Plan containing ordered `pre_com_steps`, ordered `com_steps`, and `use_com` set to true when the pipeline should use COM (when `mode` is "standard"/"verbose" or `use_com_for_formulas` is true).
     """
     return PipelinePlan(
         pre_com_steps=build_pre_com_pipeline(inputs),
         com_steps=build_com_pipeline(inputs),
-        use_com=inputs.mode != "light" or inputs.use_com_for_formulas,
+        use_com=inputs.mode in {"standard", "verbose"} or inputs.use_com_for_formulas,
     )
 
 
@@ -300,6 +308,34 @@ def build_pre_com_pipeline(inputs: ExtractionInputs) -> list[ExtractionStep]:
     """
     step_table: dict[ExtractionMode, Sequence[StepConfig]] = {
         "light": (
+            StepConfig(
+                name="cells",
+                step=step_extract_cells,
+                enabled=lambda _inputs: True,
+            ),
+            StepConfig(
+                name="print_areas_openpyxl",
+                step=step_extract_print_areas_openpyxl,
+                enabled=lambda _inputs: _inputs.include_print_areas,
+            ),
+            StepConfig(
+                name="formulas_map_openpyxl",
+                step=step_extract_formulas_map_openpyxl,
+                enabled=lambda _inputs: _inputs.include_formulas_map
+                and not _inputs.use_com_for_formulas,
+            ),
+            StepConfig(
+                name="colors_map_openpyxl",
+                step=step_extract_colors_map_openpyxl,
+                enabled=lambda _inputs: _inputs.include_colors_map,
+            ),
+            StepConfig(
+                name="merged_cells_openpyxl",
+                step=step_extract_merged_cells_openpyxl,
+                enabled=lambda _inputs: _inputs.include_merged_cells,
+            ),
+        ),
+        "libreoffice": (
             StepConfig(
                 name="cells",
                 step=step_extract_cells,
@@ -402,18 +438,18 @@ def build_com_pipeline(inputs: ExtractionInputs) -> list[ComExtractionStep]:
     Returns:
         Ordered list of COM extraction steps.
     """
-    if inputs.mode == "light" and not inputs.use_com_for_formulas:
+    if inputs.mode not in {"standard", "verbose"} and not inputs.use_com_for_formulas:
         return []
     step_table: Sequence[ComStepConfig] = (
         ComStepConfig(
             name="shapes_com",
             step=step_extract_shapes_com,
-            enabled=lambda _inputs: _inputs.mode != "light",
+            enabled=lambda _inputs: _inputs.mode in {"standard", "verbose"},
         ),
         ComStepConfig(
             name="charts_com",
             step=step_extract_charts_com,
-            enabled=lambda _inputs: _inputs.mode != "light",
+            enabled=lambda _inputs: _inputs.mode in {"standard", "verbose"},
         ),
         ComStepConfig(
             name="print_areas_com",
@@ -914,6 +950,19 @@ def collect_sheet_raw_data(
     return result
 
 
+def resolve_rich_backend(
+    *,
+    inputs: ExtractionInputs,
+    workbook: xw.Book | None = None,
+) -> RichBackend:
+    """Resolve the rich extraction backend for the requested mode."""
+    if inputs.mode == "libreoffice":
+        return LibreOfficeRichBackend(inputs.file_path)
+    if workbook is None:
+        raise ValueError("COM workbook is required for COM-backed rich extraction.")
+    return ComRichBackend(workbook)
+
+
 def run_extraction_pipeline(inputs: ExtractionInputs) -> PipelineResult:
     """
     Execute the configured extraction pipeline and produce the extraction result.
@@ -950,7 +999,38 @@ def run_extraction_pipeline(inputs: ExtractionInputs) -> PipelineResult:
         return PipelineResult(workbook=workbook, artifacts=artifacts, state=state)
 
     if not plan.use_com:
-        return _fallback("Light mode selected.", FallbackReason.LIGHT_MODE)
+        if inputs.mode == "light":
+            return _fallback("Light mode selected.", FallbackReason.LIGHT_MODE)
+        if inputs.mode == "libreoffice":
+            try:
+                rich_backend = resolve_rich_backend(inputs=inputs)
+                artifacts.shape_data = rich_backend.extract_shapes(mode=inputs.mode)
+                artifacts.chart_data = rich_backend.extract_charts(mode=inputs.mode)
+                workbook = build_cells_tables_workbook(
+                    inputs=inputs,
+                    artifacts=artifacts,
+                    reason="LibreOffice pipeline completed.",
+                    include_rich_artifacts=True,
+                )
+                return PipelineResult(
+                    workbook=workbook,
+                    artifacts=artifacts,
+                    state=state,
+                )
+            except LibreOfficeUnavailableError as exc:
+                return _fallback(
+                    f"LibreOffice runtime is unavailable. ({exc!r})",
+                    FallbackReason.LIBREOFFICE_UNAVAILABLE,
+                )
+            except Exception as exc:
+                return _fallback(
+                    f"LibreOffice pipeline failed ({exc!r}).",
+                    FallbackReason.LIBREOFFICE_PIPELINE_FAILED,
+                )
+        return _fallback(
+            "No COM-backed runtime is required for this mode.",
+            FallbackReason.LIGHT_MODE,
+        )
 
     if os.getenv("SKIP_COM_TESTS"):
         return _fallback(
@@ -1006,6 +1086,7 @@ def build_cells_tables_workbook(
     inputs: ExtractionInputs,
     artifacts: ExtractionArtifacts,
     reason: str,
+    include_rich_artifacts: bool = False,
 ) -> WorkbookData:
     """
     Builds a WorkbookData from available cell rows and detected table candidates to use as a fallback when COM-based extraction is not used or has failed.
@@ -1016,7 +1097,7 @@ def build_cells_tables_workbook(
         reason (str): Short description of why the fallback is being used (logged for debugging).
 
     Returns:
-        WorkbookData: A workbook composed from the available per-sheet cell rows, detected table candidates, merged-cell information, and any resolved formulas and colors maps. Shapes and charts are empty in this fallback path; formulas and colors maps are extracted from artifacts or from the Openpyxl backend when requested and not already present.
+        WorkbookData: A workbook composed from the available per-sheet cell rows, detected table candidates, merged-cell information, and any resolved formulas and colors maps. When `include_rich_artifacts` is false, shapes and charts are empty. Formulas and colors maps are extracted from artifacts or from the Openpyxl backend when requested and not already present.
     """
     logger.info("Building fallback workbook: %s", reason)
     backend = OpenpyxlBackend(inputs.file_path)
@@ -1056,8 +1137,12 @@ def build_cells_tables_workbook(
         )
         sheets[sheet_name] = SheetRawData(
             rows=filtered_rows,
-            shapes=[],
-            charts=[],
+            shapes=artifacts.shape_data.get(sheet_name, [])
+            if include_rich_artifacts
+            else [],
+            charts=artifacts.chart_data.get(sheet_name, [])
+            if include_rich_artifacts and inputs.mode != "light"
+            else [],
             table_candidates=tables,
             print_areas=artifacts.print_area_data.get(sheet_name, [])
             if inputs.include_print_areas

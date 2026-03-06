@@ -20,7 +20,7 @@ exstruct INPUT.xlsx --format toon           # TOON output (needs python-toon)
 | ---- | ----------- |
 | `-o, --output PATH` | Output path. Omit to write to stdout. |
 | `-f, --format {json,yaml,yml,toon}` | Serialization format (default: `json`). |
-| `-m, --mode {light,standard,verbose}` | Extraction detail level.<br>- light: cells + table candidates + print areas (no COM shapes/charts).<br>- standard: shapes with text/arrows + charts + print areas.<br>- verbose: all shapes/charts with size + hyperlinks. |
+| `-m, --mode {light,libreoffice,standard,verbose}` | Extraction detail level.<br>- light: cells + table candidates + print areas only.<br>- libreoffice: best-effort non-COM mode for `.xlsx/.xlsm`; adds merged cells, shapes, connectors, and charts when LibreOffice runtime is available.<br>- standard: shapes with text/arrows + charts + print areas via Excel COM.<br>- verbose: all shapes/charts with size + hyperlinks/maps via Excel COM. |
 | `--alpha-col` | Output column keys as Excel-style names (`A`, `B`, ..., `AA`) instead of 0-based numeric keys (`"0"`, `"1"`, ...). Default: disabled (legacy numeric keys). |
 | `--pretty` | Pretty-print JSON (indent=2). |
 | `--image` | Render per-sheet PNGs (requires Excel + COM + `pypdfium2`). |
@@ -58,6 +58,7 @@ exstruct sample.xlsx --pdf --image --dpi 144 -o out.json
 ## Notes
 
 - Optional dependencies are lazy-imported. Missing packages raise a `MissingDependencyError` with install hints.
-- On non-COM environments, shapes/charts are empty and print areas come from openpyxl; commands still succeed.
+- On non-COM environments, prefer `--mode libreoffice` for best-effort rich extraction on `.xlsx/.xlsm`, or `--mode light` for minimal extraction.
+- `--mode libreoffice` is best-effort, not a strict subset of COM output. It does not render PDFs/PNGs and does not compute auto page-break areas in v1.
 - `--sheets-dir` and `--print-areas-dir` accept existing or new directories (created if missing).
 - `--alpha-col` switches row column keys from legacy numeric strings (`"0"`, `"1"`, ...) to Excel-style keys (`"A"`, `"B"`, ...). CLI default is disabled for backward compatibility.

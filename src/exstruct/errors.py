@@ -44,3 +44,5 @@ class FallbackReason(StrEnum):
     SKIP_COM_TESTS = "skip_com_tests"
     COM_UNAVAILABLE = "com_unavailable"
     COM_PIPELINE_FAILED = "com_pipeline_failed"
+    LIBREOFFICE_UNAVAILABLE = "libreoffice_unavailable"
+    LIBREOFFICE_PIPELINE_FAILED = "libreoffice_pipeline_failed"

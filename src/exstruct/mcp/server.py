@@ -278,8 +278,9 @@ def _register_tools(
             xlsx_path: Path to the Excel workbook.
             mode: Extraction detail level. Allowed values are:
                 "light" (cells + table candidates + print areas),
-                "standard" (recommended default),
-                "verbose" (adds richer metadata such as links/maps).
+                "libreoffice" (best-effort non-COM shapes/connectors/charts),
+                "standard" (recommended default on Windows + Excel),
+                "verbose" (adds richer COM metadata such as links/maps).
             format: Output format.
             out_dir: Optional output directory.
             out_name: Optional output filename.

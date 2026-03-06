@@ -9,7 +9,9 @@ import pytest
 from exstruct.errors import MissingDependencyError
 from exstruct.models import (
     CellRow,
+    Chart,
     MergedCells,
+    Shape,
     SheetData,
     SmartArt,
     SmartArtNode,
@@ -162,3 +164,25 @@ def test_sheet_json_includes_merged_cells_schema() -> None:
     data = json.loads(sheet.to_json())
     assert data["merged_cells"]["schema"] == ["r1", "c1", "r2", "c2", "v"]
     assert data["merged_cells"]["items"][0] == [1, 0, 1, 1, "merged"]
+
+
+def test_model_dump_exclude_none_omits_backend_metadata() -> None:
+    shape = Shape(id=1, text="shape", l=0, t=0)
+    chart = Chart(
+        name="chart",
+        chart_type="Line",
+        title=None,
+        y_axis_title="",
+        y_axis_range=[],
+        series=[],
+        l=0,
+        t=0,
+    )
+    shape_dump = shape.model_dump(exclude_none=True)
+    chart_dump = chart.model_dump(exclude_none=True)
+    assert "provenance" not in shape_dump
+    assert "approximation_level" not in shape_dump
+    assert "confidence" not in shape_dump
+    assert "provenance" not in chart_dump
+    assert "approximation_level" not in chart_dump
+    assert "confidence" not in chart_dump

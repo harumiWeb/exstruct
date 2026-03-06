@@ -11,7 +11,7 @@ import pytest
 import xlwings as xw
 
 from exstruct import ExtractionMode, extract, process_excel
-from exstruct.models import Arrow
+from exstruct.models import Arrow, Chart, Shape
 
 
 def _make_basic_book(path: Path) -> None:
@@ -121,6 +121,44 @@ def test_process_excelにモードが伝搬する(tmp_path: Path) -> None:
     assert out.exists()
 
 
+def test_libreofficeモードを受け付ける(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    path = tmp_path / "book.xlsx"
+    _make_basic_book(path)
+
+    class _Backend:
+        def extract_shapes(self, *, mode: str) -> dict[str, list[Shape]]:
+            _ = mode
+            return {"Sheet1": [Shape(id=1, text="s", l=0, t=0)]}
+
+        def extract_charts(self, *, mode: str) -> dict[str, list[Chart]]:
+            _ = mode
+            return {
+                "Sheet1": [
+                    Chart(
+                        name="Chart 1",
+                        chart_type="Line",
+                        title="title",
+                        y_axis_title="",
+                        y_axis_range=[],
+                        series=[],
+                        l=0,
+                        t=0,
+                    )
+                ]
+            }
+
+    monkeypatch.setattr(
+        "exstruct.core.pipeline.resolve_rich_backend",
+        lambda **_kwargs: _Backend(),
+    )
+    data = extract(path, mode="libreoffice")
+    sheet = next(iter(data.sheets.values()))
+    assert len(sheet.shapes) == 1
+    assert len(sheet.charts) == 1
+
+
 def test_invalidモードはエラーになる(tmp_path: Path) -> None:
     path = tmp_path / "book.xlsx"
     _make_basic_book(path)
@@ -130,6 +168,13 @@ def test_invalidモードはエラーになる(tmp_path: Path) -> None:
     out = tmp_path / "out.json"
     with pytest.raises(ValueError):
         process_excel(path, out, mode=cast(ExtractionMode, "invalid"))
+
+
+def test_libreofficeモードはxlsを拒否する(tmp_path: Path) -> None:
+    path = tmp_path / "book.xls"
+    path.write_bytes(b"not-a-real-xls")
+    with pytest.raises(ValueError, match="not supported in libreoffice mode"):
+        extract(path, mode="libreoffice")
 
 
 def test_CLIのmode引数バリデーション(tmp_path: Path) -> None:

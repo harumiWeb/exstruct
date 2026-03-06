@@ -18,17 +18,17 @@ sequenceDiagram
     participant Client
     participant Pipeline
     participant OpenpyxlBackend
-    participant ComBackend
+    participant RichBackend
     participant Modeling
 
     Client->>Pipeline: extract()
     Pipeline->>OpenpyxlBackend: pre_extract()
     OpenpyxlBackend-->>Pipeline: cells / tables / print_areas
 
-    alt COM available
-        Pipeline->>ComBackend: extract()
-        ComBackend-->>Pipeline: shapes / charts
-    else COM unavailable
+    alt Rich backend available
+        Pipeline->>RichBackend: extract()
+        RichBackend-->>Pipeline: shapes / charts
+    else runtime unavailable
         Pipeline->>Pipeline: log_fallback()
     end
 
@@ -41,7 +41,7 @@ Processing proceeds in this order:
 
 1. **Pipeline** builds the execution plan
 2. **Openpyxl Backend** performs pre-analysis (cells, tables, print areas)
-3. **COM Backend** extracts rich data when available (shapes, charts)
+3. **Rich Backend** extracts shapes/charts when available (`ComBackend` or `LibreOfficeRichBackend`)
 4. **Modeling** integrates results into WorkbookData / SheetData
 5. Output is generated in the requested format (JSON / YAML / TOON)
 
@@ -64,10 +64,12 @@ The Pipeline is designed to **never read Excel contents directly**.
 
 Backends define **how Excel is read**:
 
-| Backend         | Responsibilities                          |
-| --------------- | ----------------------------------------- |
-| OpenpyxlBackend | Cells / tables / print areas / colors map |
-| ComBackend      | Shapes / arrows / charts / SmartArt (TBD) |
+| Backend                | Responsibilities                                  |
+| ---------------------- | ------------------------------------------------- |
+| OpenpyxlBackend        | Cells / tables / print areas / colors map         |
+| ComBackend             | COM-only print areas / auto page breaks / maps    |
+| ComRichBackend         | Shapes / arrows / charts / SmartArt via Excel COM |
+| LibreOfficeRichBackend | Best-effort shapes / connectors / charts          |
 
 This abstraction enables:
 
@@ -81,7 +83,7 @@ With **no Pipeline changes required**.
 
 ## Fallback Design
 
-When COM is unavailable:
+When COM or LibreOffice runtime is unavailable:
 
 - Do not crash on exceptions
 - Reuse Openpyxl results as much as possible

@@ -87,7 +87,7 @@ def build_parser(
         "-m",
         "--mode",
         default="standard",
-        choices=["light", "standard", "verbose"],
+        choices=["light", "libreoffice", "standard", "verbose"],
         help="Extraction detail level",
     )
     parser.add_argument(

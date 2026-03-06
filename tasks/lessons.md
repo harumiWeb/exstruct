@@ -33,3 +33,8 @@
 - For unattended Excel render evaluations, do not use fixed `A1:A1` as the minimal-range case; select a known non-empty single cell per workbook.
 - Add a run-validity rule for Excel modal dialogs (invalid run + rerun), otherwise stability metrics can be overstated.
 - In render paths that open Excel for export, explicitly set `app.display_alerts = False` even if other paths already do so.
+
+## 2026-03-06 libreoffice/ooxml review lessons
+
+- When mapping OOXML connector semantics into internal arrow fields, verify `head`/`tail` against the source spec instead of inferring from names alone; add separate start/end regression tests.
+- If `__enter__` allocates temp resources before a subprocess probe, clean them up in the exception path as well; `__exit__` is not guaranteed to run on enter failure.

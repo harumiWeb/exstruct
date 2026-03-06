@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol
 
-from ...models import CellRow, PrintArea
+from ...models import Arrow, CellRow, Chart, PrintArea, Shape, SmartArt
 from ..cells import MergedCellRange, WorkbookColorsMap, WorkbookFormulasMap
 
 CellData = dict[str, list[CellRow]]
 PrintAreaData = dict[str, list[PrintArea]]
 MergedCellData = dict[str, list[MergedCellRange]]
+ShapeData = dict[str, list[Shape | Arrow | SmartArt]]
+ChartData = dict[str, list[Chart]]
 
 
 @dataclass(frozen=True)
@@ -48,3 +50,17 @@ class Backend(Protocol):
         Returns:
             WorkbookFormulasMap | None: A mapping of worksheet identifiers to their formulas, or `None` if the backend cannot provide a formulas map.
         """
+
+
+class RichBackend(Protocol):
+    """Protocol for rich shape/chart extraction backends."""
+
+    def extract_shapes(
+        self, *, mode: Literal["libreoffice", "standard", "verbose"]
+    ) -> ShapeData:
+        """Extract shapes, arrows, and SmartArt per worksheet."""
+
+    def extract_charts(
+        self, *, mode: Literal["libreoffice", "standard", "verbose"]
+    ) -> ChartData:
+        """Extract charts per worksheet."""
