@@ -4,8 +4,6 @@
 
 Welcome to the ExStruct docs. This site covers usage, CLI, and API reference for extracting structured data from Excel workbooks.
 
-- [**README (EN)**](README.en.md)
-- [**README (JA)**](README.ja.md)
 - [**API Reference**](api.md): See the navigation for callable functions and parameters.
 - [**CLI Guide**](cli.md)
 - [**Concept / Why ExStruct?**](concept.md)

@@ -47,9 +47,6 @@ nav:
       - v0.2.70: release-notes/v0.2.70.md
       - v0.2.61: release-notes/v0.2.61.md
       - v0.2.60: release-notes/v0.2.60.md
-  - Read Me:
-      - Read Me (EN): README.en.md
-      - Read Me (JA): README.ja.md
   - License Guide: license-guide.md
 markdown_extensions:
   - admonition
