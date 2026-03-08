@@ -54,6 +54,8 @@ pip install exstruct
 
 - 図形・チャートを含む COM 抽出は Windows + Excel (xlwings/COM) 前提です。Linux/macOS/server 環境では `mode=libreoffice` を best-effort rich mode として使うか、`mode=light` で最小抽出を使ってください。`.xls` は `mode=libreoffice` 非対応です。
 - Debian/Ubuntu/WSL では LibreOffice と `python3-uno` を一緒に導入してください。`mode=libreoffice` は互換な system Python を自動検出し、必要なら `EXSTRUCT_LIBREOFFICE_PYTHON_PATH=/usr/bin/python3` で明示指定できます。
+- LibreOffice 用 Python の検出では、候補 interpreter に対して bundled bridge の `--probe` を実行してから採用します。互換性のない `EXSTRUCT_LIBREOFFICE_PYTHON_PATH` は、抽出中の遅延 `SyntaxError` ではなく早期の互換性エラーとして失敗します。
+- 一時的な孤立 LibreOffice profile で UNO socket の起動に失敗した場合、ExStruct は互換性 fallback として shared/default profile で 1 回だけ再試行し、両方失敗したときは各試行の起動詳細をエラーに含めます。
 
 ## クイックスタート CLI
 

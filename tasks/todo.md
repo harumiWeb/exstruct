@@ -154,15 +154,15 @@
 
 ### Planning
 
-- [ ] `tasks/feature_spec.md` の互換性契約に合わせて、LibreOffice bridge 用 Python 候補の受け入れ条件を `bridge 実行可能` ベースへ更新する
-- [ ] `src/exstruct/core/_libreoffice_bridge.py` に no-op probe 用の `--probe` を追加し、UNO socket や workbook access を伴わない実行経路を用意する
-- [ ] `src/exstruct/core/libreoffice.py` の `_python_supports_libreoffice_bridge(...)` を、UNO import だけでなく bundled bridge probe 実行まで検証する実装へ変更する
-- [ ] `_resolve_python_path(...)` が system Python 候補を選ぶ際、`uno` import は通るが bridge 実行は失敗する候補を reject するようにする
-- [ ] `EXSTRUCT_LIBREOFFICE_PYTHON_PATH` 指定時も同じ probe で fail-fast し、遅延 `SyntaxError` ではなく明確な incompatible runtime error を返す
-- [ ] `tests/core/test_libreoffice_backend.py` に、`uno` import success / bridge `SyntaxError` failure の false positive を防ぐ regression test を追加する
-- [ ] `tests/conftest.py` の LibreOffice runtime smoke gate も、必要なら bridge 実行可能性を反映した判定に揃える
-- [ ] `README.md` / `README.ja.md` / `docs/agents/TEST_REQUIREMENTS.md` の「compatible system Python」説明を probe ベースの表現へ揃える
-- [ ] `uv run pytest tests/core/test_libreoffice_backend.py tests/core/test_pipeline_fallbacks.py -q` と `uv run task precommit-run` で検証する
+- [x] `tasks/feature_spec.md` の互換性契約に合わせて、LibreOffice bridge 用 Python 候補の受け入れ条件を `bridge 実行可能` ベースへ更新する
+- [x] `src/exstruct/core/_libreoffice_bridge.py` に no-op probe 用の `--probe` を追加し、UNO socket や workbook access を伴わない実行経路を用意する
+- [x] `src/exstruct/core/libreoffice.py` の `_python_supports_libreoffice_bridge(...)` を、UNO import だけでなく bundled bridge probe 実行まで検証する実装へ変更する
+- [x] `_resolve_python_path(...)` が system Python 候補を選ぶ際、`uno` import は通るが bridge 実行は失敗する候補を reject するようにする
+- [x] `EXSTRUCT_LIBREOFFICE_PYTHON_PATH` 指定時も同じ probe で fail-fast し、遅延 `SyntaxError` ではなく明確な incompatible runtime error を返す
+- [x] `tests/core/test_libreoffice_backend.py` に、`uno` import success / bridge `SyntaxError` failure の false positive を防ぐ regression test を追加する
+- [x] `tests/conftest.py` の LibreOffice runtime smoke gate も、必要なら bridge 実行可能性を反映した判定に揃える
+- [x] `README.md` / `README.ja.md` / `docs/agents/TEST_REQUIREMENTS.md` の「compatible system Python」説明を probe ベースの表現へ揃える
+- [x] `uv run pytest tests/core/test_libreoffice_backend.py tests/core/test_pipeline_fallbacks.py -q` と `uv run task precommit-run` で検証する
 
 ### Review
 
@@ -171,3 +171,12 @@
   - Debian 11 / Ubuntu 20.04 / WSL 想定の Python 3.8 / 3.9 + `python3-uno` false positive を regression test で再現し、以後は reject される
   - 明示 override も extraction 実行前に互換性エラーとして失敗し、`_run_bridge(...)` の `SyntaxError` まで遅延しない
   - smoke / docs / task 記述が「UNO import 可能」ではなく「bundled bridge 実行可能」で整合する
+- 実装:
+  - `_libreoffice_bridge.py` に internal `--probe` を追加し、`PropertyValue` と bridge 定数だけを解決する no-op 経路を用意した
+  - `_python_supports_libreoffice_bridge(...)` は bundled bridge の `--probe` 実行で判定し、bundled / system Python 候補の両方で同じ互換性条件を使うようにした
+  - `EXSTRUCT_LIBREOFFICE_PYTHON_PATH` は同じ probe を必須にし、失敗時は `LibreOfficeUnavailableError` として fail-fast するようにした
+  - `tests/conftest.py` の LibreOffice smoke gate も probe 失敗を unavailable 扱いに寄せた
+  - README / 日本語 README / test requirements を probe ベースの説明へ更新した
+- 追加検証:
+  - `uv run pytest tests/core/test_libreoffice_backend.py tests/core/test_pipeline_fallbacks.py tests/test_conftest_libreoffice_runtime.py -q` -> `22 passed`
+  - `uv run task precommit-run` -> `ruff / ruff-format / mypy passed`

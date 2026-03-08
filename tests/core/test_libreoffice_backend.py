@@ -18,6 +18,7 @@ from exstruct.core.libreoffice import (
     LibreOfficeSession,
     LibreOfficeSessionConfig,
     LibreOfficeUnavailableError,
+    _python_supports_libreoffice_bridge,
     _resolve_python_path,
 )
 from exstruct.core.ooxml_drawing import (
@@ -123,6 +124,63 @@ class _DrawPageSession(_DummySession):
 
         _ = file_path
         return self._payload
+
+
+class _FakeLibreOfficeProcess:
+    """Simple soffice process double used for startup and shutdown tests."""
+
+    def __init__(
+        self,
+        *,
+        stderr: str = "",
+        returncode: int | None = None,
+        wait_timeouts: int = 0,
+    ) -> None:
+        """Initialize the fake process with optional stderr and wait behavior."""
+
+        self.stderr = stderr
+        self.returncode = returncode
+        self.wait_timeouts = wait_timeouts
+        self.terminate_called = False
+        self.kill_called = False
+        self.wait_calls = 0
+        self.args: list[str] = []
+
+    def poll(self) -> int | None:
+        """Return the configured process status."""
+
+        return self.returncode
+
+    def terminate(self) -> None:
+        """Record a termination request."""
+
+        self.terminate_called = True
+        if self.returncode is None:
+            self.returncode = 0
+
+    def wait(self, *, timeout: float) -> int:
+        """Return the configured exit code or raise a timeout when requested."""
+
+        _ = timeout
+        self.wait_calls += 1
+        if self.wait_timeouts > 0:
+            self.wait_timeouts -= 1
+            raise subprocess.TimeoutExpired(cmd="soffice", timeout=timeout)
+        if self.returncode is None:
+            self.returncode = 0
+        return self.returncode
+
+    def kill(self) -> None:
+        """Record a forced kill request."""
+
+        self.kill_called = True
+        self.returncode = -9
+
+    def communicate(self, timeout: float | None = None) -> tuple[str, str]:
+        """Return the configured stderr payload."""
+
+        _ = timeout
+        return ("", self.stderr)
 
 
 def test_libreoffice_backend_extracts_connector_graph_from_sample() -> None:
@@ -387,11 +445,12 @@ def test_ooxml_connector_head_end_maps_to_end_arrow_style() -> None:
     assert connector.end_arrow_style == 2
 
 
-def test_libreoffice_session_cleans_temp_profile_on_enter_failure(
+def test_libreoffice_session_skips_temp_profile_when_version_probe_fails(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
-    """Verify that LibreOffice session cleans temp profile on enter failure."""
+    """Verify that version probe failure happens before temp-profile creation."""
 
+    mkdtemp_called = False
     removed_paths: list[Path] = []
     created_dir = tmp_path / "lo-profile"
     soffice_path = tmp_path / "soffice.exe"
@@ -399,11 +458,13 @@ def test_libreoffice_session_cleans_temp_profile_on_enter_failure(
     soffice_path.write_text("", encoding="utf-8")
     python_path.write_text("", encoding="utf-8")
 
-    def _fake_mkdtemp(*, prefix: str, temp_dir: str | None = None) -> str:
+    def _fake_mkdtemp(*, prefix: str, **kwargs: object) -> str:
         """Provide a fake mkdtemp implementation for this test."""
 
+        nonlocal mkdtemp_called
         _ = prefix
-        _ = temp_dir
+        _ = kwargs
+        mkdtemp_called = True
         created_dir.mkdir(parents=True, exist_ok=True)
         return str(created_dir)
 
@@ -424,6 +485,10 @@ def test_libreoffice_session_cleans_temp_profile_on_enter_failure(
     )
     monkeypatch.setattr("exstruct.core.libreoffice.shutil.rmtree", _fake_rmtree)
     monkeypatch.setattr("exstruct.core.libreoffice.subprocess.run", _fake_run)
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._resolve_python_path",
+        lambda _path: python_path,
+    )
 
     session = LibreOfficeSession(
         LibreOfficeSessionConfig(
@@ -437,7 +502,270 @@ def test_libreoffice_session_cleans_temp_profile_on_enter_failure(
     with pytest.raises(LibreOfficeUnavailableError):
         session.__enter__()
 
-    assert removed_paths == [created_dir]
+    assert mkdtemp_called is False
+    assert removed_paths == []
+    assert session._temp_profile_dir is None
+
+
+def test_libreoffice_session_enters_with_isolated_profile(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Verify that the primary startup path uses an isolated temp profile."""
+
+    cleaned_paths: list[Path] = []
+    created_dir = tmp_path / "lo-profile"
+    soffice_path = tmp_path / "soffice.exe"
+    python_path = tmp_path / "python.exe"
+    process = _FakeLibreOfficeProcess()
+    soffice_path.write_text("", encoding="utf-8")
+    python_path.write_text("", encoding="utf-8")
+
+    def _fake_mkdtemp(*, prefix: str, **kwargs: object) -> str:
+        _ = prefix
+        _ = kwargs
+        created_dir.mkdir(parents=True, exist_ok=True)
+        return str(created_dir)
+
+    def _fake_run(
+        args: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(
+            args=args, returncode=0, stdout="", stderr=""
+        )
+
+    def _fake_popen(args: list[str], **_kwargs: object) -> _FakeLibreOfficeProcess:
+        process.args = list(args)
+        return process
+
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice.mkdtemp",
+        cast(Callable[..., str], _fake_mkdtemp),
+    )
+    monkeypatch.setattr("exstruct.core.libreoffice.subprocess.run", _fake_run)
+    monkeypatch.setattr("exstruct.core.libreoffice.subprocess.Popen", _fake_popen)
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._wait_for_socket",
+        lambda **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._cleanup_profile_dir",
+        lambda path: cleaned_paths.append(path),
+    )
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._resolve_python_path",
+        lambda _path: python_path,
+    )
+
+    session = LibreOfficeSession(
+        LibreOfficeSessionConfig(
+            soffice_path=soffice_path,
+            startup_timeout_sec=1.0,
+            exec_timeout_sec=1.0,
+            profile_root=None,
+        )
+    )
+
+    session.__enter__()
+
+    assert session._temp_profile_dir == created_dir
+    assert cast(object, session._soffice_process) is process
+    assert any(
+        arg == f"-env:UserInstallation={created_dir.as_uri()}" for arg in process.args
+    )
+
+    session.__exit__(None, None, None)
+
+    assert process.terminate_called is True
+    assert cleaned_paths == [created_dir]
+
+
+def test_libreoffice_session_retries_without_temp_profile_after_startup_failure(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Verify that shared-profile retry runs after isolated startup failure."""
+
+    cleaned_paths: list[Path] = []
+    created_dir = tmp_path / "lo-profile"
+    soffice_path = tmp_path / "soffice.exe"
+    python_path = tmp_path / "python.exe"
+    first_process = _FakeLibreOfficeProcess(stderr="javaldx failed!")
+    second_process = _FakeLibreOfficeProcess()
+    spawned: list[_FakeLibreOfficeProcess] = []
+    soffice_path.write_text("", encoding="utf-8")
+    python_path.write_text("", encoding="utf-8")
+
+    def _fake_mkdtemp(*, prefix: str, **kwargs: object) -> str:
+        _ = prefix
+        _ = kwargs
+        created_dir.mkdir(parents=True, exist_ok=True)
+        return str(created_dir)
+
+    def _fake_run(
+        args: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(
+            args=args, returncode=0, stdout="", stderr=""
+        )
+
+    def _fake_popen(args: list[str], **_kwargs: object) -> _FakeLibreOfficeProcess:
+        process = (first_process, second_process)[len(spawned)]
+        process.args = list(args)
+        spawned.append(process)
+        return process
+
+    def _fake_wait_for_socket(
+        *,
+        host: str,
+        port: int,
+        timeout_sec: float,
+        process: object,
+    ) -> None:
+        _ = host
+        _ = port
+        _ = timeout_sec
+        if process is first_process:
+            raise LibreOfficeUnavailableError(
+                "LibreOffice runtime is unavailable: soffice socket startup timed out."
+            )
+
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice.mkdtemp",
+        cast(Callable[..., str], _fake_mkdtemp),
+    )
+    monkeypatch.setattr("exstruct.core.libreoffice.subprocess.run", _fake_run)
+    monkeypatch.setattr("exstruct.core.libreoffice.subprocess.Popen", _fake_popen)
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._wait_for_socket",
+        _fake_wait_for_socket,
+    )
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._cleanup_profile_dir",
+        lambda path: cleaned_paths.append(path),
+    )
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._resolve_python_path",
+        lambda _path: python_path,
+    )
+
+    session = LibreOfficeSession(
+        LibreOfficeSessionConfig(
+            soffice_path=soffice_path,
+            startup_timeout_sec=1.0,
+            exec_timeout_sec=1.0,
+            profile_root=None,
+        )
+    )
+
+    session.__enter__()
+
+    assert spawned == [first_process, second_process]
+    assert first_process.terminate_called is True
+    assert cleaned_paths == [created_dir]
+    assert any(arg.startswith("-env:UserInstallation=") for arg in first_process.args)
+    assert all(
+        not arg.startswith("-env:UserInstallation=") for arg in second_process.args
+    )
+    assert session._temp_profile_dir is None
+    assert cast(object, session._soffice_process) is second_process
+
+    session.__exit__(None, None, None)
+
+    assert second_process.terminate_called is True
+
+
+def test_libreoffice_session_reports_both_startup_attempt_failures(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Verify that final startup errors include isolated and shared attempt detail."""
+
+    cleaned_paths: list[Path] = []
+    created_dir = tmp_path / "lo-profile"
+    soffice_path = tmp_path / "soffice.exe"
+    python_path = tmp_path / "python.exe"
+    first_process = _FakeLibreOfficeProcess(stderr="javaldx failed!")
+    second_process = _FakeLibreOfficeProcess(
+        stderr="User installation could not be completed.",
+        returncode=1,
+    )
+    spawned: list[_FakeLibreOfficeProcess] = []
+    soffice_path.write_text("", encoding="utf-8")
+    python_path.write_text("", encoding="utf-8")
+
+    def _fake_mkdtemp(*, prefix: str, **kwargs: object) -> str:
+        _ = prefix
+        _ = kwargs
+        created_dir.mkdir(parents=True, exist_ok=True)
+        return str(created_dir)
+
+    def _fake_run(
+        args: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(
+            args=args, returncode=0, stdout="", stderr=""
+        )
+
+    def _fake_popen(args: list[str], **_kwargs: object) -> _FakeLibreOfficeProcess:
+        process = (first_process, second_process)[len(spawned)]
+        process.args = list(args)
+        spawned.append(process)
+        return process
+
+    def _fake_wait_for_socket(
+        *,
+        host: str,
+        port: int,
+        timeout_sec: float,
+        process: object,
+    ) -> None:
+        _ = host
+        _ = port
+        _ = timeout_sec
+        if process is first_process:
+            raise LibreOfficeUnavailableError(
+                "LibreOffice runtime is unavailable: soffice socket startup timed out."
+            )
+        raise LibreOfficeUnavailableError(
+            "LibreOffice runtime is unavailable: soffice exited during startup."
+        )
+
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice.mkdtemp",
+        cast(Callable[..., str], _fake_mkdtemp),
+    )
+    monkeypatch.setattr("exstruct.core.libreoffice.subprocess.run", _fake_run)
+    monkeypatch.setattr("exstruct.core.libreoffice.subprocess.Popen", _fake_popen)
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._wait_for_socket",
+        _fake_wait_for_socket,
+    )
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._cleanup_profile_dir",
+        lambda path: cleaned_paths.append(path),
+    )
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._resolve_python_path",
+        lambda _path: python_path,
+    )
+
+    session = LibreOfficeSession(
+        LibreOfficeSessionConfig(
+            soffice_path=soffice_path,
+            startup_timeout_sec=1.0,
+            exec_timeout_sec=1.0,
+            profile_root=None,
+        )
+    )
+
+    with pytest.raises(LibreOfficeUnavailableError) as excinfo:
+        session.__enter__()
+
+    message = str(excinfo.value)
+    assert "isolated-profile: soffice socket startup timed out." in message
+    assert "stderr=javaldx failed!" in message
+    assert "shared-profile: soffice exited during startup." in message
+    assert "stderr=User installation could not be completed." in message
+    assert cleaned_paths == [created_dir]
+    assert session._soffice_process is None
     assert session._temp_profile_dir is None
 
 
@@ -449,6 +777,17 @@ def test_resolve_python_path_prefers_override(
     override_path = tmp_path / "custom-python"
     override_path.write_text("", encoding="utf-8")
     monkeypatch.setenv("EXSTRUCT_LIBREOFFICE_PYTHON_PATH", str(override_path))
+
+    def _fake_run(
+        args: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        """Allow the override probe to succeed."""
+
+        return subprocess.CompletedProcess(
+            args=args, returncode=0, stdout="", stderr=""
+        )
+
+    monkeypatch.setattr("exstruct.core.libreoffice.subprocess.run", _fake_run)
 
     assert _resolve_python_path(tmp_path / "soffice") == override_path
 
@@ -477,6 +816,10 @@ def test_resolve_python_path_checks_resolved_soffice_dir(
         return original_resolve(self, strict=strict)
 
     monkeypatch.setattr(Path, "resolve", _fake_resolve)
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._python_supports_libreoffice_bridge",
+        lambda path: path == real_python,
+    )
 
     assert _resolve_python_path(soffice_path) == real_python
 
@@ -527,39 +870,101 @@ def test_resolve_python_path_returns_none_without_compatible_python(
     assert _resolve_python_path(soffice_path) is None
 
 
+def test_python_supports_libreoffice_bridge_uses_probe_command(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Verify that bridge compatibility is checked via the bundled probe script."""
+
+    python_path = tmp_path / "python3"
+    python_path.write_text("", encoding="utf-8")
+    calls: list[list[str]] = []
+
+    def _fake_run(
+        args: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        """Capture subprocess arguments for the bridge probe."""
+
+        calls.append(args)
+        return subprocess.CompletedProcess(
+            args=args, returncode=0, stdout="", stderr=""
+        )
+
+    monkeypatch.setattr("exstruct.core.libreoffice.subprocess.run", _fake_run)
+
+    assert _python_supports_libreoffice_bridge(python_path) is True
+    assert len(calls) == 1
+    assert calls[0][0] == str(python_path)
+    assert calls[0][1].endswith("_libreoffice_bridge.py")
+    assert calls[0][2] == "--probe"
+
+
+def test_resolve_python_path_rejects_system_python_when_bridge_probe_fails(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Verify that system Python fallback rejects bridge-incompatible runtimes."""
+
+    soffice_path = tmp_path / "soffice"
+    soffice_path.write_text("", encoding="utf-8")
+    system_python = tmp_path / "system-python"
+    system_python.write_text("", encoding="utf-8")
+
+    def _fake_run(
+        *_args: object, **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        """Simulate a Python that imports UNO but cannot parse the bundled bridge."""
+
+        raise subprocess.CalledProcessError(
+            returncode=1,
+            cmd=str(system_python),
+            stderr="SyntaxError: invalid syntax",
+        )
+
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._system_python_candidates",
+        lambda: (system_python,),
+    )
+    monkeypatch.setattr("exstruct.core.libreoffice.subprocess.run", _fake_run)
+
+    assert _resolve_python_path(soffice_path) is None
+
+
+def test_resolve_python_path_rejects_incompatible_override_early(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Verify that an explicit override fails fast when the bridge probe fails."""
+
+    soffice_path = tmp_path / "soffice"
+    soffice_path.write_text("", encoding="utf-8")
+    override_path = tmp_path / "custom-python"
+    override_path.write_text("", encoding="utf-8")
+    monkeypatch.setenv("EXSTRUCT_LIBREOFFICE_PYTHON_PATH", str(override_path))
+
+    def _fake_run(
+        *_args: object, **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        """Simulate a bridge parse failure for the explicit override."""
+
+        raise subprocess.CalledProcessError(
+            returncode=1,
+            cmd=str(override_path),
+            stderr="SyntaxError: invalid syntax",
+        )
+
+    monkeypatch.setattr("exstruct.core.libreoffice.subprocess.run", _fake_run)
+
+    with pytest.raises(
+        LibreOfficeUnavailableError,
+        match="EXSTRUCT_LIBREOFFICE_PYTHON_PATH.*incompatible",
+    ):
+        _resolve_python_path(soffice_path)
+
+
 def test_libreoffice_session_exit_cleans_profile_even_if_kill_wait_times_out(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """Verify that LibreOffice session exit cleans profile even if kill wait times out."""
 
     cleaned_paths: list[Path] = []
-
-    class _FakeProcess:
-        """Fake LibreOffice process used to test shutdown behavior."""
-
-        def __init__(self) -> None:
-            """Initialize the test double."""
-
-            self.terminate_called = False
-            self.kill_called = False
-            self.wait_calls = 0
-
-        def terminate(self) -> None:
-            """Record a termination request on the fake process."""
-
-            self.terminate_called = True
-
-        def wait(self, *, timeout: float) -> None:
-            """Simulate waiting for the fake process and raise a timeout."""
-
-            _ = timeout
-            self.wait_calls += 1
-            raise subprocess.TimeoutExpired(cmd="soffice", timeout=5.0)
-
-        def kill(self) -> None:
-            """Record a forced kill request on the fake process."""
-
-            self.kill_called = True
 
     def _fake_cleanup(path: Path) -> None:
         """Provide a fake cleanup implementation for this test."""
@@ -575,7 +980,7 @@ def test_libreoffice_session_exit_cleans_profile_even_if_kill_wait_times_out(
         )
     )
     profile_dir = tmp_path / "lo-profile"
-    process = _FakeProcess()
+    process = _FakeLibreOfficeProcess(wait_timeouts=2)
     session._temp_profile_dir = profile_dir
     session._soffice_process = cast(subprocess.Popen[str], process)
     session._accept_port = 12345

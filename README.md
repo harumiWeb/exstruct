@@ -64,6 +64,8 @@ Platform note:
 
 - Full COM extraction for shapes/charts targets Windows + Excel (xlwings/COM). On Linux/macOS/server environments, use `mode=libreoffice` as the best-effort rich mode or `mode=light` for minimal extraction. `.xls` is not supported in `mode=libreoffice`.
 - On Debian/Ubuntu/WSL, install LibreOffice together with `python3-uno`. ExStruct probes a compatible system Python automatically for `mode=libreoffice`; if your environment needs an explicit interpreter, set `EXSTRUCT_LIBREOFFICE_PYTHON_PATH=/usr/bin/python3`.
+- LibreOffice Python detection now runs the bundled bridge in `--probe` mode before selection. An incompatible `EXSTRUCT_LIBREOFFICE_PYTHON_PATH` fails fast instead of surfacing a delayed bridge `SyntaxError` during extraction.
+- If the isolated temporary LibreOffice profile fails before the UNO socket becomes ready, ExStruct retries once with the shared/default LibreOffice profile as a compatibility fallback and reports per-attempt startup detail if both launches fail.
 
 ## Quick Start CLI
 

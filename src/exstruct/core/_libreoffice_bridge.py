@@ -137,6 +137,9 @@ def main() -> int:
     """Run the bridge entry point and print a JSON payload for the requested extraction."""
 
     args = _parse_args()
+    if args.probe:
+        _run_probe()
+        return 0
     ctx = _resolve_context(args.host, args.port)
     desktop = cast(
         _Desktop,
@@ -158,11 +161,27 @@ def _parse_args() -> argparse.Namespace:
     """Parse command-line arguments for the LibreOffice bridge."""
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--host", required=True)
-    parser.add_argument("--port", required=True, type=int)
-    parser.add_argument("--file", required=True)
+    parser.add_argument("--probe", action="store_true")
+    parser.add_argument("--host")
+    parser.add_argument("--port", type=int)
+    parser.add_argument("--file")
     parser.add_argument("--kind", choices=("charts", "draw-page"), default="charts")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if not args.probe and (args.host is None or args.port is None or args.file is None):
+        parser.error("--host, --port, and --file are required unless --probe is set.")
+    return args
+
+
+def _run_probe() -> None:
+    """Validate that the bridge can be imported and basic UNO types resolve."""
+
+    from com.sun.star.beans import PropertyValue
+
+    prop = PropertyValue()
+    prop.Name = "Hidden"
+    prop.Value = True
+    _ = prop
+    _ = _HMM_PER_POINT
 
 
 def _resolve_context(host: str, port: int) -> _UnoContext:

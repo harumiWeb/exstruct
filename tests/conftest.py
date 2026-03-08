@@ -83,7 +83,10 @@ def _has_libreoffice_runtime() -> bool:
     soffice_path = Path(raw_path) if raw_path else which_soffice()
     if not isinstance(soffice_path, Path) or not soffice_path.exists():
         return False
-    python_path = resolve_python_path(soffice_path)
+    try:
+        python_path = resolve_python_path(soffice_path)
+    except Exception:
+        return False
     if not isinstance(python_path, Path) or not python_path.exists():
         return False
     try:

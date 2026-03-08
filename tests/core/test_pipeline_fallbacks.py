@@ -3,6 +3,7 @@
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+import subprocess
 
 from _pytest.monkeypatch import MonkeyPatch
 from openpyxl import Workbook
@@ -227,6 +228,55 @@ def test_pipeline_fallback_libreoffice_pipeline_failed(
     result = run_extraction_pipeline(inputs)
 
     assert result.state.fallback_reason == FallbackReason.LIBREOFFICE_PIPELINE_FAILED
+    sheet = result.workbook.sheets["Sheet1"]
+    assert sheet.shapes == []
+    assert sheet.charts == []
+    assert sheet.rows
+
+
+def test_pipeline_fallback_libreoffice_incompatible_override(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    """Verify that an incompatible override is treated as LibreOffice unavailable."""
+
+    path = tmp_path / "book.xlsx"
+    _make_basic_book(path)
+    soffice_path = tmp_path / "soffice"
+    soffice_path.write_text("", encoding="utf-8")
+    override_path = tmp_path / "python3"
+    override_path.write_text("", encoding="utf-8")
+    monkeypatch.setenv("EXSTRUCT_LIBREOFFICE_PATH", str(soffice_path))
+    monkeypatch.setenv("EXSTRUCT_LIBREOFFICE_PYTHON_PATH", str(override_path))
+
+    def _fake_run(
+        *_args: object, **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        """Simulate bridge probe failure for the configured override."""
+
+        raise subprocess.CalledProcessError(
+            returncode=1,
+            cmd=str(override_path),
+            stderr="SyntaxError: invalid syntax",
+        )
+
+    monkeypatch.setattr("exstruct.core.libreoffice.subprocess.run", _fake_run)
+
+    inputs = resolve_extraction_inputs(
+        path,
+        mode="libreoffice",
+        include_cell_links=False,
+        include_print_areas=True,
+        include_auto_page_breaks=False,
+        include_colors_map=False,
+        include_default_background=False,
+        ignore_colors=None,
+        include_formulas_map=None,
+        include_merged_cells=None,
+        include_merged_values_in_rows=True,
+    )
+    result = run_extraction_pipeline(inputs)
+
+    assert result.state.fallback_reason == FallbackReason.LIBREOFFICE_UNAVAILABLE
     sheet = result.workbook.sheets["Sheet1"]
     assert sheet.shapes == []
     assert sheet.charts == []

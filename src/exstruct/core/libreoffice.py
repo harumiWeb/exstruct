@@ -63,6 +63,41 @@ class LibreOfficeSessionConfig:
     profile_root: Path | None
 
 
+@dataclass(frozen=True)
+class _LibreOfficeStartupAttempt:
+    """Configuration for one LibreOffice startup strategy."""
+
+    name: str
+    use_temp_profile: bool
+
+
+@dataclass(frozen=True)
+class _LibreOfficeStartupSuccess:
+    """Process state returned by a successful LibreOffice startup attempt."""
+
+    process: subprocess.Popen[str]
+    port: int
+    temp_profile_dir: Path | None
+
+
+@dataclass(frozen=True)
+class _LibreOfficeStartupFailure:
+    """User-facing detail captured for a failed LibreOffice startup attempt."""
+
+    attempt_name: str
+    message: str
+
+
+class _LibreOfficeStartupAttemptError(RuntimeError):
+    """Internal wrapper used to retry alternate LibreOffice startup strategies."""
+
+    def __init__(self, failure: _LibreOfficeStartupFailure) -> None:
+        """Store the structured startup failure for later aggregation."""
+
+        super().__init__(failure.message)
+        self.failure = failure
+
+
 class LibreOfficeSession:
     """Best-effort runtime guard for LibreOffice-backed extraction."""
 
@@ -118,70 +153,27 @@ class LibreOfficeSession:
             raise LibreOfficeUnavailableError(
                 "LibreOffice runtime is unavailable: compatible Python runtime was not found."
             )
-        profile_root = self.config.profile_root
-        if profile_root is not None:
-            profile_root.mkdir(parents=True, exist_ok=True)
-            self._temp_profile_dir = Path(
-                mkdtemp(prefix="exstruct-lo-", dir=str(profile_root))
-            )
-        else:
-            self._temp_profile_dir = Path(mkdtemp(prefix="exstruct-lo-"))
-        try:
-            subprocess.run(
-                [str(self.config.soffice_path), "--version"],
-                capture_output=True,
-                check=True,
-                text=True,
-                timeout=self.config.startup_timeout_sec,
-            )
-        except Exception as exc:
-            if self._temp_profile_dir is not None:
-                shutil.rmtree(self._temp_profile_dir, ignore_errors=True)
-                self._temp_profile_dir = None
-            if isinstance(exc, FileNotFoundError):
-                raise LibreOfficeUnavailableError(
-                    f"LibreOffice runtime is unavailable: '{self.config.soffice_path}' could not be executed."
-                ) from exc
-            if isinstance(exc, subprocess.TimeoutExpired):
-                raise LibreOfficeUnavailableError(
-                    "LibreOffice runtime is unavailable: soffice version probe timed out."
-                ) from exc
-            if isinstance(exc, subprocess.CalledProcessError):
-                raise LibreOfficeUnavailableError(
-                    "LibreOffice runtime is unavailable: soffice version probe failed."
-                ) from exc
-            raise
-        self._accept_port = _reserve_tcp_port()
-        try:
-            self._soffice_process = subprocess.Popen(
-                [
-                    str(self.config.soffice_path),
-                    "--headless",
-                    "--nologo",
-                    "--nodefault",
-                    "--norestore",
-                    "--nolockcheck",
-                    f"-env:UserInstallation={self._temp_profile_dir.as_uri()}",
-                    (
-                        "--accept="
-                        "socket,host=127.0.0.1,"
-                        f"port={self._accept_port};urp;StarOffice.ComponentContext"
-                    ),
-                ],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                text=True,
-            )
-            _wait_for_socket(
-                host="127.0.0.1",
-                port=self._accept_port,
-                timeout_sec=self.config.startup_timeout_sec,
-                process=self._soffice_process,
-            )
-        except Exception:
-            self.__exit__(None, None, None)
-            raise
-        return self
+        _probe_soffice_runtime(
+            soffice_path=self.config.soffice_path,
+            timeout_sec=self.config.startup_timeout_sec,
+        )
+        failures: list[_LibreOfficeStartupFailure] = []
+        for attempt in _iter_startup_attempts():
+            try:
+                startup = _start_soffice_startup_attempt(
+                    soffice_path=self.config.soffice_path,
+                    profile_root=self.config.profile_root,
+                    startup_timeout_sec=self.config.startup_timeout_sec,
+                    attempt=attempt,
+                )
+            except _LibreOfficeStartupAttemptError as exc:
+                failures.append(exc.failure)
+                continue
+            self._soffice_process = startup.process
+            self._accept_port = startup.port
+            self._temp_profile_dir = startup.temp_profile_dir
+            return self
+        raise LibreOfficeUnavailableError(_format_startup_failures(failures))
 
     def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
         """Terminate the LibreOffice process and remove the temporary user profile."""
@@ -190,15 +182,7 @@ class LibreOfficeSession:
         _ = exc
         _ = tb
         if self._soffice_process is not None:
-            self._soffice_process.terminate()
-            try:
-                self._soffice_process.wait(timeout=5.0)
-            except subprocess.TimeoutExpired:
-                self._soffice_process.kill()
-                try:
-                    self._soffice_process.wait(timeout=5.0)
-                except subprocess.TimeoutExpired:
-                    pass
+            _shutdown_soffice_process(self._soffice_process)
             self._soffice_process = None
         self._accept_port = None
         if self._temp_profile_dir is not None:
@@ -333,16 +317,253 @@ def _get_optional_path(name: str) -> Path | None:
     return Path(raw)
 
 
+def _probe_soffice_runtime(*, soffice_path: Path, timeout_sec: float) -> None:
+    """Verify that the configured soffice executable is runnable."""
+
+    try:
+        subprocess.run(
+            [str(soffice_path), "--version"],
+            capture_output=True,
+            check=True,
+            text=True,
+            timeout=timeout_sec,
+        )
+    except FileNotFoundError as exc:
+        raise LibreOfficeUnavailableError(
+            f"LibreOffice runtime is unavailable: '{soffice_path}' could not be executed."
+        ) from exc
+    except subprocess.TimeoutExpired as exc:
+        raise LibreOfficeUnavailableError(
+            "LibreOffice runtime is unavailable: soffice version probe timed out."
+        ) from exc
+    except subprocess.CalledProcessError as exc:
+        raise LibreOfficeUnavailableError(
+            "LibreOffice runtime is unavailable: soffice version probe failed."
+        ) from exc
+
+
+def _iter_startup_attempts() -> tuple[_LibreOfficeStartupAttempt, ...]:
+    """Return the ordered startup strategies used for the LibreOffice session."""
+
+    return (
+        _LibreOfficeStartupAttempt(name="isolated-profile", use_temp_profile=True),
+        _LibreOfficeStartupAttempt(name="shared-profile", use_temp_profile=False),
+    )
+
+
+def _start_soffice_startup_attempt(
+    *,
+    soffice_path: Path,
+    profile_root: Path | None,
+    startup_timeout_sec: float,
+    attempt: _LibreOfficeStartupAttempt,
+) -> _LibreOfficeStartupSuccess:
+    """Launch soffice for one startup strategy and wait for the UNO socket."""
+
+    temp_profile_dir = (
+        _create_temp_profile_dir(profile_root) if attempt.use_temp_profile else None
+    )
+    port = _reserve_tcp_port()
+    process: subprocess.Popen[str] | None = None
+    try:
+        process = subprocess.Popen(
+            _build_soffice_startup_command(
+                soffice_path=soffice_path,
+                port=port,
+                temp_profile_dir=temp_profile_dir,
+            ),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        _wait_for_socket(
+            host="127.0.0.1",
+            port=port,
+            timeout_sec=startup_timeout_sec,
+            process=process,
+        )
+    except FileNotFoundError as exc:
+        _cleanup_failed_startup_attempt(
+            process=process,
+            temp_profile_dir=temp_profile_dir,
+        )
+        raise _LibreOfficeStartupAttemptError(
+            _LibreOfficeStartupFailure(
+                attempt_name=attempt.name,
+                message=f"'{soffice_path}' could not be executed.",
+            )
+        ) from exc
+    except OSError as exc:
+        detail = _cleanup_failed_startup_attempt(
+            process=process,
+            temp_profile_dir=temp_profile_dir,
+        )
+        raise _LibreOfficeStartupAttemptError(
+            _LibreOfficeStartupFailure(
+                attempt_name=attempt.name,
+                message=_append_startup_detail(
+                    f"soffice startup could not be launched ({exc.__class__.__name__}: {exc}).",
+                    detail,
+                ),
+            )
+        ) from exc
+    except LibreOfficeUnavailableError as exc:
+        detail = _cleanup_failed_startup_attempt(
+            process=process,
+            temp_profile_dir=temp_profile_dir,
+        )
+        raise _LibreOfficeStartupAttemptError(
+            _LibreOfficeStartupFailure(
+                attempt_name=attempt.name,
+                message=_append_startup_detail(
+                    _strip_runtime_unavailable_prefix(str(exc)),
+                    detail,
+                ),
+            )
+        ) from exc
+    if process is None:
+        raise RuntimeError("LibreOffice startup attempt did not create a process.")
+    return _LibreOfficeStartupSuccess(
+        process=process,
+        port=port,
+        temp_profile_dir=temp_profile_dir,
+    )
+
+
+def _create_temp_profile_dir(profile_root: Path | None) -> Path:
+    """Create a temporary LibreOffice profile directory for an isolated launch."""
+
+    if profile_root is not None:
+        profile_root.mkdir(parents=True, exist_ok=True)
+        return Path(mkdtemp(prefix="exstruct-lo-", dir=str(profile_root)))
+    return Path(mkdtemp(prefix="exstruct-lo-"))
+
+
+def _build_soffice_startup_command(
+    *,
+    soffice_path: Path,
+    port: int,
+    temp_profile_dir: Path | None,
+) -> list[str]:
+    """Build the soffice command used for a startup attempt."""
+
+    args = [
+        str(soffice_path),
+        "--headless",
+        "--nologo",
+        "--nodefault",
+        "--norestore",
+        "--nolockcheck",
+    ]
+    if temp_profile_dir is not None:
+        args.append(f"-env:UserInstallation={temp_profile_dir.as_uri()}")
+    args.append(
+        "--accept="
+        "socket,host=127.0.0.1,"
+        f"port={port};urp;StarOffice.ComponentContext"
+    )
+    return args
+
+
+def _cleanup_failed_startup_attempt(
+    *,
+    process: subprocess.Popen[str] | None,
+    temp_profile_dir: Path | None,
+) -> str | None:
+    """Terminate a failed startup attempt and return a bounded stderr detail."""
+
+    detail: str | None = None
+    if process is not None:
+        _shutdown_soffice_process(process)
+        detail = _read_soffice_startup_stderr(process)
+    if temp_profile_dir is not None:
+        _cleanup_profile_dir(temp_profile_dir)
+    return detail
+
+
+def _shutdown_soffice_process(process: subprocess.Popen[str]) -> None:
+    """Terminate a soffice process with a bounded force-kill fallback."""
+
+    if process.poll() is not None:
+        try:
+            process.wait(timeout=0.2)
+        except subprocess.TimeoutExpired:
+            pass
+        return
+    process.terminate()
+    try:
+        process.wait(timeout=5.0)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        try:
+            process.wait(timeout=5.0)
+        except subprocess.TimeoutExpired:
+            pass
+
+
+def _read_soffice_startup_stderr(process: subprocess.Popen[str]) -> str | None:
+    """Read a short stderr snippet from a failed soffice startup attempt."""
+
+    try:
+        _stdout, stderr = process.communicate(timeout=0.2)
+    except subprocess.TimeoutExpired:
+        return None
+    if not stderr:
+        return None
+    cleaned = " ".join(stderr.strip().split())
+    if not cleaned:
+        return None
+    return f"stderr={cleaned[:240]}"
+
+
+def _append_startup_detail(message: str, detail: str | None) -> str:
+    """Append bounded subprocess detail to a startup message when available."""
+
+    if detail is None:
+        return message
+    return f"{message} {detail}"
+
+
+def _strip_runtime_unavailable_prefix(message: str) -> str:
+    """Strip the shared public error prefix from an internal startup message."""
+
+    prefix = "LibreOffice runtime is unavailable: "
+    if message.startswith(prefix):
+        return message[len(prefix) :]
+    return message
+
+
+def _format_startup_failures(
+    failures: list[_LibreOfficeStartupFailure],
+) -> str:
+    """Render a combined startup failure message across all launch strategies."""
+
+    if not failures:
+        return "LibreOffice runtime is unavailable: soffice startup failed."
+    detail = "; ".join(
+        f"{failure.attempt_name}: {failure.message}" for failure in failures
+    )
+    return f"LibreOffice runtime is unavailable: soffice startup failed. ({detail})"
+
+
 def _resolve_python_path(soffice_path: Path) -> Path | None:
     """Resolve a Python executable capable of running the LibreOffice bridge."""
 
     override = os.getenv("EXSTRUCT_LIBREOFFICE_PYTHON_PATH")
     if override:
-        return Path(override)
+        override_path = Path(override)
+        detail = _probe_libreoffice_bridge_failure(override_path)
+        if detail is not None:
+            raise LibreOfficeUnavailableError(
+                "LibreOffice runtime is unavailable: configured "
+                "EXSTRUCT_LIBREOFFICE_PYTHON_PATH is incompatible with the "
+                f"bundled bridge. ({detail})"
+            )
+        return override_path
     for program_dir in _soffice_program_dirs(soffice_path):
         for candidate in ("python.exe", "python.bin", "python"):
             path = program_dir / candidate
-            if path.exists():
+            if path.exists() and _python_supports_libreoffice_bridge(path):
                 return path
     for python_candidate in _system_python_candidates():
         if _python_supports_libreoffice_bridge(python_candidate):
@@ -384,28 +605,42 @@ def _system_python_candidates() -> tuple[Path, ...]:
 
 
 def _python_supports_libreoffice_bridge(python_path: Path) -> bool:
-    """Return True when the candidate Python can import required UNO modules."""
+    """Return True when the candidate Python can run the bundled bridge probe."""
+
+    return _probe_libreoffice_bridge_failure(python_path) is None
+
+
+def _probe_libreoffice_bridge_failure(python_path: Path) -> str | None:
+    """Return ``None`` on success, otherwise a short incompatibility detail."""
 
     if not python_path.exists():
-        return False
+        return f"'{python_path}' was not found."
     env = dict(os.environ)
     env["PYTHONIOENCODING"] = "utf-8"
+    bridge_path = Path(__file__).with_name("_libreoffice_bridge.py")
     try:
         subprocess.run(
             [
                 str(python_path),
-                "-c",
-                "import uno\nfrom com.sun.star.beans import PropertyValue\n",
+                str(bridge_path),
+                "--probe",
             ],
             capture_output=True,
             check=True,
             text=True,
+            encoding="utf-8",
             timeout=_DEFAULT_PYTHON_PROBE_TIMEOUT_SEC,
             env=env,
         )
-    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
-        return False
-    return True
+    except OSError:
+        return f"'{python_path}' could not be executed."
+    except subprocess.TimeoutExpired:
+        return "bundled bridge probe timed out."
+    except subprocess.CalledProcessError as exc:
+        return (
+            exc.stderr.strip() or exc.stdout.strip() or "bundled bridge probe failed."
+        )
+    return None
 
 
 def _reserve_tcp_port() -> int:
