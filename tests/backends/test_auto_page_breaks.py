@@ -138,6 +138,61 @@ def test_process_passes_auto_page_break_flag_from_per_call_destination(
     assert called["include_auto_page_breaks"] is True
 
 
+def test_process_uses_engine_default_auto_page_break_destination_without_mutation(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    """Verify that process forwards engine defaults without mutating engine state."""
+
+    calls: dict[str, object] = {}
+    default_dir = tmp_path / "auto-default"
+
+    def fake_extract(
+        self: ExStructEngine,
+        path: Path,
+        *,
+        mode: str | None = None,
+    ) -> WorkbookData:
+        calls["extract_path"] = path
+        calls["extract_mode"] = mode
+        calls["engine_dir_inside_extract"] = (
+            self.output.destinations.auto_page_breaks_dir
+        )
+        return WorkbookData(book_name=path.name, sheets={})
+
+    def fake_export(
+        self: ExStructEngine,
+        wb: WorkbookData,
+        *,
+        auto_page_breaks_dir: Path | None = None,
+        **kwargs: object,
+    ) -> None:
+        _ = kwargs
+        _engine = self
+        _ = _engine
+        calls["export_book_name"] = wb.book_name
+        calls["export_dir"] = auto_page_breaks_dir
+
+    monkeypatch.setattr(ExStructEngine, "extract", fake_extract, raising=True)
+    monkeypatch.setattr(ExStructEngine, "export", fake_export, raising=True)
+
+    engine = ExStructEngine(
+        output=OutputOptions(
+            destinations=DestinationOptions(auto_page_breaks_dir=default_dir)
+        )
+    )
+    input_path = tmp_path / "book.xlsx"
+    input_path.write_text("", encoding="utf-8")
+
+    engine.process(input_path, output_path=tmp_path / "out.json")
+
+    assert calls["extract_path"] == input_path
+    assert calls["extract_mode"] == "standard"
+    assert calls["engine_dir_inside_extract"] == default_dir
+    assert calls["export_dir"] == default_dir
+    assert calls["export_book_name"] == input_path.name
+    assert engine.output.destinations.auto_page_breaks_dir == default_dir
+
+
 def test_export_auto_page_breaks_writes_files(tmp_path: Path) -> None:
     """Verify that export auto page breaks writes files."""
 

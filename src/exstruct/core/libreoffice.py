@@ -19,6 +19,7 @@ from typing import Literal, TextIO, cast
 _DEFAULT_STARTUP_TIMEOUT_SEC = 15.0
 _DEFAULT_EXEC_TIMEOUT_SEC = 30.0
 _DEFAULT_PYTHON_PROBE_TIMEOUT_SEC = 5.0
+_STARTUP_BRIDGE_HANDSHAKE_TIMEOUT_SEC = 5.0
 _STARTUP_PORT_RETRY_LIMIT = 3
 _STARTUP_PORT_RETRY_BACKOFF_SEC = 0.1
 _SUBPROCESS_ENV_ALLOWLIST = (
@@ -183,6 +184,7 @@ class LibreOfficeSession:
             try:
                 startup = _start_soffice_startup_attempt(
                     soffice_path=self.config.soffice_path,
+                    python_path=self._python_path,
                     profile_root=self.config.profile_root,
                     startup_timeout_sec=self.config.startup_timeout_sec,
                     attempt=attempt,
@@ -264,7 +266,7 @@ class LibreOfficeSession:
             return self._bridge_payload_cache[cache_key]
         bridge_path = Path(__file__).with_name("_libreoffice_bridge.py")
         try:
-            completed = subprocess.run(
+            completed = _run_trusted_subprocess(
                 [
                     _subprocess_executable_arg(self._python_path),
                     _subprocess_path_arg(bridge_path),
@@ -277,11 +279,7 @@ class LibreOfficeSession:
                     "--kind",
                     kind,
                 ],
-                capture_output=True,
-                check=True,
-                text=True,
-                encoding="utf-8",
-                timeout=self.config.exec_timeout_sec,
+                timeout_sec=self.config.exec_timeout_sec,
                 env=_build_subprocess_env(pythonioencoding="utf-8"),
             )
         except FileNotFoundError as exc:
@@ -345,12 +343,9 @@ def _probe_soffice_runtime(*, soffice_path: Path, timeout_sec: float) -> None:
     """Verify that the configured soffice executable is runnable."""
 
     try:
-        subprocess.run(
+        _run_trusted_subprocess(
             [_subprocess_executable_arg(soffice_path), "--version"],
-            capture_output=True,
-            check=True,
-            text=True,
-            timeout=timeout_sec,
+            timeout_sec=timeout_sec,
         )
     except FileNotFoundError as exc:
         raise LibreOfficeUnavailableError(
@@ -378,6 +373,7 @@ def _iter_startup_attempts() -> tuple[_LibreOfficeStartupAttempt, ...]:
 def _start_soffice_startup_attempt(
     *,
     soffice_path: Path,
+    python_path: Path,
     profile_root: Path | None,
     startup_timeout_sec: float,
     attempt: _LibreOfficeStartupAttempt,
@@ -395,7 +391,7 @@ def _start_soffice_startup_attempt(
         stderr_path: Path | None = None
         try:
             stderr_sink, stderr_path = _create_stderr_sink()
-            process = subprocess.Popen(
+            process = _spawn_trusted_subprocess(
                 _build_soffice_startup_command(
                     soffice_path=soffice_path,
                     port=port,
@@ -403,12 +399,21 @@ def _start_soffice_startup_attempt(
                 ),
                 stdout=subprocess.DEVNULL,
                 stderr=stderr_sink,
-                text=True,
             )
             _wait_for_socket(
                 host="127.0.0.1",
                 port=port,
                 timeout_sec=startup_timeout_sec,
+                process=process,
+            )
+            _probe_uno_bridge_handshake(
+                python_path=python_path,
+                host="127.0.0.1",
+                port=port,
+                timeout_sec=min(
+                    startup_timeout_sec,
+                    _STARTUP_BRIDGE_HANDSHAKE_TIMEOUT_SEC,
+                ),
                 process=process,
             )
         except FileNotFoundError as exc:
@@ -627,6 +632,8 @@ def _should_retry_startup_failure(message: str) -> bool:
     retryable_markers = (
         "soffice socket startup timed out.",
         "soffice exited during startup.",
+        "uno bridge handshake timed out.",
+        "uno bridge handshake failed.",
         "address already in use",
         "already in use",
         "failed to bind",
@@ -741,17 +748,13 @@ def _probe_libreoffice_bridge_failure(python_path: Path) -> str | None:
         return f"'{python_path}' was not found."
     bridge_path = Path(__file__).with_name("_libreoffice_bridge.py")
     try:
-        subprocess.run(
+        _run_trusted_subprocess(
             [
                 _subprocess_executable_arg(python_path),
                 _subprocess_path_arg(bridge_path),
                 "--probe",
             ],
-            capture_output=True,
-            check=True,
-            text=True,
-            encoding="utf-8",
-            timeout=_DEFAULT_PYTHON_PROBE_TIMEOUT_SEC,
+            timeout_sec=_DEFAULT_PYTHON_PROBE_TIMEOUT_SEC,
             env=_build_subprocess_env(pythonioencoding="utf-8"),
         )
     except OSError:
@@ -807,6 +810,47 @@ def _build_subprocess_env(*, pythonioencoding: str | None = None) -> dict[str, s
     return env
 
 
+def _run_trusted_subprocess(
+    args: Sequence[str],
+    *,
+    timeout_sec: float,
+    env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Run a trusted local subprocess with fixed argv structure."""
+
+    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit, python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args
+    # Safe by construction: argv is built from validated local runtime/script paths,
+    # uses `shell=False`, and bridge env is reduced to an explicit allowlist.
+    return subprocess.run(  # nosec B603  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit, python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args
+        list(args),
+        capture_output=True,
+        check=True,
+        text=True,
+        encoding="utf-8",
+        timeout=timeout_sec,
+        env=env,
+    )
+
+
+def _spawn_trusted_subprocess(
+    args: Sequence[str],
+    *,
+    stdout: int | TextIO,
+    stderr: int | TextIO,
+) -> subprocess.Popen[str]:
+    """Spawn a trusted long-running subprocess with fixed argv structure."""
+
+    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
+    # Safe by construction: argv is a fixed `soffice` command assembled from validated
+    # local paths and an ephemeral localhost port; no shell expansion is used.
+    return subprocess.Popen(  # nosec B603  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
+        list(args),
+        stdout=stdout,
+        stderr=stderr,
+        text=True,
+    )
+
+
 def _wait_for_socket(
     *,
     host: str,
@@ -833,6 +877,52 @@ def _wait_for_socket(
     raise LibreOfficeUnavailableError(
         "LibreOffice runtime is unavailable: soffice socket startup timed out."
     )
+
+
+def _probe_uno_bridge_handshake(
+    *,
+    python_path: Path,
+    host: str,
+    port: int,
+    timeout_sec: float,
+    process: subprocess.Popen[str] | None,
+) -> None:
+    """Verify that the accepting socket resolves a LibreOffice UNO context."""
+
+    if process is not None and process.poll() is not None:
+        raise LibreOfficeUnavailableError(
+            "LibreOffice runtime is unavailable: soffice exited during startup."
+        )
+    bridge_path = Path(__file__).with_name("_libreoffice_bridge.py")
+    try:
+        _run_trusted_subprocess(
+            [
+                _subprocess_executable_arg(python_path),
+                _subprocess_path_arg(bridge_path),
+                "--handshake",
+                "--host",
+                host,
+                "--port",
+                str(port),
+                "--connect-timeout",
+                str(timeout_sec),
+            ],
+            timeout_sec=timeout_sec,
+            env=_build_subprocess_env(pythonioencoding="utf-8"),
+        )
+    except FileNotFoundError as exc:
+        raise LibreOfficeUnavailableError(
+            "LibreOffice runtime is unavailable: compatible Python runtime could not be executed."
+        ) from exc
+    except subprocess.TimeoutExpired as exc:
+        raise LibreOfficeUnavailableError(
+            "LibreOffice runtime is unavailable: UNO bridge handshake timed out."
+        ) from exc
+    except subprocess.CalledProcessError as exc:
+        detail = exc.stderr.strip() or exc.stdout.strip() or "unknown error"
+        raise LibreOfficeUnavailableError(
+            f"LibreOffice runtime is unavailable: UNO bridge handshake failed. ({detail})"
+        ) from exc
 
 
 def _cleanup_profile_dir(path: Path) -> None:

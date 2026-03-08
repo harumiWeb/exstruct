@@ -247,22 +247,20 @@ class ExStructEngine:
         finally:
             set_table_detection_params(**prev)
 
-    @contextmanager
-    def _process_extract_scope(
+    _AUTO_PAGE_BREAKS_DIR_UNSET = object()
+
+    def _resolve_auto_page_breaks_dir(
         self,
         *,
-        auto_page_breaks_dir: Path | None,
-    ) -> Iterator[None]:
-        """Temporarily apply process-time extraction overrides to engine defaults."""
+        auto_page_breaks_dir: Path | None | object = _AUTO_PAGE_BREAKS_DIR_UNSET,
+    ) -> Path | None:
+        """Return the effective auto page-break destination for one extraction."""
 
-        previous_auto_page_breaks_dir = self.output.destinations.auto_page_breaks_dir
-        self.output.destinations.auto_page_breaks_dir = auto_page_breaks_dir
-        try:
-            yield
-        finally:
-            self.output.destinations.auto_page_breaks_dir = (
-                previous_auto_page_breaks_dir
+        if auto_page_breaks_dir is self._AUTO_PAGE_BREAKS_DIR_UNSET:
+            return self._ensure_optional_path(
+                self.output.destinations.auto_page_breaks_dir
             )
+        return cast(Path | None, auto_page_breaks_dir)
 
     def _resolve_size_flags(self) -> tuple[bool, bool]:
         """
@@ -401,7 +399,13 @@ class ExStructEngine:
         return cls._ensure_path(path)
 
     def extract(
-        self, file_path: str | Path, *, mode: ExtractionMode | None = None
+        self,
+        file_path: str | Path,
+        *,
+        mode: ExtractionMode | None = None,
+        _auto_page_breaks_dir_override: Path | None | object = (
+            _AUTO_PAGE_BREAKS_DIR_UNSET
+        ),
     ) -> WorkbookData:
         """
         Produce a normalized WorkbookData extracted from the given workbook file.
@@ -415,7 +419,9 @@ class ExStructEngine:
             WorkbookData: Normalized workbook data extracted from the file.
         """
         chosen_mode = mode or self.options.mode
-        include_auto_page_breaks = self._resolve_include_auto_page_breaks()
+        include_auto_page_breaks = self._resolve_include_auto_page_breaks(
+            auto_page_breaks_dir=_auto_page_breaks_dir_override
+        )
         return self._extract_workbook_with_options(
             file_path,
             mode=chosen_mode,
@@ -425,16 +431,12 @@ class ExStructEngine:
     def _resolve_include_auto_page_breaks(
         self,
         *,
-        auto_page_breaks_dir: Path | None = None,
+        auto_page_breaks_dir: Path | None | object = _AUTO_PAGE_BREAKS_DIR_UNSET,
     ) -> bool:
         """Return whether extraction must compute auto page-break areas."""
 
-        effective_auto_page_breaks_dir = (
-            auto_page_breaks_dir
-            if auto_page_breaks_dir is not None
-            else self._ensure_optional_path(
-                self.output.destinations.auto_page_breaks_dir
-            )
+        effective_auto_page_breaks_dir = self._resolve_auto_page_breaks_dir(
+            auto_page_breaks_dir=auto_page_breaks_dir
         )
         return (
             self.output.filters.include_auto_print_areas
@@ -669,8 +671,15 @@ class ExStructEngine:
         normalized_auto_page_breaks_dir = self._ensure_optional_path(
             auto_page_breaks_dir
         )
+        effective_auto_page_breaks_dir = self._resolve_auto_page_breaks_dir(
+            auto_page_breaks_dir=(
+                normalized_auto_page_breaks_dir
+                if normalized_auto_page_breaks_dir is not None
+                else self._AUTO_PAGE_BREAKS_DIR_UNSET
+            )
+        )
         include_auto_page_breaks = self._resolve_include_auto_page_breaks(
-            auto_page_breaks_dir=normalized_auto_page_breaks_dir
+            auto_page_breaks_dir=effective_auto_page_breaks_dir
         )
         normalized_file_path = validate_libreoffice_process_request(
             file_path,
@@ -680,10 +689,14 @@ class ExStructEngine:
             image=image,
         )
 
-        with self._process_extract_scope(
-            auto_page_breaks_dir=normalized_auto_page_breaks_dir
-        ):
+        if normalized_auto_page_breaks_dir is None:
             wb = self.extract(normalized_file_path, mode=chosen_mode)
+        else:
+            wb = self.extract(
+                normalized_file_path,
+                mode=chosen_mode,
+                _auto_page_breaks_dir_override=effective_auto_page_breaks_dir,
+            )
         chosen_fmt = out_fmt or self.output.format.fmt
         self.export(
             wb,
@@ -693,7 +706,7 @@ class ExStructEngine:
             indent=indent,
             sheets_dir=normalized_sheets_dir,
             print_areas_dir=normalized_print_areas_dir,
-            auto_page_breaks_dir=normalized_auto_page_breaks_dir,
+            auto_page_breaks_dir=effective_auto_page_breaks_dir,
             stream=stream,
         )
 

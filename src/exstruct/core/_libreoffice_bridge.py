@@ -140,7 +140,13 @@ def main() -> int:
     if args.probe:
         _run_probe()
         return 0
-    ctx = _resolve_context(args.host, args.port)
+    ctx = _resolve_context(
+        args.host,
+        args.port,
+        timeout_sec=args.connect_timeout,
+    )
+    if args.handshake:
+        return 0
     desktop = cast(
         _Desktop,
         ctx.ServiceManager.createInstanceWithContext("com.sun.star.frame.Desktop", ctx),
@@ -162,13 +168,22 @@ def _parse_args() -> argparse.Namespace:
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--probe", action="store_true")
+    parser.add_argument("--handshake", action="store_true")
     parser.add_argument("--host")
     parser.add_argument("--port", type=int)
     parser.add_argument("--file")
     parser.add_argument("--kind", choices=("charts", "draw-page"), default="charts")
+    parser.add_argument("--connect-timeout", type=float, default=15.0)
     args = parser.parse_args()
-    if not args.probe and (args.host is None or args.port is None or args.file is None):
-        parser.error("--host, --port, and --file are required unless --probe is set.")
+    if not args.probe and (
+        args.host is None
+        or args.port is None
+        or (not args.handshake and args.file is None)
+    ):
+        parser.error(
+            "--host and --port are required unless --probe is set; "
+            "--file is also required unless --handshake is set."
+        )
     return args
 
 
@@ -184,7 +199,7 @@ def _run_probe() -> None:
     _ = _HMM_PER_POINT
 
 
-def _resolve_context(host: str, port: int) -> _UnoContext:
+def _resolve_context(host: str, port: int, *, timeout_sec: float = 15.0) -> _UnoContext:
     """Resolve the remote LibreOffice UNO component context for the requested host and port."""
 
     local_ctx = uno.getComponentContext()
@@ -196,7 +211,7 @@ def _resolve_context(host: str, port: int) -> _UnoContext:
         ),
     )
     connection = f"uno:socket,host={host},port={port};urp;StarOffice.ComponentContext"
-    deadline = time.monotonic() + 15.0
+    deadline = time.monotonic() + timeout_sec
     last_error: Exception | None = None
     while time.monotonic() < deadline:
         try:

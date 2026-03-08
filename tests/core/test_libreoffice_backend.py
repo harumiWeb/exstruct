@@ -22,6 +22,7 @@ from exstruct.core.libreoffice import (
     LibreOfficeSession,
     LibreOfficeSessionConfig,
     LibreOfficeUnavailableError,
+    _probe_uno_bridge_handshake,
     _python_supports_libreoffice_bridge,
     _resolve_python_path,
 )
@@ -995,6 +996,80 @@ def test_libreoffice_session_enters_with_isolated_profile(
     assert cleaned_paths == [created_dir]
 
 
+def test_probe_uno_bridge_handshake_uses_bridge_script(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Verify that startup handshake runs the bundled bridge with fixed args/env."""
+
+    python_path = tmp_path / "python.exe"
+    python_path.write_text("", encoding="utf-8")
+    process = _FakeLibreOfficeProcess()
+    calls: dict[str, object] = {}
+
+    def _fake_run(
+        args: list[str], **kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        calls["args"] = list(args)
+        calls["env"] = kwargs["env"]
+        calls["timeout"] = kwargs["timeout"]
+        return subprocess.CompletedProcess(
+            args=args, returncode=0, stdout="", stderr=""
+        )
+
+    monkeypatch.setattr("exstruct.core.libreoffice.subprocess.run", _fake_run)
+
+    _probe_uno_bridge_handshake(
+        python_path=python_path,
+        host="127.0.0.1",
+        port=42001,
+        timeout_sec=1.5,
+        process=cast(subprocess.Popen[str], process),
+    )
+
+    args = cast(list[str], calls["args"])
+    assert args[0] == str(python_path.resolve())
+    assert args[1].endswith("_libreoffice_bridge.py")
+    assert "--handshake" in args
+    assert args[args.index("--host") + 1] == "127.0.0.1"
+    assert args[args.index("--port") + 1] == "42001"
+    assert args[args.index("--connect-timeout") + 1] == "1.5"
+    env = cast(dict[str, str], calls["env"])
+    assert env["PYTHONIOENCODING"] == "utf-8"
+    assert calls["timeout"] == 1.5
+
+
+def test_probe_uno_bridge_handshake_reports_bridge_failures(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Verify that startup handshake surfaces actionable bridge failures."""
+
+    python_path = tmp_path / "python.exe"
+    python_path.write_text("", encoding="utf-8")
+
+    def _fake_run(
+        args: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        raise subprocess.CalledProcessError(
+            returncode=1,
+            cmd=args,
+            stderr="Connector could not be established",
+        )
+
+    monkeypatch.setattr("exstruct.core.libreoffice.subprocess.run", _fake_run)
+
+    with pytest.raises(
+        LibreOfficeUnavailableError,
+        match="UNO bridge handshake failed. \\(Connector could not be established\\)",
+    ):
+        _probe_uno_bridge_handshake(
+            python_path=python_path,
+            host="127.0.0.1",
+            port=42001,
+            timeout_sec=1.0,
+            process=cast(subprocess.Popen[str], _FakeLibreOfficeProcess()),
+        )
+
+
 def test_libreoffice_session_retries_port_within_startup_attempt(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
@@ -1093,6 +1168,109 @@ def test_libreoffice_session_retries_port_within_startup_attempt(
     )
     assert any(arg.startswith("-env:UserInstallation=") for arg in first_process.args)
     assert any(arg.startswith("-env:UserInstallation=") for arg in second_process.args)
+    assert session._temp_profile_dir == created_dir
+    assert cast(object, session._soffice_process) is second_process
+
+    session.__exit__(None, None, None)
+
+    assert second_process.terminate_called is True
+    assert cleaned_paths == [created_dir]
+
+
+def test_libreoffice_session_retries_when_uno_handshake_finds_wrong_listener(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Verify that startup retries when socket accept succeeds but UNO handshake fails."""
+
+    cleaned_paths: list[Path] = []
+    created_dir = tmp_path / "lo-profile"
+    soffice_path = tmp_path / "soffice.exe"
+    python_path = tmp_path / "python.exe"
+    first_process = _FakeLibreOfficeProcess()
+    second_process = _FakeLibreOfficeProcess()
+    spawned: list[_FakeLibreOfficeProcess] = []
+    reserved_ports = [42001, 42002]
+    handshake_ports: list[int] = []
+    soffice_path.write_text("", encoding="utf-8")
+    python_path.write_text("", encoding="utf-8")
+
+    def _fake_mkdtemp(*, prefix: str, **kwargs: object) -> str:
+        _ = prefix
+        _ = kwargs
+        created_dir.mkdir(parents=True, exist_ok=True)
+        return str(created_dir)
+
+    def _fake_run(
+        args: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(
+            args=args, returncode=0, stdout="", stderr=""
+        )
+
+    def _fake_popen(args: list[str], **_kwargs: object) -> _FakeLibreOfficeProcess:
+        process = (first_process, second_process)[len(spawned)]
+        process.args = list(args)
+        spawned.append(process)
+        return process
+
+    def _fake_probe_uno_bridge_handshake(
+        *,
+        python_path: Path,
+        host: str,
+        port: int,
+        timeout_sec: float,
+        process: object,
+    ) -> None:
+        _ = python_path
+        _ = host
+        _ = timeout_sec
+        handshake_ports.append(port)
+        if process is first_process:
+            raise LibreOfficeUnavailableError(
+                "LibreOffice runtime is unavailable: UNO bridge handshake failed. (connection refused)"
+            )
+
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice.mkdtemp",
+        cast(Callable[..., str], _fake_mkdtemp),
+    )
+    monkeypatch.setattr("exstruct.core.libreoffice.subprocess.run", _fake_run)
+    monkeypatch.setattr("exstruct.core.libreoffice.subprocess.Popen", _fake_popen)
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._wait_for_socket",
+        lambda **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._probe_uno_bridge_handshake",
+        _fake_probe_uno_bridge_handshake,
+    )
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._reserve_tcp_port",
+        lambda: reserved_ports.pop(0),
+    )
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._cleanup_profile_dir",
+        lambda path: cleaned_paths.append(path),
+    )
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._resolve_python_path",
+        lambda _path: python_path,
+    )
+
+    session = LibreOfficeSession(
+        LibreOfficeSessionConfig(
+            soffice_path=soffice_path,
+            startup_timeout_sec=1.0,
+            exec_timeout_sec=1.0,
+            profile_root=None,
+        )
+    )
+
+    session.__enter__()
+
+    assert spawned == [first_process, second_process]
+    assert handshake_ports == [42001, 42002]
+    assert first_process.terminate_called is True
     assert session._temp_profile_dir == created_dir
     assert cast(object, session._soffice_process) is second_process
 

@@ -9,13 +9,13 @@
 - [x] PR #76 の最新 Codacy 指摘を再取得し、runtime defect と static-analysis false positive を切り分ける
 - [x] PR #76 の最新 CodeRabbit / review thread を再確認し、未解決 thread と duplicate review comment を切り分ける
 - [x] `tasks/feature_spec.md` に今回の accepted follow-up / out-of-scope を追記する
-- [ ] `engine.py` の per-call override 伝播を shared state mutation なしに組み直す
-- [ ] `engine.py` の immutability regression tests を追加する
-- [ ] LibreOffice startup 後の UNO bridge handshake を追加し、wrong-listener false positive を retry failure に戻す
-- [ ] wrong-listener / handshake failure の regression tests を追加する
-- [ ] `src/exstruct/core/libreoffice.py` の Codacy 対象 4 call site に最小スコープ suppression/comment を入れる
-- [ ] coverage 回復用の targeted tests を `libreoffice.py` / `libreoffice_backend.py` / `engine.py` に追加する
-- [ ] local non-COM suite coverage が `>= 80%` に戻ることを確認する
+- [x] `engine.py` の per-call override 伝播を shared state mutation なしに組み直す
+- [x] `engine.py` の immutability regression tests を追加する
+- [x] LibreOffice startup 後の UNO bridge handshake を追加し、wrong-listener false positive を retry failure に戻す
+- [x] wrong-listener / handshake failure の regression tests を追加する
+- [x] `src/exstruct/core/libreoffice.py` の Codacy 対象 4 call site に最小スコープ suppression/comment を入れる
+- [x] coverage 回復用の targeted tests を `libreoffice.py` / `libreoffice_backend.py` / `engine.py` に追加する
+- [x] local non-COM suite coverage が `>= 80%` に戻ることを確認する
 
 ### Review
 
@@ -43,6 +43,14 @@
   - `process()` の override 伝播は engine-level seam を維持しつつ explicit parameter 化し、shared state mutation を除去する
   - startup false positive は PID lookup ではなく UNO bridge handshake で詰める
   - Codacy は helper を前提に、該当 call site のみ inline suppression/comment で収束させる
+- 実装結果
+  - `src/exstruct/engine.py` は `_process_extract_scope()` を削除し、per-call destination がある場合だけ private override を `extract()` に渡す形へ変更した
+  - `src/exstruct/core/libreoffice.py` は trusted subprocess helper と `--handshake` ベースの UNO startup 検証を追加し、wrong-listener を retry failure として扱う
+  - `src/exstruct/core/_libreoffice_bridge.py` は `--handshake` / `--connect-timeout` を追加し、source file 自体の unit tests を追加した
+- 検証結果
+  - `uv run pytest tests/core/test_libreoffice_bridge.py tests/backends/test_auto_page_breaks.py tests/core/test_libreoffice_backend.py tests/engine/test_engine.py -q` -> `59 passed`
+  - `uv run task precommit-run` -> `ruff`, `ruff-format`, `mypy` passed
+  - `uv run pytest -m "not com and not render" --maxfail=1 --disable-warnings -q --cov=exstruct --cov-report=term-missing:skip-covered --cov-fail-under=80` -> `797 passed, 1 skipped, 11 deselected`, `Total coverage: 80.29%`
 
 ## 2026-03-08 PR #76 post-push triage
 
