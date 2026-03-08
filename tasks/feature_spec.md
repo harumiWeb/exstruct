@@ -1,5 +1,33 @@
 # Feature Spec
 
+## 2026-03-08 PR #76 unresolved thread follow-up
+
+### Issue
+
+- PR #76 には 2026-03-08 時点で未 resolve thread が 2 件残っている。
+  - `src/exstruct/core/backends/libreoffice_backend.py:539-541`
+    - connector heuristic endpoint matching が OOXML の `rotation` を無視し、`left + dx`, `top + dy` の未回転ベクトルで begin/end を推定している。
+  - `src/exstruct/core/pipeline.py:1009-1010`
+    - LibreOffice rich extraction で `extract_shapes()` と `extract_charts()` を同じ `try` に入れているため、chart 側だけの failure でも shape artifact まで捨てて cells-only fallback に落ちる。
+
+### Accepted follow-ups
+
+- LibreOffice connector endpoint heuristic は OOXML connector の回転を反映してから begin/end 候補点を作る。
+  - `direction_dx/direction_dy` は connector local axis のベクトルとして扱い、`rotation` がある場合は sheet 座標へ回転変換してから `left/top` に加算する。
+  - `rotation` が未設定なら現行どおり未回転ベクトルを使う。
+  - `(dx, dy) == (0, 0)` のときは既存 contract を維持し、OOXML endpoint heuristic には使わず UNO bounding box fallback を使う。
+  - regression test:
+    - direct endpoint refs が無く、`rotation=90` の connector でも heuristic begin/end が期待 shape に張り付くこと
+    - `rotation=None` の既存 heuristic が変わらないこと
+- LibreOffice pipeline fallback は rich artifact の部分成功を保持する。
+  - `resolve_rich_backend(...)` failure は従来どおり `LIBREOFFICE_UNAVAILABLE` または `LIBREOFFICE_PIPELINE_FAILED` fallback に落としてよい。
+  - ただし backend 解決後は `extract_shapes()` と `extract_charts()` を独立して扱い、片方が成功済みなら成功した artifact を保持したまま workbook を組み立てる。
+  - chart extraction failure 時は extracted shapes を保持し、shapes extraction failure 時は fallback reason を維持しつつ charts だけを破棄してよい。
+  - workbook build では `include_rich_artifacts=True` を使い、空 dict の rich artifact は単に空配列として扱う。
+  - regression test:
+    - shapes 成功 + charts failure で workbook に shapes が残り、`fallback_reason == LIBREOFFICE_PIPELINE_FAILED` になること
+    - charts 成功 + shapes failure の場合は shapes/charts とも空で fallback になること
+
 ## 2026-03-08 PR #76 follow-up triage
 
 ### Issue

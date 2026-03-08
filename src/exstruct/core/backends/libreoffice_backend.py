@@ -536,8 +536,13 @@ def _connector_endpoints(
             and dy is not None
             and (dx != 0 or dy != 0)
         ):
+            rotated_dx, rotated_dy = _rotate_connector_delta(
+                float(dx),
+                float(dy),
+                connector_info.rotation,
+            )
             start = (float(left), float(top))
-            end = (float(left + dx), float(top + dy))
+            end = (float(left) + rotated_dx, float(top) + rotated_dy)
             return (start, end)
 
     if uno_connector is None:
@@ -577,6 +582,24 @@ def _distance_to_box(x: float, y: float, box: _ShapeBox) -> float:
     dx = max(box.left - x, 0.0, x - box.right)
     dy = max(box.top - y, 0.0, y - box.bottom)
     return math.hypot(dx, dy)
+
+
+def _rotate_connector_delta(
+    dx: float,
+    dy: float,
+    rotation_deg: float | None,
+) -> tuple[float, float]:
+    """Rotate an OOXML connector delta into sheet coordinates when needed."""
+
+    if rotation_deg is None:
+        return (dx, dy)
+    if math.isclose(rotation_deg % 360.0, 0.0, abs_tol=1e-9):
+        return (dx, dy)
+    length = math.hypot(dx, dy)
+    if length == 0.0:
+        return (dx, dy)
+    angle_rad = math.radians(compute_line_angle_deg(dx, dy) + rotation_deg)
+    return (length * math.cos(angle_rad), length * math.sin(angle_rad))
 
 
 def _to_shape_box(

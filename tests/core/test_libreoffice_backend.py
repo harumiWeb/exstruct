@@ -745,6 +745,128 @@ def test_libreoffice_backend_combines_ooxml_and_uno_connector_endpoints(
     assert connector.direction == "N"
 
 
+def test_libreoffice_backend_rotates_ooxml_connector_delta_for_heuristic_matching(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Verify that rotated OOXML deltas steer heuristic endpoint matching."""
+
+    payload = {
+        "Sheet1": [
+            LibreOfficeDrawPageShape(
+                name="Start",
+                shape_type="com.sun.star.drawing.CustomShape",
+                left=0,
+                top=0,
+                width=20,
+                height=20,
+            ),
+            LibreOfficeDrawPageShape(
+                name="East",
+                shape_type="com.sun.star.drawing.CustomShape",
+                left=100,
+                top=0,
+                width=20,
+                height=20,
+            ),
+            LibreOfficeDrawPageShape(
+                name="South",
+                shape_type="com.sun.star.drawing.CustomShape",
+                left=0,
+                top=100,
+                width=20,
+                height=20,
+            ),
+            LibreOfficeDrawPageShape(
+                name="Connector",
+                shape_type="com.sun.star.drawing.ConnectorShape",
+                left=10,
+                top=10,
+                width=0,
+                height=100,
+                is_connector=True,
+            ),
+        ]
+    }
+    monkeypatch.setattr(
+        "exstruct.core.backends.libreoffice_backend.read_sheet_drawings",
+        lambda _path: {
+            "Sheet1": SheetDrawingData(
+                shapes=[
+                    OoxmlShapeInfo(
+                        ref=DrawingShapeRef(
+                            drawing_id=10,
+                            name="Start",
+                            kind="shape",
+                            left=0,
+                            top=0,
+                            width=20,
+                            height=20,
+                        )
+                    ),
+                    OoxmlShapeInfo(
+                        ref=DrawingShapeRef(
+                            drawing_id=20,
+                            name="East",
+                            kind="shape",
+                            left=100,
+                            top=0,
+                            width=20,
+                            height=20,
+                        )
+                    ),
+                    OoxmlShapeInfo(
+                        ref=DrawingShapeRef(
+                            drawing_id=30,
+                            name="South",
+                            kind="shape",
+                            left=0,
+                            top=100,
+                            width=20,
+                            height=20,
+                        )
+                    ),
+                ],
+                connectors=[
+                    OoxmlConnectorInfo(
+                        ref=DrawingShapeRef(
+                            drawing_id=40,
+                            name="Connector",
+                            kind="connector",
+                            left=10,
+                            top=10,
+                            width=100,
+                            height=0,
+                        ),
+                        connection=DrawingConnectorRef(
+                            drawing_id=40,
+                            start_drawing_id=None,
+                            end_drawing_id=None,
+                        ),
+                        rotation=90.0,
+                        direction_dx=100,
+                        direction_dy=0,
+                    )
+                ],
+            )
+        },
+    )
+    backend = LibreOfficeRichBackend(
+        Path("sample/flowchart/sample-shape-connector.xlsx"),
+        session_factory=lambda: cast(LibreOfficeSession, _DrawPageSession(payload)),
+    )
+
+    connector = next(
+        shape
+        for shape in backend.extract_shapes(mode="libreoffice")["Sheet1"]
+        if isinstance(shape, Arrow)
+    )
+
+    assert connector.begin_id == 1
+    assert connector.end_id == 3
+    assert connector.approximation_level == "heuristic"
+    assert connector.confidence == 0.6
+
+
 def test_ooxml_zero_delta_direction_falls_back_to_uno_geometry() -> None:
     """Verify that a zero-length OOXML delta does not force an eastward direction."""
 

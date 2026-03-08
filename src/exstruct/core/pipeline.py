@@ -965,6 +965,69 @@ def resolve_rich_backend(
     return ComRichBackend(workbook)
 
 
+def _run_libreoffice_pipeline(
+    *,
+    inputs: ExtractionInputs,
+    artifacts: ExtractionArtifacts,
+    state: PipelineState,
+    fallback: Callable[..., PipelineResult],
+) -> PipelineResult:
+    """Run LibreOffice rich extraction while preserving partial shape success."""
+
+    rich_mode: Literal["libreoffice"] = "libreoffice"
+    try:
+        rich_backend = resolve_rich_backend(inputs=inputs)
+    except LibreOfficeUnavailableError as exc:
+        return fallback(
+            f"LibreOffice runtime is unavailable. ({exc!r})",
+            FallbackReason.LIBREOFFICE_UNAVAILABLE,
+        )
+    except Exception as exc:
+        return fallback(
+            f"LibreOffice pipeline failed ({exc!r}).",
+            FallbackReason.LIBREOFFICE_PIPELINE_FAILED,
+        )
+    try:
+        artifacts.shape_data = rich_backend.extract_shapes(mode=rich_mode)
+    except LibreOfficeUnavailableError as exc:
+        artifacts.shape_data = {}
+        artifacts.chart_data = {}
+        return fallback(
+            f"LibreOffice runtime is unavailable. ({exc!r})",
+            FallbackReason.LIBREOFFICE_UNAVAILABLE,
+        )
+    except Exception as exc:
+        artifacts.shape_data = {}
+        artifacts.chart_data = {}
+        return fallback(
+            f"LibreOffice pipeline failed ({exc!r}).",
+            FallbackReason.LIBREOFFICE_PIPELINE_FAILED,
+        )
+    try:
+        artifacts.chart_data = rich_backend.extract_charts(mode=rich_mode)
+    except LibreOfficeUnavailableError as exc:
+        artifacts.chart_data = {}
+        return fallback(
+            f"LibreOffice runtime is unavailable. ({exc!r})",
+            FallbackReason.LIBREOFFICE_UNAVAILABLE,
+            include_rich_artifacts=True,
+        )
+    except Exception as exc:
+        artifacts.chart_data = {}
+        return fallback(
+            f"LibreOffice pipeline failed ({exc!r}).",
+            FallbackReason.LIBREOFFICE_PIPELINE_FAILED,
+            include_rich_artifacts=True,
+        )
+    workbook = build_cells_tables_workbook(
+        inputs=inputs,
+        artifacts=artifacts,
+        reason="LibreOffice pipeline completed.",
+        include_rich_artifacts=True,
+    )
+    return PipelineResult(workbook=workbook, artifacts=artifacts, state=state)
+
+
 def run_extraction_pipeline(inputs: ExtractionInputs) -> PipelineResult:
     """
     Execute the configured extraction pipeline and produce the extraction result.
@@ -979,12 +1042,19 @@ def run_extraction_pipeline(inputs: ExtractionInputs) -> PipelineResult:
     artifacts = run_pipeline(plan.pre_com_steps, inputs, ExtractionArtifacts())
     state = PipelineState()
 
-    def _fallback(message: str, reason: FallbackReason) -> PipelineResult:
+    def _fallback(
+        message: str,
+        reason: FallbackReason,
+        *,
+        include_rich_artifacts: bool = False,
+    ) -> PipelineResult:
         """Run the fallback pipeline for non-COM extraction.
 
         Args:
             message: Human-readable fallback reason.
             reason: Structured fallback reason enum.
+            include_rich_artifacts: Whether already extracted rich artifacts should
+                be preserved in the fallback workbook.
 
         Returns:
             PipelineResult for the fallback run.
@@ -996,6 +1066,7 @@ def run_extraction_pipeline(inputs: ExtractionInputs) -> PipelineResult:
             inputs=inputs,
             artifacts=artifacts,
             reason=message,
+            include_rich_artifacts=include_rich_artifacts,
         )
         logger.info("Fallback pipeline completed.")
         return PipelineResult(workbook=workbook, artifacts=artifacts, state=state)
@@ -1004,31 +1075,13 @@ def run_extraction_pipeline(inputs: ExtractionInputs) -> PipelineResult:
         if inputs.mode == "light":
             return _fallback("Light mode selected.", FallbackReason.LIGHT_MODE)
         if inputs.mode == "libreoffice":
-            try:
-                rich_backend = resolve_rich_backend(inputs=inputs)
-                artifacts.shape_data = rich_backend.extract_shapes(mode=inputs.mode)
-                artifacts.chart_data = rich_backend.extract_charts(mode=inputs.mode)
-                workbook = build_cells_tables_workbook(
-                    inputs=inputs,
-                    artifacts=artifacts,
-                    reason="LibreOffice pipeline completed.",
-                    include_rich_artifacts=True,
-                )
-                return PipelineResult(
-                    workbook=workbook,
-                    artifacts=artifacts,
-                    state=state,
-                )
-            except LibreOfficeUnavailableError as exc:
-                return _fallback(
-                    f"LibreOffice runtime is unavailable. ({exc!r})",
-                    FallbackReason.LIBREOFFICE_UNAVAILABLE,
-                )
-            except Exception as exc:
-                return _fallback(
-                    f"LibreOffice pipeline failed ({exc!r}).",
-                    FallbackReason.LIBREOFFICE_PIPELINE_FAILED,
-                )
+            result = _run_libreoffice_pipeline(
+                inputs=inputs,
+                artifacts=artifacts,
+                state=state,
+                fallback=_fallback,
+            )
+            return result
         return _fallback(
             "No COM-backed runtime is required for this mode.",
             FallbackReason.LIGHT_MODE,

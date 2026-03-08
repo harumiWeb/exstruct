@@ -1,5 +1,30 @@
 # Todo
 
+## 2026-03-08 PR #76 unresolved thread follow-up
+
+### Planning
+
+- [x] PR #76 の未 resolve review thread を再取得して現行コードと突き合わせる
+- [x] `tasks/feature_spec.md` に今回の follow-up contract を追記する
+- [x] connector heuristic endpoint matching に rotation 反映を追加する
+- [x] LibreOffice pipeline で rich artifact の部分成功を保持する
+- [x] connector / pipeline fallback の regression tests を追加する
+- [x] 関連 pytest と `uv run task precommit-run` で検証する
+
+### Review
+
+- PR #76 の未 resolve thread は 2026-03-08 時点で 2 件だった
+  - `src/exstruct/core/backends/libreoffice_backend.py:539-541`
+  - `src/exstruct/core/pipeline.py:1009-1010`
+- 実装結果
+  - `src/exstruct/core/backends/libreoffice_backend.py` は OOXML connector heuristic endpoint の `dx/dy` に `rotation` を反映してから begin/end 候補点を計算するようにした
+  - `src/exstruct/core/pipeline.py` は LibreOffice rich backend 解決後の `extract_shapes()` と `extract_charts()` を分離し、chart failure 時は取得済み shape artifact を保持したまま fallback workbook を組み立てるようにした
+  - `tests/core/test_libreoffice_backend.py` に回転付き heuristic endpoint regression test を追加した
+  - `tests/core/test_pipeline_fallbacks.py` に `shapes success + charts failure` と `shapes failure short-circuit` の regression tests を追加した
+- 検証結果
+  - `uv run pytest tests/core/test_libreoffice_backend.py tests/core/test_pipeline_fallbacks.py -q` -> `45 passed`
+  - `uv run task precommit-run` -> `ruff / ruff-format / mypy passed`
+
 ## 2026-03-08 coverage / Codacy / CodeRabbit follow-up triage
 
 ### Planning
