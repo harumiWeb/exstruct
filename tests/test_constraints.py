@@ -92,3 +92,15 @@ def test_validate_libreoffice_process_request_allows_standard_passthrough() -> N
         image=True,
     )
     assert normalized == Path("book.xlsx")
+
+
+def test_validate_libreoffice_process_request_allows_string_path_without_flags() -> (
+    None
+):
+    """Verify that valid LibreOffice process requests normalize string paths."""
+
+    normalized = validate_libreoffice_process_request(
+        "book.xlsx",
+        mode="libreoffice",
+    )
+    assert normalized == Path("book.xlsx")

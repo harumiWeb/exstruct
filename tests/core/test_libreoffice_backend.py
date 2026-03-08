@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+import json
 from pathlib import Path
 import subprocess
 from typing import cast
@@ -22,6 +23,8 @@ from exstruct.core.libreoffice import (
     LibreOfficeSession,
     LibreOfficeSessionConfig,
     LibreOfficeUnavailableError,
+    _parse_chart_payload,
+    _parse_draw_page_payload,
     _probe_uno_bridge_handshake,
     _python_supports_libreoffice_bridge,
     _resolve_python_path,
@@ -1758,3 +1761,337 @@ def test_libreoffice_session_exit_cleans_profile_even_if_kill_wait_times_out(
     assert session._soffice_process is None
     assert session._temp_profile_dir is None
     assert session._accept_port is None
+
+
+def test_libreoffice_session_extractors_cache_bridge_payloads_and_parse_results(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Verify bridge-backed extractors cache per kind and coerce payload details."""
+
+    soffice_path = tmp_path / "soffice.exe"
+    python_path = tmp_path / "python.exe"
+    workbook_path = tmp_path / "book.xlsx"
+    for path in (soffice_path, python_path, workbook_path):
+        path.write_text("", encoding="utf-8")
+    bridge_calls: list[list[str]] = []
+
+    def _fake_run_trusted_subprocess(
+        args: list[str], *, timeout_sec: float, env: dict[str, str] | None = None
+    ) -> subprocess.CompletedProcess[str]:
+        bridge_calls.append(list(args))
+        assert timeout_sec == 2.0
+        assert env is not None
+        assert env["PYTHONIOENCODING"] == "utf-8"
+        kind = args[args.index("--kind") + 1]
+        draw_items: list[object] = [
+            {
+                "name": "Flow",
+                "shape_type": "com.sun.star.drawing.ConnectorShape",
+                "text": "step",
+                "left": 10.2,
+                "top": 20,
+                "width": 30.7,
+                "height": 40.1,
+                "rotation": 45,
+                "is_connector": 1,
+                "start_shape_name": "Start",
+                "end_shape_name": "End",
+            },
+            "skip me",
+            {
+                "name": "",
+                "shape_type": 123,
+                "text": None,
+                "left": 2.4,
+                "top": 3.6,
+                "width": 4.4,
+                "height": 5.6,
+                "rotation": 90,
+                "is_connector": True,
+                "start_shape_name": "Origin",
+                "end_shape_name": 999,
+            },
+        ]
+        chart_items: list[object] = [
+            {
+                "name": "Chart 1",
+                "persist_name": "Object 1",
+                "left": 100.2,
+                "top": 200.2,
+                "width": 300.8,
+                "height": 400.1,
+            },
+            {"name": "", "persist_name": "ignored"},
+            123,
+            {"name": "Chart 2", "persist_name": 1234},
+        ]
+        payload: object = (
+            {"sheets": {"Sheet1": draw_items, "Broken": "not-a-list"}}
+            if kind == "draw-page"
+            else {"sheets": {"Sheet1": chart_items, "Broken": "not-a-list"}}
+        )
+        return subprocess.CompletedProcess(
+            args=args,
+            returncode=0,
+            stdout=json.dumps(payload),
+            stderr="",
+        )
+
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._resolve_python_path",
+        lambda _path: python_path,
+    )
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._run_trusted_subprocess",
+        _fake_run_trusted_subprocess,
+    )
+
+    session = LibreOfficeSession(
+        LibreOfficeSessionConfig(
+            soffice_path=soffice_path,
+            startup_timeout_sec=1.0,
+            exec_timeout_sec=2.0,
+            profile_root=None,
+        )
+    )
+    session._accept_port = 42001
+
+    workbook_token = session.load_workbook(workbook_path)
+    assert workbook_token == {"file_path": str(workbook_path.resolve())}
+    session.close_workbook(workbook_token)
+
+    draw_page_shapes = session.extract_draw_page_shapes(workbook_path)
+    chart_geometries = session.extract_chart_geometries(workbook_path)
+
+    assert session.extract_draw_page_shapes(workbook_path) == draw_page_shapes
+    assert session.extract_chart_geometries(workbook_path) == chart_geometries
+    assert [call[call.index("--kind") + 1] for call in bridge_calls] == [
+        "draw-page",
+        "charts",
+    ]
+
+    assert draw_page_shapes == {
+        "Sheet1": [
+            LibreOfficeDrawPageShape(
+                name="Flow",
+                shape_type="com.sun.star.drawing.ConnectorShape",
+                text="step",
+                left=10,
+                top=20,
+                width=31,
+                height=40,
+                rotation=45.0,
+                is_connector=True,
+                start_shape_name="Start",
+                end_shape_name="End",
+            ),
+            LibreOfficeDrawPageShape(
+                name="Shape 3",
+                shape_type=None,
+                text="",
+                left=2,
+                top=4,
+                width=4,
+                height=6,
+                rotation=90.0,
+                is_connector=True,
+                start_shape_name="Origin",
+                end_shape_name=None,
+            ),
+        ]
+    }
+    assert chart_geometries == {
+        "Sheet1": [
+            LibreOfficeChartGeometry(
+                name="Chart 1",
+                persist_name="Object 1",
+                left=100,
+                top=200,
+                width=301,
+                height=400,
+            ),
+            LibreOfficeChartGeometry(
+                name="Chart 2",
+                persist_name=None,
+                left=None,
+                top=None,
+                width=None,
+                height=None,
+            ),
+        ]
+    }
+
+
+def test_libreoffice_session_run_bridge_requires_entered_session(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Verify bridge extraction fails before a session has been entered."""
+
+    soffice_path = tmp_path / "soffice.exe"
+    python_path = tmp_path / "python.exe"
+    workbook_path = tmp_path / "book.xlsx"
+    for path in (soffice_path, python_path, workbook_path):
+        path.write_text("", encoding="utf-8")
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._resolve_python_path",
+        lambda _path: python_path,
+    )
+    session = LibreOfficeSession(
+        LibreOfficeSessionConfig(
+            soffice_path=soffice_path,
+            startup_timeout_sec=1.0,
+            exec_timeout_sec=1.0,
+            profile_root=None,
+        )
+    )
+
+    with pytest.raises(RuntimeError, match="must be entered before extraction"):
+        session._run_bridge(workbook_path, kind="charts")
+
+
+def test_libreoffice_session_run_bridge_surfaces_subprocess_failures(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Verify bridge extraction turns subprocess failures into actionable errors."""
+
+    cases: tuple[tuple[Exception, type[BaseException], str], ...] = (
+        (
+            FileNotFoundError("missing python"),
+            LibreOfficeUnavailableError,
+            "compatible Python runtime could not be executed",
+        ),
+        (
+            subprocess.TimeoutExpired(cmd="bridge", timeout=2.0),
+            LibreOfficeUnavailableError,
+            "UNO bridge extraction timed out",
+        ),
+        (
+            subprocess.CalledProcessError(
+                returncode=1,
+                cmd="bridge",
+                stderr="bridge crashed",
+            ),
+            RuntimeError,
+            "LibreOffice UNO bridge extraction failed: bridge crashed",
+        ),
+    )
+    for raised, expected_exception, expected_message in cases:
+        soffice_path = tmp_path / "soffice.exe"
+        python_path = tmp_path / "python.exe"
+        workbook_path = tmp_path / "book.xlsx"
+        for path in (soffice_path, python_path, workbook_path):
+            path.write_text("", encoding="utf-8")
+
+        def _fake_run_trusted_subprocess(
+            _args: list[str],
+            *,
+            timeout_sec: float,
+            env: dict[str, str] | None = None,
+            raised: Exception = raised,
+        ) -> subprocess.CompletedProcess[str]:
+            _ = timeout_sec
+            _ = env
+            raise raised
+
+        monkeypatch.setattr(
+            "exstruct.core.libreoffice._resolve_python_path",
+            lambda _path, python_path=python_path: python_path,
+        )
+        monkeypatch.setattr(
+            "exstruct.core.libreoffice._run_trusted_subprocess",
+            _fake_run_trusted_subprocess,
+        )
+
+        session = LibreOfficeSession(
+            LibreOfficeSessionConfig(
+                soffice_path=soffice_path,
+                startup_timeout_sec=1.0,
+                exec_timeout_sec=2.0,
+                profile_root=None,
+            )
+        )
+        session._accept_port = 42001
+
+        with pytest.raises(expected_exception, match=expected_message):
+            session._run_bridge(workbook_path, kind="charts")
+
+
+def test_libreoffice_session_run_bridge_rejects_invalid_json(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Verify bridge extraction rejects malformed JSON payloads."""
+
+    soffice_path = tmp_path / "soffice.exe"
+    python_path = tmp_path / "python.exe"
+    workbook_path = tmp_path / "book.xlsx"
+    for path in (soffice_path, python_path, workbook_path):
+        path.write_text("", encoding="utf-8")
+
+    def _fake_run_trusted_subprocess(
+        args: list[str], *, timeout_sec: float, env: dict[str, str] | None = None
+    ) -> subprocess.CompletedProcess[str]:
+        _ = timeout_sec
+        _ = env
+        return subprocess.CompletedProcess(
+            args=args,
+            returncode=0,
+            stdout="{not-json",
+            stderr="",
+        )
+
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._resolve_python_path",
+        lambda _path: python_path,
+    )
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._run_trusted_subprocess",
+        _fake_run_trusted_subprocess,
+    )
+
+    session = LibreOfficeSession(
+        LibreOfficeSessionConfig(
+            soffice_path=soffice_path,
+            startup_timeout_sec=1.0,
+            exec_timeout_sec=2.0,
+            profile_root=None,
+        )
+    )
+    session._accept_port = 42001
+
+    with pytest.raises(
+        RuntimeError,
+        match="LibreOffice UNO bridge extraction returned invalid JSON",
+    ):
+        session._run_bridge(workbook_path, kind="draw-page")
+
+
+def test_libreoffice_payload_parsers_reject_invalid_top_level_data() -> None:
+    """Verify payload parsers reject malformed top-level bridge payloads."""
+
+    cases: tuple[tuple[Callable[[object], object], object, str], ...] = (
+        (
+            _parse_chart_payload,
+            [],
+            "LibreOffice UNO chart extraction returned a non-object payload",
+        ),
+        (
+            _parse_chart_payload,
+            {"sheets": []},
+            "LibreOffice UNO chart extraction payload is missing sheets",
+        ),
+        (
+            _parse_draw_page_payload,
+            [],
+            "LibreOffice UNO draw-page extraction returned a non-object payload",
+        ),
+        (
+            _parse_draw_page_payload,
+            {"sheets": []},
+            "LibreOffice UNO draw-page extraction payload is missing sheets",
+        ),
+    )
+
+    for parser, payload, expected_message in cases:
+        with pytest.raises(RuntimeError, match=expected_message):
+            parser(payload)
