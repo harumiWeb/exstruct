@@ -128,9 +128,6 @@ jobs:
           if (-not (Test-Path $env:EXSTRUCT_LIBREOFFICE_PATH)) {
             throw "LibreOffice executable not found at $env:EXSTRUCT_LIBREOFFICE_PATH"
           }
-          if (-not $env:EXSTRUCT_LIBREOFFICE_PYTHON_PATH) {
-            throw "EXSTRUCT_LIBREOFFICE_PYTHON_PATH was not discovered"
-          }
           if (-not (Test-Path $env:EXSTRUCT_LIBREOFFICE_PYTHON_PATH)) {
             throw "LibreOffice Python executable not found at $env:EXSTRUCT_LIBREOFFICE_PYTHON_PATH"
           }
