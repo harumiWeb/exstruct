@@ -1029,3 +1029,29 @@ pairing ルールは次のとおり。
   - Inputs: none (uses env + runtime helpers)
   - Output: runtime availability decision with timeout fallback behavior above
   - Side effect: may create a short-lived `LibreOfficeSession` during timeout fallback path
+
+
+## 2026-03-10 PR79 follow-up: slow Windows version probe retry
+
+### Background
+
+- Previous fix added session fallback when `soffice --version` times out, but CI still fails on Windows with `FORCE_LIBREOFFICE_SMOKE=1`.
+- The failure window suggests first-run startup latency can exceed 5 seconds and may also cause immediate session startup to miss the 15-second budget under cold install conditions.
+
+### Spec
+
+- In `tests/conftest.py::_has_libreoffice_runtime()`:
+  - Keep the fast `soffice --version` probe (5s) for normal cases.
+  - If that first probe times out, retry `soffice --version` once with an extended timeout (30s).
+  - If the extended retry succeeds, return `True` and skip session fallback.
+  - If the extended retry still times out, keep the existing session fallback probe (`LibreOfficeSession.from_env()`).
+  - `FileNotFoundError`, `OSError`, `CalledProcessError` from either version probe still map to `False`.
+
+### Function contracts
+
+- `_has_libreoffice_runtime() -> bool`
+  - Performs at most two version probes before session fallback:
+    1. timeout=5.0
+    2. timeout=30.0 (only after first timeout)
+  - Returns `True` when retry probe or fallback session succeeds.
+  - Returns `False` on expected runtime-unavailable failures.

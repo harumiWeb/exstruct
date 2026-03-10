@@ -19,6 +19,8 @@ FORCE_COM_TESTS = os.getenv("FORCE_COM_TESTS") == "1"
 RUN_RENDER_SMOKE = os.getenv("RUN_RENDER_SMOKE") == "1"
 RUN_LIBREOFFICE_SMOKE = os.getenv("RUN_LIBREOFFICE_SMOKE") == "1"
 FORCE_LIBREOFFICE_SMOKE = os.getenv("FORCE_LIBREOFFICE_SMOKE") == "1"
+_LIBREOFFICE_VERSION_PROBE_TIMEOUT_SEC = 5.0
+_LIBREOFFICE_VERSION_PROBE_RETRY_TIMEOUT_SEC = 30.0
 
 
 def _markexpr_requests_com(markexpr: str) -> bool:
@@ -93,24 +95,42 @@ def _has_libreoffice_runtime() -> bool:
         return False
     if not isinstance(python_path, Path) or not python_path.exists():
         return False
+    first_probe = _run_soffice_version_probe(
+        soffice_path=soffice_path,
+        timeout_sec=_LIBREOFFICE_VERSION_PROBE_TIMEOUT_SEC,
+    )
+    if first_probe is True:
+        return True
+    if first_probe is False:
+        return False
+    retry_probe = _run_soffice_version_probe(
+        soffice_path=soffice_path,
+        timeout_sec=_LIBREOFFICE_VERSION_PROBE_RETRY_TIMEOUT_SEC,
+    )
+    if retry_probe is True:
+        return True
+    if retry_probe is False:
+        return False
+    return _has_libreoffice_runtime_via_session_probe(
+        libreoffice_module=libreoffice_module,
+        unavailable_error=unavailable_error,
+    )
+
+
+def _run_soffice_version_probe(*, soffice_path: Path, timeout_sec: float) -> bool | None:
+    """Run ``soffice --version`` and map expected outcomes for runtime gating."""
+
     try:
         subprocess.run(
             [str(soffice_path), "--version"],
             capture_output=True,
             check=True,
             text=True,
-            timeout=5.0,
+            timeout=timeout_sec,
         )
     except subprocess.TimeoutExpired:
-        return _has_libreoffice_runtime_via_session_probe(
-            libreoffice_module=libreoffice_module,
-            unavailable_error=unavailable_error,
-        )
-    except (
-        FileNotFoundError,
-        OSError,
-        subprocess.CalledProcessError,
-    ):
+        return None
+    except (FileNotFoundError, OSError, subprocess.CalledProcessError):
         return False
     return True
 
