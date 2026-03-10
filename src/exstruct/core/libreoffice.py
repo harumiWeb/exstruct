@@ -723,12 +723,14 @@ def _bundled_python_candidates(program_dir: Path) -> tuple[Path, ...]:
     """Return bundled LibreOffice Python candidates for a program directory."""
 
     candidates: list[Path] = []
+    seen_paths: set[Path] = set()
     for file_name in ("python.exe", "python.bin", "python"):
         path = program_dir / file_name
-        if path.exists() and path not in candidates:
+        if path.exists() and path not in seen_paths:
             candidates.append(path)
+            seen_paths.add(path)
     try:
-        child_dirs = sorted(
+        child_dirs = tuple(
             child
             for child in program_dir.iterdir()
             if child.is_dir() and child.name.startswith("python-core-")
@@ -743,8 +745,9 @@ def _bundled_python_candidates(program_dir: Path) -> tuple[Path, ...]:
             Path("bin/python"),
         ):
             bundled_path = child_dir / relative_path
-            if bundled_path.exists() and bundled_path not in candidates:
+            if bundled_path.exists() and bundled_path not in seen_paths:
                 candidates.append(bundled_path)
+                seen_paths.add(bundled_path)
     return tuple(candidates)
 
 
