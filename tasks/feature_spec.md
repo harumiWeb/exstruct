@@ -846,3 +846,28 @@ pairing ルールは次のとおり。
   - `uv run pytest tests/core/test_libreoffice_backend.py tests/core/test_libreoffice_bridge.py tests/core/test_libreoffice_smoke.py tests/core/test_pipeline.py tests/core/test_mode_output.py tests/cli/test_cli.py -q`
   - `uv run task precommit-run`
 - push 後に `python scripts/codacy_issues.py --pr 76 --min-level Warning` を再実行し、PR #76 の issue 数が減っていることを確認する。
+
+## 2026-03-09 LibreOffice stderr cleanup masking on Windows
+
+### Issue
+
+- `mode="libreoffice"` の startup failure 後に `src/exstruct/core/libreoffice.py::_close_stderr_sink()` が一時 stderr log を `unlink()` すると、Windows で `PermissionError(13, "プロセスはファイルにアクセスできません。別のプロセスが使用中です。")` が出ることがある。
+- この cleanup error が、本来 surfacing されるべき `LibreOfficeUnavailableError` を覆い隠し、pipeline 側では `libreoffice_pipeline_failed` として見えてしまう。
+
+### Goal
+
+- stderr sink cleanup を best-effort 化し、temporary log file の削除失敗が startup failure の真因を置き換えないようにする。
+- cleanup の改善によって、本来の startup failure detail は引き続き error message に残す。
+
+### Cleanup contract
+
+- `_close_stderr_sink(stderr_sink, stderr_path)` は、sink close 後に stderr log file を best-effort で削除する。
+- `unlink()` が `FileNotFoundError` の場合は従来どおり成功扱いとする。
+- `unlink()` が `PermissionError` の場合は、Windows の handle release 遅延を吸収するため、短い bounded retry を行う。
+- retry budget を超えても file が lock されたままなら、cleanup failure は黙って捨てる。temporary stderr log の残置は許容し、startup failure をマスクしてはならない。
+- `_cleanup_failed_startup_process(...)` と `_start_soffice_startup_attempt(...)` は、stderr cleanup で `PermissionError` が起きても、元の `LibreOfficeUnavailableError` を `_LibreOfficeStartupAttemptError` として返す。
+
+### Verification
+
+- `tests/core/test_libreoffice_backend.py` に、`_close_stderr_sink()` が一時的な `PermissionError` を retry 後に解消できる regression test を追加する。
+- 同 test file に、stderr log unlink が lock され続けても `_start_soffice_startup_attempt(...)` が `PermissionError` ではなく startup failure を返す regression test を追加する。

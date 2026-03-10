@@ -23,6 +23,9 @@ from exstruct.core.libreoffice import (
     LibreOfficeSession,
     LibreOfficeSessionConfig,
     LibreOfficeUnavailableError,
+    _close_stderr_sink,
+    _LibreOfficeStartupAttempt,
+    _LibreOfficeStartupAttemptError,
     _parse_chart_payload,
     _parse_draw_page_payload,
     _probe_uno_bridge_handshake,
@@ -30,6 +33,7 @@ from exstruct.core.libreoffice import (
     _resolve_python_path,
     _run_bridge_extract_subprocess,
     _run_bridge_probe_subprocess,
+    _start_soffice_startup_attempt,
 )
 from exstruct.core.ooxml_drawing import (
     DrawingConnectorRef,
@@ -1257,6 +1261,111 @@ def test_libreoffice_session_enters_with_isolated_profile(
 
     assert process.terminate_called is True
     assert cleaned_paths == [created_dir]
+
+
+def test_close_stderr_sink_retries_permission_error_then_unlinks(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Verify that stderr sink cleanup retries transient Windows-style file locks."""
+
+    log_path = tmp_path / "stderr.log"
+    log_path.write_text("startup detail", encoding="utf-8")
+    stderr_sink = log_path.open("w+", encoding="utf-8")
+    unlink_calls = 0
+    original_unlink = Path.unlink
+
+    def _fake_unlink(self: Path, missing_ok: bool = False) -> None:
+        """Raise transient lock errors before delegating to the real unlink."""
+
+        nonlocal unlink_calls
+        if self == log_path and unlink_calls < 2:
+            unlink_calls += 1
+            raise PermissionError(13, "locked")
+        unlink_calls += 1
+        original_unlink(self, missing_ok=missing_ok)
+
+    monkeypatch.setattr(Path, "unlink", _fake_unlink)
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._STDERR_SINK_UNLINK_TIMEOUT_SEC",
+        1.0,
+    )
+    monkeypatch.setattr("exstruct.core.libreoffice.time.sleep", lambda _sec: None)
+
+    _close_stderr_sink(stderr_sink, log_path)
+
+    assert unlink_calls == 3
+    assert log_path.exists() is False
+
+
+def test_startup_attempt_preserves_original_failure_when_stderr_unlink_stays_locked(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Verify that stderr cleanup locks do not mask the original startup failure."""
+
+    soffice_path = tmp_path / "soffice.exe"
+    python_path = tmp_path / "python.exe"
+    stderr_path = tmp_path / "stderr.log"
+    process = _FakeLibreOfficeProcess()
+    stderr_path.write_text("fatal startup detail", encoding="utf-8")
+    stderr_sink = stderr_path.open("r+", encoding="utf-8")
+    original_unlink = Path.unlink
+
+    soffice_path.write_text("", encoding="utf-8")
+    python_path.write_text("", encoding="utf-8")
+
+    def _fake_unlink(self: Path, missing_ok: bool = False) -> None:
+        """Keep the stderr log locked for the target path only."""
+
+        if self == stderr_path:
+            raise PermissionError(13, "locked")
+        original_unlink(self, missing_ok=missing_ok)
+
+    def _fake_wait_for_socket(**_kwargs: object) -> None:
+        """Raise the startup failure that should remain user-visible."""
+
+        raise LibreOfficeUnavailableError(
+            "LibreOffice runtime is unavailable: soffice exited during startup."
+        )
+
+    monkeypatch.setattr(Path, "unlink", _fake_unlink)
+    monkeypatch.setattr("exstruct.core.libreoffice._reserve_tcp_port", lambda: 43001)
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._create_stderr_sink",
+        lambda: (stderr_sink, stderr_path),
+    )
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._spawn_trusted_subprocess",
+        lambda *_args, **_kwargs: cast(subprocess.Popen[str], process),
+    )
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._wait_for_socket",
+        _fake_wait_for_socket,
+    )
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._should_retry_startup_failure",
+        lambda _message: False,
+    )
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._STDERR_SINK_UNLINK_TIMEOUT_SEC",
+        0.0,
+    )
+    monkeypatch.setattr("exstruct.core.libreoffice.time.sleep", lambda _sec: None)
+
+    with pytest.raises(_LibreOfficeStartupAttemptError) as exc_info:
+        _start_soffice_startup_attempt(
+            soffice_path=soffice_path,
+            python_path=python_path,
+            profile_root=None,
+            startup_timeout_sec=1.0,
+            attempt=_LibreOfficeStartupAttempt(
+                name="isolated-profile",
+                use_temp_profile=False,
+            ),
+        )
+
+    assert "soffice exited during startup." in str(exc_info.value)
+    assert "fatal startup detail" in str(exc_info.value)
+    assert "PermissionError" not in str(exc_info.value)
 
 
 def test_probe_uno_bridge_handshake_uses_bridge_script(

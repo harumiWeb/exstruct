@@ -1,5 +1,46 @@
 # Todo
 
+## 2026-03-09 LibreOffice stderr cleanup masking fix
+
+### Planning
+
+- [x] cleanup maskingの契約を `tasks/feature_spec.md` に追記する
+- [x] stderr log unlink を best-effort retry に変更する
+- [x] cleanup lock が startup failure を隠さない回帰テストを追加する
+- [x] 影響範囲の手動検証を行う
+
+### Review
+
+- `src/exstruct/core/libreoffice.py` に stderr log unlink 用の短い retry budget を追加し、`PermissionError` は cleanup failure として握りつぶすようにした
+- `_close_stderr_sink()` は `stderr_path.unlink()` を直接呼ばず、best-effort helper 経由で削除するようにした
+- `tests/core/test_libreoffice_backend.py` に以下の regression tests を追加した
+  - 一時的な `PermissionError` 後に unlink 成功へ回復する test
+  - unlink が常に lock されても `_start_soffice_startup_attempt()` が `PermissionError` ではなく元の startup failure を返す test
+- 検証
+  - `python -m py_compile src/exstruct/core/libreoffice.py tests/core/test_libreoffice_backend.py`
+  - 対象テスト関数の直接実行
+    - 新規 2 tests: pass
+    - 既存回帰相当 2 tests (`test_libreoffice_session_enters_with_isolated_profile`, `test_probe_uno_bridge_handshake_uses_bridge_script`): pass
+  - 備考: `pytest` 本体はこの環境で tmpdir / basetemp cleanup が `PermissionError` になり、通常実行では harness 側が不安定だった
+
+## 2026-03-09 LibreOffice WinError32 investigation
+
+### Planning
+
+- [x] `libreoffice` モード失敗をローカルで再現する
+- [x] `src/exstruct/core/libreoffice.py` の startup / cleanup 経路を確認する
+- [x] `PermissionError(13)` の直接発生箇所と一次原因を切り分ける
+- [x] 阻害要因を `tasks/todo.md` に記録する
+
+### Review
+
+- 再現は `sample/basic/sample.xlsx` を絶対パスで `mode="libreoffice"` 実行したときに確認した
+- 直接の `PermissionError(13)` は `src/exstruct/core/libreoffice.py` の `_close_stderr_sink()` にある `stderr_path.unlink()` で発生していた
+- ただし一次原因は cleanup 失敗ではなく、その直前の LibreOffice startup failure だった
+- `soffice` の stderr には、isolated profile 起動時に `UserInstallation` 用ディレクトリへアクセスできず起動できない旨の Fatal Error が出ていた
+- `_close_stderr_sink()` の `PermissionError` が上位に伝播し、本来の `LibreOfficeUnavailableError` を覆い隠して `libreoffice_pipeline_failed` に化けていた
+- shared profile fallback もこの環境では `soffice exited during startup` で失敗した
+
 ## 2026-03-08 LibreOffice subprocess Codacy false-positive follow-up
 
 ### Planning

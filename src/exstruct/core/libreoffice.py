@@ -22,6 +22,8 @@ _DEFAULT_PYTHON_PROBE_TIMEOUT_SEC = 5.0
 _STARTUP_BRIDGE_HANDSHAKE_TIMEOUT_SEC = 5.0
 _STARTUP_PORT_RETRY_LIMIT = 3
 _STARTUP_PORT_RETRY_BACKOFF_SEC = 0.1
+_STDERR_SINK_UNLINK_TIMEOUT_SEC = 1.0
+_STDERR_SINK_UNLINK_RETRY_INTERVAL_SEC = 0.1
 _SUBPROCESS_ENV_ALLOWLIST = (
     "HOME",
     "LANG",
@@ -576,10 +578,23 @@ def _close_stderr_sink(stderr_sink: TextIO | None, stderr_path: Path | None) -> 
     if stderr_sink is not None:
         stderr_sink.close()
     if stderr_path is not None:
+        _unlink_stderr_sink_path(stderr_path)
+
+
+def _unlink_stderr_sink_path(path: Path) -> None:
+    """Best-effort unlink for temporary stderr logs without masking prior failures."""
+
+    deadline = time.monotonic() + _STDERR_SINK_UNLINK_TIMEOUT_SEC
+    while True:
         try:
-            stderr_path.unlink()
+            path.unlink()
+            return
         except FileNotFoundError:
-            pass
+            return
+        except PermissionError:
+            if time.monotonic() >= deadline:
+                return
+            time.sleep(_STDERR_SINK_UNLINK_RETRY_INTERVAL_SEC)
 
 
 def _read_soffice_startup_stderr(
