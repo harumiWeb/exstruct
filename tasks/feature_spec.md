@@ -1,5 +1,38 @@
 # Feature Spec
 
+## 2026-03-10 PR #76 review + Codacy follow-up
+
+### Issue
+
+- PR #76 に 2026-03-10 時点で未 resolve review thread が 2 件残っている。
+  - `src/exstruct/core/backends/libreoffice_backend.py:_match_by_name_then_order()`
+    - name match 後の order fallback が `len(remaining_snapshot_indexes) == len(unused)` 条件で止まり、件数不一致時の部分一致を落としている。
+  - `src/exstruct/core/backends/libreoffice_backend.py:_direction_from_box()`
+    - OOXML 向き情報が無い場合に UNO bbox (`width/height`) から heading を推定しており、左向き/上向き系 connector で誤方向を返しうる。
+- Codacy check も `src/exstruct/core/libreoffice.py:13` の `import subprocess` に対する `Bandit_B404` notice を 1 件返し、PR status を `action_required` にしている。
+
+### Accepted follow-ups
+
+- `_match_by_name_then_order()` の order fallback は件数一致を要求しない。
+  - name match で消費した残差については `zip(..., strict=False)` の範囲で部分順序対応を許す。
+  - これにより、OOXML-only / UNO-only の余剰要素が片側にあっても、相対順序で合わせられる候補は metadata を取り戻せる。
+- connector `direction` は UNO bbox から推定しない。
+  - 優先順位は `OOXML direction_dx/direction_dy`。
+  - それが無い/ゼロ長の場合は、解決済み `begin_id/end_id` の shape geometry から direction を導く。
+  - 解決済み endpoint geometry も無い場合は `None` を返し、誤った heading をでっち上げない。
+- `src/exstruct/core/libreoffice.py` の `import subprocess` には `Bandit_B404` 向けの narrow suppression comment を付与する。
+  - 対象は import 行のみ。
+  - subprocess 利用自体は既存の validated local runtime/process management に限定される契約を維持する。
+
+### Verification
+
+- `tests/core/test_libreoffice_backend.py` に次の regression tests を追加/更新する。
+  - `_match_by_name_then_order()` が件数不一致でも partial order fallback を適用する test
+  - zero-length OOXML delta が resolved endpoint geometry に fallback する test
+  - OOXML metadata も resolved endpoint geometry も無いとき direction が `None` になる test
+- `uv run pytest tests/core/test_libreoffice_backend.py -q`
+- `uv run task precommit-run`
+
 ## 2026-03-08 LibreOffice subprocess Codacy false-positive follow-up
 
 ### Issue

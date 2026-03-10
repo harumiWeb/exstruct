@@ -242,6 +242,9 @@ def _build_shapes_from_ooxml(
                 direction=_resolve_direction(
                     connector_info=connector_info,
                     uno_connector=None,
+                    begin_id=begin_id,
+                    end_id=end_id,
+                    shape_boxes=shape_boxes,
                 ),
                 provenance="libreoffice_uno",
                 approximation_level=approximation_level,
@@ -350,6 +353,9 @@ def _build_shapes_from_draw_page(
                     direction=_resolve_direction(
                         connector_info=connector_info,
                         uno_connector=snapshot,
+                        begin_id=begin_id,
+                        end_id=end_id,
+                        shape_boxes=shape_boxes,
                     ),
                     provenance="libreoffice_uno",
                     approximation_level=approximation_level,
@@ -489,17 +495,32 @@ def _resolve_direction(
     *,
     connector_info: OoxmlConnectorInfo | None,
     uno_connector: LibreOfficeDrawPageShape | None,
+    begin_id: int | None = None,
+    end_id: int | None = None,
+    shape_boxes: dict[int, _ShapeBox] | None = None,
 ) -> str | None:
-    """Infer connector direction from OOXML deltas or UNO geometry."""
+    """Infer connector direction from OOXML deltas or resolved endpoint geometry."""
 
     if connector_info is None:
-        return _direction_from_box(uno_connector)
+        return _direction_from_shape_boxes(
+            begin_id=begin_id,
+            end_id=end_id,
+            shape_boxes=shape_boxes,
+        )
     dx = connector_info.direction_dx
     dy = connector_info.direction_dy
     if dx is None or dy is None:
-        return _direction_from_box(uno_connector)
+        return _direction_from_shape_boxes(
+            begin_id=begin_id,
+            end_id=end_id,
+            shape_boxes=shape_boxes,
+        )
     if dx == 0 and dy == 0:
-        return _direction_from_box(uno_connector)
+        return _direction_from_shape_boxes(
+            begin_id=begin_id,
+            end_id=end_id,
+            shape_boxes=shape_boxes,
+        )
     rotated_dx, rotated_dy = _rotate_connector_delta(
         float(dx),
         float(dy),
@@ -671,7 +692,7 @@ def _match_by_name_then_order(
     remaining_snapshot_indexes = [
         index for index, match in enumerate(matches) if match is None
     ]
-    if remaining_snapshot_indexes and len(remaining_snapshot_indexes) == len(unused):
+    if remaining_snapshot_indexes:
         for snapshot_index, candidate_index in zip(
             remaining_snapshot_indexes, unused, strict=False
         ):
@@ -688,19 +709,34 @@ def _shape_type_from_uno(shape_type: str | None) -> str | None:
     return shape_type.rsplit(".", 1)[-1]
 
 
-def _direction_from_box(
-    connector: LibreOfficeDrawPageShape | None,
+def _direction_from_shape_boxes(
+    *,
+    begin_id: int | None,
+    end_id: int | None,
+    shape_boxes: dict[int, _ShapeBox] | None,
 ) -> str | None:
-    """Infer a connector direction from its bounding-box delta."""
+    """Infer a connector direction from resolved endpoint shape centers."""
 
-    if connector is None:
+    if begin_id is None or end_id is None or shape_boxes is None:
         return None
-    if connector.width is None or connector.height is None:
+    begin_box = shape_boxes.get(begin_id)
+    end_box = shape_boxes.get(end_id)
+    if begin_box is None or end_box is None:
         return None
-    if connector.width == 0 and connector.height == 0:
+    begin_center = _shape_box_center(begin_box)
+    end_center = _shape_box_center(end_box)
+    dx = end_center[0] - begin_center[0]
+    dy = end_center[1] - begin_center[1]
+    if dx == 0 and dy == 0:
         return None
-    angle = compute_line_angle_deg(float(connector.width), float(connector.height))
+    angle = compute_line_angle_deg(dx, dy)
     return angle_to_compass(angle)
+
+
+def _shape_box_center(box: _ShapeBox) -> tuple[float, float]:
+    """Return the center point of a matched emitted shape box."""
+
+    return ((box.left + box.right) / 2.0, (box.top + box.bottom) / 2.0)
 
 
 def _resolve_direct_connector_ids(

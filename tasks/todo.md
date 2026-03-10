@@ -1,5 +1,33 @@
 # Todo
 
+## 2026-03-10 PR #76 review + Codacy follow-up
+
+### Planning
+
+- [x] review thread 2 件と Codacy `Bandit_B404` notice の妥当性を現行コードで再確認する
+- [x] `libreoffice_backend.py` の partial order fallback と direction fallback を修正する
+- [x] `tests/core/test_libreoffice_backend.py` に回帰テストを追加/更新する
+- [x] `src/exstruct/core/libreoffice.py` の `subprocess` import notice を narrow suppression で解消する
+- [x] 対象 pytest と `uv run task precommit-run` で検証する
+
+### Review
+
+- GitHub の未 resolve review thread 2 件はどちらも採用した。
+  - `_match_by_name_then_order()` は name match 後の残差に対して、件数不一致でも `zip(..., strict=False)` で partial order fallback を適用するようにした。
+  - connector `direction` は UNO bbox の `width/height` からは推定せず、OOXML delta が無いときは resolved endpoint shape centers から導く形へ変更した。endpoint geometry まで無い場合は `None` を返す。
+- `src/exstruct/core/libreoffice.py` の `import subprocess` に `# nosec B404` コメントを追加し、Codacy/Bandit の import-level notice を narrow suppression した。
+- `tests/core/test_libreoffice_backend.py` では次を回帰固定した。
+  - partial order fallback が件数不一致でも動くこと
+  - zero-length OOXML delta が resolved endpoint geometry に fallback すること
+  - direction metadata が取れないときに bbox から誤推定せず `None` を返すこと
+  - resolved endpoint geometry だけでも direction が計算できること
+- 検証:
+  - `python scripts/codacy_issues.py --pr 76 --min-level Info`（修正前の remote PR 状態）では `Bandit_B404` 1 件を確認
+  - `wsl.exe bash -lc 'cd /mnt/c/dev/Python/exstruct && uv run pytest tests/core/test_libreoffice_backend.py -q -k "match_by_name_then_order or ooxml_zero_delta_direction_falls_back_to_resolved_shape_geometry or resolve_direction_returns_none_without_ooxml_delta_or_resolved_shapes or resolve_direction_uses_resolved_shape_geometry_without_ooxml_metadata or combines_ooxml_and_uno_connector_endpoints or rotates_ooxml_connector_delta_for_heuristic_matching or resolve_direction_uses_unrotated_ooxml_delta or resolve_direction_rotates_ooxml_delta_before_mapping" --basetemp .pytest-tmp-codex-review'` -> `8 passed, 39 deselected`
+  - `wsl.exe bash -lc 'cd /mnt/c/dev/Python/exstruct && uv run task precommit-run'` -> `ruff / ruff-format / mypy passed`
+- 補足:
+  - Codacy の remote PR status は未 push のためまだ再評価されていない。今回の import-level suppression が反映されるのは次回 push 後。
+
 ## 2026-03-09 LibreOffice stderr cleanup masking fix
 
 ### Planning

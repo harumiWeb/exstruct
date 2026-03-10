@@ -15,7 +15,9 @@ import pytest
 
 from exstruct.core.backends.libreoffice_backend import (
     LibreOfficeRichBackend,
+    _match_by_name_then_order,
     _resolve_direction,
+    _ShapeBox,
 )
 from exstruct.core.libreoffice import (
     LibreOfficeChartGeometry,
@@ -791,7 +793,7 @@ def test_libreoffice_backend_combines_ooxml_and_uno_connector_endpoints(
     assert connector.end_id == 2
     assert connector.approximation_level == "partial"
     assert connector.confidence == 0.9
-    assert connector.direction == "N"
+    assert connector.direction == "NE"
 
 
 def test_libreoffice_backend_rotates_ooxml_connector_delta_for_heuristic_matching(
@@ -968,8 +970,8 @@ def test_resolve_direction_rotates_ooxml_delta_before_mapping() -> None:
     assert _resolve_direction(connector_info=connector, uno_connector=None) == "N"
 
 
-def test_ooxml_zero_delta_direction_falls_back_to_uno_geometry() -> None:
-    """Verify that a zero-length OOXML delta does not force an eastward direction."""
+def test_ooxml_zero_delta_direction_falls_back_to_resolved_shape_geometry() -> None:
+    """Verify that a zero-length OOXML delta uses resolved endpoint geometry."""
 
     connector = OoxmlConnectorInfo(
         ref=DrawingShapeRef(
@@ -997,8 +999,88 @@ def test_ooxml_zero_delta_direction_falls_back_to_uno_geometry() -> None:
     )
 
     assert (
-        _resolve_direction(connector_info=connector, uno_connector=uno_connector) == "N"
+        _resolve_direction(
+            connector_info=connector,
+            uno_connector=uno_connector,
+            begin_id=1,
+            end_id=2,
+            shape_boxes={
+                1: _ShapeBox(
+                    shape_id=1,
+                    left=0.0,
+                    top=0.0,
+                    right=20.0,
+                    bottom=20.0,
+                ),
+                2: _ShapeBox(
+                    shape_id=2,
+                    left=0.0,
+                    top=100.0,
+                    right=20.0,
+                    bottom=120.0,
+                ),
+            },
+        )
+        == "N"
     )
+
+
+def test_resolve_direction_returns_none_without_ooxml_delta_or_resolved_shapes() -> (
+    None
+):
+    """Verify that UNO bounding boxes alone do not force a connector heading."""
+
+    uno_connector = LibreOfficeDrawPageShape(
+        name="Connector",
+        is_connector=True,
+        width=25,
+        height=25,
+    )
+
+    assert _resolve_direction(connector_info=None, uno_connector=uno_connector) is None
+
+
+def test_resolve_direction_uses_resolved_shape_geometry_without_ooxml_metadata() -> (
+    None
+):
+    """Verify that resolved endpoints drive direction when OOXML deltas are absent."""
+
+    assert (
+        _resolve_direction(
+            connector_info=None,
+            uno_connector=None,
+            begin_id=1,
+            end_id=2,
+            shape_boxes={
+                1: _ShapeBox(
+                    shape_id=1,
+                    left=100.0,
+                    top=0.0,
+                    right=120.0,
+                    bottom=20.0,
+                ),
+                2: _ShapeBox(
+                    shape_id=2,
+                    left=0.0,
+                    top=0.0,
+                    right=20.0,
+                    bottom=20.0,
+                ),
+            },
+        )
+        == "W"
+    )
+
+
+def test_match_by_name_then_order_applies_partial_order_fallback_when_counts_differ() -> (
+    None
+):
+    """Verify that relative-order fallback still matches when one side has extras."""
+
+    assert _match_by_name_then_order(
+        ["Start", "Middle", "End"],
+        ["Start", "OOXML middle", "End", "OOXML-only"],
+    ) == [0, 1, 2]
 
 
 def test_read_sheet_drawings_uses_anchor_fallback_for_chart_geometry() -> None:

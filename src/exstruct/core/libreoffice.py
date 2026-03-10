@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 import shutil
 import socket
-import subprocess
+import subprocess  # nosec B404 - required for validated local runtime/process management
 import sys
 from tempfile import NamedTemporaryFile, mkdtemp
 import time
