@@ -301,10 +301,10 @@ class LibreOfficeSession:
 def _which_soffice() -> Path | None:
     """Return the first discoverable ``soffice`` executable on ``PATH``."""
 
-    for candidate in ("soffice", "soffice.exe"):
+    for candidate in ("soffice", "soffice.com", "soffice.exe"):
         resolved = shutil.which(candidate)
         if resolved:
-            return Path(resolved)
+            return _validated_runtime_path(Path(resolved))
     return None
 
 
@@ -697,9 +697,8 @@ def _resolve_python_path(soffice_path: Path) -> Path | None:
             )
         return override_path
     for program_dir in _soffice_program_dirs(soffice_path):
-        for candidate in ("python.exe", "python.bin", "python"):
-            path = program_dir / candidate
-            if path.exists() and _python_supports_libreoffice_bridge(path):
+        for path in _bundled_python_candidates(program_dir):
+            if _python_supports_libreoffice_bridge(path):
                 return path
     for python_candidate in _system_python_candidates():
         if _python_supports_libreoffice_bridge(python_candidate):
@@ -718,6 +717,38 @@ def _soffice_program_dirs(soffice_path: Path) -> tuple[Path, ...]:
     if resolved_parent not in program_dirs:
         program_dirs.append(resolved_parent)
     return tuple(program_dirs)
+
+
+def _bundled_python_candidates(program_dir: Path) -> tuple[Path, ...]:
+    """Return bundled LibreOffice Python candidates for a program directory."""
+
+    candidates: list[Path] = []
+    seen_paths: set[Path] = set()
+    for file_name in ("python.exe", "python.bin", "python"):
+        path = program_dir / file_name
+        if path.exists() and path not in seen_paths:
+            candidates.append(path)
+            seen_paths.add(path)
+    try:
+        child_dirs = tuple(
+            child
+            for child in program_dir.iterdir()
+            if child.is_dir() and child.name.startswith("python-core-")
+        )
+    except OSError:
+        return tuple(candidates)
+    for child_dir in child_dirs:
+        for relative_path in (
+            Path("python.exe"),
+            Path("python"),
+            Path("bin/python.exe"),
+            Path("bin/python"),
+        ):
+            bundled_path = child_dir / relative_path
+            if bundled_path.exists() and bundled_path not in seen_paths:
+                candidates.append(bundled_path)
+                seen_paths.add(bundled_path)
+    return tuple(candidates)
 
 
 def _system_python_candidates() -> tuple[Path, ...]:
@@ -778,10 +809,22 @@ def _reserve_tcp_port() -> int:
 def _validated_runtime_path(path: Path) -> Path:
     """Return a normalized runtime path before it is used in subprocess argv."""
 
+    normalized_path = _prefer_windows_console_soffice(path)
     try:
-        return path.resolve(strict=False)
+        return normalized_path.resolve(strict=False)
     except OSError:
+        return normalized_path
+
+
+def _prefer_windows_console_soffice(path: Path) -> Path:
+    """Prefer ``soffice.com`` when a Windows caller points at ``soffice.exe``."""
+
+    if sys.platform != "win32" or path.name.lower() != "soffice.exe":
         return path
+    console_launcher = path.with_name("soffice.com")
+    if console_launcher.exists():
+        return console_launcher
+    return path
 
 
 def _subprocess_executable_arg(path: Path) -> str:
@@ -796,7 +839,17 @@ def _subprocess_path_arg(path: Path) -> str:
     return str(path.resolve(strict=False))
 
 
-def _build_subprocess_env(*, pythonioencoding: str | None = None) -> dict[str, str]:
+def _bridge_subprocess_cwd(python_path: Path) -> Path:
+    """Return the working directory used for LibreOffice bridge subprocesses."""
+
+    return _validated_runtime_path(python_path).parent
+
+
+def _build_subprocess_env(
+    *,
+    pythonioencoding: str | None = None,
+    runtime_dirs: Sequence[Path] = (),
+) -> dict[str, str]:
     """Return a minimal inherited environment for bridge-related subprocesses."""
 
     env: dict[str, str] = {}
@@ -804,6 +857,12 @@ def _build_subprocess_env(*, pythonioencoding: str | None = None) -> dict[str, s
         value = os.environ.get(key)
         if value:
             env[key] = value
+    runtime_paths = [_subprocess_path_arg(path) for path in runtime_dirs]
+    if runtime_paths:
+        inherited_path = env.get("PATH")
+        env["PATH"] = os.pathsep.join(
+            [*runtime_paths, *([inherited_path] if inherited_path else [])]
+        )
     if pythonioencoding is not None:
         env["PYTHONIOENCODING"] = pythonioencoding
     return env
@@ -837,15 +896,16 @@ def _run_bridge_probe_subprocess(
     """Run the bundled LibreOffice bridge in `--probe` mode."""
 
     bridge_path = Path(__file__).with_name("_libreoffice_bridge.py")
+    runtime_dir = _bridge_subprocess_cwd(python_path)
+    env = _build_subprocess_env(pythonioencoding="utf-8", runtime_dirs=(runtime_dir,))
     # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
     # Safe by construction: validated Python executable + bundled local script +
-    # fixed probe flag under shell=False. Probe mode uses a fixed UTF-8 runtime
-    # option and does not forward an inherited environment.
+    # fixed probe flag under shell=False. Probe mode forwards only the shared
+    # allowlisted environment, while prepending the runtime dir needed for
+    # Windows-hosted UNO imports and DLL resolution.
     return subprocess.run(  # nosec B603  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
         [
             _subprocess_executable_arg(python_path),
-            "-X",
-            "utf8",
             _subprocess_path_arg(bridge_path),
             "--probe",
         ],
@@ -854,6 +914,8 @@ def _run_bridge_probe_subprocess(
         text=True,
         encoding="utf-8",
         timeout=timeout_sec,
+        env=env,
+        cwd=_bridge_subprocess_cwd(python_path),
     )
 
 
@@ -869,7 +931,8 @@ def _run_bridge_extract_subprocess(
     """Run the bundled LibreOffice bridge for workbook extraction."""
 
     bridge_path = Path(__file__).with_name("_libreoffice_bridge.py")
-    env = _build_subprocess_env(pythonioencoding="utf-8")
+    runtime_dir = _bridge_subprocess_cwd(python_path)
+    env = _build_subprocess_env(pythonioencoding="utf-8", runtime_dirs=(runtime_dir,))
     input_text = _subprocess_path_arg(file_path)
     # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
     # Safe by construction: executable/script paths are local validated files, the
@@ -894,6 +957,7 @@ def _run_bridge_extract_subprocess(
         encoding="utf-8",
         timeout=timeout_sec,
         env=env,
+        cwd=runtime_dir,
     )
 
 
@@ -907,7 +971,8 @@ def _run_bridge_handshake_subprocess(
     """Run the bundled LibreOffice bridge in handshake mode."""
 
     bridge_path = Path(__file__).with_name("_libreoffice_bridge.py")
-    env = _build_subprocess_env(pythonioencoding="utf-8")
+    runtime_dir = _bridge_subprocess_cwd(python_path)
+    env = _build_subprocess_env(pythonioencoding="utf-8", runtime_dirs=(runtime_dir,))
     # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
     # Safe by construction: validated Python executable + bundled local script +
     # fixed handshake flags under shell=False. Host/port remain argv elements, not
@@ -930,6 +995,7 @@ def _run_bridge_handshake_subprocess(
         encoding="utf-8",
         timeout=timeout_sec,
         env=env,
+        cwd=runtime_dir,
     )
 
 

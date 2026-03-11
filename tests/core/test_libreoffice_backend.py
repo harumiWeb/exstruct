@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 import json
+import os
 from pathlib import Path
 import subprocess
 from typing import cast
@@ -36,6 +37,7 @@ from exstruct.core.libreoffice import (
     _run_bridge_extract_subprocess,
     _run_bridge_probe_subprocess,
     _start_soffice_startup_attempt,
+    _validated_runtime_path,
 )
 from exstruct.core.ooxml_drawing import (
     DrawingConnectorRef,
@@ -1459,6 +1461,7 @@ def test_probe_uno_bridge_handshake_uses_bridge_script(
     python_path.write_text("", encoding="utf-8")
     process = _FakeLibreOfficeProcess()
     calls: dict[str, object] = {}
+    monkeypatch.setenv("PATH", "/tmp/runtime-path")
 
     def _fake_run(
         args: list[str], **kwargs: object
@@ -1466,6 +1469,7 @@ def test_probe_uno_bridge_handshake_uses_bridge_script(
         calls["args"] = list(args)
         calls["env"] = kwargs["env"]
         calls["timeout"] = kwargs["timeout"]
+        calls["cwd"] = kwargs["cwd"]
         return subprocess.CompletedProcess(
             args=args, returncode=0, stdout="", stderr=""
         )
@@ -1489,7 +1493,9 @@ def test_probe_uno_bridge_handshake_uses_bridge_script(
     assert args[args.index("--connect-timeout") + 1] == "1.5"
     env = cast(dict[str, str], calls["env"])
     assert env["PYTHONIOENCODING"] == "utf-8"
+    assert env["PATH"] == f"{python_path.resolve().parent}{os.pathsep}/tmp/runtime-path"
     assert calls["timeout"] == 1.5
+    assert calls["cwd"] == python_path.resolve().parent
 
 
 def test_probe_uno_bridge_handshake_reports_bridge_failures(
@@ -1954,6 +1960,51 @@ def test_libreoffice_session_reports_both_startup_attempt_failures(
     assert session._temp_profile_dir is None
 
 
+def test_validated_runtime_path_prefers_windows_console_soffice(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Verify that Windows `soffice.exe` paths normalize to `soffice.com` when present."""
+
+    monkeypatch.setattr("exstruct.core.libreoffice.sys.platform", "win32")
+
+    base_path = Path("C:/LibreOffice/program/soffice.exe")
+
+    def _fake_exists(self: Path) -> bool:
+        return self.name.lower() == "soffice.com"
+
+    monkeypatch.setattr(Path, "exists", _fake_exists)
+
+    assert _validated_runtime_path(base_path).name.lower() == "soffice.com"
+
+
+def test_validated_runtime_path_keeps_windows_soffice_exe_without_console_variant(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Verify that Windows runtime normalization keeps `.exe` when `.com` is absent."""
+
+    monkeypatch.setattr("exstruct.core.libreoffice.sys.platform", "win32")
+
+    base_path = Path("C:/LibreOffice/program/soffice.exe")
+
+    monkeypatch.setattr(Path, "exists", lambda _self: False)
+
+    assert _validated_runtime_path(base_path).name.lower() == "soffice.exe"
+
+
+def test_validated_runtime_path_keeps_non_windows_runtime(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Verify that non-Windows runtime normalization does not rewrite executable names."""
+
+    monkeypatch.setattr("exstruct.core.libreoffice.sys.platform", "linux")
+
+    base_path = Path("/opt/libreoffice/program/soffice.exe")
+
+    monkeypatch.setattr(Path, "exists", lambda _self: True)
+
+    assert _validated_runtime_path(base_path).name.lower() == "soffice.exe"
+
+
 def test_resolve_python_path_prefers_override(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
@@ -2009,6 +2060,31 @@ def test_resolve_python_path_checks_resolved_soffice_dir(
     assert _resolve_python_path(soffice_path) == real_python
 
 
+def test_resolve_python_path_detects_windows_python_core_bundle(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Verify that Windows LibreOffice `python-core-*` bundles are auto-detected."""
+
+    program_dir = tmp_path / "LibreOffice" / "program"
+    program_dir.mkdir(parents=True)
+    soffice_path = program_dir / "soffice.exe"
+    soffice_path.write_text("", encoding="utf-8")
+    bundled_python = program_dir / "python-core-3.11.11" / "bin" / "python.exe"
+    bundled_python.parent.mkdir(parents=True)
+    bundled_python.write_text("", encoding="utf-8")
+
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._python_supports_libreoffice_bridge",
+        lambda path: path == bundled_python,
+    )
+    monkeypatch.setattr(
+        "exstruct.core.libreoffice._system_python_candidates",
+        lambda: (),
+    )
+
+    assert _resolve_python_path(soffice_path) == bundled_python
+
+
 def test_resolve_python_path_falls_back_to_system_python(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
@@ -2062,14 +2138,16 @@ def test_python_supports_libreoffice_bridge_uses_probe_command(
 
     python_path = tmp_path / "python3"
     python_path.write_text("", encoding="utf-8")
-    calls: list[list[str]] = []
+    captured: dict[str, object] = {}
+    monkeypatch.setenv("PATH", "/tmp/path-entry")
 
     def _fake_run(
-        args: list[str], **_kwargs: object
+        args: list[str], **kwargs: object
     ) -> subprocess.CompletedProcess[str]:
         """Capture subprocess arguments for the bridge probe."""
 
-        calls.append(args)
+        captured["args"] = list(args)
+        captured["kwargs"] = dict(kwargs)
         return subprocess.CompletedProcess(
             args=args, returncode=0, stdout="", stderr=""
         )
@@ -2077,22 +2155,27 @@ def test_python_supports_libreoffice_bridge_uses_probe_command(
     monkeypatch.setattr("exstruct.core.libreoffice.subprocess.run", _fake_run)
 
     assert _python_supports_libreoffice_bridge(python_path) is True
-    assert len(calls) == 1
-    assert calls[0][0] == str(python_path.resolve())
-    assert calls[0][1] == "-X"
-    assert calls[0][2] == "utf8"
-    assert calls[0][3].endswith("_libreoffice_bridge.py")
-    assert calls[0][4] == "--probe"
+    args = cast(list[str], captured["args"])
+    kwargs = cast(dict[str, object], captured["kwargs"])
+    assert args[0] == str(python_path.resolve())
+    assert args[1].endswith("_libreoffice_bridge.py")
+    assert args[2] == "--probe"
+    env = cast(dict[str, str], kwargs["env"])
+    assert env["PATH"] == f"{python_path.resolve().parent}{os.pathsep}/tmp/path-entry"
+    assert kwargs["cwd"] == python_path.resolve().parent
 
 
-def test_run_bridge_probe_subprocess_uses_fixed_utf8_args_without_env(
+def test_run_bridge_probe_subprocess_uses_fixed_args_with_allowlisted_env(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
-    """Verify that probe subprocesses avoid inherited env and force UTF-8 via argv."""
+    """Verify that probe subprocesses pass only the allowlisted env plus UTF-8."""
 
     python_path = tmp_path / "python3"
     python_path.write_text("", encoding="utf-8")
     captured: dict[str, object] = {}
+    monkeypatch.setenv("PATH", "/tmp/path-entry")
+    monkeypatch.setenv("SYSTEMROOT", "/tmp/system-root")
+    monkeypatch.setenv("SECRET_TOKEN", "should-not-leak")
 
     def _fake_run(
         args: list[str], **kwargs: object
@@ -2112,11 +2195,14 @@ def test_run_bridge_probe_subprocess_uses_fixed_utf8_args_without_env(
     args = cast(list[str], captured["args"])
     kwargs = cast(dict[str, object], captured["kwargs"])
     assert args[0] == str(python_path.resolve())
-    assert args[1] == "-X"
-    assert args[2] == "utf8"
-    assert args[3].endswith("_libreoffice_bridge.py")
-    assert args[4] == "--probe"
-    assert "env" not in kwargs
+    assert args[1].endswith("_libreoffice_bridge.py")
+    assert args[2] == "--probe"
+    env = cast(dict[str, str], kwargs["env"])
+    assert env["PATH"] == f"{python_path.resolve().parent}{os.pathsep}/tmp/path-entry"
+    assert env["SYSTEMROOT"] == "/tmp/system-root"
+    assert env["PYTHONIOENCODING"] == "utf-8"
+    assert "SECRET_TOKEN" not in env
+    assert kwargs["cwd"] == python_path.resolve().parent
     assert kwargs["encoding"] == "utf-8"
     assert kwargs["timeout"] == 1.25
 
@@ -2433,6 +2519,7 @@ def test_run_bridge_extract_subprocess_uses_fixed_argv_and_env(
     python_path.write_text("", encoding="utf-8")
     workbook_path.write_text("", encoding="utf-8")
     captured: dict[str, object] = {}
+    monkeypatch.setenv("PATH", "/tmp/existing-path")
 
     def _fake_run(
         args: list[str], **kwargs: object
@@ -2441,6 +2528,7 @@ def test_run_bridge_extract_subprocess_uses_fixed_argv_and_env(
         captured["env"] = kwargs["env"]
         captured["input"] = kwargs["input"]
         captured["timeout"] = kwargs["timeout"]
+        captured["cwd"] = kwargs["cwd"]
         return subprocess.CompletedProcess(
             args=args,
             returncode=0,
@@ -2467,9 +2555,13 @@ def test_run_bridge_extract_subprocess_uses_fixed_argv_and_env(
     assert "--file-stdin" in args
     assert args[args.index("--kind") + 1] == "draw-page"
     env = cast(dict[str, str], captured["env"])
+    assert env["PATH"] == (
+        f"{python_path.resolve().parent}{os.pathsep}/tmp/existing-path"
+    )
     assert env["PYTHONIOENCODING"] == "utf-8"
     assert captured["input"] == str(workbook_path.resolve())
     assert captured["timeout"] == 2.0
+    assert captured["cwd"] == python_path.resolve().parent
 
 
 def test_libreoffice_session_run_bridge_surfaces_subprocess_failures(

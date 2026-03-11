@@ -48,3 +48,9 @@
 
 - When changing a public README example or CLI/API option in `README.md`, update `README.ja.md` in the same change before reporting completion.
 - For token/serialization policy changes, check both English and Japanese quick-start sections for parity on defaults and opt-in flags.
+
+
+## 2026-03-10 libreoffice smoke gate retry lessons
+
+- For Windows cold-start runtime checks, avoid single-shot `soffice --version` gating with a short timeout; add an explicit longer retry before declaring runtime unavailable.
+- If a fallback probe is expensive (full session startup), place a cheaper retry tier ahead of it to reduce false negatives under CI install jitter.

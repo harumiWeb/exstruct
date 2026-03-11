@@ -649,3 +649,173 @@
   - `uv run task precommit-run` -> `ruff / ruff-format / mypy passed`
   - push 後に 2 分待ってから `python scripts/codacy_issues.py --pr 76 --min-level Warning` を 1 回だけ再実行し、`total: 0` を確認した
   - `gh api graphql` 再確認で PR #76 の review thread は全件 `isResolved: true` になった
+
+## 2026-03-10 Windows LibreOffice CI smoke gate
+
+### Planning
+
+- [x] 既存の Linux LibreOffice smoke job / README / test requirements を確認し、Windows smoke 追加の最小変更方針を決める
+- [x] `.github/workflows/pytest.yml` に Windows 専用 job `libreoffice-windows-smoke` を追加する
+- [x] Windows hosted runner で `choco install libreoffice-fresh`、`RUN_LIBREOFFICE_SMOKE=1`、`FORCE_LIBREOFFICE_SMOKE=1`、`EXSTRUCT_LIBREOFFICE_PATH` を設定する
+- [x] install 後に `soffice.exe` の存在確認と `--version` 実行を入れて fail-fast 化する
+- [x] README / README.ja / `docs/agents/TEST_REQUIREMENTS.md` / `tasks/feature_spec.md` に Windows smoke job の契約を追記する
+- [x] YAML parse と既存 pytest / pre-commit による最終確認を行う
+
+### Review
+
+- `.github/workflows/pytest.yml` に `windows-2025` 固定の `libreoffice-windows-smoke` job を追加した
+- Windows job は Linux smoke と同じく unit matrix から独立させ、LibreOffice smoke だけを担当する構成にした
+- runtime 導入は issue 提案どおり `choco install libreoffice-fresh -y --no-progress` を使い、`EXSTRUCT_LIBREOFFICE_PATH=C:\Program Files\LibreOffice\program\soffice.exe` を明示する
+- install 後に `Test-Path` と `soffice.exe --version` を実行し、runtime 不在/破損を smoke 実行前に fail-fast させる
+- README / 日本語 README / test requirements / feature spec を Windows smoke job 反映に更新した
+- 検証:
+  - `python -c "import yaml; yaml.safe_load(open('.github/workflows/pytest.yml', encoding='utf-8')); print('yaml-ok')"` -> `yaml-ok`
+  - `python -m pytest tests/test_conftest_libreoffice_runtime.py -q` -> `3 passed`
+  - `python -m pre_commit run -a` -> `ruff / ruff-format / mypy passed`
+
+## 2026-03-10 Windows LibreOffice CI failure follow-up
+
+### Planning
+
+- [x] GitHub Actions の失敗 run / job / logs を確認し、失敗点を `libreoffice-windows-smoke` に絞る
+- [x] `tests/conftest.py` と `src/exstruct/core/libreoffice.py` を確認し、Windows runtime unavailable の原因を切り分ける
+- [x] bundled Python auto-detection が `python-core-*` 配下を探索していないギャップを埋める
+- [x] `tests/core/test_libreoffice_backend.py` に Windows layout の regression test を追加する
+- [x] 対象 pytest と `python -m pre_commit run -a` を実行する
+
+### Review
+
+- GitHub Actions run `22904348826` の job `libreoffice-windows-smoke` だけが failure で、`Install LibreOffice runtime` と `Verify LibreOffice runtime` は success、失敗は `tests/conftest.py::_has_libreoffice_runtime()` による setup error だった
+- 既存の `_resolve_python_path(...)` は `program/python.exe` 等の直下候補しか見ておらず、Windows LibreOffice install の `python-core-*` 配下 bundled Python を見逃していた
+- `src/exstruct/core/libreoffice.py` に `_bundled_python_candidates(program_dir)` を追加し、従来の直下候補に加えて `python-core-*/python.exe` / `python-core-*/bin/python.exe` を探索するようにした
+- `tests/core/test_libreoffice_backend.py` に Windows `python-core-*` layout の回帰 test を追加した
+- 検証:
+  - `python3 -m pytest tests/core/test_libreoffice_backend.py -q` -> `48 passed`
+  - `python3 -m pytest tests/test_conftest_libreoffice_runtime.py -q` -> `3 passed`
+  - `python3 -m pre_commit run -a` -> `ruff / ruff-format / mypy passed`
+
+## 2026-03-10 Windows LibreOffice CI failure second follow-up
+
+### Planning
+
+- [x] 最新の failing workflow run / job / logs を確認し、まだ残っている failure point を特定する
+- [x] runtime gate と bridge probe の実装差分を確認し、Windows hosted runner で不足している条件を見つける
+- [x] probe subprocess に必要な最小 env だけを forward するよう修正する
+- [x] 関連 regression test を更新し、targeted pytest と pre-commit を再実行する
+
+### Review
+
+- 最新 run `22905085870` でも failure は `libreoffice-windows-smoke` の setup error で、`soffice.exe --version` 成功後に `tests/conftest.py::_has_libreoffice_runtime()` が `False` になっていた
+- `_run_bridge_probe_subprocess(...)` だけが `_build_subprocess_env(...)` を使っておらず、Windows hosted runner の LibreOffice Python / UNO probe に必要な runtime env を欠く可能性があった
+- `src/exstruct/core/libreoffice.py` で probe subprocess にも allowlisted env + `PYTHONIOENCODING=utf-8` を渡すようにし、bridge handshake / extraction と整合させた
+- `tests/core/test_libreoffice_backend.py` の probe subprocess test を、env を forward しつつ allowlist 外 env を漏らさない契約に更新した
+- 検証:
+  - `python3 -m pytest tests/core/test_libreoffice_backend.py -q` -> `48 passed`
+  - `python3 -m pytest tests/test_conftest_libreoffice_runtime.py -q` -> `3 passed`
+  - `python3 -m pre_commit run -a` -> `ruff / ruff-format / mypy passed`
+
+## 2026-03-10 Windows LibreOffice CI failure third follow-up
+
+### Planning
+
+- [x] 最新の workflow run / logs を再確認し、failure が依然として runtime gate setup にあることを確認する
+- [x] bundled Python auto-detection と Windows workflow assumptions を見直し、CI 固有の残ギャップを特定する
+- [x] workflow で bundled Python path を明示 discovery して `EXSTRUCT_LIBREOFFICE_PYTHON_PATH` を渡す最小修正を入れる
+- [x] YAML parse と関連 validation を実行し、変更を push する
+
+### Review
+
+- 最新 run `22905850626` でも failure は `libreoffice-windows-smoke` の setup error で、`soffice.exe --version` 成功後に `tests/conftest.py::_has_libreoffice_runtime()` が `False` になっていた
+- code 側の bundled Python auto-detection は `python.exe` / `python.bin` / `python` / `python-core-*` 系を探索するが、workflow では `EXSTRUCT_LIBREOFFICE_PATH` しか固定しておらず、hosted runner 上の actual bundled Python path は runtime gate に委ねられていた
+- `.github/workflows/pytest.yml` に `Discover LibreOffice bundled Python` step を追加し、LibreOffice install 後に bundled Python executable を探索して `EXSTRUCT_LIBREOFFICE_PYTHON_PATH` として後続 step に渡すようにした
+- bundled Python が見つからない場合は、smoke 実行前に program directory listing を出して fail-fast するようにし、次回以降の CI 調査を容易にした
+- `Verify LibreOffice runtime` step でも discovered Python path の存在確認を追加した
+- 検証:
+  - `python3 - <<'PY' ... yaml.safe_load('.github/workflows/pytest.yml') ...` -> `yaml-ok`
+  - `python3 -m pytest tests/test_conftest_libreoffice_runtime.py -q` -> `3 passed`
+  - `python3 -m pre_commit run -a` -> `ruff / ruff-format / mypy passed`
+
+## 2026-03-10 Windows LibreOffice CI failure fourth follow-up
+
+### Planning
+
+- [x] 最新の `libreoffice-windows-smoke` log を再確認し、workflow discovery 後も runtime gate で落ちていることを確認する
+- [x] discovered `EXSTRUCT_LIBREOFFICE_PYTHON_PATH` が pytest step に届いていることを確認し、残差分が bridge probe subprocess 条件にあると切り分ける
+- [x] bridge subprocess を bundled Python parent directory を `cwd` にして起動する最小コード修正を入れる
+- [x] focused tests と validation を実行し、結果を記録する
+
+### Review
+
+- 最新 run `22906728072` では `Discover LibreOffice bundled Python` が成功し、`EXSTRUCT_LIBREOFFICE_PYTHON_PATH=C:\\Program Files\\LibreOffice\\program\\python.exe` が pytest step に渡っていた
+- それでも `tests/conftest.py::_has_libreoffice_runtime()` が `False` になっていたため、残障害は path discovery ではなく bridge probe subprocess 側だと切り分けた
+- `src/exstruct/core/_libreoffice_bridge.py` は module import 時点で `uno` を import するため、Windows bundled Python は probe / handshake / extraction すべてで LibreOffice program directory を working directory として持つ必要がある
+- `src/exstruct/core/libreoffice.py` に `_bridge_subprocess_cwd(...)` を追加し、bridge subprocess 3系統 (`--probe`, `--handshake`, extraction) で `cwd=_validated_runtime_path(python_path).parent` を使うようにした
+- `tests/core/test_libreoffice_backend.py` の focused test を更新し、probe / handshake / extraction が同じ `cwd` contract を使うことを検証した
+- 検証:
+  - `python3 -m pytest tests/core/test_libreoffice_backend.py -q` -> `48 passed`
+  - `python3 -m pytest tests/test_conftest_libreoffice_runtime.py -q` -> `3 passed`
+  - `python3 -m pre_commit run -a` -> `ruff / ruff-format / mypy passed`
+
+## 2026-03-10 PR79 LibreOffice Windows smoke failure investigation
+
+### Planning
+
+- [x] 失敗ログと `tests/conftest.py` の runtime gate を照合し、Windows CI false-negative の経路を特定する
+- [x] `tasks/feature_spec.md` で runtime gate timeout fallback 仕様を明文化する
+- [x] `tests/conftest.py` の LibreOffice 判定を timeout 耐性付きに修正する
+- [x] 回帰テストを追加して timeout fallback 契約を固定する
+- [x] 対象 pytest を実行して挙動を検証する
+
+### Review
+
+- `tests/conftest.py::_has_libreoffice_runtime()` の `soffice --version` probe で `TimeoutExpired` が起きた場合、即 `False` ではなく `LibreOfficeSession.from_env()` の短命セッション probe を 1 回実施するように変更した。
+- fallback session が `LibreOfficeUnavailableError` を返す場合のみ unavailable (`False`) とし、予期しない例外は従来どおり surfacing して fail-fast を維持した。
+- `tests/test_conftest_libreoffice_runtime.py` に timeout fallback の成功/失敗ケース回帰テストを追加し、Windows CI で起きうる初期タイムアウトの false-negative を防ぐ契約を固定した。
+- 検証:
+  - `pytest tests/test_conftest_libreoffice_runtime.py -q` -> `5 passed`
+  - `uv run ruff check tests/conftest.py tests/test_conftest_libreoffice_runtime.py` -> pass
+  - `uv run mypy tests/conftest.py tests/test_conftest_libreoffice_runtime.py` -> pass
+  - `uv run task precommit-run` は pre-commit hook の remote fetch (`astral-sh/ruff-pre-commit`) が `CONNECT tunnel failed, response 403` で失敗（環境制約）
+
+
+## 2026-03-10 PR79 follow-up retry hardening
+
+### Planning
+
+- [x] CI再失敗ログを前回修正との差分観点で再分析する
+- [x] slow probe retry 方針を `tasks/feature_spec.md` に追記する
+- [x] `tests/conftest.py` に version probe retry を実装する
+- [x] retry 契約の回帰テストを追加する
+- [x] pytest + lint/type check を再実行する
+- [x] lessons を更新する
+
+### Review
+
+- `tests/conftest.py` の LibreOffice runtime gate を再調整し、`soffice --version` の 5 秒 probe timeout 後に 30 秒で 1 回再試行するようにした。
+- 再試行が成功した場合は `True` を返し、重い session fallback (`LibreOfficeSession.from_env()`) は呼ばない。
+- 再試行も timeout の場合のみ既存の session fallback に委譲し、`LibreOfficeUnavailableError` は `False`、予期しない例外は surfacing を維持した。
+- `tests/test_conftest_libreoffice_runtime.py` に、初回 timeout -> 再試行成功で `True` を返し session fallback を通らない回帰テストを追加した。
+- `tasks/lessons.md` に、Windows cold-start probe は short-timeout single-shot にせず long-timeout retry 層を先に置く学びを追記した。
+- 検証:
+  - `pytest tests/test_conftest_libreoffice_runtime.py -q` -> `6 passed`
+  - `uv run ruff check tests/conftest.py tests/test_conftest_libreoffice_runtime.py` -> pass
+  - `uv run mypy tests/conftest.py tests/test_conftest_libreoffice_runtime.py` -> pass
+  - `uv run task precommit-run` は pre-commit hook remote fetch が `CONNECT tunnel failed, response 403` で失敗（環境制約）
+
+
+## 2026-03-11 PR #79 Windows LibreOffice smoke CI fix
+
+### Planning
+
+- [x] 現行 `libreoffice-windows-smoke` workflow と runtime 正規化実装を確認する
+- [x] Windows で `soffice.com` 優先となるよう runtime path 正規化と workflow を修正する
+- [x] 回帰テストを追加し、対象 pytest を実行して検証する
+- [x] 変更内容を自己レビューし、commit/PR メッセージを作成する
+
+### Review
+
+- `src/exstruct/core/libreoffice.py` で runtime path 正規化時に Windows の `soffice.exe` を `soffice.com` 優先へ自動変換する helper を追加した。
+- `src/exstruct/core/libreoffice.py` の `_which_soffice()` は `soffice.com` を探索候補に追加し、検出 path を正規化して返すようにした。
+- `.github/workflows/pytest.yml` の Windows smoke job は `soffice.com` を既定にしつつ、discover step で `.com` 優先 / `.exe` fallback を明示し `EXSTRUCT_LIBREOFFICE_PATH` を再設定するよう変更した。
+- 同 workflow の verify step で `--version` 実行後 `$LASTEXITCODE` を確認し、非ゼロを即失敗にするようにした。
+- `tests/core/test_libreoffice_backend.py` に runtime path 正規化の Windows/非 Windows 回帰テストを追加した。

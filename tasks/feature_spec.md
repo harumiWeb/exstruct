@@ -803,6 +803,104 @@ pairing ルールは次のとおり。
 - 実装後は `uv run pytest tests/core/test_libreoffice_backend.py tests/core/test_libreoffice_bridge.py -q` と `uv run task precommit-run` を通す。
 - push 後に `python scripts/codacy_issues.py --pr 76 --min-level Warning` を再実行し、当該 issue が消えていることを確認する。
 
+## 2026-03-10 Windows LibreOffice CI smoke gate
+
+### Goal
+
+- `mode="libreoffice"` の hosted-runner smoke を Windows でも継続的に検証できるようにする。
+- Linux smoke だけでは拾えない Windows 固有の `soffice.exe` path / process startup / UNO bridge 初期化の問題を CI で早期検出する。
+
+### CI contract
+
+- GitHub Actions に Windows 専用の smoke job `libreoffice-windows-smoke` を追加する。
+- 当該 job は既存の unit matrix や COM test job と分離し、LibreOffice smoke だけを担当する。
+- runner は `windows-2025` に固定する。
+- runtime 準備として `choco install libreoffice-fresh -y --no-progress` を実行する。
+- smoke 実行時は `RUN_LIBREOFFICE_SMOKE=1` と `FORCE_LIBREOFFICE_SMOKE=1` を設定する。
+- ExStruct に `EXSTRUCT_LIBREOFFICE_PATH=C:\Program Files\LibreOffice\program\soffice.exe` を渡す。
+- install 後は `soffice.exe` の存在確認と `--version` 実行で fail-fast し、その後 `tests/core/test_libreoffice_smoke.py -m libreoffice` を skip なしで実行する。
+- Windows smoke は bundled Python の auto-detection をまず検証対象とし、`EXSTRUCT_LIBREOFFICE_PYTHON_PATH` は追加しない。
+
+### Verification target
+
+- Windows hosted runner 上で LibreOffice の起動コマンドが通る。
+- `pytest.mark.libreoffice` smoke が runtime unavailable で skip されず、unavailable/incompatible 時は job failure になる。
+- sample workbook の shape/chart extraction smoke が Windows 上でも green になる。
+
+## 2026-03-10 Windows LibreOffice bundled Python auto-detection follow-up
+
+### Issue
+
+- `libreoffice-windows-smoke` で `soffice.exe --version` は通る一方、`tests/conftest.py::_has_libreoffice_runtime()` が `False` になり smoke test setup が `FORCE_LIBREOFFICE_SMOKE=1` で fail-fast した。
+- 既存の `_resolve_python_path(...)` は `program/python.exe` のような直下候補しか見ておらず、Windows LibreOffice install の `python-core-*` 配下 layout を拾えない。
+
+### Contract
+
+- bundled LibreOffice Python の auto-detection は、従来の `program/python.exe` / `python.bin` / `python` 直下候補を維持する。
+- 加えて Windows install で現れる `program/python-core-*/python.exe` と `program/python-core-*/bin/python.exe` 系候補も探索対象に含める。
+- 既存どおり、採用条件は `_python_supports_libreoffice_bridge(...)` probe success とする。
+- system Python fallback と explicit `EXSTRUCT_LIBREOFFICE_PYTHON_PATH` override contract は変えない。
+
+### Verification
+
+- `tests/core/test_libreoffice_backend.py` に `python-core-*` 配下の `python.exe` が auto-detection で選ばれる regression test を追加する。
+- `tests/test_conftest_libreoffice_runtime.py` と `python -m pre_commit run -a` を通し、runtime gate と型/lint を再確認する。
+
+## 2026-03-10 Windows LibreOffice probe env follow-up
+
+### Issue
+
+- 最新の `libreoffice-windows-smoke` でも `tests/conftest.py::_has_libreoffice_runtime()` が `False` となり、`FORCE_LIBREOFFICE_SMOKE=1` により setup で fail-fast した。
+- `resolve_python_path(...)` の互換性判定で使う bridge probe だけが allowlisted subprocess env を渡しておらず、Windows hosted runner の LibreOffice Python / UNO import に必要な runtime env を欠く可能性があった。
+
+### Contract
+
+- `_run_bridge_probe_subprocess(...)` も bridge handshake / extraction と同様に `_build_subprocess_env(...)` を使う。
+- probe に渡す env は既存 allowlist に限定し、秘密値や無関係な env は forward しない。
+- probe の argv contract (`python -X utf8 _libreoffice_bridge.py --probe`) は維持する。
+
+### Verification
+
+- `tests/core/test_libreoffice_backend.py` の probe subprocess regression test を、allowlisted env を forward する契約へ更新する。
+- `tests/test_conftest_libreoffice_runtime.py` と `python -m pre_commit run -a` を再実行する。
+
+## 2026-03-10 Windows LibreOffice workflow override follow-up
+
+### Issue
+
+- `libreoffice-windows-smoke` は probe env を forward した後も、Windows hosted runner 上で bundled Python auto-detection に依存する runtime gate のまま失敗し続けた。
+- CI は `soffice.exe` の場所までは固定しているが、Chocolatey が導入する LibreOffice 26.x の bundled Python 配置は runner image / package variant に依存し得るため、workflow 側で明示 discovery した方が failure surface を狭められる。
+
+### Contract
+
+- Windows smoke workflow は LibreOffice install 後に bundled Python executable を探索し、`EXSTRUCT_LIBREOFFICE_PYTHON_PATH` として後続 step に引き渡す。
+- discovery は既存 runtime helper が探索する bundled path 群 (`python.exe`, `python.bin`, `python`, `python-core-*`, `python-core-*\\bin`) に合わせる。
+- bundled Python が見つからない場合は smoke test 実行前に job を fail し、program directory listing を残して原因調査を容易にする。
+
+### Verification
+
+- `.github/workflows/pytest.yml` が YAML として parse できることを確認する。
+- Windows verify step で `EXSTRUCT_LIBREOFFICE_PYTHON_PATH` の存在確認を行う。
+
+## 2026-03-10 Windows LibreOffice bridge cwd follow-up
+
+### Issue
+
+- Windows smoke workflow で bundled `python.exe` の path discovery 自体は成功したが、`tests/conftest.py::_has_libreoffice_runtime()` は引き続き bridge probe を incompatible 扱いした。
+- `_libreoffice_bridge.py` は module import 時点で `uno` を import するため、Windows の LibreOffice bundled Python は subprocess 実行時にも LibreOffice program directory を working directory として持つ必要がある。
+
+### Contract
+
+- LibreOffice bridge subprocess (`--probe`, `--handshake`, extraction) は `python_path` の親ディレクトリを `cwd` にして起動する。
+- この `cwd` contract は allowlisted env と併用し、Windows bundled Python でも Linux system Python fallback でも同じ subprocess API で扱う。
+- focused unit tests は probe / handshake / extraction subprocess が同じ `cwd` contract を使うことを検証する。
+
+### Verification
+
+- `uv run pytest tests/core/test_libreoffice_backend.py -q`
+- `uv run pytest tests/test_conftest_libreoffice_runtime.py -q`
+- `uv run task precommit-run`
+
 ## 2026-03-09 PR #76 latest review + Codacy re-triage
 
 ### Review-thread cleanup
@@ -904,3 +1002,68 @@ pairing ルールは次のとおり。
 
 - `tests/core/test_libreoffice_backend.py` に、`_close_stderr_sink()` が一時的な `PermissionError` を retry 後に解消できる regression test を追加する。
 - 同 test file に、stderr log unlink が lock され続けても `_start_soffice_startup_attempt(...)` が `PermissionError` ではなく startup failure を返す regression test を追加する。
+
+## 2026-03-10 PR79 LibreOffice Windows smoke runtime gate hardening
+
+### Background
+
+- Windows CI (`libreoffice-windows-smoke`) can have transiently slow `soffice --version` startup right after Chocolatey install.
+- `tests/conftest.py::_has_libreoffice_runtime()` currently treats any timeout from the version probe as runtime unavailable, which can create a false negative and trip `FORCE_LIBREOFFICE_SMOKE=1`.
+
+### Spec
+
+- `_has_libreoffice_runtime()` keeps strict checks for:
+  - `soffice` executable path existence
+  - bridge-compatible Python resolution
+- Version probe policy is refined:
+  - On `subprocess.TimeoutExpired` from `soffice --version`, do **not** immediately mark runtime unavailable.
+  - Attempt one fallback runtime viability check by launching `LibreOfficeSession.from_env()` and entering/exiting the session.
+  - If fallback session startup succeeds, treat runtime as available (`True`).
+  - If fallback session startup fails with `LibreOfficeUnavailableError`, treat runtime as unavailable (`False`).
+  - Unexpected exceptions from the fallback remain loud (raise) to avoid masking regressions.
+- Existing behavior for `FileNotFoundError`, `OSError`, and `CalledProcessError` in version probe remains `False`.
+
+### Function contracts
+
+- `_has_libreoffice_runtime() -> bool`
+  - Inputs: none (uses env + runtime helpers)
+  - Output: runtime availability decision with timeout fallback behavior above
+  - Side effect: may create a short-lived `LibreOfficeSession` during timeout fallback path
+
+
+## 2026-03-10 PR79 follow-up: slow Windows version probe retry
+
+### Background
+
+- Previous fix added session fallback when `soffice --version` times out, but CI still fails on Windows with `FORCE_LIBREOFFICE_SMOKE=1`.
+- The failure window suggests first-run startup latency can exceed 5 seconds and may also cause immediate session startup to miss the 15-second budget under cold install conditions.
+
+### Spec
+
+- In `tests/conftest.py::_has_libreoffice_runtime()`:
+  - Keep the fast `soffice --version` probe (5s) for normal cases.
+  - If that first probe times out, retry `soffice --version` once with an extended timeout (30s).
+  - If the extended retry succeeds, return `True` and skip session fallback.
+  - If the extended retry still times out, keep the existing session fallback probe (`LibreOfficeSession.from_env()`).
+  - `FileNotFoundError`, `OSError`, `CalledProcessError` from either version probe still map to `False`.
+
+### Function contracts
+
+- `_has_libreoffice_runtime() -> bool`
+  - Performs at most two version probes before session fallback:
+    1. timeout=5.0
+    2. timeout=30.0 (only after first timeout)
+  - Returns `True` when retry probe or fallback session succeeds.
+  - Returns `False` on expected runtime-unavailable failures.
+
+
+## 2026-03-11 PR #79 Windows LibreOffice smoke stabilization
+
+- `_validated_runtime_path(path: Path) -> Path`
+  - Windows で `soffice.exe` が指定された場合、同ディレクトリの `soffice.com` が存在すれば `soffice.com` に正規化する。
+  - 非 Windows では入力 path を維持する。
+- `_which_soffice() -> Path | None`
+  - PATH 探索順を `soffice` → `soffice.com` → `soffice.exe` とし、見つかった path は runtime path 正規化を通す。
+- GitHub Actions `libreoffice-windows-smoke`
+  - `EXSTRUCT_LIBREOFFICE_PATH` は `soffice.com` を優先し、存在しない場合のみ `soffice.exe` を fallback とする。
+  - Verify step は `--version` 実行後に `$LASTEXITCODE` を検証し、非ゼロを fail-fast する。

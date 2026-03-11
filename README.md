@@ -66,7 +66,7 @@ Platform note:
 - On Debian/Ubuntu/WSL, install LibreOffice together with `python3-uno`. ExStruct probes a compatible system Python automatically for `mode=libreoffice`; if your environment needs an explicit interpreter, set `EXSTRUCT_LIBREOFFICE_PYTHON_PATH=/usr/bin/python3`.
 - LibreOffice Python detection now runs the bundled bridge in `--probe` mode before selection. An incompatible `EXSTRUCT_LIBREOFFICE_PYTHON_PATH` fails fast instead of surfacing a delayed bridge `SyntaxError` during extraction.
 - If the isolated temporary LibreOffice profile fails before the UNO socket becomes ready, ExStruct retries once with the shared/default LibreOffice profile as a compatibility fallback and reports per-attempt startup detail if both launches fail.
-- GitHub Actions includes a required Linux smoke job on `ubuntu-24.04` that installs `libreoffice` + `python3-uno` and runs `tests/core/test_libreoffice_smoke.py` with `RUN_LIBREOFFICE_SMOKE=1`.
+- GitHub Actions includes dedicated LibreOffice smoke jobs on `ubuntu-24.04` and `windows-2025`. Linux installs `libreoffice` + `python3-uno`; Windows installs `libreoffice-fresh`, sets `EXSTRUCT_LIBREOFFICE_PATH`, and both jobs run `tests/core/test_libreoffice_smoke.py` with `RUN_LIBREOFFICE_SMOKE=1`.
 
 ## Quick Start CLI
 

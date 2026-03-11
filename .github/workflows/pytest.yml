@@ -73,3 +73,82 @@ jobs:
       - name: Run LibreOffice smoke tests
         run: |
           pytest tests/core/test_libreoffice_smoke.py -m libreoffice --maxfail=1 --disable-warnings -q
+
+  libreoffice-windows-smoke:
+    runs-on: windows-2025
+    timeout-minutes: 25
+    env:
+      PYTHONIOENCODING: "utf-8"
+      RUN_LIBREOFFICE_SMOKE: "1"
+      FORCE_LIBREOFFICE_SMOKE: "1"
+      EXSTRUCT_LIBREOFFICE_PATH: 'C:\Program Files\LibreOffice\program\soffice.com'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[yaml,mcp]
+          pip install pytest pytest-cov pytest-mock
+      - name: Install LibreOffice runtime
+        shell: powershell
+        run: |
+          choco install libreoffice-fresh -y --no-progress
+      - name: Discover LibreOffice runtime paths
+        shell: powershell
+        run: |
+          $programDir = Split-Path -Parent $env:EXSTRUCT_LIBREOFFICE_PATH
+          $consoleSoffice = Join-Path $programDir 'soffice.com'
+          $windowedSoffice = Join-Path $programDir 'soffice.exe'
+          if (Test-Path $consoleSoffice) {
+            $selectedSoffice = $consoleSoffice
+          } elseif (Test-Path $windowedSoffice) {
+            $selectedSoffice = $windowedSoffice
+          } else {
+            Write-Host "LibreOffice program directory contents:"
+            Get-ChildItem -Path $programDir -ErrorAction SilentlyContinue | Select-Object Name, FullName
+            throw "Could not find soffice.com or soffice.exe under $programDir"
+          }
+          "EXSTRUCT_LIBREOFFICE_PATH=$selectedSoffice" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Selected LibreOffice executable: $selectedSoffice"
+
+          $patterns = @(
+            'python.exe',
+            'python.bin',
+            'python',
+            'python-core-*\python.exe',
+            'python-core-*\python',
+            'python-core-*\bin\python.exe',
+            'python-core-*\bin\python'
+          )
+          foreach ($pattern in $patterns) {
+            $searchPath = "$programDir\$pattern"
+            $candidate = Get-ChildItem -Path $searchPath -File -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($null -ne $candidate) {
+              "EXSTRUCT_LIBREOFFICE_PYTHON_PATH=$($candidate.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+              Write-Host "Discovered LibreOffice Python: $($candidate.FullName)"
+              exit 0
+            }
+          }
+          Write-Host "LibreOffice program directory contents:"
+          Get-ChildItem -Path $programDir -ErrorAction SilentlyContinue | Select-Object Name, FullName
+          throw "Could not discover a bundled LibreOffice Python executable under $programDir"
+      - name: Verify LibreOffice runtime
+        shell: powershell
+        run: |
+          if (-not (Test-Path $env:EXSTRUCT_LIBREOFFICE_PATH)) {
+            throw "LibreOffice executable not found at $env:EXSTRUCT_LIBREOFFICE_PATH"
+          }
+          if (-not (Test-Path $env:EXSTRUCT_LIBREOFFICE_PYTHON_PATH)) {
+            throw "LibreOffice Python executable not found at $env:EXSTRUCT_LIBREOFFICE_PYTHON_PATH"
+          }
+          & $env:EXSTRUCT_LIBREOFFICE_PATH --version
+          if ($LASTEXITCODE -ne 0) {
+            throw "LibreOffice version probe failed with exit code $LASTEXITCODE"
+          }
+      - name: Run LibreOffice smoke tests
+        run: |
+          pytest tests/core/test_libreoffice_smoke.py -m libreoffice --maxfail=1 --disable-warnings -q
