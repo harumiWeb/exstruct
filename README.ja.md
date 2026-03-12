@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://harumiweb.github.io/exstruct/">
-    <img src="docs/assets/logo.png" alt="ExStruct Logo" width="600">
+    <img width="600" alt="ExStruct Logo" src="https://github.com/user-attachments/assets/c1d4e616-890f-435c-9d53-fba054f861a8" />
   </a>
 </p>
 
