@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://harumiweb.github.io/exstruct/">
-    <img src="docs/assets/logo.png" alt="ExStruct Logo" width="600">
+    <img width="600" alt="ExStruct Logo" src="https://github.com/user-attachments/assets/c1d4e616-890f-435c-9d53-fba054f861a8" />
   </a>
 </p>
 
@@ -277,7 +277,7 @@ To show how far exstruct can structure Excel, we parse an Excel workbook that co
 - a flowchart built only with shapes
 
 (The image below is the actual sample Excel sheet.)
-![Sample Excel](docs/assets/demo_sheet.png)
+<img width="1842" height="1242" alt="demo_sheet" src="https://github.com/user-attachments/assets/91f32b64-02a9-4269-a13f-9909e6e5b06f" />
 Sample Excel: `sample/sample.xlsx`
 
 ### 1. Input: Excel Sheet Overview
@@ -456,7 +456,7 @@ flowchart TD
 
 ### Excel data
 
-![General application form](docs/assets/demo_form.ja.png)
+<img width="1040" height="1615" alt="demo_form ja" src="https://github.com/user-attachments/assets/1997c5d7-eb93-4370-b2ff-6e8da34e79a0" />
 
 ### ExStruct JSON
 
@@ -572,7 +572,7 @@ In short, **exstruct = "an engine that converts Excel into a format AI can under
 
 ## Benchmark
 
-![Benchmark Chart](benchmark/public/plots/markdown_quality.png)
+<img width="1440" height="720" alt="markdown_quality" src="https://github.com/user-attachments/assets/537bbc8c-8e09-433d-a910-6521274d2df5" />
 
 This repository includes benchmark reports focused on RAG/LLM preprocessing of Excel documents.
 We track two perspectives: (1) core extraction accuracy and (2) reconstruction utility for downstream structure queries (RUB).
