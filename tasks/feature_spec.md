@@ -92,10 +92,10 @@
   - evidence は `adr` / `specs` / `src` / `tests` の matrix を必須とする
   - ADR 本文や spec 本文を自動編集しない
 - `adr-indexer` は次を満たす。
-  - `dev-docs/adr/README.md`, `index.yaml`, `decision-map.md` を同期する
+  - `dev-docs/adr/README.md`, `dev-docs/adr/index.yaml`, `dev-docs/adr/decision-map.md` を同期する
   - `id`, `title`, `status`, `primary_domain`, `domains`, `supersedes`, `superseded_by`, `related_specs` を正規化する
-  - `README.md` の主ドメインは `index.yaml.primary_domain` と一致する
-  - `decision-map.md` の見出しは `domains` 配列の各要素と 1 対 1 で対応する
+  - `dev-docs/adr/README.md` の主ドメインは `dev-docs/adr/index.yaml.primary_domain` と一致する
+  - `dev-docs/adr/decision-map.md` の見出しは `domains` 配列の各要素と 1 対 1 で対応する
   - ADR 本文から導けない domain や関係性を invent しない
 - `dev-docs/agents/adr-governance.md` は Phase 2 の drift 監査ルールと derived index artifact の更新条件を含む。
 - `dev-docs/agents/adr-workflow.md` は lint 後の `adr-reconciler` と、ADR 変更後の `adr-indexer` を実行する経路を含む。
@@ -143,6 +143,7 @@
 - `dev-docs/agents/adr-governance.md`, `adr-workflow.md`, `adr-criteria.md` が Phase 3 のレビュー契約に更新されている。
 - `dev-docs/specs/adr-review.md` が追加されている。
 - Phase 3 の入出力契約が `SKILL.md` と `dev-docs/*.md` で一致している。
+- `adr-reviewer` 実行条件として「未解消の `adr-linter` `high` / `medium` finding がないこと」が skill / workflow / spec で一致している。
 
 ## 2026-03-13 PR #91 unresolved review follow-up
 

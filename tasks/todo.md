@@ -76,14 +76,14 @@
   - `adr-workflow` は verdict 後ではなく verdict 前に evidence triad を集める流れへ修正した
   - Phase 2 として `adr-reconciler` と `adr-indexer` を追加し、継続監査と索引更新を標準フローに入れた
   - `adr-reconciler` の findings には `policy-drift`, `missing-adr-update`, `missing-evidence`, `stale-reference` の種別と、`severity` / `recommended action` を必須とする方針にした
-  - `adr-indexer` は `README.md`, `index.yaml`, `decision-map.md` を同期する derived artifact manager と定義した
+  - `adr-indexer` は `dev-docs/adr/README.md`, `dev-docs/adr/index.yaml`, `dev-docs/adr/decision-map.md` を同期する derived artifact manager と定義した
   - `dev-docs/specs/adr-index.md` に `index.yaml` / `decision-map.md` の内部契約を追加し、既存 ADR 5 本を seeded artifact として反映した
   - review follow-up として、`adr-reconciler` の Output Contract に `scope` と `findings[].type` を追加し、`adr-indexer` の machine-readable metadata に `primary_domain` を追加した
-  - `decision-map.md` は `domains` 配列の各要素を独立見出しとして表現し、`README.md` の主ドメインは `index.yaml.primary_domain` を source of truth にする方針へ修正した
+  - `dev-docs/adr/decision-map.md` は `domains` 配列の各要素を独立見出しとして表現し、`dev-docs/adr/README.md` の主ドメインは `dev-docs/adr/index.yaml.primary_domain` を source of truth にする方針へ修正した
 - 検証:
 - `.agents/skills/` のディレクトリ一覧で `adr-reconciler` と `adr-indexer` が追加されていることを確認した
-- `python C:\Users\HARUMI\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents\skills\adr-reconciler`
-- `python C:\Users\HARUMI\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents\skills\adr-indexer`
+- `python %SKILL_CREATOR_ROOT%\scripts\quick_validate.py .agents\skills\adr-reconciler`
+- `python %SKILL_CREATOR_ROOT%\scripts\quick_validate.py .agents\skills\adr-indexer`
 - `python` で `dev-docs/adr/index.yaml` と `agents/openai.yaml` 2 本の YAML parse が通ることを確認した
 - `git diff --check -- <changed files>` で実害のある差分エラーがないことを確認した
 - `tasks/feature_spec.md`, `dev-docs/agents/`, `dev-docs/specs/adr-index.md`, `.agents/skills/` の参照更新を目視確認した
@@ -95,10 +95,11 @@
 - 公開 API / CLI / MCP に触れる ADR では、`adr-reviewer` が関連 `docs/` を review scope に含める契約へ修正した
 - `adr-reviewer` の契約を `SKILL.md`, `adr-governance.md`, `adr-criteria.md`, `adr-workflow.md`, `adr-review.md` でそろえる
 - 検証:
-  - `python C:\Users\HARUMI\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents\skills\adr-reviewer`
+  - `python %SKILL_CREATOR_ROOT%\scripts\quick_validate.py .agents\skills\adr-reviewer`
   - `python` で `.agents/skills/adr-reviewer/agents/openai.yaml` の YAML parse が通ることを確認した
   - `git diff --check -- <changed files>` で実害のある差分エラーがないことを確認した
   - `rg` で `ready`, `revise`, `escalate`, `decision-gap`, `scope-conflict`, `evidence-risk`, `rollout-gap`, `ownership-escalation` が `SKILL.md` と `dev-docs/*.md` で一致していることを確認した
+  - `rg` で `adr-reviewer` の clean `adr-linter` (`high` / `medium`) 前提が skill / workflow / spec に反映されていることを確認した
   - follow-up として、public `docs/` scope と clean `adr-linter` 前提を追加後も `quick_validate.py` と `git diff --check` が通ることを確認した
 
 ### Future phase backlog

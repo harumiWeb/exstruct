@@ -73,3 +73,8 @@
 ## 2026-03-13 AGENTS retention policy lessons
 
 - When AGENTS explains how to preserve or migrate durable documentation, explicitly direct agents to the relevant repository skills; otherwise the ADR workflow is easy to bypass with ad hoc manual judgment.
+
+## 2026-03-13 ADR review follow-up lessons
+
+- When a template defines a required section such as `状態`, mirror that exact requirement in the producing or linting skill checklist; validating only the value is not enough if the section itself can be omitted.
+- When recording validation commands in tracked docs, avoid machine-specific absolute paths; use a placeholder or portable form so the evidence remains reproducible across contributors.

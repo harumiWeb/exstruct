@@ -17,7 +17,7 @@ Review the ADR as a decision record, not as prose polish.
 ## Workflow
 
 1. Validate the status value.
-2. Check that the ADR has `背景`, `決定`, `影響`, `根拠`, `Supersedes`, and `Superseded by`.
+2. Check that the ADR has `状態`, `背景`, `決定`, `影響`, `根拠`, `Supersedes`, and `Superseded by`.
 3. Verify that `根拠` contains concrete `Tests`, `Code`, or `Related specs`.
 4. Check that consequences include tradeoffs, not only benefits.
 5. If supersede or replacement is claimed, verify the referenced ADR links are present and consistent.
