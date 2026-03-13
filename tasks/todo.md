@@ -7,12 +7,13 @@
 - [x] PR #91 の未 resolve review thread を最新状態で取得し、論点を列挙する
 - [x] 各 thread を現行コードとテストで照合し、採用/非採用を分類する
 - [x] 採用した指摘だけを最小差分で修正し、必要な検証を行う
-- [ ] 非採用の thread には判断理由を返信して resolve する
-- [ ] 実施内容、検証結果、未解決事項を Review セクションに記録する
+- [x] 非採用の thread には判断理由を返信して resolve する
+- [x] 実施内容、検証結果、未解決事項を Review セクションに記録する
 
 ### Review
 
-- PR #91 の未 resolve thread 16 件を再取得し、13 件を採用、2 件を重複、1 件を対応不要と判定した。
+- PR #91 の review thread は、初回 16 件に加えて push 後の CodeRabbit follow-up 2 件を含め、最終的に 18 件すべてを resolve した。
+- 初回 16 件の分類は、13 件を採用、2 件を重複、1 件を対応不要と判定した。
 - 採用した修正:
   - `dev-docs/specs/excel-extraction.md`
     - `libreoffice` mode を追加
@@ -54,11 +55,11 @@
     - `src/exstruct/mcp/patch/service.py`
   - `git diff --check -- <changed files>` で whitespace error なしを確認
 - GitHub:
-  - commit `1a8e6ba` を `origin/docs/adr` へ push 済み
-  - 既存 16 thread は resolve 済み
+  - commit `1a8e6ba` と `3bad843` を `origin/docs/adr` へ push 済み
+  - 最終確認で review thread 18 件すべて `isResolved: true`
   - 対応不要の PR Summary 指摘は thread reply 権限がなかったため、PR comment `#issuecomment-4052594372` で理由を補足した
 - 追加 follow-up:
-  - push 後に CodeRabbit から `test-requirements.md` へ 2 件の新規 thread が追加されたため、この後続修正で対応する
+  - push 後に CodeRabbit から `test-requirements.md` へ 2 件の新規 thread が追加されたが、`dev-docs/specs/data-model.md` 参照名と Windows smoke の `soffice.com` 優先契約へ追随して解消した
 
 ## 2026-03-13 AI agent document retention policy
 
