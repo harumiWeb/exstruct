@@ -159,6 +159,12 @@ AI はコード生成前に以下の手順を必ず踏んでください。
 - 設計判断やトレードオフは `dev-docs/adr/`、現行の内部仕様や制約は `dev-docs/specs/`、実装構造や拡張方針は `dev-docs/architecture/` に移す。
 - 公開 API、CLI、MCP などユーザー向け契約だけは `docs/` 配下の該当文書へ反映する。
 
+### skills 活用
+
+- 文書の保存先、移管先、検証方法に迷う場合は、利用可能な skill を優先して使い、手動判断だけで閉じない。
+- ADR 要否は `adr-suggester`、ADR 草案または更新提案は `adr-drafter`、草案の lint は `adr-linter`、設計レビューは `adr-reviewer`、drift 監査は `adr-reconciler`、索引同期は `adr-indexer` を使う。
+- skill の結果は `tasks/` の一時メモに閉じ込めず、必要な `dev-docs/` または `docs/` に反映する。
+
 ### 残すべき情報
 
 - 将来の実装者が同じ論点で迷う可能性がある判断理由
@@ -181,12 +187,14 @@ AI はコード生成前に以下の手順を必ず踏んでください。
 - 将来参照される内容がある場合、削除より先に恒久文書へ移管する。
 - 移管が完了していない判断理由、仕様、検証条件を破棄してはならない。
 - 恒久情報が存在しないことを確認できたセクションだけを、要約、削除、アーカイブ対象にしてよい。
+- ADR 化、spec 化、索引同期、設計レビューのいずれかが関係する場合は、対応する skill があるなら先に実行し、判定結果や findings を見てから恒久文書の保存先と反映内容を確定する。
 - 移管先は `dev-docs/README.md` の役割分担に従って選ぶ。
 - 「なぜそうしたか」は `dev-docs/adr/`、「何を保証するか」は `dev-docs/specs/`、「どういう構造で成り立つか」は `dev-docs/architecture/` を優先する。
 - 公開契約の変更を含む場合のみ、内部文書への移管に加えて `docs/` 配下の該当ページも更新する。
 
 ### ADR 作成条件
 
+- ADR 要否に迷う場合は、まず `adr-suggester` を使って `required` / `recommended` / `not-needed` を判定し、その根拠を残す。
 - 次のいずれかに該当する場合、AI は `dev-docs/adr/` 配下に判断を残す。
 - 複数案の比較やトレードオフがある。
 - 将来も同じ論点が再発しうる。
@@ -198,6 +206,7 @@ AI はコード生成前に以下の手順を必ず踏んでください。
 
 - `tasks/todo.md` の Review にある結論が、必要に応じて `dev-docs/adr/`、`dev-docs/specs/`、`dev-docs/architecture/` または `docs/` に移されたか確認する。
 - `tasks/feature_spec.md` の契約、制約、検証条件が、必要に応じて `dev-docs/` 配下の恒久文書へ反映されたか確認する。
+- ADR を追加 / 更新 / supersede した場合は、必要に応じて `adr-linter`、`adr-reviewer`、`adr-reconciler`、`adr-indexer` の結果が恒久文書と矛盾していないか確認する。
 - 恒久文書に移した後でのみ、該当セクションを短く整理してよい。
 
 ---

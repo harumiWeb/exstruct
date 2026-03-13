@@ -1,0 +1,4 @@
+interface:
+  display_name: "ADR Reviewer"
+  short_description: "Review ADR drafts for design gaps and escalation risks"
+  default_prompt: "Use $adr-reviewer to review this ADR draft for design-quality issues, conflicts with existing ADRs or specs, weak evidence, rollout gaps, and any decisions that should be escalated to a human."

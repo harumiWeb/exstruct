@@ -1,0 +1,4 @@
+interface:
+  display_name: "ADR Reconciler"
+  short_description: "Audit ADRs against current specs, tests, and code"
+  default_prompt: "Use $adr-reconciler to audit these ADRs against the current specs, tests, and source paths, then report any policy drift, missing ADR updates, stale references, or evidence gaps."

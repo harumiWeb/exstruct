@@ -54,3 +54,27 @@
 
 - For Windows cold-start runtime checks, avoid single-shot `soffice --version` gating with a short timeout; add an explicit longer retry before declaring runtime unavailable.
 - If a fallback probe is expensive (full session startup), place a cheaper retry tier ahead of it to reduce false negatives under CI install jitter.
+
+## 2026-03-13 ADR governance contract alignment lessons
+
+- When a shared policy document defines a required output artifact (here: the `specs`/`src`/`tests` evidence triad), mirror that requirement in every dependent skill contract; do not assume downstream docs will fill the gap.
+- In decision workflows, collect verification evidence before any terminal verdict, including negative outcomes like `not-needed`; otherwise the process silently permits ungrounded dismissals.
+
+## 2026-03-13 ADR index contract lessons
+
+- When a spec makes structured audit fields mandatory (for example `scope` or finding `type`), copy those exact fields into the producing skill contract; partial paraphrases in workflow docs are not enough.
+- If a human-facing artifact needs one canonical label while machine-readable metadata supports multiple labels, encode the canonical label explicitly (for example `primary_domain`) instead of inferring it from array order or merged headings.
+
+## 2026-03-13 ADR reviewer scope and gating lessons
+
+- When a review skill is responsible for compatibility or public break judgment, make the relevant public `docs/` pages part of its required scope; internal specs alone are not enough evidence.
+- When lint and design review are split into separate skills, encode a clean linter result as an explicit precondition in the skill, spec, and workflow docs so `ready` cannot bypass mandatory structural checks.
+
+## 2026-03-13 AGENTS retention policy lessons
+
+- When AGENTS explains how to preserve or migrate durable documentation, explicitly direct agents to the relevant repository skills; otherwise the ADR workflow is easy to bypass with ad hoc manual judgment.
+
+## 2026-03-13 ADR review follow-up lessons
+
+- When a template defines a required section such as `状態`, mirror that exact requirement in the producing or linting skill checklist; validating only the value is not enough if the section itself can be omitted.
+- When recording validation commands in tracked docs, avoid machine-specific absolute paths; use a placeholder or portable form so the evidence remains reproducible across contributors.

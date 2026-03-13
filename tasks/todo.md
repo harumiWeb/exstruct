@@ -1,5 +1,111 @@
 # Todo
 
+## 2026-03-13 issue #90 ADR management skills
+
+### Planning
+
+- [x] issue #90 の本文、ラベル、受け入れ条件を取得して要点を整理する
+- [x] `dev-docs/adr/`、`dev-docs/agents/`、`.agents/skills/` の現状を確認し、既存土台と不足領域を把握する
+- [x] Phase 1 の対象 skill と各 skill の責務境界を具体化する
+- [x] exstruct 固有の ADR 必須 / 推奨 / 不要判定ルールを文書化する
+- [x] `dev-docs/agents/` に追加する ADR 運用文書の構成と初期ドラフト方針を決める
+- [x] Phase 1 の skill 雛形と参照導線を追加する
+- [x] 文書整合性と skill frontmatter / metadata の最低限検証を行う
+
+### Planning (Phase 2)
+
+- [x] Phase 2 の対象を `adr-reconciler` と `adr-indexer` に確定する
+- [x] `adr-reconciler` と `adr-indexer` の入出力契約を定義する
+- [x] `.agents/skills/adr-reconciler/` と `.agents/skills/adr-indexer/` の `SKILL.md` / `agents/openai.yaml` を追加する
+- [x] `dev-docs/agents/adr-workflow.md` と `adr-governance.md` に Phase 2 運用を反映する
+- [x] `dev-docs/agents/adr-criteria.md` と `dev-docs/specs/adr-index.md` に Phase 2 の出力 / 索引契約を追加する
+- [x] `dev-docs/adr/index.yaml` と `decision-map.md` の初期 artifact を追加する
+- [x] issue #90 セクションの `tasks/feature_spec.md` / `tasks/todo.md` を更新し、検証結果を記録する
+
+### Review follow-up
+
+- [x] `adr-reconciler` の Output Contract に `scope` と `findings[].type` を追加する
+- [x] `decision-map.md` の domain 見出しを `index.yaml.domains` と 1 対 1 にそろえる
+- [x] `README.md` の主ドメインを決定する `primary_domain` ルールを `adr-index.md` と `index.yaml` に追加する
+- [x] review 指摘反映後の validator / YAML parse / 差分チェックを再実行する
+
+### Planning (Phase 3)
+
+- [x] Phase 3 の対象を `adr-reviewer` に確定し、`adr-linter` との差分を明文化する
+- [x] `adr-reviewer` の verdict / finding type / escalation ルールを定義する
+- [x] `.agents/skills/adr-reviewer/` の `SKILL.md` / `agents/openai.yaml` を追加する
+- [x] `dev-docs/agents/adr-governance.md`, `adr-workflow.md`, `adr-criteria.md` に Phase 3 を反映する
+- [x] `dev-docs/specs/adr-review.md` を追加し、設計レビュー契約を固定する
+- [x] 公開 surface 向け `docs/` scope と clean `adr-linter` 前提を Phase 3 契約へ反映する
+- [x] issue #90 セクションの `tasks/feature_spec.md` / `tasks/todo.md` を更新し、検証結果を記録する
+
+### Review
+
+- issue #90 は、ADR 文書を 1 本生成する話ではなく、ADR 要否判定から草案作成、品質検査、整合性監査、索引化までを段階導入する skill 群の設計 issue として理解した。
+- 既存土台:
+  - `dev-docs/adr/` に ADR 本文、`README.md`、`template.md` が存在する
+  - `dev-docs/agents/` に AI エージェント向け内部文書が存在する
+  - `.agents/skills/` には既存 skill の配置例が 1 件ある
+- 着手前のギャップ:
+  - ADR ガバナンス専用 skill 群は未作成
+  - `adr-governance.md`、`adr-criteria.md`、`adr-workflow.md` は未作成
+  - ADR と実装 / tests / specs の整合性を継続監査する仕組みは未整備
+- 実施した追加:
+  - `dev-docs/agents/adr-governance.md`
+    - ADR の目的、作成/更新条件、status ルール、evidence 要件、supersede 方針を定義した
+  - `dev-docs/agents/adr-criteria.md`
+    - `required` / `recommended` / `not-needed` の判定基準と、exstruct 固有の必須領域を定義した
+  - `dev-docs/agents/adr-workflow.md`
+    - Phase 1 の標準フローと skill ごとの責務を定義した
+  - `.agents/skills/adr-suggester/`
+    - issue / PR / diff の ADR 要否判定に特化した skill 雛形を追加した
+  - `.agents/skills/adr-drafter/`
+    - 新規 ADR 草案または既存 ADR 更新提案を作る skill 雛形を追加した
+  - `.agents/skills/adr-linter/`
+    - ADR 文書の構造・evidence・supersede 関係を検査する skill 雛形を追加した
+  - `dev-docs/agents/README.md`
+    - 新しい ADR 運用文書を参照順へ追加した
+  - `tasks/feature_spec.md`
+    - Phase 1 / Phase 2 以降の責務境界と追加成果物を明文化した
+- 設計結論:
+  - Phase 1 は `adr-suggester`、`adr-drafter`、`adr-linter` に限定し、Phase 2 で `adr-reconciler` と `adr-indexer`、Phase 3 で `adr-reviewer` を扱う形に整理した
+  - exstruct 固有の必須領域は、mode 境界、backend fallback、serialization contract、patch backend policy、safety boundary、compatibility policy とした
+  - 判定ヒューリスティクスとして、入口整合、fallback の理由コード/ログ/返却形状、serialization 既定値変更、backend 選択変更を ADR 必須寄りの信号として採用した
+  - ADR 候補の裏付けは `specs` + `src` + `tests` の evidence triad で揃える方針にした
+  - `adr-suggester` も `adr-drafter` と同様に evidence triad を成果物へ残し、`not-needed` 判定でも根拠追跡できる契約に修正した
+  - `adr-workflow` は verdict 後ではなく verdict 前に evidence triad を集める流れへ修正した
+  - Phase 2 として `adr-reconciler` と `adr-indexer` を追加し、継続監査と索引更新を標準フローに入れた
+  - `adr-reconciler` の findings には `policy-drift`, `missing-adr-update`, `missing-evidence`, `stale-reference` の種別と、`severity` / `recommended action` を必須とする方針にした
+  - `adr-indexer` は `dev-docs/adr/README.md`, `dev-docs/adr/index.yaml`, `dev-docs/adr/decision-map.md` を同期する derived artifact manager と定義した
+  - `dev-docs/specs/adr-index.md` に `index.yaml` / `decision-map.md` の内部契約を追加し、既存 ADR 5 本を seeded artifact として反映した
+  - review follow-up として、`adr-reconciler` の Output Contract に `scope` と `findings[].type` を追加し、`adr-indexer` の machine-readable metadata に `primary_domain` を追加した
+  - `dev-docs/adr/decision-map.md` は `domains` 配列の各要素を独立見出しとして表現し、`dev-docs/adr/README.md` の主ドメインは `dev-docs/adr/index.yaml.primary_domain` を source of truth にする方針へ修正した
+- 検証:
+- `.agents/skills/` のディレクトリ一覧で `adr-reconciler` と `adr-indexer` が追加されていることを確認した
+- `python %SKILL_CREATOR_ROOT%\scripts\quick_validate.py .agents\skills\adr-reconciler`
+- `python %SKILL_CREATOR_ROOT%\scripts\quick_validate.py .agents\skills\adr-indexer`
+- `python` で `dev-docs/adr/index.yaml` と `agents/openai.yaml` 2 本の YAML parse が通ることを確認した
+- `git diff --check -- <changed files>` で実害のある差分エラーがないことを確認した
+- `tasks/feature_spec.md`, `dev-docs/agents/`, `dev-docs/specs/adr-index.md`, `.agents/skills/` の参照更新を目視確認した
+- `adr-reconciler` と `adr-indexer` の契約用語が `SKILL.md`、`adr-workflow.md`、`adr-governance.md`、`adr-criteria.md`、`adr-index.md` で一致していることを確認した
+- Phase 3 として `adr-reviewer` を追加し、`adr-linter` の構造検査と分離した設計レビュー専用 skill として定義した
+- `adr-reviewer` の verdict は `ready`, `revise`, `escalate` に固定し、finding 種別は `decision-gap`, `scope-conflict`, `evidence-risk`, `rollout-gap`, `ownership-escalation` を採用した
+- `dev-docs/specs/adr-review.md` を追加し、review focus、verdict rule、finding contract を恒久 spec として分離した
+- `adr-workflow` は `adr-drafter` -> clean `adr-linter` -> `adr-reviewer` の順序に更新し、AI の責務外に触れる ADR は `escalate` で人へ戻す方針にした
+- 公開 API / CLI / MCP に触れる ADR では、`adr-reviewer` が関連 `docs/` を review scope に含める契約へ修正した
+- `adr-reviewer` の契約を `SKILL.md`, `adr-governance.md`, `adr-criteria.md`, `adr-workflow.md`, `adr-review.md` でそろえる
+- 検証:
+  - `python %SKILL_CREATOR_ROOT%\scripts\quick_validate.py .agents\skills\adr-reviewer`
+  - `python` で `.agents/skills/adr-reviewer/agents/openai.yaml` の YAML parse が通ることを確認した
+  - `git diff --check -- <changed files>` で実害のある差分エラーがないことを確認した
+  - `rg` で `ready`, `revise`, `escalate`, `decision-gap`, `scope-conflict`, `evidence-risk`, `rollout-gap`, `ownership-escalation` が `SKILL.md` と `dev-docs/*.md` で一致していることを確認した
+  - `rg` で `adr-reviewer` の clean `adr-linter` (`high` / `medium`) 前提が skill / workflow / spec に反映されていることを確認した
+  - follow-up として、public `docs/` scope と clean `adr-linter` 前提を追加後も `quick_validate.py` と `git diff --check` が通ることを確認した
+
+### Future phase backlog
+
+- [x] Phase 3 で `adr-reviewer` の入出力契約を定義し、ドラフトレビュー観点を固定する
+
 ## 2026-03-13 PR #91 unresolved review follow-up
 
 ### Planning

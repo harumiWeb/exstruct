@@ -1,0 +1,4 @@
+interface:
+  display_name: "ADR Drafter"
+  short_description: "Draft or update ExStruct ADRs from repo evidence"
+  default_prompt: "Use $adr-drafter to produce a new ADR draft or an existing ADR update proposal from this issue, diff, specs, tests, and related ADRs."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "ADR Suggester"
+  short_description: "Judge whether an ExStruct change requires an ADR"
+  default_prompt: "Use $adr-suggester to classify this issue, PR, or diff as ADR required, recommended, or not-needed, and list the related existing ADRs."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "ADR Linter"
+  short_description: "Lint ExStruct ADR drafts for structure and evidence"
+  default_prompt: "Use $adr-linter to review this ADR draft for missing sections, weak evidence, invalid status values, and broken supersede links."
