@@ -5,10 +5,11 @@
 ## 全体フロー
 
 1. `resolve_extraction_inputs` で include_* と mode を正規化
-2. pre-com（openpyxl）で cells/print_areas/colors_map を取得
-3. com（xlwings）で shapes/charts/auto_page_breaks を取得
-4. COM 成功時は colors_map を COM 結果で上書き
-5. COM 失敗時は cells+tables のみでフォールバック
+2. pre-com（openpyxl）で cells/print_areas/formulas_map/colors_map/merged_cells を取得
+3. `standard` / `verbose` は com（xlwings）で shapes/charts/auto_page_breaks を取得
+4. `libreoffice` は LibreOffice backend で shapes/charts を best-effort 抽出
+5. COM 成功時は colors_map を COM 結果で上書き
+6. rich backend 失敗時は cells+table_candidates を維持し、pre-com 取得済みの print_areas / formulas_map / colors_map / merged_cells もフラグに応じて保持する
 
 ## 座標系
 
@@ -17,7 +18,8 @@
 
 ## モード
 
-- light: COM を完全にスキップ、cells+tables のみ
+- light: COM を完全にスキップし、cells+table_candidates を基本に pre-com artifact をフラグに応じて返す
+- libreoffice: LibreOffice backend で rich artifact を best-effort 抽出し、失敗時は pre-com artifact を保持した cells fallback に戻る
 - standard: 既存挙動（テキスト付き図形、必要に応じてチャート）
 - verbose: 全図形 + サイズ付き、チャートもサイズ付き
 
@@ -63,5 +65,5 @@
 
 ## エラーハンドリング / フォールバック
 
-- COM 不可・例外時は cells+tables のみ返す
+- COM / LibreOffice 不可・例外時は cells+table_candidates を返し、pre-com 取得済みの print_areas / formulas_map / colors_map / merged_cells は保持する
 - fallback 理由は `FallbackReason` で統一ログ

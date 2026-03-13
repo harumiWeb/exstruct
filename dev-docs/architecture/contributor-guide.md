@@ -17,10 +17,11 @@
 src/exstruct/core/
 ├── pipeline.py        # Orchestrates the overall flow
 ├── backends/          # Backend abstractions and runtime-specific adapters
+│   ├── openpyxl_backend.py
+│   ├── com_backend.py
+│   └── libreoffice_backend.py
 ├── libreoffice.py     # LibreOffice runtime/session helper
 ├── ooxml_drawing.py   # OOXML drawing/chart parser for best-effort rich extraction
-├── openpyxl_backend.py
-├── com_backend.py
 ├── modeling.py        # Final data integration
 ├── workbook.py        # Workbook lifecycle management
 ├── cells.py           # Cell/table analysis (mainly openpyxl)

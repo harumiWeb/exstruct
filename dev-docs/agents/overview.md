@@ -1,13 +1,13 @@
 # ExStruct - Excel 構造抽出エンジン概要
 
 **ExStruct** は Excel ブックから意味構造を抽出する Python ライブラリです。
-openpyxl と Excel COM（xlwings）を組み合わせ、LLM が扱いやすい構造データを生成します。
+openpyxl、Excel COM（xlwings）、LibreOffice backend を組み合わせ、LLM が扱いやすい構造データを生成します。
 
 ## 特徴
 
 - パイプライン設計で抽出フローを統一
-- mode（light/standard/verbose）で抽出粒度を切替
-- openpyxl/COM の backend 抽象化
+- mode（light/libreoffice/standard/verbose）で抽出粒度を切替
+- openpyxl/COM/LibreOffice の backend 抽象化
 - JSON/YAML/TOON 出力（依存がある場合）
 - print_areas / auto_page_breaks の出力対応
 - フォールバック理由を統一ログで可視化

@@ -1,5 +1,59 @@
 # Todo
 
+## 2026-03-13 PR #91 unresolved review follow-up
+
+### Planning
+
+- [x] PR #91 の未 resolve review thread を最新状態で取得し、論点を列挙する
+- [x] 各 thread を現行コードとテストで照合し、採用/非採用を分類する
+- [x] 採用した指摘だけを最小差分で修正し、必要な検証を行う
+- [ ] 非採用の thread には判断理由を返信して resolve する
+- [ ] 実施内容、検証結果、未解決事項を Review セクションに記録する
+
+### Review
+
+- PR #91 の未 resolve thread 15 件を再取得し、12 件を採用、2 件を重複、1 件を対応不要と判定した。
+- 採用した修正:
+  - `dev-docs/specs/excel-extraction.md`
+    - `libreoffice` mode を追加
+    - rich backend failure 時に保持される pre-com artifact を実装どおり明記
+    - `light` mode の説明を pre-com artifact を含む形へ修正
+  - `dev-docs/agents/contributing.md`
+    - `integrate.py` と `modeling.py` の責務を実装どおりに修正
+  - `dev-docs/agents/overview.md`
+    - mode 一覧と backend 説明に `libreoffice` を追加
+  - `dev-docs/architecture/contributor-guide.md`
+    - backend ファイルパスを `core/backends/*` に修正
+  - `dev-docs/architecture/overview.md`
+    - アーキテクチャ概要に LibreOffice backend を追加
+  - `dev-docs/testing/test-requirements.md`
+    - coverage target を `80%` に修正
+    - `CellRow.r` を 1-based に修正
+    - pandas dtype を `dtype=str` に修正
+    - merged cell の空値正規化を `" "` に修正
+  - `dev-docs/specs/patch/model-migration-notes.md`
+    - canonical model が `patch/models.py` に既にあり、`internal.py` に重複定義が残っている現状へ修正
+    - 移行手順を「移設」ではなく「重複解消と import 統一」へ修正
+- 非採用/重複:
+  - `dev-docs/agents/overview.md` の CodeRabbit mode 指摘は Copilot 指摘と重複
+  - `dev-docs/specs/excel-extraction.md` の CodeRabbit mode 指摘は Copilot 指摘と重複
+  - `tasks/todo.md` 上の PR Summary 指摘は、現在の PR 本文がすでに `dev-docs/` 配下の internal docs 追加を明記しているため対応不要
+- 検証:
+  - `gh api graphql` で PR #91 の unresolved review thread を取得
+  - 現行コード照合:
+    - `codecov.yml`
+    - `src/exstruct/core/cells.py`
+    - `src/exstruct/core/integrate.py`
+    - `src/exstruct/core/modeling.py`
+    - `src/exstruct/core/pipeline.py`
+    - `src/exstruct/mcp/patch/models.py`
+    - `src/exstruct/mcp/patch/internal.py`
+    - `src/exstruct/mcp/patch_runner.py`
+    - `src/exstruct/mcp/patch/service.py`
+  - `git diff --check -- <changed files>` で whitespace error なしを確認
+- 未実施:
+  - GitHub への返信と resolve
+
 ## 2026-03-13 AI agent document retention policy
 
 ### Planning

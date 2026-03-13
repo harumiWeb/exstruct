@@ -7,7 +7,7 @@
 
 1. `docs/` は公開契約、`dev-docs/specs/` は内部仕様、`dev-docs/adr/` は判断理由として読む
 2. モデル定義（`dev-docs/specs/data-model.md`）と矛盾するコードは禁止
-3. core 層は「抽出のみ」。推論ロジックは integrate に集約
+3. core 層は「抽出のみ」。統合ロジックは `modeling.py` に集約し、`integrate.py` は pipeline 呼び出しの入口にとどめる
 4. models 層は絶対に「副作用なし」
 5. I/O 処理とコアロジックを混在させない
 6. 例外処理は fail-safe を徹底する

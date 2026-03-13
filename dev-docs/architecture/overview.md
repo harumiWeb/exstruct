@@ -1,7 +1,8 @@
 # ExStruct アーキテクチャ概要
 
 ExStruct はパイプライン中心の抽出アーキテクチャで、
-openpyxl と Excel COM（xlwings）を役割分担させています。
+openpyxl、Excel COM（xlwings）、LibreOffice backend を
+モードに応じて役割分担させています。
 
 ## 全体構造
 
@@ -16,6 +17,7 @@ exstruct/
       base.py
       openpyxl_backend.py
       com_backend.py
+      libreoffice_backend.py
     cells.py
     shapes.py
     charts.py
@@ -45,7 +47,7 @@ exstruct/
 抽出の中心層（外部依存を集約）
 
 - `pipeline.py` → 抽出フロー、COM 判定、fallback、raw 生成
-- `backends/*` → openpyxl/COM の抽象化
+- `backends/*` → openpyxl/COM/LibreOffice の抽象化
 - `cells.py` → セル抽出、テーブル検出、colors_map
 - `shapes.py` → 図形抽出、方向推定
 - `charts.py` → チャート解析

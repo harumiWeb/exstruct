@@ -1,5 +1,28 @@
 # Feature Spec
 
+## 2026-03-13 PR #91 unresolved review follow-up
+
+### Issue
+
+- PR #91 に未 resolve の review thread が残っており、各指摘について「実害のある不具合か」「既存契約どおりで対応不要か」を現行コードで再確認する必要がある。
+- 対応が必要な指摘は、最小差分で根本原因を修正し、回帰テストまたは既存検証で裏付ける。
+- 対応不要と判断した指摘は、判断理由を明示した返信を付けて resolve する。
+
+### Review contract
+
+- 未 resolve thread は `gh api graphql` などで最新状態を再取得し、duplicate / outdated / active issue を混同しない。
+- 各指摘は次の基準で分類する。
+  - public contract、実行時挙動、CI 安定性、型/検証契約を壊すものは採用する。
+  - 既に別修正で満たされているもの、誤読に基づくもの、style-only で実害根拠がないものは非採用とする。
+- 採用した指摘への対応は、指摘箇所だけでなく周辺 contract まで確認し、必要なら targeted test を追加する。
+- 非採用 thread を resolve する際は、現行コード上の根拠と非採用理由を短くコメントする。
+
+### Verification
+
+- PR #91 の未 resolve thread ごとに、採用/非採用の判断理由を整理できる。
+- 採用した変更について、少なくとも対象テストまたは同等の再現手順で挙動を確認する。
+- 最終的に対象 thread を GitHub 上で resolve できる。
+
 ## 2026-03-13 AI agent document retention policy
 
 ### Issue
