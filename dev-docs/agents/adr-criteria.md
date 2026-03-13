@@ -90,3 +90,28 @@ AI エージェントは判定時に最低限次を返す。
   - specs の契約文
   - src の主要シンボルまたは実行経路
   - tests の固定化ケース
+
+## Phase 2: 監査 / 索引の出力要件
+
+`adr-reconciler` は判定済み ADR の drift 監査で最低限次を返す。
+
+- scope:
+  - 対象 ADR
+  - 調査した `specs` / `src` / `tests`
+- findings:
+  - type: `policy-drift` / `missing-adr-update` / `missing-evidence` / `stale-reference`
+  - severity: `high` / `medium` / `low`
+  - claim
+  - affected ADRs
+  - evidence matrix:
+    - adr の claim または該当節
+    - specs の契約文
+    - src の主要シンボルまたは実行経路
+    - tests の固定化ケース
+  - recommended action: `update-adr` / `new-adr` / `update-specs` / `add-tests` / `no-action`
+
+`adr-indexer` は索引更新で最低限次を返す。
+
+- updated artifacts
+- added or changed ADR entries
+- consistency findings

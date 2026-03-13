@@ -9,5 +9,6 @@
 3. `dev-docs/agents/adr-governance.md`
 4. `dev-docs/agents/adr-criteria.md`
 5. `dev-docs/agents/adr-workflow.md`
-6. `dev-docs/specs/`
-7. `dev-docs/adr/`
+6. `dev-docs/specs/adr-index.md`
+7. `dev-docs/specs/`
+8. `dev-docs/adr/`

@@ -59,3 +59,8 @@
 
 - When a shared policy document defines a required output artifact (here: the `specs`/`src`/`tests` evidence triad), mirror that requirement in every dependent skill contract; do not assume downstream docs will fill the gap.
 - In decision workflows, collect verification evidence before any terminal verdict, including negative outcomes like `not-needed`; otherwise the process silently permits ungrounded dismissals.
+
+## 2026-03-13 ADR index contract lessons
+
+- When a spec makes structured audit fields mandatory (for example `scope` or finding `type`), copy those exact fields into the producing skill contract; partial paraphrases in workflow docs are not enough.
+- If a human-facing artifact needs one canonical label while machine-readable metadata supports multiple labels, encode the canonical label explicitly (for example `primary_domain`) instead of inferring it from array order or merged headings.

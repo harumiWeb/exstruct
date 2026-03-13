@@ -1,0 +1,4 @@
+interface:
+  display_name: "ADR Indexer"
+  short_description: "Refresh ADR README, index.yaml, and decision map"
+  default_prompt: "Use $adr-indexer to rescan the ADR files and synchronize dev-docs/adr/README.md, dev-docs/adr/index.yaml, and dev-docs/adr/decision-map.md."

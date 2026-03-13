@@ -25,9 +25,19 @@
   - `adr-linter`
     - ADR 文書の `状態`、必須セクション、evidence、supersede 関係、片面的な consequence を検査する
     - 出力は修正文案ではなく findings 中心とする
-- Phase 2 以降は次の責務を予約し、Phase 1 skill に混ぜない。
-  - `adr-reconciler`: ADR と specs / tests / src の整合性監査
-  - `adr-indexer`: ADR 一覧、タグ、関係マップ更新
+- Phase 2 は次の 2 skill を導入し、Phase 1 の判定/草案/lint 後に継続運用を追加する。
+  - `adr-reconciler`
+    - 対象は `accepted` / `proposed` ADR と、関連する `dev-docs/specs/`, `tests/`, `src/`
+    - findings ごとに `policy-drift`, `missing-adr-update`, `missing-evidence`, `stale-reference` を返す
+    - 各 finding は `severity` (`high` / `medium` / `low`) と `recommended action` を持つ
+    - `recommended action` は `update-adr`, `new-adr`, `update-specs`, `add-tests`, `no-action` のいずれかとする
+    - 出力は `scope` と `findings[].type` を含む
+    - `adr-reconciler` は ADR 本文や spec を自動修正しない
+  - `adr-indexer`
+    - `dev-docs/adr/README.md`, `dev-docs/adr/index.yaml`, `dev-docs/adr/decision-map.md` を同期する
+    - 各 ADR から `id`, `title`, `status`, `primary_domain`, `domains`, `supersedes`, `superseded_by`, `related_specs` を正規化して反映する
+    - 索引 artifact は source of truth ではなく derived view として扱う
+- Phase 3 以降は次の責務を予約し、Phase 2 skill に混ぜない。
   - `adr-reviewer`: ADR 草案の設計レビュー
 - scope は次に限定する。
   - ADR 管理 skill 群の責務分割
@@ -45,6 +55,7 @@
   - `adr-workflow.md`: issue から ADR 判定、草案、lint、merge 後運用までの流れ
 - ADR 要否判定は `required` / `recommended` だけでなく `not-needed` でも evidence triad を必須とし、issue や PR の説明だけで判定を終えてはならない。
 - `.agents/skills/` には Phase 1 の skill ディレクトリを追加し、各 skill は `SKILL.md` と `agents/openai.yaml` を持つ。
+- `.agents/skills/` の Phase 2 では `adr-reconciler` と `adr-indexer` を追加し、監査結果と索引 artifact を定型運用する。
 
 ### Verification
 
@@ -56,6 +67,42 @@
 - 次の実装計画で、Phase 1 の対象と ADR 判定ルール定義を最初の論点として扱う。
 - `dev-docs/agents/` に ADR 運用文書 3 本が追加されている。
 - `.agents/skills/adr-suggester/`, `.agents/skills/adr-drafter/`, `.agents/skills/adr-linter/` が追加されている。
+- `.agents/skills/adr-reconciler/` と `.agents/skills/adr-indexer/` が追加されている。
+
+### Phase 2 extension
+
+#### Issue
+
+- Phase 1 で ADR 要否判定、草案、lint の入口は整ったが、merge 前後で ADR と `specs` / `tests` / `src` のズレを検知する標準手順と、AI がたどりやすい索引 artifact がない。
+- issue #90 の Phase 2 では、`adr-reconciler` と `adr-indexer` の出力契約を固定し、初期 index artifact を seeded state で置く必要がある。
+
+#### Design contract
+
+- Phase 2 は `adr-reconciler` と `adr-indexer` の 2 skill に限定する。
+- `adr-reconciler` は次を満たす。
+  - 既存 ADR の claim と `dev-docs/specs/`, `tests/`, `src/` を照合する
+  - findings ごとに `policy-drift` / `missing-adr-update` / `missing-evidence` / `stale-reference` を返す
+  - findings ごとに `severity` (`high` / `medium` / `low`) と `recommended action` (`update-adr`, `new-adr`, `update-specs`, `add-tests`, `no-action`) を返す
+  - 出力に `scope` と `findings[].type` を含める
+  - evidence は `adr` / `specs` / `src` / `tests` の matrix を必須とする
+  - ADR 本文や spec 本文を自動編集しない
+- `adr-indexer` は次を満たす。
+  - `dev-docs/adr/README.md`, `index.yaml`, `decision-map.md` を同期する
+  - `id`, `title`, `status`, `primary_domain`, `domains`, `supersedes`, `superseded_by`, `related_specs` を正規化する
+  - `README.md` の主ドメインは `index.yaml.primary_domain` と一致する
+  - `decision-map.md` の見出しは `domains` 配列の各要素と 1 対 1 で対応する
+  - ADR 本文から導けない domain や関係性を invent しない
+- `dev-docs/agents/adr-governance.md` は Phase 2 の drift 監査ルールと derived index artifact の更新条件を含む。
+- `dev-docs/agents/adr-workflow.md` は lint 後の `adr-reconciler` と、ADR 変更後の `adr-indexer` を実行する経路を含む。
+- `dev-docs/agents/adr-criteria.md` は Phase 2 の最小出力要件を含む。
+- `dev-docs/specs/adr-index.md` は `index.yaml` と `decision-map.md` の内部契約を定義する。
+
+#### Verification
+
+- `.agents/skills/adr-reconciler/` と `.agents/skills/adr-indexer/` が追加され、`SKILL.md` と `agents/openai.yaml` を持つ。
+- `dev-docs/agents/adr-governance.md`, `adr-workflow.md`, `adr-criteria.md` が Phase 2 の監査 / 索引契約に更新されている。
+- `dev-docs/specs/adr-index.md`, `dev-docs/adr/index.yaml`, `dev-docs/adr/decision-map.md` が追加されている。
+- Phase 2 の入出力契約が `SKILL.md` と `dev-docs/*.md` で一致している。
 
 ## 2026-03-13 PR #91 unresolved review follow-up
 

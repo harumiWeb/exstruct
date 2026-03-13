@@ -12,6 +12,23 @@
 - [x] Phase 1 の skill 雛形と参照導線を追加する
 - [x] 文書整合性と skill frontmatter / metadata の最低限検証を行う
 
+### Planning (Phase 2)
+
+- [x] Phase 2 の対象を `adr-reconciler` と `adr-indexer` に確定する
+- [x] `adr-reconciler` と `adr-indexer` の入出力契約を定義する
+- [x] `.agents/skills/adr-reconciler/` と `.agents/skills/adr-indexer/` の `SKILL.md` / `agents/openai.yaml` を追加する
+- [x] `dev-docs/agents/adr-workflow.md` と `adr-governance.md` に Phase 2 運用を反映する
+- [x] `dev-docs/agents/adr-criteria.md` と `dev-docs/specs/adr-index.md` に Phase 2 の出力 / 索引契約を追加する
+- [x] `dev-docs/adr/index.yaml` と `decision-map.md` の初期 artifact を追加する
+- [x] issue #90 セクションの `tasks/feature_spec.md` / `tasks/todo.md` を更新し、検証結果を記録する
+
+### Review follow-up
+
+- [x] `adr-reconciler` の Output Contract に `scope` と `findings[].type` を追加する
+- [x] `decision-map.md` の domain 見出しを `index.yaml.domains` と 1 対 1 にそろえる
+- [x] `README.md` の主ドメインを決定する `primary_domain` ルールを `adr-index.md` と `index.yaml` に追加する
+- [x] review 指摘反映後の validator / YAML parse / 差分チェックを再実行する
+
 ### Review
 
 - issue #90 は、ADR 文書を 1 本生成する話ではなく、ADR 要否判定から草案作成、品質検査、整合性監査、索引化までを段階導入する skill 群の設計 issue として理解した。
@@ -41,17 +58,30 @@
   - `tasks/feature_spec.md`
     - Phase 1 / Phase 2 以降の責務境界と追加成果物を明文化した
 - 設計結論:
-  - Phase 1 は `adr-suggester`、`adr-drafter`、`adr-linter` に限定し、`adr-reconciler`、`adr-indexer`、`adr-reviewer` は将来フェーズへ分離した
+  - Phase 1 は `adr-suggester`、`adr-drafter`、`adr-linter` に限定し、Phase 2 で `adr-reconciler` と `adr-indexer`、Phase 3 で `adr-reviewer` を扱う形に整理した
   - exstruct 固有の必須領域は、mode 境界、backend fallback、serialization contract、patch backend policy、safety boundary、compatibility policy とした
   - 判定ヒューリスティクスとして、入口整合、fallback の理由コード/ログ/返却形状、serialization 既定値変更、backend 選択変更を ADR 必須寄りの信号として採用した
   - ADR 候補の裏付けは `specs` + `src` + `tests` の evidence triad で揃える方針にした
   - `adr-suggester` も `adr-drafter` と同様に evidence triad を成果物へ残し、`not-needed` 判定でも根拠追跡できる契約に修正した
   - `adr-workflow` は verdict 後ではなく verdict 前に evidence triad を集める流れへ修正した
+  - Phase 2 として `adr-reconciler` と `adr-indexer` を追加し、継続監査と索引更新を標準フローに入れた
+  - `adr-reconciler` の findings には `policy-drift`, `missing-adr-update`, `missing-evidence`, `stale-reference` の種別と、`severity` / `recommended action` を必須とする方針にした
+  - `adr-indexer` は `README.md`, `index.yaml`, `decision-map.md` を同期する derived artifact manager と定義した
+  - `dev-docs/specs/adr-index.md` に `index.yaml` / `decision-map.md` の内部契約を追加し、既存 ADR 5 本を seeded artifact として反映した
+  - review follow-up として、`adr-reconciler` の Output Contract に `scope` と `findings[].type` を追加し、`adr-indexer` の machine-readable metadata に `primary_domain` を追加した
+  - `decision-map.md` は `domains` 配列の各要素を独立見出しとして表現し、`README.md` の主ドメインは `index.yaml.primary_domain` を source of truth にする方針へ修正した
 - 検証:
-  - `git diff --check -- <changed files>` で差分上の whitespace error がないことを確認した
-  - `python` で新規 `SKILL.md` 3 本の frontmatter (`name`, `description`) を確認した
-  - `python` で `agents/openai.yaml` 3 本の最小項目 (`display_name`, `short_description`, `default_prompt`) を確認した
-  - `rg` で Phase 1 skill 名と判定ラベルが `tasks/feature_spec.md`、`dev-docs/agents/`、`.agents/skills/` に反映されていることを確認した
+  - `.agents/skills/` のディレクトリ一覧で `adr-reconciler` と `adr-indexer` が追加されていることを確認した
+  - `python C:\Users\HARUMI\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents\skills\adr-reconciler`
+  - `python C:\Users\HARUMI\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents\skills\adr-indexer`
+  - `python` で `dev-docs/adr/index.yaml` と `agents/openai.yaml` 2 本の YAML parse が通ることを確認した
+  - `git diff --check -- <changed files>` で実害のある差分エラーがないことを確認した
+  - `tasks/feature_spec.md`, `dev-docs/agents/`, `dev-docs/specs/adr-index.md`, `.agents/skills/` の参照更新を目視確認した
+  - `adr-reconciler` と `adr-indexer` の契約用語が `SKILL.md`、`adr-workflow.md`、`adr-governance.md`、`adr-criteria.md`、`adr-index.md` で一致していることを確認した
+
+### Future phase backlog
+
+- [ ] Phase 3 で `adr-reviewer` の入出力契約を定義し、ドラフトレビュー観点を固定する
 
 ## 2026-03-13 PR #91 unresolved review follow-up
 

@@ -52,6 +52,37 @@ ADR は少なくとも 1 つの concrete evidence を持つ。
 
 推奨は、`Tests`、`Code`、`Related specs` の 3 系統をすべて埋めること。
 
+## Reconciliation ルール
+
+ADR が `proposed` または `accepted` の場合は、変更時または定期点検時に `adr-reconciler` で drift を確認する。
+
+- 監査対象は claim 単位とし、`adr`, `specs`, `src`, `tests` の evidence matrix をそろえる
+- finding 種別は少なくとも次を使う
+  - `policy-drift`
+  - `missing-adr-update`
+  - `missing-evidence`
+  - `stale-reference`
+- findings は `severity` (`high` / `medium` / `low`) を持つ
+- `high` findings は merge 前に解消するか、明示的な follow-up を作る
+- 監査結果の `recommended action` は次を使う
+  - `update-adr`
+  - `new-adr`
+  - `update-specs`
+  - `add-tests`
+  - `no-action`
+
+`adr-reconciler` は監査結果を返すだけで、ADR や spec の本文を自動変更しない。policy-level change が疑われる場合は `adr-suggester` と `adr-drafter` に戻す。
+
+## 索引 artifact の扱い
+
+次のファイルは ADR 本文から導かれる derived artifact として扱う。
+
+- `dev-docs/adr/README.md`
+- `dev-docs/adr/index.yaml`
+- `dev-docs/adr/decision-map.md`
+
+これらは新規 ADR、status 変更、supersede 関係変更、domain 分類変更、related spec 更新があったときに更新する。
+
 ## Status ルール
 
 利用可能な `状態` は次のみとする。
@@ -69,6 +100,8 @@ ADR は少なくとも 1 つの concrete evidence を持つ。
 - ADR 対象の論点では、`why` と `what` を混同しない
 - 新しい ADR を提案するときは、関連する `tests`, `code`, `specs` を列挙する
 - ADR 不要と判断した場合も、なぜ policy-level change ではないのかを短く残す
+- ADR を新規作成/更新した場合は、必要に応じて `adr-reconciler` で drift 監査を行い、`high` findings を残さない
+- ADR を追加・更新・supersede した場合は、derived index artifact も同期させる
 
 ## 非目標
 

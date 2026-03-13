@@ -1,0 +1,69 @@
+adrs:
+  - id: ADR-0001
+    title: 抽出モードの責務境界
+    status: accepted
+    path: dev-docs/adr/ADR-0001-extraction-mode-boundaries.md
+    primary_domain: extraction
+    domains:
+      - extraction
+      - mode
+    supersedes: []
+    superseded_by: []
+    related_specs:
+      - docs/api.md
+      - docs/cli.md
+      - dev-docs/specs/excel-extraction.md
+  - id: ADR-0002
+    title: Rich Backend のフォールバック方針
+    status: accepted
+    path: dev-docs/adr/ADR-0002-rich-backend-fallback-policy.md
+    primary_domain: backend
+    domains:
+      - backend
+      - fallback
+      - extraction
+    supersedes: []
+    superseded_by: []
+    related_specs:
+      - dev-docs/specs/excel-extraction.md
+      - docs/concept.md
+  - id: ADR-0003
+    title: 出力直列化における省略方針
+    status: accepted
+    path: dev-docs/adr/ADR-0003-output-serialization-omission-policy.md
+    primary_domain: schema
+    domains:
+      - schema
+      - serialization
+      - compatibility
+    supersedes: []
+    superseded_by: []
+    related_specs:
+      - docs/api.md
+      - docs/cli.md
+  - id: ADR-0004
+    title: Patch backend 選択方針
+    status: accepted
+    path: dev-docs/adr/ADR-0004-patch-backend-selection-policy.md
+    primary_domain: mcp
+    domains:
+      - mcp
+      - backend
+      - compatibility
+    supersedes: []
+    superseded_by: []
+    related_specs:
+      - docs/mcp.md
+      - dev-docs/specs/patch/legacy-dependency-inventory.md
+  - id: ADR-0005
+    title: PathPolicy の安全境界
+    status: accepted
+    path: dev-docs/adr/ADR-0005-path-policy-safety-boundary.md
+    primary_domain: safety
+    domains:
+      - safety
+      - mcp
+    supersedes: []
+    superseded_by: []
+    related_specs:
+      - docs/mcp.md
