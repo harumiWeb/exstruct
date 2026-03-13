@@ -1,5 +1,24 @@
 # Feature Spec
 
+## 2026-03-13 AI agent document retention policy
+
+### Issue
+
+- `tasks/feature_spec.md` と `tasks/todo.md` を区切りの良いタイミングで白紙に戻す運用だと、設計判断、仕様制約、検証条件まで失われやすい。
+- 現在の task 文書には、実質的に ADR や恒久 spec として残すべき内容が混在している。
+
+### Documentation contract
+
+- `AGENTS.md` に、task 文書の役割分離、残す/捨てる基準、完了時の移管手順、ADR 化条件を明記する。
+- AI は `tasks/feature_spec.md` と `tasks/todo.md` をファイルごと白紙化せず、完了済みタスクのセクション単位で整理する。
+- `dev-docs/README.md` の役割分担に合わせ、将来参照される設計判断は `dev-docs/adr/`、内部仕様は `dev-docs/specs/`、実装構造の説明は `dev-docs/architecture/` へ移管してから task 文書を整理する。
+- 公開 API や利用者向け契約を変更した場合のみ、`docs/*.md` への反映を併用する。
+
+### Verification
+
+- `AGENTS.md` にドキュメント保持ポリシー節が追加されている。
+- 追加された節に、役割分離、残す/捨てる基準、完了時の必須手順、ADR 作成条件が含まれている。
+
 ## 2026-03-12 v0.6.1 release notes and changelog
 
 ### Issue

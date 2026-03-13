@@ -1,5 +1,23 @@
 # Todo
 
+## 2026-03-13 AI agent document retention policy
+
+### Planning
+
+- [x] 既存の `AGENTS.md`、`tasks/feature_spec.md`、`tasks/todo.md` を確認し、現状の task 文書が担っている役割を整理する
+- [x] 残すべき設計判断と破棄可能な作業メモの境界を定義する
+- [x] `AGENTS.md` に、文書保持ポリシー、ADR 化条件、白紙化禁止の粒度を追記する
+- [x] 変更内容を確認し、今回の運用変更がそのまま AI 指示として使えることを確認する
+
+### Review
+
+- `AGENTS.md` に `## ドキュメント保持ポリシー` を追加し、`tasks/feature_spec.md` と `tasks/todo.md` をファイル単位で白紙化しない運用を明文化した。
+- task 文書の役割分離、残すべき情報、捨ててよい情報、完了時の移管手順、ADR 作成条件、セッション終了チェックを一か所にまとめた。
+- `dev-docs/README.md` の整理に合わせ、内部向け恒久文書の移管先を `dev-docs/adr/`、`dev-docs/specs/`、`dev-docs/architecture/` に揃え、公開契約だけを `docs/*.md` に残す方針へ修正した。
+- 検証:
+  - `AGENTS.md` の追記内容を目視確認し、役割分離、残す/捨てる基準、完了時の必須手順、ADR 条件が含まれていることを確認した
+  - doc-only 変更のためテストは未実行
+
 ## 2026-03-12 v0.6.1 release notes and changelog
 
 ### Planning
