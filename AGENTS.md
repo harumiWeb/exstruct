@@ -1,5 +1,27 @@
 # ExStruct AI Agents Guide
 
+## 0. Overview
+
+This repository is organized around the following top-level directories:
+
+```text
+exstruct/
+|- src/           # Main library and implementation code
+|- tests/         # Automated tests
+|- sample/        # Sample workbooks and example inputs
+|- schemas/       # JSON schemas and validation-related assets
+|- scripts/       # Utility and maintenance scripts
+|- benchmark/     # Benchmark code and performance measurements
+|- docs/          # User-facing documentation
+|- dev-docs/      # All developer-facing documentation
+|- tasks/         # Temporary task notes and working files
+|- drafts/        # Draft documents and work-in-progress materials
+|- dist/          # Build artifacts and packaged outputs
+`- site/          # Generated documentation site output
+```
+
+For internal development guidance, architecture notes, ADRs, specifications, and testing references, use `dev-docs/` as the canonical location. Developer-facing documentation should be written there rather than scattered across the repository.
+
 ## 1. Workflow Design
 
 ### 1. Use Plan mode by default
@@ -49,65 +71,7 @@
 
 ---
 
-## 2. Coding Standards the AI Must Follow
-
-The AI must always generate code according to the following rules.
-
-### 2.1 Type Hints Required (mypy strict compliant)
-
-- Always add argument and return types to every function and method
-- `Any` may be used only at external library boundaries (xlwings, pandas, etc.)
-
-### 2.2 Return Pydantic BaseModel or dataclass
-
-- Do not return dictionaries or tuples
-- Represent all structured data using Pydantic or dataclass models
-
-### 2.3 One function = one responsibility
-
-- Complexity (C90) must not exceed 12
-- If needed, the AI may automatically split functions
-
-### 2.4 Import order
-
-1. Standard library
-2. Third-party
-3. Modules within exstruct
-
-### 2.5 Docstrings (Google style)
-
-All functions and classes must have Docstrings.
-
-### 2.6 Do not depend on the internal structure of external libraries
-
-- Do not infer types from xlwings / pandas / numpy and similar libraries
-- Receive entities as Any at the boundary layer and normalize them internally with Pydantic
-
----
-
-## 3. Code the AI Must Not Write (Prohibited Patterns)
-
-The AI must not write the following code.
-
-### ❌ Large single function (God Function)
-
-### ❌ God class (God Object)
-
-### ❌ Unnecessary nesting and deeply nested conditionals
-
-### ❌ Returning dictionaries or tuples (Pydantic or dataclass required)
-
-### ❌ Code that depends on internal types in xlwings or pandas
-
-### ❌ Code with disorganized imports
-
-### ❌ Functions full of side effects that cannot be tested
-
-If necessary, the AI may **refactor to avoid these prohibited patterns**.
-
----
-
-## 4. Areas Outside the AI's Responsibility (Handled by Humans)
+## 2. Areas Outside the AI's Responsibility (Handled by Humans)
 
 The AI does not own the following areas. Humans make these decisions.
 
@@ -120,7 +84,7 @@ However, the AI **may make proposals**.
 
 ---
 
-## 5. Required Work Procedure
+## 3. Required Work Procedure
 
 The AI must always follow the steps below before generating code.
 
@@ -137,7 +101,7 @@ The AI must always follow the steps below before generating code.
 
 ---
 
-## Task Management
+## 4. Task Management
 
 1. **Plan first**: Write the plan in `tasks/todo.md` as checkable items
 2. **Review the plan**: Review it before starting implementation
@@ -148,7 +112,7 @@ The AI must always follow the steps below before generating code.
 
 ---
 
-## Documentation Retention Policy
+## 5. Documentation Retention Policy
 
 ### Separation of Roles
 
@@ -211,7 +175,7 @@ The AI must always follow the steps below before generating code.
 
 ---
 
-## Core Principles
+## 6. Core Principles
 
 - **Simplicity first**: Keep every change as simple as possible. Minimize the code affected.
 - **No cutting corners**: Find the root cause. Avoid temporary fixes. Maintain senior engineer standards.
