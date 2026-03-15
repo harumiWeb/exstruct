@@ -2,7 +2,7 @@
 
 ## Status
 
-`proposed`
+`accepted`
 
 ## Background
 
