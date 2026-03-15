@@ -1,3 +1,3 @@
-# テスト文書
+# Testing documentation
 
-このディレクトリには、ExStruct 内部の検証期待値とテスト計画ガイドを置きます。
+This directory contains internal validation expectations and test planning guides for ExStruct.

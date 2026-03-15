@@ -1,8 +1,8 @@
-# エージェント向け文書
+# Agent documentation
 
-このディレクトリでは、AI エージェントが ExStruct をどう読み、どう変更するかを説明します。
+This directory explains how AI agents should read and modify ExStruct.
 
-まず次を読むこと:
+Read these first:
 
 1. `dev-docs/README.md`
 2. `dev-docs/agents/contributing.md`

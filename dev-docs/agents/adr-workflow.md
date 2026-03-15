@@ -1,47 +1,47 @@
-# ADR ワークフロー
+# ADR workflow
 
-この文書は、issue や PR から ADR を扱うときの標準フローを定義する。
+This document defines the standard flow for handling ADRs from issues and PRs.
 
-## Phase 1 の対象
+## Scope of Phase 1
 
-Phase 1 では次だけを標準化する。
+Phase 1 standardizes only the following:
 
-1. ADR 要否判定
-2. ADR 草案または既存 ADR 更新提案
-3. ADR 文書の lint
+1. Determining whether an ADR is needed
+2. Drafting a new ADR or proposing an update to an existing ADR
+3. Linting ADR documents
 
-## Phase 2 の追加対象
+## Additions in Phase 2
 
-Phase 2 では、Phase 1 に次を追加する。
+Phase 2 adds the following on top of Phase 1:
 
-1. `adr-reconciler` による ADR と `specs` / `tests` / `src` の整合性監査
-2. `adr-indexer` による ADR 索引と relationship map の更新
+1. Auditing ADR consistency against `specs` / `tests` / `src` via `adr-reconciler`
+2. Updating ADR indexes and relationship maps via `adr-indexer`
 
-## Phase 3 の追加対象
+## Additions in Phase 3
 
-Phase 3 では、Phase 1 + 2 に次を追加する。
+Phase 3 adds the following on top of Phase 1 + 2:
 
-1. `adr-reviewer` による ADR 草案の設計レビュー
+1. Design review of ADR drafts via `adr-reviewer`
 
-## 標準フロー
+## Standard flow
 
-1. issue または PR を読む
-2. 関連する `docs/`, `dev-docs/specs/`, `dev-docs/adr/`, `tests/`, `src/` を読み、判定に必要な evidence triad を集める
-3. `adr-suggester` で `required` / `recommended` / `not-needed` を判定する
-4. `not-needed` の場合でも、判定理由と evidence triad を issue または PR に残す
-5. `required` または `recommended` の場合は、`adr-drafter` で新規 ADR 草案または既存 ADR 更新提案を作る
-6. `adr-linter` で形式と evidence を検査する
-7. `adr-linter` に未解消の `high` / `medium` finding がある場合は、草案を更新して 6 を再実行する
-8. `adr-reviewer` で設計妥当性、既存 ADR との衝突、互換性 / rollout / fallback / safety impact をレビューする。公開 API / CLI / MCP に触れる ADR では関連 `docs/` も scope に含める
-9. `adr-reviewer` が `revise` を返した場合は、草案を更新して必要なら 6-8 を再実行する
-10. `adr-reviewer` が `escalate` を返した場合は、人の判断が必要な論点として issue または PR に戻す
-11. ADR が新規追加/更新された場合、または policy-level 変更を含む場合は `adr-reconciler` を実行する
-12. merge 時に関連 spec / docs / tests と reconciliation findings の整合を再確認する
-13. ADR が追加 / 更新 / supersede された場合は `adr-indexer` で `README.md`, `index.yaml`, `decision-map.md` を同期する
+1. Read the issue or PR
+2. Read related `docs/`, `dev-docs/specs/`, `dev-docs/adr/`, `tests/`, and `src/`, and gather the evidence triad needed for the decision
+3. Use `adr-suggester` to decide `required` / `recommended` / `not-needed`
+4. Even when the verdict is `not-needed`, leave the rationale and evidence triad in the issue or PR
+5. When the verdict is `required` or `recommended`, use `adr-drafter` to produce a new ADR draft or a proposal to update an existing ADR
+6. Use `adr-linter` to check structure and evidence
+7. If `adr-linter` reports unresolved `high` / `medium` findings, revise the draft and rerun step 6
+8. Use `adr-reviewer` to review design soundness, conflicts with existing ADRs, and compatibility / rollout / fallback / safety impact. If the ADR touches public API / CLI / MCP, include related `docs/` in scope
+9. If `adr-reviewer` returns `revise`, revise the draft and rerun steps 6-8 as needed
+10. If `adr-reviewer` returns `escalate`, send the issue back to the issue or PR as a point that requires human judgment
+11. Run `adr-reconciler` when an ADR is newly added or updated, or when the change includes a policy-level shift
+12. At merge time, recheck consistency with related specs / docs / tests and reconciliation findings
+13. If an ADR was added, updated, or superseded, run `adr-indexer` to synchronize `README.md`, `index.yaml`, and `decision-map.md`
 
-## 読み順
+## Reading order
 
-ADR 系タスクでは、次の順で資料を確認する。
+For ADR-related tasks, review materials in this order:
 
 1. `docs/`
 2. `dev-docs/specs/`
@@ -49,75 +49,75 @@ ADR 系タスクでは、次の順で資料を確認する。
 4. `tests/`
 5. `src/`
 
-AI 向けの判断基準が必要なときだけ、追加で次を読む。
+Only when AI-oriented decision guidance is needed, also read:
 
 - `dev-docs/agents/adr-governance.md`
 - `dev-docs/agents/adr-criteria.md`
 
-## skill ごとの責務
+## Responsibility of each skill
 
 ### `adr-suggester`
 
-- 変更を設計判断として扱うべきか判定する
-- verdict 前に evidence triad を集める
-- 新規 ADR 候補と既存 ADR 候補を返す
-- `not-needed` を含め、判定結果には evidence triad を添える
-- 草案本文は生成しない
+- Decide whether a change should be treated as a design decision
+- Gather the evidence triad before returning a verdict
+- Return new-ADR candidates and existing-ADR candidates
+- Include the evidence triad even for `not-needed`
+- Do not generate ADR body text
 
 ### `adr-drafter`
 
-- 新規 ADR 草案か既存 ADR 更新提案を作る
-- `背景`, `決定`, `影響`, `根拠` を埋める
-- 根拠には `Tests`, `Code`, `Related specs` を含める
+- Create either a new ADR draft or a proposal to update an existing ADR
+- Fill in `Background`, `Decision`, `Consequences`, and `Rationale`
+- Include `Tests`, `Code`, and `Related specs` in the `Rationale` section
 
 ### `adr-linter`
 
-- `状態`、必須セクション、evidence、`Supersedes` / `Superseded by` を検査する
-- 修正文案より findings を優先する
+- Check `Status`, required sections, evidence, and `Supersedes` / `Superseded by`
+- Prioritize findings over rewrite suggestions
 
 ### `adr-reconciler`
 
-- ADR の claim と `specs` / `src` / `tests` の現行状態を照合する
-- finding ごとに `adr`, `specs`, `src`, `tests` の evidence matrix を返す
-- finding 種別として `policy-drift`, `missing-adr-update`, `missing-evidence`, `stale-reference` を使う
-- finding ごとに `severity` (`high` / `medium` / `low`) と `recommended action` を返す
-- ADR 本文の自動修正は行わない
+- Compare ADR claims with the current state of `specs` / `src` / `tests`
+- Return an evidence matrix across `adr`, `specs`, `src`, and `tests` for each finding
+- Use the finding types `policy-drift`, `missing-adr-update`, `missing-evidence`, and `stale-reference`
+- Return `severity` (`high` / `medium` / `low`) and `recommended action` for each finding
+- Do not auto-edit ADR text
 
 ### `adr-reviewer`
 
-- ADR 草案の設計レビューを行う
-- 現行 draft に `adr-linter` の未解消 `high` / `medium` finding がないことを前提にする
-- 公開 API / CLI / MCP に触れる ADR では関連 `docs/` を scope に含める
-- findings 種別として `decision-gap`, `scope-conflict`, `evidence-risk`, `rollout-gap`, `ownership-escalation` を使う
-- verdict は `ready`, `revise`, `escalate` を返す
-- `adr-linter` が扱う構造検査を繰り返さず、設計論点、既存 ADR との衝突、互換性 / rollout / fallback / safety impact に集中する
-- AI の責務外に触れる論点は `escalate` として人へ戻す
+- Perform design review of ADR drafts
+- Assume there are no unresolved `adr-linter` `high` / `medium` findings in the current draft
+- Include related `docs/` in scope when the ADR touches public API / CLI / MCP
+- Use the finding types `decision-gap`, `scope-conflict`, `evidence-risk`, `rollout-gap`, and `ownership-escalation`
+- Return verdicts `ready`, `revise`, and `escalate`
+- Do not repeat structural checks already handled by `adr-linter`; focus on design issues, conflicts with existing ADRs, and compatibility / rollout / fallback / safety impact
+- Escalate issues outside AI ownership back to humans
 
 ### `adr-indexer`
 
-- 既存 ADR とその metadata を走査し、`README.md`, `index.yaml`, `decision-map.md` を同期する
-- status、domain、supersede 関係、related specs の不整合を findings として返す
-- 索引 artifact は source of truth ではなく、ADR 本文の derived view として扱う
+- Scan existing ADRs and their metadata, then synchronize `README.md`, `index.yaml`, and `decision-map.md`
+- Return findings when status, domain, supersede relationships, or related specs are inconsistent
+- Treat index artifacts as derived views of the ADR source text, not as the source of truth
 
-## merge 前チェック
+## Pre-merge checks
 
-- ADR の結論が spec と矛盾していない
-- spec に書かれた契約が tests で裏付けられている
-- 既存 ADR を supersede する場合は相互参照が埋まっている
-- ADR が不要な場合でも、その理由が issue または PR に残っている
-- ADR が不要な場合でも、判定に使った `specs`, `src`, `tests` の根拠が追跡できる
-- `adr-reconciler` の `high` findings が未解消のまま merge されていない
-- `adr-linter` の `high` / `medium` findings が未解消のまま merge されていない
-- `adr-reviewer` の `revise` verdict や `high` / `medium` findings が未解消のまま merge されていない
-- `adr-reviewer` が `escalate` を返した論点が未処理のまま merge されていない
+- ADR conclusions do not conflict with specs
+- Contracts written in specs are backed by tests
+- If an ADR supersedes an existing ADR, the cross-references are filled in
+- Even when an ADR is unnecessary, the reason is left in the issue or PR
+- Even when an ADR is unnecessary, the `specs`, `src`, and `tests` evidence used for the decision remains traceable
+- `adr-reconciler` `high` findings are not left unresolved at merge time
+- `adr-linter` `high` / `medium` findings are not left unresolved at merge time
+- `adr-reviewer` `revise` verdicts or `high` / `medium` findings are not left unresolved at merge time
+- Issues returned as `escalate` by `adr-reviewer` are not left unresolved at merge time
 
-## merge 後 / 定期監査チェック
+## Post-merge / periodic audit checks
 
-- `adr-reconciler` が `high` findings を返した場合は、対象 ADR と drift 元の spec / test / code path を issue または PR に残す
-- drift が policy-level change を示す場合は、`adr-suggester` へ戻して `required` / `recommended` / `not-needed` を再判定する
-- ADR が追加 / 更新 / supersede された場合は `adr-indexer` で derived artifact を更新する
-- `index.yaml` と `decision-map.md` は、ADR 本文と異なる status や supersede 関係を持ってはならない
+- If `adr-reconciler` returns `high` findings, leave the target ADR and the drifting spec / test / code path in the issue or PR
+- If the drift indicates a policy-level change, go back to `adr-suggester` and re-evaluate `required` / `recommended` / `not-needed`
+- If an ADR is added, updated, or superseded, update the derived artifacts with `adr-indexer`
+- `index.yaml` and `decision-map.md` must not disagree with the ADR source text on status or supersede relationships
 
-## 将来フェーズ
+## Future phases
 
-- review automation や PR bot 連携の詳細化
+- More detailed review automation and PR-bot integration

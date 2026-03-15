@@ -1,74 +1,74 @@
-# ロードマップ — ExStruct
+# Roadmap — ExStruct
 
 ## v0.1.0
 
-- Core extraction（Cells, Shapes, Charts）
+- Core extraction (Cells, Shapes, Charts)
 - JSON/YAML/TOON export
 - PDF/PNG rendering
-- 罫線解析
-- 表構造検出（Table heuristics）
+- Border analysis
+- Table structure detection (table heuristics)
 
 ## v0.2.0
 
 - Flowchart semantic mapping
-- 図形の論理関係（矢印 → ノード間リンク）
-- ハイパーリンク取得（オプション）
+- Logical relationships between shapes (arrows → inter-node links)
+- Hyperlink retrieval (optional)
 
 ## v0.2.3
 
-- 印刷範囲データに対応
-- CLI で自動改ページ範囲の出力（COM 限定）
+- Print area data support
+- CLI output of auto page-break ranges (COM only)
 
 ## v0.2.80
 
-- フローチャート推論精度強化
+- Improved flowchart inference accuracy
 
 ## v0.2.90
 
-- セルの背景色情報の構造化
+- Structured cell background color information
 
 ## v0.3.0
 
-- 内部処理アーキテクチャのリファクタリングとレガシーオプションの廃止
+- Refactoring of internal processing architecture and removal of legacy options
 
 ## v0.3.1
 
-- Shapes と Arrows の分離（後の SmartArt 追加のため）
-- SmartArt 解析
+- Separation of Shapes and Arrows (in preparation for later SmartArt addition)
+- SmartArt analysis
 
 ## v0.3.2
 
-- セル結合範囲取得機能追加
+- Added merged cell range retrieval
 
 ## v0.3.5
 
-- セル結合範囲データ圧縮とrowsデータ構造見直しによるコンテキスト圧縮
+- Merged cell data compression and rows data structure redesign for context compression
 
 ## v0.3.7
 
-- 数式取得オプション追加
+- Added formula retrieval option
 
 ## v0.4.0
 
-- MCPサーバー機能追加(Read Only MVP)
+- Added MCP server feature (Read Only MVP)
 
 ## v0.5.0
 
-- MCPサーバー機能強化（Write）
+- Enhanced MCP server functionality (Write)
 
 ## v0.5.5
 
-- MCPサーバーの機能強化（図形、グラフ、画像対応）
+- Enhanced MCP server functionality (shapes, charts, images)
 
 ## v0.6.0
 
-- バックエンドに LibreOffice を追加（COM と選択可能に）
+- Added LibreOffice as a backend (selectable alongside COM)
 
 ## v0.8.0
 
-- Excel Form Controls 解析
+- Excel Form Controls analysis
 
 ## v1.0.0
 
-- 完全な Excel 意味構造解析エンジン
-- RAG 最適化モード搭載
+- Complete Excel semantic structure analysis engine
+- RAG optimization mode included

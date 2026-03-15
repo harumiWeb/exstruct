@@ -1,10 +1,10 @@
-# ExStruct アーキテクチャ概要
+# ExStruct Architecture Overview
 
-ExStruct はパイプライン中心の抽出アーキテクチャで、
-openpyxl、Excel COM（xlwings）、LibreOffice backend を
-モードに応じて役割分担させています。
+ExStruct uses a pipeline-centric extraction architecture where
+openpyxl, Excel COM (xlwings), and LibreOffice backends
+are assigned roles based on the selected mode.
 
-## 全体構造
+## Overall Structure
 
 ```txt
 exstruct/
@@ -33,66 +33,66 @@ exstruct/
     main.py
 ```
 
-## パイプライン設計
+## Pipeline Design
 
-- `resolve_extraction_inputs` が include_* と mode を正規化
-- `PipelinePlan` は pre-com / com の静的ステップ構成のみ保持
-- 実行状態は `PipelineState` / `PipelineResult` に分離
-- `run_extraction_pipeline` が COM 可否判定とフォールバックを一元管理
+- `resolve_extraction_inputs` normalizes include_* and mode
+- `PipelinePlan` holds only the static step configuration for pre-com / com
+- Execution state is separated into `PipelineState` / `PipelineResult`
+- `run_extraction_pipeline` centrally manages COM availability checks and fallback
 
-## モジュール責務
+## Module Responsibilities
 
 ### core/
 
-抽出の中心層（外部依存を集約）
+The central extraction layer (aggregates external dependencies)
 
-- `pipeline.py` → 抽出フロー、COM 判定、fallback、raw 生成
-- `backends/*` → openpyxl/COM/LibreOffice の抽象化
-- `cells.py` → セル抽出、テーブル検出、colors_map
-- `shapes.py` → 図形抽出、方向推定
-- `charts.py` → チャート解析
-- `ranges.py` → 範囲解析の共通関数
-- `workbook.py` → openpyxl/xlwings の contextmanager
-- `modeling.py` → RawData から WorkbookData/SheetData を生成
-- `integrate.py` → pipeline 呼び出しに特化した薄い入口
+- `pipeline.py` → extraction flow, COM determination, fallback, raw data generation
+- `backends/*` → abstraction over openpyxl/COM/LibreOffice
+- `cells.py` → cell extraction, table detection, colors_map
+- `shapes.py` → shape extraction, direction estimation
+- `charts.py` → chart analysis
+- `ranges.py` → shared range analysis utilities
+- `workbook.py` → openpyxl/xlwings context managers
+- `modeling.py` → builds WorkbookData/SheetData from RawData
+- `integrate.py` → thin entry point dedicated to pipeline calls
 
 ### models/
 
-Pydantic による公開データ構造
-（外部 API は BaseModel を返す）
+Public data structures via Pydantic
+(external API returns BaseModel)
 
 ### io/
 
-出力フォーマット（JSON / YAML / TOON）とファイル書き込み
+Output formats (JSON / YAML / TOON) and file writing
 
 ### render/
 
-PDF/PNG 出力（RAG 用途）
+PDF/PNG output (for RAG use cases)
 
 ### cli/
 
-CLI エントリポイント
+CLI entry point
 
-### mcp/patch（Patch 実装）
+### mcp/patch (Patch Implementation)
 
-Patch 系は `src/exstruct/mcp/patch/` に責務分離して実装する。
+Patch functionality is responsibility-separated under `src/exstruct/mcp/patch/`.
 
-- `patch_runner.py` → 互換性維持用ファサード（既存 import 経路を維持）
-- `patch/internal.py` → patch 実装の内部互換レイヤ（非公開）
-- `patch/service.py` → `run_patch` / `run_make` のオーケストレーション
-- `patch/runtime.py` → path/backend 選択など実行時ユーティリティ集約
-- `patch/engine/openpyxl_engine.py` → openpyxl 実行境界
-- `patch/engine/xlwings_engine.py` → xlwings(COM) 実行境界
-- `patch/ops/openpyxl_ops.py` → openpyxl 向け op 適用入口
-- `patch/ops/xlwings_ops.py` → xlwings 向け op 適用入口
-- `patch/normalize.py` / `patch/specs.py` → op 正規化と仕様メタデータ
-- `shared/a1.py` / `shared/output_path.py` → A1 と出力 path の共通処理
+- `patch_runner.py` → compatibility facade for maintaining existing import paths
+- `patch/internal.py` → internal compatibility layer for patch implementation (non-public)
+- `patch/service.py` → orchestration of `run_patch` / `run_make`
+- `patch/runtime.py` → runtime utilities for path/backend selection
+- `patch/engine/openpyxl_engine.py` → openpyxl execution boundary
+- `patch/engine/xlwings_engine.py` → xlwings (COM) execution boundary
+- `patch/ops/openpyxl_ops.py` → op application entry point for openpyxl
+- `patch/ops/xlwings_ops.py` → op application entry point for xlwings
+- `patch/normalize.py` / `patch/specs.py` → op normalization and spec metadata
+- `shared/a1.py` / `shared/output_path.py` → shared utilities for A1 notation and output paths
 
 ---
 
-## AI エージェント向けガイド
+## Guide for AI Agents
 
-- モデル変更は core の RawData 変換にも反映する
-- 外部依存（openpyxl/xlwings）は core の境界で完結させる
-- `PipelinePlan` は不変、実行状態は `PipelineState` へ分離
-- 公開契約は `docs/`、内部モデル仕様は `dev-docs/specs/data-model.md` を参照する
+- Reflect model changes in the core RawData conversion as well
+- Contain external dependencies (openpyxl/xlwings) within the core boundary
+- `PipelinePlan` is immutable; separate execution state into `PipelineState`
+- For public contracts, refer to `docs/`; for internal model specifications, refer to `dev-docs/specs/data-model.md`

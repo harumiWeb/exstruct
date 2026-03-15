@@ -1,42 +1,42 @@
 # ADR
 
-ADR は、どの制約のもとで何を判断し、どのトレードオフを受け入れたかを記録する文書です。
+ADRs record what was decided, under which constraints, and which trade-offs were accepted.
 
-## 目的
+## Purpose
 
-- 構造や長期保守に影響する判断を記録する
-- 採用しなかった案と非目標を残す
-- 将来どの ADR に置き換えられたかを追跡できるようにする
+- Record decisions that affect structure and long-term maintenance
+- Preserve alternatives not chosen and non-goals
+- Enable tracking of which ADR superseded which in the future
 
-## 状態
+## Status
 
 - `proposed`
 - `accepted`
 - `superseded`
 - `deprecated`
 
-## 採番
+## Numbering
 
-- リポジトリ追加順に `ADR-0001`, `ADR-0002`, ... を使う
-- タイトルが変わっても番号は固定する
+- Use `ADR-0001`, `ADR-0002`, ... in the order they are added to the repository
+- Numbers are fixed even if the title changes
 
-## 他の文書との関係
+## Relationship to Other Documents
 
-- ADR は「なぜそうしたか」を説明する
-- `dev-docs/specs/` は「何を保証するか」を説明する
-- `tests/` はその振る舞いが実在する証拠を示す
+- ADR explains "why it was done this way"
+- `dev-docs/specs/` explains "what is guaranteed"
+- `tests/` provides evidence that the behavior actually exists
 
-## 索引 artifact
+## Index Artifacts
 
-- `index.yaml`: AI が機械可読にたどるための ADR metadata index
-- `decision-map.md`: domain ごとの関連 ADR と supersede 関係の概要
+- `index.yaml`: machine-readable ADR metadata index for AI agents
+- `decision-map.md`: overview of related ADRs and supersede relationships by domain
 
-## 一覧
+## Index
 
-| ID | タイトル | 状態 | 主ドメイン |
+| ID | Title | Status | Primary Domain |
 | --- | --- | --- | --- |
-| `ADR-0001` | 抽出モードの責務境界 | `accepted` | `extraction` |
-| `ADR-0002` | Rich Backend のフォールバック方針 | `accepted` | `backend` |
-| `ADR-0003` | 出力直列化における省略方針 | `accepted` | `schema` |
-| `ADR-0004` | Patch backend 選択方針 | `accepted` | `mcp` |
-| `ADR-0005` | PathPolicy の安全境界 | `accepted` | `safety` |
+| `ADR-0001` | Extraction Mode Responsibility Boundaries | `accepted` | `extraction` |
+| `ADR-0002` | Rich Backend Fallback Policy | `accepted` | `backend` |
+| `ADR-0003` | Output Serialization Omission Policy | `accepted` | `schema` |
+| `ADR-0004` | Patch Backend Selection Policy | `accepted` | `mcp` |
+| `ADR-0005` | PathPolicy Safety Boundary | `accepted` | `safety` |

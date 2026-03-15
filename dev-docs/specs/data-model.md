@@ -1,27 +1,28 @@
-﻿# ExStruct データモデル仕様
+# ExStruct Data Model Specification
 
-**バージョン**: 0.16
-**状態**: 正準
+**Version**: 0.16
+**Status**: Canonical
 
-本ドキュメントは ExStruct が返す全モデルの唯一の正準ソースです。
-core / io / integrate はこの仕様に従うこと。モデルは **pydantic v2** で実装します。
-
----
-
-# 1. 概要
-
-ExStruct は Excel ワークブックを LLM が扱いやすい **意味構造** として JSON 化します。
-特記がない限り、以下のモデルはすべて Pydantic の `BaseModel` です。
+This document is the single canonical source for all models returned by ExStruct.
+core / io / integrate must comply with this specification.
+Models are implemented with **pydantic v2**.
 
 ---
 
-# 2. Shape / Arrow / SmartArt モデル
+# 1. Overview
 
-出力の `shapes` は下記 3 モデルのユニオンです。`kind` で判別します。
+ExStruct serializes Excel workbooks to JSON as **semantic structure** suitable for LLM consumption.
+Unless otherwise noted, all models below are Pydantic `BaseModel` instances.
+
+---
+
+# 2. Shape / Arrow / SmartArt Models
+
+The `shapes` output is a union of the three models below. Use `kind` to distinguish them.
 
 ```jsonc
 BaseShape {
-  id: int | null   // sheet 連番 id（矢印は null の場合あり）
+  id: int | null   // per-sheet sequential id (may be null for arrows)
   text: str
   l: int           // left (px)
   t: int           // top  (px)
@@ -32,15 +33,15 @@ BaseShape {
 
 Shape extends BaseShape {
   kind: "shape"
-  type: str | null // MSO 図形タイプラベル
+  type: str | null // MSO shape type label
 }
 
 Arrow extends BaseShape {
   kind: "arrow"
   begin_arrow_style: int | null
   end_arrow_style: int | null
-  begin_id: int | null // コネクタ始点の接続 Shape.id
-  end_id: int | null   // コネクタ終点の接続 Shape.id
+  begin_id: int | null // Shape.id of the connector start connection
+  end_id: int | null   // Shape.id of the connector end connection
   direction: "E"|"SE"|"S"|"SW"|"W"|"NW"|"N"|"NE" | null
 }
 
@@ -56,28 +57,28 @@ SmartArt extends BaseShape {
 }
 ```
 
-補足:
+Notes:
 
-- `direction` は線や矢印の向きを 8 方位に正規化
-- 矢印スタイルは Excel の enum に対応
-- `begin_id` / `end_id` はコネクタが接続している図形の `id`
-- `SmartArtNode` はネスト構造で表現し、`nodes` がツリーの根
+- `direction` normalizes the direction of lines and arrows to 8 compass points
+- Arrow styles correspond to Excel enums
+- `begin_id` / `end_id` are the `id` of the shape the connector is connected to
+- `SmartArtNode` is represented as a nested structure, with `nodes` as the tree root
 
 ---
 
-# 3. CellRow モデル
+# 3. CellRow Model
 
 ```jsonc
 CellRow {
-  r: int                                  // 行番号 (1-based)
-  c: { [colIndex: str]: str | int | float } // 非空セルのみ、キーは列インデックス文字列
-  links: { [colIndex: str]: url } | null    // ハイパーリンク有効化時のみ
+  r: int                                  // row number (1-based)
+  c: { [colIndex: str]: str | int | float } // non-empty cells only; keys are column index strings
+  links: { [colIndex: str]: url } | null    // only when hyperlink support is enabled
 }
 ```
 
 ---
 
-# 4. ChartSeries モデル
+# 4. ChartSeries Model
 
 ```jsonc
 ChartSeries {
@@ -88,49 +89,49 @@ ChartSeries {
 }
 ```
 
-シリーズは値ではなく参照を保持し、ペイロードを削減します。
+Series hold references rather than values, reducing payload size.
 
 ---
 
-# 5. Chart モデル
+# 5. Chart Model
 
 ```jsonc
 Chart {
   name: str
-  chart_type: str              // XL_CHART_TYPE_MAP のラベル
+  chart_type: str              // label from XL_CHART_TYPE_MAP
   title: str | null
   y_axis_title: str
-  y_axis_range: [float]        // [min, max]、空の可能性あり
+  y_axis_range: [float]        // [min, max], may be empty
   w: int | null
   h: int | null
   series: [ChartSeries]
   l: int                       // left (px)
   t: int                       // top  (px)
-  error: str | null            // 解析失敗時のみセット
+  error: str | null            // set only on parse failure
 }
 ```
 
 ---
 
-# 6. PrintArea モデル
+# 6. PrintArea Model
 
 ```jsonc
 PrintArea {
-  r1: int  // 開始行 (1-based, inclusive)
-  c1: int  // 開始列 (0-based, inclusive)
-  r2: int  // 終了行 (1-based, inclusive)
-  c2: int  // 終了列 (0-based, inclusive)
+  r1: int  // start row (1-based, inclusive)
+  c1: int  // start column (0-based, inclusive)
+  r2: int  // end row (1-based, inclusive)
+  c2: int  // end column (0-based, inclusive)
 }
 ```
 
-補足:
+Notes:
 
-- シートごとに複数保持可能
-- `standard` / `verbose` で取得できる場合に含まれる
+- Multiple areas may be held per sheet
+- Included when obtainable in `standard` / `verbose`
 
 ---
 
-# 7. PrintAreaView モデル
+# 7. PrintAreaView Model
 
 ```jsonc
 PrintAreaView {
@@ -139,18 +140,18 @@ PrintAreaView {
   area: PrintArea
   shapes: [Shape | Arrow | SmartArt]
   charts: [Chart]
-  rows: [CellRow]          // 範囲に交差する行のみ、空列は落とす
-  table_candidates: [str]  // 範囲内に収まるテーブル候補
+  rows: [CellRow]          // only rows intersecting the range; empty columns dropped
+  table_candidates: [str]  // table candidates fully contained within the range
 }
 ```
 
-補足:
+Notes:
 
-- 座標はデフォルトでシート基準。`normalize` 指定時は範囲左上を原点に再基準化
+- Coordinates are sheet-relative by default. When `normalize` is specified, the range top-left is used as the origin.
 
 ---
 
-# 8. MergedCells モデル
+# 8. MergedCells Model
 
 ```jsonc
 MergedCells {
@@ -159,13 +160,13 @@ MergedCells {
 }
 ```
 
-- `items` は `(r1, c1, r2, c2, v)` の配列
-- row は 1-based、col は 0-based
-- `v` は結合セルの代表値。値がない場合でも `" "` を出力する
+- `items` is an array of `(r1, c1, r2, c2, v)` tuples
+- Row is 1-based; column is 0-based
+- `v` is the representative value of the merged cell; `" "` is output even when there is no value
 
 ---
 
-# 9. SheetData モデル
+# 9. SheetData Model
 
 ```jsonc
 SheetData {
@@ -174,23 +175,23 @@ SheetData {
   charts: [Chart]
   table_candidates: [str]
   print_areas: [PrintArea]
-  auto_print_areas: [PrintArea] // 自動改ページ矩形 (COM 前提、デフォルト無効)
+  auto_print_areas: [PrintArea] // auto page-break rectangles (COM required, disabled by default)
   formulas_map: {[formula: str]: [[int, int]]} // (row=1-based, col=0-based)
   colors_map: {[colorHex: str]: [[int, int]]} // (row=1-based, col=0-based)
   merged_cells: MergedCells | null
 }
 ```
 
-補足:
+Notes:
 
-- `table_candidates` はテーブル検知結果
-- `print_areas` は定義済み印刷範囲
-- `auto_print_areas` は Excel COM の自動改ページから取得
-- `rows` の結合セル値の出力は `include_merged_values_in_rows` フラグで制御（既定: `True`）
+- `table_candidates` are table detection results
+- `print_areas` are defined print ranges
+- `auto_print_areas` are obtained from Excel COM auto page breaks
+- Merged cell value output in `rows` is controlled by the `include_merged_values_in_rows` flag (default: `True`)
 
 ---
 
-# 10. WorkbookData モデル（トップレベル）
+# 10. WorkbookData Model (Top Level)
 
 ```jsonc
 WorkbookData {
@@ -199,76 +200,76 @@ WorkbookData {
 }
 ```
 
-補足:
+Notes:
 
-- シート名は Excel の Unicode 名をそのまま保持
+- Sheet names are preserved verbatim as Excel Unicode names
 
 ---
 
-# 11. Export Helper（`SheetData` / `WorkbookData`）
+# 11. Export Helpers (`SheetData` / `WorkbookData`)
 
-共通:
+Common:
 
 - `to_json(pretty=False, indent=None, include_backend_metadata=False)`
-- `to_yaml(include_backend_metadata=False)` (`pyyaml` 必須)
-- `to_toon(include_backend_metadata=False)` (`python-toon` 必須)
+- `to_yaml(include_backend_metadata=False)` (`pyyaml` required)
+- `to_toon(include_backend_metadata=False)` (`python-toon` required)
 - `save(path, pretty=False, indent=None, include_backend_metadata=False)`
-  - 拡張子 `.json` / `.yaml` / `.yml` / `.toon` を自動判別
-  - 非対応拡張子は `ValueError`
-- `model_dump(exclude_none=True)` 後に `dict_without_empty_values` で空値を除去
-- 既定では shape/chart の backend metadata (`provenance`, `approximation_level`, `confidence`) は直列化出力に含めない
+  - Auto-detects format by extension: `.json` / `.yaml` / `.yml` / `.toon`
+  - Unsupported extensions raise `ValueError`
+- After `model_dump(exclude_none=True)`, remove empty values with `dict_without_empty_values`
+- By default, backend metadata (`provenance`, `approximation_level`, `confidence`) is not included in serialized output
 
 `SheetData`:
 
-- シリアライズ時に `book_name` は含まない（シート単体）
+- `book_name` is not included when serialized (single sheet)
 
 `WorkbookData`:
 
-- ペイロードに `book_name` と `sheets` を含む
-- `__getitem__(sheet_name)` で SheetData を取得
-- `__iter__()` で `(sheet_name, SheetData)` を順に返す
+- Payload includes `book_name` and `sheets`
+- `__getitem__(sheet_name)` retrieves a SheetData
+- `__iter__()` yields `(sheet_name, SheetData)` in order
 
 ---
 
-# 12. バージョニング原則
+# 12. Versioning Principles
 
-- モデル変更時は本ファイルを先に更新する
-- モデルは純粋なデータコンテナとし、副作用を持たせない
-- core / io / integrate は本仕様に忠実なモデルのみを返し、独自フィールドを追加しない
-
----
-
-# 13. 変更履歴
-
-- 0.3: serialize/save ヘルパー追加、`WorkbookData` に `__iter__` / `__getitem__` を定義
-- 0.4: `CellRow.links` を追加（ハイパーリンクは opt-in）
-- 0.5: `PrintArea` を追加し、`SheetData.print_areas` で保持
-- 0.6: PrintArea をデフォルト抽出。テーブル検知は従来通り
-- 0.7: Chart にサイズ `w` / `h` を追加
-- 0.8: `SheetData.auto_print_areas` を追加（COM 自動改ページ矩形、デフォルト無効）
-- 0.9: Shape に `name` / `begin_connected_shape` / `end_connected_shape` を追加し、後に `begin_id` / `end_id` に変更
-- 0.10: Shape に `id` を追加し、`name` を削除
-- 0.11: コネクタのフィールド名を `begin_id` / `end_id` に統一
-- 0.12: `SheetData.colors_map` を追加
-- 0.13: Shape を `Shape` / `Arrow` / `SmartArt` に分割し、`SmartArtNode` のネスト構造を追加
-- 0.14: `MergedCell` / `SheetData.merged_cells` を追加
-- 0.15: `MergedCells` を schema + items 形式に変更し圧縮形式を導入
-- 0.16: `SheetData.formulas_map` を追加
+- Update this file before making model changes
+- Keep models as pure data containers; do not add side effects
+- core / io / integrate must only return models faithful to this specification and must not add custom fields
 
 ---
 
-# 付録 A. MCP Patch モデル
+# 13. Changelog
 
-MCP の patch/make で利用するモデル群は、後方互換のため
-`exstruct.mcp.patch_runner` から引き続き import 可能です。
+- 0.3: Added serialize/save helpers; defined `__iter__` / `__getitem__` on `WorkbookData`
+- 0.4: Added `CellRow.links` (hyperlinks are opt-in)
+- 0.5: Added `PrintArea`; held in `SheetData.print_areas`
+- 0.6: Extract PrintArea by default; table detection as before
+- 0.7: Added size `w` / `h` to Chart
+- 0.8: Added `SheetData.auto_print_areas` (COM auto page-break rectangles; disabled by default)
+- 0.9: Added `name` / `begin_connected_shape` / `end_connected_shape` to Shape; later renamed to `begin_id` / `end_id`
+- 0.10: Added `id` to Shape; removed `name`
+- 0.11: Unified connector field names to `begin_id` / `end_id`
+- 0.12: Added `SheetData.colors_map`
+- 0.13: Split Shape into `Shape` / `Arrow` / `SmartArt`; added nested `SmartArtNode` structure
+- 0.14: Added `MergedCell` / `SheetData.merged_cells`
+- 0.15: Changed `MergedCells` to schema + items format introducing a compressed representation
+- 0.16: Added `SheetData.formulas_map`
 
-実体の配置は以下です。
+---
 
-- 実体モデル: `src/exstruct/mcp/patch/models.py`
-- 互換ファサード: `src/exstruct/mcp/patch_runner.py`
-- サービス層: `src/exstruct/mcp/patch/service.py`
+# Appendix A. MCP Patch Models
 
-主なモデル:
+The model group used by MCP patch/make operations remains importable from
+`exstruct.mcp.patch_runner` for backward compatibility.
+
+The actual locations are as follows.
+
+- Canonical models: `src/exstruct/mcp/patch/models.py`
+- Compatibility facade: `src/exstruct/mcp/patch_runner.py`
+- Service layer: `src/exstruct/mcp/patch/service.py`
+
+Primary models:
 
 - `PatchOp`
 - `PatchRequest`

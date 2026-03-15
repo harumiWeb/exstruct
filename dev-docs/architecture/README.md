@@ -1,7 +1,7 @@
-# アーキテクチャ文書
+# Architecture Documentation
 
-このディレクトリでは、ExStruct の実装構造と安全な拡張方法を説明します。
+This directory explains ExStruct's implementation structure and how to extend it safely.
 
-- `overview.md`: 内部アーキテクチャの概要
-- `pipeline.md`: pipeline に特化した設計
-- `contributor-guide.md`: 拡張と保守のためのガイド
+- `overview.md`: Overview of the internal architecture
+- `pipeline.md`: Pipeline-specific design
+- `contributor-guide.md`: Guide for extending and maintaining the codebase

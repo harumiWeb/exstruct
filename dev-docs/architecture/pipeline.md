@@ -1,17 +1,17 @@
-# Pipeline アーキテクチャ概要
+# Pipeline Architecture Overview
 
-ExStruct は Excel workbook を **意味構造化 JSON** に変換するために、
-**Pipeline + Backend + Modeling** の三層構成を採用している。
+ExStruct uses a three-layer **Pipeline + Backend + Modeling** architecture
+to convert Excel workbooks into **semantically structured JSON**.
 
-この設計により、次を実現する。
+This design achieves the following.
 
-- Excel COM 依存ロジックと非依存ロジックの分離
-- OpenXML/XML 直接解析への将来的な拡張
-- RAG/LLM 用途での安定した出力
+- Separation of Excel COM-dependent logic from non-dependent logic
+- Future extensibility to direct OpenXML/XML parsing
+- Stable output for RAG/LLM use cases
 
 ---
 
-## エンドツーエンドの流れ
+## End-to-End Flow
 
 ```mermaid
 sequenceDiagram
@@ -26,8 +26,10 @@ sequenceDiagram
     OpenpyxlBackend-->>Pipeline: cells / tables / print_areas
 
     alt Rich backend available
-        Pipeline->>RichBackend: extract()
-        RichBackend-->>Pipeline: shapes / charts
+        Pipeline->>RichBackend: extract_shapes(mode=...)
+        RichBackend-->>Pipeline: shapes
+        Pipeline->>RichBackend: extract_charts(mode=...)
+        RichBackend-->>Pipeline: charts
     else runtime unavailable
         Pipeline->>Pipeline: log_fallback()
     end
@@ -37,32 +39,34 @@ sequenceDiagram
     Pipeline-->>Client: structured output
 ```
 
-処理順は次のとおり。
+The processing order is as follows.
 
-1. **Pipeline** が実行計画を組み立てる
-2. **Openpyxl Backend** が事前解析を行う（cells, tables, print areas）
-3. **Rich Backend** が利用可能なら shapes/charts を抽出する（`ComBackend` または `LibreOfficeRichBackend`）
-4. **Modeling** が結果を WorkbookData / SheetData に統合する
-5. 要求された形式（JSON / YAML / TOON）で出力する
+`RichBackend` in this diagram refers to the conceptual rich-extraction layer; the concrete implementations are `ComRichBackend` and `LibreOfficeRichBackend`.
 
----
-
-## Pipeline の責務
-
-Pipeline は **司令塔** である。
-
-- 抽出順序を決める
-- backend を選択する
-- fallback path を制御する
-- 中間 artifact を管理する
-
-Pipeline は **Excel 内容を直接読まない** 設計とする。
+1. **Pipeline** assembles the execution plan
+2. **Openpyxl Backend** performs pre-analysis (cells, tables, print areas)
+3. **Rich Backend** extracts shapes/charts if available. Here, `RichBackend` is the conceptual layer and `ComRichBackend` / `LibreOfficeRichBackend` are the concrete implementations.
+4. **Modeling** integrates the results into WorkbookData / SheetData
+5. Output in the requested format (JSON / YAML / TOON)
 
 ---
 
-## Backend の責務
+## Pipeline Responsibilities
 
-Backend は **どう Excel を読むか** を定義する。
+Pipeline is the **orchestrator**.
+
+- Determines the extraction order
+- Selects backends
+- Controls fallback paths
+- Manages intermediate artifacts
+
+Pipeline is designed to **never read Excel content directly**.
+
+---
+
+## Backend Responsibilities
+
+Backend defines **how Excel is read**.
 
 | Backend                | Responsibilities                                  |
 | ---------------------- | ------------------------------------------------- |
@@ -71,44 +75,46 @@ Backend は **どう Excel を読むか** を定義する。
 | ComRichBackend         | Shapes / arrows / charts / SmartArt via Excel COM |
 | LibreOfficeRichBackend | Best-effort shapes / connectors / charts          |
 
-この抽象化により、次の拡張が可能になる。
+In this document, `RichBackend` refers to the protocol-level concept, while `ComRichBackend` and `LibreOfficeRichBackend` are the concrete backend classes.
 
-- XML 直接解析 backend
+This abstraction enables the following extensions.
+
+- Direct XML parsing backend
 - LibreOffice backend
 - Remote Excel service backend
 
-いずれも **Pipeline を大きく変えずに** 追加できる。
+All of these can be added **without major changes to the Pipeline**.
 
 ---
 
-## フォールバック設計
+## Fallback Design
 
-COM または LibreOffice runtime が使えない場合は、次を守る。
+When COM or LibreOffice runtime is unavailable, the following must be respected.
 
-- 例外で全体を落とさない
-- Openpyxl の結果をできるだけ再利用する
-- fallback reason を明示的に記録する
+- Do not take down the entire process with an exception
+- Reuse openpyxl results as much as possible
+- Record the fallback reason explicitly
 
-これは **batch processing, CI, automation** を前提にした意図的な設計である。
-
----
-
-## Modeling 層の責務
-
-Modeling は次を担当する。
-
-- 複数 backend の結果を統合する
-- 正規化済みの WorkbookData / SheetData を生成する
-- 出力形式そのものには依存しない
-
-RAG/LLM 用の **意味構造モデル** はここに集約する。
+This is an intentional design that assumes **batch processing, CI, and automation**.
 
 ---
 
-## なぜこの設計か
+## Modeling Layer Responsibilities
 
-- Excel には cells, shapes, charts という別世界がある
-- COM は強力だが壊れやすい
-- LLM は安定した構造化データを必要とする
+Modeling is responsible for:
 
-そのため、**pipeline separation** が最も実用的である。
+- Integrating results from multiple backends
+- Producing normalized WorkbookData / SheetData
+- Not depending on the output format itself
+
+**Semantic structure models** for RAG/LLM use are centralized here.
+
+---
+
+## Why This Design
+
+- Excel has separate worlds of cells, shapes, and charts
+- COM is powerful but fragile
+- LLMs require stable structured data
+
+Therefore, **pipeline separation** is the most practical approach.

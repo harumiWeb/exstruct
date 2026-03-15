@@ -1,122 +1,122 @@
-# ADR ガバナンス
+# ADR governance
 
-この文書は、AI エージェントが ExStruct で ADR をいつ作り、いつ更新し、何を根拠として扱うかを定義する。
+This document defines when AI agents should create or update ADRs in ExStruct, and what counts as evidence.
 
-## 目的
+## Purpose
 
-- 長期保守に影響する設計判断を、issue や差分の暗黙知に埋もれさせない
-- `dev-docs/specs/`、`tests/`、`src/` との責務分離を維持する
-- 既存 ADR と新しい変更の関係を明示し、判断理由の死文化を防ぐ
+- Prevent design decisions that affect long-term maintenance from being buried in issue threads or diffs
+- Preserve the responsibility split with `dev-docs/specs/`, `tests/`, and `src/`
+- Make the relationship between existing ADRs and new changes explicit, so decision rationale does not go stale
 
-## 文書の役割
+## Role of each document
 
-- ADR = なぜその方針を採用したか
-- specs = 何を保証するか
-- tests = その保証が実在する証拠
-- src = どう実装するか
+- ADR = why a policy was chosen
+- specs = what is guaranteed
+- tests = evidence that the guarantee exists
+- src = how it is implemented
 
-ADR に実装メモだけを書くのは禁止する。単なる手順や一時的な作業順序は `tasks/` に置く。
+Do not put implementation notes alone into ADRs. Simple procedures and temporary work order belong in `tasks/`.
 
-## ADR を新規作成する条件
+## When to create a new ADR
 
-次のいずれかに当てはまる場合は、新規 ADR を優先する。
+Prefer a new ADR when any of the following apply:
 
-- 新しい政策や責務境界を追加する
-- 既存 ADR では説明できない別論点の判断を導入する
-- 複数案の比較や長期トレードオフがある
-- 将来も同じ論点が再発しうる
+- adding a new policy or responsibility boundary
+- introducing a decision on a different issue that existing ADRs cannot explain
+- comparing multiple options or accepting a long-term trade-off
+- addressing a question that may recur in the future
 
-## 既存 ADR を更新する条件
+## When to update an existing ADR
 
-次の条件を満たす場合は、既存 ADR の更新を優先する。
+Prefer updating an existing ADR when all of the following are true:
 
-- 既存 ADR の政策は維持しつつ、背景、根拠、関連 spec を補強する
-- 既存 ADR がカバーしている同じ論点に、追加 evidence や clarifying constraint を足す
-- 実装や docs の整理により、参照先だけを最新化する
+- the existing ADR's policy remains intact, but its context, evidence, or related specs should be strengthened
+- the same issue covered by the existing ADR gains additional evidence or clarifying constraints
+- implementation or documentation cleanup only requires references to be refreshed
 
-既存 ADR の結論そのものが変わる場合は、更新ではなく新規 ADR + supersede を検討する。
+If the conclusion of the ADR itself changes, consider a new ADR plus `supersede` instead of an update.
 
-## Supersede の扱い
+## Handling supersedes
 
-- 旧 ADR の判断がもはや権威を持たない場合は、新規 ADR を作成して旧 ADR を `superseded` にする
-- 旧 ADR 側の `Superseded by` と、新 ADR 側の `Supersedes` を相互に更新する
-- 部分上書きではなく、どの政策が置き換わったかを明記する
+- If the old ADR no longer has authority, create a new ADR and mark the old ADR as `superseded`
+- Update both `Superseded by` on the old ADR and `Supersedes` on the new ADR
+- Do not do partial overwrite without stating which policy was replaced
 
-## Evidence 要件
+## Evidence requirements
 
-ADR は少なくとも 1 つの concrete evidence を持つ。
+An ADR must have at least one piece of concrete evidence.
 
-- Tests: 回帰テスト、契約テスト、統合テスト
-- Code: 判断を実装している主要ファイル
-- Related specs: 現行仕様を定義している内部 spec または公開 docs
+- Tests: regression tests, contract tests, integration tests
+- Code: key files that implement the decision
+- Related specs: internal specs or public docs that define the current contract
 
-推奨は、`Tests`、`Code`、`Related specs` の 3 系統をすべて埋めること。
+The recommended baseline is to fill all three categories: `Tests`, `Code`, and `Related specs`.
 
-## Draft review ルール
+## Draft review rules
 
-`proposed` ADR を merge 前に扱うときは、構造検査と設計レビューを分ける。
+When handling a `proposed` ADR before merge, separate structural checks from design review.
 
-- `adr-linter` は status、必須節、evidence の有無、supersede link の整合を検査する
-- `adr-reviewer` は現行 draft に未解消の `adr-linter` `high` / `medium` finding がない状態で使い、公開 API / CLI / MCP に触れる ADR では関連 `docs/` も scope に含めて、判断の妥当性、既存 ADR / spec との衝突、evidence の説得力、互換性 / rollout / fallback / safety impact をレビューする
-- `adr-reviewer` の verdict は `ready`, `revise`, `escalate` を使う
-- `revise` の場合は、ADR 草案を更新して `adr-linter` と `adr-reviewer` を再実行する
-- `escalate` は、AI の責務外である公開 API break judgement、security / license 判断、大規模ディレクトリ再編、未確定の product / spec 方針を含む場合に使う
-- `ready` は merge 自体の承認を意味しない。人の最終判断が必要な論点は残りうる
+- `adr-linter` checks status, required sections, presence of evidence, and consistency of supersede links
+- `adr-reviewer` is used only when the current draft has no unresolved `adr-linter` `high` / `medium` findings. For ADRs that touch public API / CLI / MCP, include the related `docs/` in scope and review decision quality, conflicts with existing ADRs / specs, evidence strength, and compatibility / rollout / fallback / safety impact
+- `adr-reviewer` uses the verdicts `ready`, `revise`, and `escalate`
+- If the verdict is `revise`, update the draft and rerun `adr-linter` and `adr-reviewer`
+- Use `escalate` when the issue includes matters outside AI ownership, such as public API break judgment, security / license decisions, large directory restructures, or unresolved product / spec policy
+- `ready` does not mean the merge itself is approved. Questions that require human final judgment may still remain
 
-## Reconciliation ルール
+## Reconciliation rules
 
-ADR が `proposed` または `accepted` の場合は、変更時または定期点検時に `adr-reconciler` で drift を確認する。
+When an ADR is `proposed` or `accepted`, check for drift with `adr-reconciler` during changes or periodic reviews.
 
-- 監査対象は claim 単位とし、`adr`, `specs`, `src`, `tests` の evidence matrix をそろえる
-- finding 種別は少なくとも次を使う
+- Audit at the claim level and gather an evidence matrix across `adr`, `specs`, `src`, and `tests`
+- Use at least the following finding types:
   - `policy-drift`
   - `missing-adr-update`
   - `missing-evidence`
   - `stale-reference`
-- findings は `severity` (`high` / `medium` / `low`) を持つ
-- `high` findings は merge 前に解消するか、明示的な follow-up を作る
-- 監査結果の `recommended action` は次を使う
+- Findings carry `severity` values of `high`, `medium`, or `low`
+- Resolve `high` findings before merge or create an explicit follow-up
+- Use the following `recommended action` values:
   - `update-adr`
   - `new-adr`
   - `update-specs`
   - `add-tests`
   - `no-action`
 
-`adr-reconciler` は監査結果を返すだけで、ADR や spec の本文を自動変更しない。policy-level change が疑われる場合は `adr-suggester` と `adr-drafter` に戻す。
+`adr-reconciler` only returns audit results. It does not auto-edit ADR or spec text. If a policy-level change is suspected, return to `adr-suggester` and `adr-drafter`.
 
-## 索引 artifact の扱い
+## Handling index artifacts
 
-次のファイルは ADR 本文から導かれる derived artifact として扱う。
+Treat the following files as derived artifacts from ADR source text:
 
 - `dev-docs/adr/README.md`
 - `dev-docs/adr/index.yaml`
 - `dev-docs/adr/decision-map.md`
 
-これらは新規 ADR、status 変更、supersede 関係変更、domain 分類変更、related spec 更新があったときに更新する。
+Update them when a new ADR is added, when status changes, when supersede relationships change, when domain classification changes, or when related specs change.
 
-## Status ルール
+## Status rules
 
-利用可能な `状態` は次のみとする。
+The only allowed status values are:
 
 - `proposed`
 - `accepted`
 - `superseded`
 - `deprecated`
 
-`draft` や独自 status は使わない。草案段階でも ADR 文書上は `proposed` を使う。
+Do not use `draft` or custom statuses. Even at the drafting stage, the ADR document itself should use `proposed`.
 
-## AI エージェントの必須動作
+## Required AI-agent behavior
 
-- 変更着手前に、関係しそうな既存 ADR を確認する
-- ADR 対象の論点では、`why` と `what` を混同しない
-- 新しい ADR を提案するときは、関連する `tests`, `code`, `specs` を列挙する
-- ADR 不要と判断した場合も、なぜ policy-level change ではないのかを短く残す
-- ADR を新規作成/更新した場合は、必要に応じて `adr-reconciler` で drift 監査を行い、`high` findings を残さない
-- ADR を追加・更新・supersede した場合は、derived index artifact も同期させる
-- ADR 草案をレビューするときは、現行 draft の `adr-linter` `high` / `medium` finding を先に解消し、公開 surface に触れる場合は関連 `docs/` も確認したうえで、`adr-reviewer` で設計論点だけを findings 化する
+- Check existing ADRs that may be related before starting the change
+- For ADR-worthy issues, do not mix up `why` and `what`
+- When proposing a new ADR, list the related `tests`, `code`, and `specs`
+- Even when deciding an ADR is unnecessary, leave a short note explaining why it is not a policy-level change
+- When creating or updating an ADR, run `adr-reconciler` as needed and do not leave `high` findings unresolved
+- When adding, updating, or superseding an ADR, also synchronize the derived index artifacts
+- When reviewing an ADR draft, clear the current draft's `adr-linter` `high` / `medium` findings first, and if the ADR touches a public surface, review the related `docs/` as well before using `adr-reviewer` to capture only design-level findings
 
-## 非目標
+## Non-goals
 
-- ADR だけで公開契約を定義しない
-- ADR だけで実装正当性を証明しない
-- ADR を CI や bot 連携の詳細設計書として使わない
+- Do not define the public contract with ADRs alone
+- Do not prove implementation correctness with ADRs alone
+- Do not use ADRs as detailed design docs for CI or bot integrations

@@ -1,131 +1,131 @@
-# ADR 判定基準
+# ADR decision criteria
 
-この文書は、AI エージェントが変更を `required` / `recommended` / `not-needed` に分類するための基準を定義する。
+This document defines the criteria AI agents use to classify a change as `required`, `recommended`, or `not-needed`.
 
-## 判定レベル
+## Decision levels
 
 ### `required`
 
-次のいずれかに当てはまる場合は ADR 必須とする。
+An ADR is required when any of the following apply:
 
-- 公開 API、CLI、MCP の契約や意味が変わる
-- 出力 JSON / YAML / TOON の意味、必須性、省略方針が変わる
-- 既定値が `default omit` / `default include` のように意味契約を変える
-- mode の責務境界や validation 契約が変わる
-- 同じ制約を API / CLI / engine / MCP の各入口でどう揃えるかが変わる
-- backend の追加、削除、優先順位、fallback 方針が変わる
-- runtime failure の扱い、理由コード、ログ整合、返却形状の組み合わせが変わる
-- `PathPolicy` など safety boundary が変わる
-- backward compatibility の方針が変わる
-- patch/edit backend の capability や選択ポリシーが変わる
+- The contract or meaning of the public API, CLI, or MCP changes
+- The meaning, requiredness, or omission policy of output JSON / YAML / TOON changes
+- A default changes semantic contract, such as `default omit` vs `default include`
+- Mode responsibility boundaries or validation contracts change
+- The way the same constraints are aligned across API / CLI / engine / MCP entry points changes
+- Backend addition, removal, priority, or fallback policy changes
+- Runtime-failure handling, reason codes, log consistency, or return-shape combinations change
+- A safety boundary such as `PathPolicy` changes
+- Backward-compatibility policy changes
+- Patch/edit backend capabilities or selection policy changes
 
 ### `recommended`
 
-設計判断の可能性は高いが、必ずしも ADR が必要とは限らない変更。
+Changes that are likely to contain design decisions, but do not always require an ADR.
 
-- テスト体系の大きな見直し
-- エラー処理ポリシーの再整理
-- 大きな依存ライブラリ追加や置き換え
-- パフォーマンス最適化の基本戦略変更
-- 運用フローや AI エージェント手順の恒久ルール化
+- Large revisions to the testing system
+- Reorganization of error-handling policy
+- Addition or replacement of a major dependency
+- Changes to the basic strategy for performance optimization
+- Turning operational flows or AI-agent procedures into permanent rules
 
 ### `not-needed`
 
-policy-level change ではないため ADR 不要。
+ADR not needed because the change is not a policy-level change.
 
-- typo 修正
-- ふるまい不変の内部 refactor
-- 既存契約を変えない文言整理
-- 設計意図を変えない単純なテスト追加
-- バグ修正のうち、既存 ADR / spec / tests の契約に戻すだけのもの
+- typo fixes
+- internal refactors with unchanged behavior
+- wording cleanup that does not change the contract
+- simple test additions that do not change design intent
+- bug fixes that only restore the contract already defined by existing ADRs / specs / tests
 
-## exstruct 固有の必須領域
+## ExStruct-specific must-check areas
 
-次の領域は、変更が入った時点で ADR 必須を第一候補として疑う。
+For the following areas, treat ADR-required as the first candidate as soon as a change appears.
 
-| 領域 | 典型例 | 既存参照 |
+| Area | Typical example | Existing references |
 | --- | --- | --- |
-| extraction mode | `light` / `libreoffice` / `standard` / `verbose` の責務変更 | `ADR-0001`, `dev-docs/specs/excel-extraction.md` |
-| backend fallback | COM / LibreOffice / 将来 backend の fallback 契約変更 | `ADR-0002` |
-| serialization contract | metadata の省略/含有、schema の意味変更 | `ADR-0003`, `docs/api.md`, `docs/cli.md` |
-| patch backend policy | `auto` / `com` / `openpyxl` の選択・制約変更 | `ADR-0004`, `docs/mcp.md` |
-| safety boundary | path 許可範囲、正規化、出力位置のルール変更 | `ADR-0005`, `docs/mcp.md` |
-| compatibility policy | backward compatibility の維持・破壊条件変更 | 既存 ADR または新規 ADR 対象 |
+| extraction mode | changing responsibilities of `light` / `libreoffice` / `standard` / `verbose` | `ADR-0001`, `dev-docs/specs/excel-extraction.md` |
+| backend fallback | changing fallback contracts for COM / LibreOffice / future backends | `ADR-0002` |
+| serialization contract | changing metadata omission/inclusion or schema meaning | `ADR-0003`, `docs/api.md`, `docs/cli.md` |
+| patch backend policy | changing selection or constraints for `auto` / `com` / `openpyxl` | `ADR-0004`, `docs/mcp.md` |
+| safety boundary | changing path allow ranges, normalization, or output-location rules | `ADR-0005`, `docs/mcp.md` |
+| compatibility policy | changing preservation or break conditions for backward compatibility | existing ADR or a new ADR target |
 
-## 見分け方
+## How to tell
 
-次の問いに 1 つでも `yes` なら ADR を強く検討する。
+If even one of the following questions is answered `yes`, strongly consider an ADR.
 
-1. これは「どう作るか」ではなく「なぜその方針を採るか」の変更か
-2. 変更が `docs/specs/tests/src` の複数層へ波及するか
-3. 将来、同じ論点で再び迷う可能性が高いか
-4. 既存 ADR の前提や例外条件を壊していないか
-5. レビューで「どの policy を守るべきか」が争点になりそうか
+1. Is this a change in "why we adopt this policy" rather than "how we build it"?
+2. Does the change affect multiple layers such as `docs/specs/tests/src`?
+3. Is it likely that future contributors will face the same question again?
+4. Does it break an assumption or exception condition from an existing ADR?
+5. Is the likely review debate about which policy should be followed?
 
-## 追加ヒューリスティクス
+## Additional heuristics
 
-- mode や backend の変更が「どこで validation されるか」ではなく、「全入口で同じ validation を課すか」を変えるなら ADR 必須寄り
-- runtime failure を扱う変更では、理由コード、ログ、返却データ形状の 3 点をセットで見る
-- serialization の既定値変更は、小さく見えても consumer contract を変えるため ADR 必須寄り
-- backend 選択の変更は、優先順位、禁止 fallback、事前 capability check のどれか 1 つでも触れたら ADR 必須寄り
+- If a mode or backend change affects not just "where validation happens" but "whether the same validation is enforced at every entry point", it leans ADR-required
+- For runtime-failure changes, consider reason codes, logs, and return-data shape as a three-part set
+- A default change in serialization may look small, but it leans ADR-required because it changes the consumer contract
+- For backend-selection changes, touching priority, forbidden fallback, or preflight capability checks makes the change lean ADR-required
 
-## ADR 不要だが根拠は残すべきケース
+## Cases where ADR is not needed but rationale should still be recorded
 
-- 既存 ADR の契約に戻すだけの回帰修正
-- 既存 spec の誤記修正
-- 既存 policy に従った tests 追加
+- regression fixes that only restore an existing ADR contract
+- typo fixes in existing specs
+- tests added according to an existing policy
 
-この場合は、新規 ADR ではなく、関連する issue、PR、`tasks/todo.md`、レビューコメントに判断理由を短く残す。
+In these cases, do not create a new ADR. Instead, leave a short rationale in the related issue, PR, `tasks/todo.md`, or review comment.
 
-## 判定出力の最小要件
+## Minimum output requirements for a verdict
 
-AI エージェントは判定時に最低限次を返す。
+At minimum, the AI agent must return:
 
 - verdict: `required` / `recommended` / `not-needed`
-- rationale: 1-3 行の理由
-- affected domains: 関連する設計領域
-- existing ADR candidates: 参照すべき既存 ADR
+- rationale: 1-3 lines of explanation
+- affected domains: the related design areas
+- existing ADR candidates: the existing ADRs to consult
 - next action: `new-adr`, `update-existing-adr`, `no-adr`
 - evidence triad:
-  - specs の契約文
-  - src の主要シンボルまたは実行経路
-  - tests の固定化ケース
+  - contract text from specs
+  - primary symbols or execution paths in src
+  - fixed tests that lock the behavior down
 
-## Phase 2: 監査 / 索引の出力要件
+## Phase 2: output requirements for audits and indexes
 
-`adr-reconciler` は判定済み ADR の drift 監査で最低限次を返す。
+At minimum, `adr-reconciler` returns the following for drift audits of already-classified ADRs:
 
 - scope:
-  - 対象 ADR
-  - 調査した `specs` / `src` / `tests`
+  - target ADRs
+  - reviewed `specs` / `src` / `tests`
 - findings:
   - type: `policy-drift` / `missing-adr-update` / `missing-evidence` / `stale-reference`
   - severity: `high` / `medium` / `low`
   - claim
   - affected ADRs
   - evidence matrix:
-    - adr の claim または該当節
-    - specs の契約文
-    - src の主要シンボルまたは実行経路
-    - tests の固定化ケース
+    - ADR claim or relevant section
+    - contract text from specs
+    - primary symbols or execution paths in src
+    - fixed tests that lock the behavior down
   - recommended action: `update-adr` / `new-adr` / `update-specs` / `add-tests` / `no-action`
 
-`adr-indexer` は索引更新で最低限次を返す。
+At minimum, `adr-indexer` returns the following when updating indexes:
 
 - updated artifacts
 - added or changed ADR entries
 - consistency findings
 
-## Phase 3: ドラフトレビューの出力要件
+## Phase 3: output requirements for draft review
 
-`adr-reviewer` は ADR 草案の設計レビューで最低限次を返す。
+At minimum, `adr-reviewer` returns the following when reviewing ADR drafts:
 
-- prerequisite: 現行 draft に未解消の `adr-linter` `high` / `medium` finding が残っていない
+- prerequisite: no unresolved `adr-linter` `high` / `medium` findings remain in the current draft
 - verdict: `ready` / `revise` / `escalate`
 - scope:
-  - 対象 ADR 草案
-  - 調査した関連 ADR / `docs/` (公開 API / CLI / MCP が関係する場合) / `specs` / `src` / `tests`
-  - 参照した issue / PR / diff context
+  - target ADR draft
+  - related ADRs / `docs/` (when public API / CLI / MCP is involved) / `specs` / `src` / `tests`
+  - referenced issue / PR / diff context
 - findings:
   - type: `decision-gap` / `scope-conflict` / `evidence-risk` / `rollout-gap` / `ownership-escalation`
   - severity: `high` / `medium` / `low`
@@ -133,7 +133,7 @@ AI エージェントは判定時に最低限次を返す。
   - why it matters
   - suggested revision
   - evidence:
-    - draft の該当節または claim
+    - relevant draft section or claim
     - related sources
 - open questions
 - residual risks

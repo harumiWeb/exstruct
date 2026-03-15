@@ -1,7 +1,7 @@
-# 内部仕様
+# Internal Specifications
 
-`dev-docs/specs/` には、現行の内部仕様文書を置きます。
+`dev-docs/specs/` holds the current internal specification documents.
 
-- まずこの文書群で、意図されている現行挙動を把握する
-- 境界がなぜそうなっているかは ADR で確認する
-- その挙動が今も強制されているかは tests で確認する
+- Use these documents first to understand the intended current behavior
+- Consult the ADRs to understand why the boundaries are what they are
+- Consult tests to verify that the behavior is still enforced

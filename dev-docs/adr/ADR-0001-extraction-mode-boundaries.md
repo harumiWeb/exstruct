@@ -1,27 +1,28 @@
-# ADR-0001: 抽出モードの責務境界
+# ADR-0001: Extraction Mode Responsibility Boundaries
 
-## 状態
+## Status
 
 `accepted`
 
-## 背景
+## Background
 
-ExStruct は複数の抽出モードを提供しており、それぞれ保証内容と必要 runtime が異なる。明示的な判断記録がないと、`light`, `libreoffice`, `standard`, `verbose` の責務が曖昧になりやすく、新しい artifact や validation rule を追加するときに境界が崩れやすい。
+ExStruct provides multiple extraction modes, each with different guarantees and runtime requirements.
+Without an explicit decision record, the responsibilities of `light`, `libreoffice`, `standard`, and `verbose` are easy to conflate, and the boundaries tend to erode when adding new artifacts or validation rules.
 
-## 決定
+## Decision
 
-- `light` は最小構成を維持し、rich runtime 依存を持ち込まない。
-- `libreoffice` は `.xlsx/.xlsm` 向けの non-COM best-effort rich mode とし、PDF、画像、自動改ページ export は明示的に拒否する。
-- `standard` と `verbose` は、より高忠実度な Excel ネイティブ抽出を行う COM 利用可能モードとして維持する。
-- モード別 validation は単なる実装都合ではなく、プロダクト契約の一部として扱う。
+- `light` maintains a minimal configuration and does not introduce any rich runtime dependency.
+- `libreoffice` is a non-COM best-effort rich mode for `.xlsx/.xlsm` and explicitly rejects PDF, image, and auto page-break export.
+- `standard` and `verbose` are maintained as COM-enabled modes that perform higher-fidelity native Excel extraction.
+- Per-mode validation is treated as part of the product contract, not merely an implementation detail.
 
-## 影響
+## Consequences
 
-- 新機能を追加するときは、どの mode がその振る舞いを担当するかを明示する必要がある。
-- validation logic は API、CLI、engine の入口で一致していなければならない。
-- mode ごとの責務表は、tests の暗黙知だけに頼らず明示的に維持される。
+- When adding a new feature, the mode responsible for that behavior must be stated explicitly.
+- Validation logic must be consistent across the API, CLI, and engine entry points.
+- The responsibility table per mode is maintained explicitly rather than relying solely on the implicit knowledge embedded in tests.
 
-## 根拠
+## Rationale
 
 - Tests: `tests/test_constraints.py`
 - Code: `src/exstruct/constraints.py`, `src/exstruct/engine.py`

@@ -1,22 +1,22 @@
-# ADR-0000: <タイトル>
+# ADR-0000: <Title>
 
-## 状態
+## Status
 
 `proposed` | `accepted` | `superseded` | `deprecated`
 
-## 背景
+## Background
 
-なぜこの判断が必要か。制約、背景、非目標も含めて書く。
+Why this decision is needed. Include constraints, context, and non-goals.
 
-## 決定
+## Decision
 
-何を採用するか。必要なら公開契約との境界も書く。
+What is being adopted. Include boundaries with public contracts if relevant.
 
-## 影響
+## Consequences
 
-この判断による正負の影響を書く。
+Describe the positive and negative consequences of this decision.
 
-## 根拠
+## Rationale
 
 - Tests:
 - Code:

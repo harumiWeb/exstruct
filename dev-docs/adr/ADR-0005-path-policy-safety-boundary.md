@@ -1,26 +1,27 @@
-# ADR-0005: PathPolicy の安全境界
+# ADR-0005: PathPolicy Safety Boundary
 
-## 状態
+## Status
 
 `accepted`
 
-## 背景
+## Background
 
-MCP tool は外部クライアントから渡された file path を操作する。どの path を許可するか、出力 path をどう解決するか、path validation をどこに置くかについて、明確な安全境界が必要である。
+MCP tools manipulate file paths provided by external clients.
+A clear safety boundary is needed regarding which paths are allowed, how output paths are resolved, and where path validation is placed.
 
-## 決定
+## Decision
 
-- `PathPolicy` を MCP の file access と output location rule を検証する中心境界とする。
-- caller は tool call site ごとに path check を複製せず、`PathPolicy` を意識した helper を通じて path を正規化・検証する。
-- safety check は任意の hygiene ではなく、tool execution contract の一部として扱う。
+- `PathPolicy` is the central boundary for validating MCP file access and output location rules.
+- Callers normalize and validate paths through `PathPolicy`-aware helpers rather than duplicating path checks at each tool call site.
+- Safety checks are treated as part of the tool execution contract, not optional hygiene.
 
-## 影響
+## Consequences
 
-- 新しい MCP file-manipulating tool は `PathPolicy` と統合しなければならない。
-- MCP handler での直接 filesystem access は、テスト済み boundary helper で正当化されない限り疑うべきである。
-- path behavior を変える場合は、allow、deny、normalization の test が必要になる。
+- New MCP file-manipulating tools must integrate with `PathPolicy`.
+- Direct filesystem access in MCP handlers should be treated with suspicion unless justified by a tested boundary helper.
+- Changing path behavior requires tests covering allow, deny, and normalization cases.
 
-## 根拠
+## Rationale
 
 - Tests: `tests/mcp/test_path_policy.py`, `tests/mcp/test_validate_input.py`, `tests/mcp/shared/test_output_path.py`
 - Code: `src/exstruct/mcp/io.py`, `src/exstruct/mcp/server.py`, `src/exstruct/mcp/render_runner.py`

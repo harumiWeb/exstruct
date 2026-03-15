@@ -1,69 +1,69 @@
-# Excel 抽出仕様 - ExStruct
+# Excel Extraction Specification — ExStruct
 
-この文書は Excel からの抽出処理の最新仕様をまとめたものです。
+This document summarizes the current specification for Excel extraction processing.
 
-## 全体フロー
+## Overall Flow
 
-1. `resolve_extraction_inputs` で include_* と mode を正規化
-2. pre-com（openpyxl）で cells/print_areas/formulas_map/colors_map/merged_cells を取得
-3. `standard` / `verbose` は com（xlwings）で shapes/charts/auto_page_breaks を取得
-4. `libreoffice` は LibreOffice backend で shapes/charts を best-effort 抽出
-5. COM 成功時は colors_map を COM 結果で上書き
-6. rich backend 失敗時は cells+table_candidates を維持し、pre-com 取得済みの print_areas / formulas_map / colors_map / merged_cells もフラグに応じて保持する
+1. `resolve_extraction_inputs` normalizes include_* and mode
+2. Pre-com (openpyxl) retrieves cells/print_areas/formulas_map/colors_map/merged_cells
+3. `standard` / `verbose` use COM (xlwings) to retrieve shapes/charts/auto_page_breaks
+4. `libreoffice` uses the LibreOffice backend for best-effort shape/chart extraction
+5. When COM succeeds, colors_map is overwritten with COM results
+6. When the rich backend fails, cells+table_candidates are preserved, and pre-com artifacts (print_areas / formulas_map / colors_map / merged_cells) are also retained according to their flags
 
-## 座標系
+## Coordinate System
 
-- 行は 1-based
-- 列は 0-based
+- Rows are 1-based
+- Columns are 0-based
 
-## モード
+## Modes
 
-- light: COM を完全にスキップし、cells+table_candidates を基本に pre-com artifact をフラグに応じて返す
-- libreoffice: LibreOffice backend で rich artifact を best-effort 抽出し、失敗時は pre-com artifact を保持した cells fallback に戻る
-- standard: 既存挙動（テキスト付き図形、必要に応じてチャート）
-- verbose: 全図形 + サイズ付き、チャートもサイズ付き
+- light: Skip COM entirely; return cells+table_candidates as the base, along with pre-com artifacts according to their flags
+- libreoffice: Extract rich artifacts best-effort with the LibreOffice backend; on failure, fall back to cells with pre-com artifacts preserved
+- standard: Existing behavior (text-bearing shapes, charts if needed)
+- verbose: All shapes + sizes, charts with sizes
 
-## セル抽出
+## Cell Extraction
 
-- pandas の `read_excel(header=None, dtype=str)` で読み込む
-- 空白セルは無視
-- 行データは `CellRow` に正規化
+- Load with pandas `read_excel(header=None, dtype=str)`
+- Ignore blank cells
+- Normalize row data into `CellRow`
 
-## テーブル抽出
+## Table Extraction
 
-- openpyxl のテーブル定義 + 罫線クラスターを統合
-- COM が使えない場合でも table_candidates を維持
+- Merge openpyxl table definitions + border clusters
+- Preserve table_candidates even when COM is unavailable
 
-## Shapes / Arrows / SmartArt 抽出
+## Shapes / Arrows / SmartArt Extraction
 
-抽出内容:
+What is extracted:
 
-- Type / AutoShapeType の正規化（`type` は Shape のみ）
+- Normalization of Type / AutoShapeType (`type` is kept for Shape only)
 - Left/Top/Width/Height
 - TextFrame2.TextRange.Text
-- 矢印方向や接続情報
-- SmartArt の layout/nodes/kids（ネスト構造）
+- Arrow direction and connection information
+- SmartArt layout/nodes/kids (nested structure)
 
-## チャート抽出
+## Chart Extraction
 
-抽出内容:
+What is extracted:
 
-- ChartType（整数 → XL_CHART_TYPE_MAP で文字列化）
+- ChartType (integer → string via XL_CHART_TYPE_MAP)
 - Series / Axis Title / Axis Range
 - Chart Title
 
-## 印刷範囲 / 自動改ページ
+## Print Areas / Auto Page Breaks
 
-- print_areas は pre-com（openpyxl）で取得し COM では補完のみ
-- auto_page_breaks は COM のみで取得
+- print_areas are retrieved via pre-com (openpyxl); COM only supplements missing parts
+- auto_page_breaks are retrieved via COM only
 
 ## Colors Map
 
-- 条件付き書式の色を含めるため COM を優先
-- COM 成功時は COM 結果で上書き
-- COM 失敗時のみ openpyxl 結果を使用
+- Prefer COM to include conditional formatting colors
+- Overwrite with COM results when COM succeeds
+- Use openpyxl results only when COM fails
 
-## エラーハンドリング / フォールバック
+## Error Handling / Fallback
 
-- COM / LibreOffice 不可・例外時は cells+table_candidates を返し、pre-com 取得済みの print_areas / formulas_map / colors_map / merged_cells は保持する
-- fallback 理由は `FallbackReason` で統一ログ
+- When COM / LibreOffice is unavailable or raises an exception, return cells+table_candidates, and preserve the pre-com artifacts (print_areas / formulas_map / colors_map / merged_cells) according to their flags
+- Log fallback reasons uniformly via `FallbackReason`

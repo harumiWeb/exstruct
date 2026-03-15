@@ -1,61 +1,60 @@
 # ADR Review Contract
 
-この文書は、`adr-reviewer` が ADR 草案をどうレビューし、どの形で findings を返すかを定義する。
+This document defines how `adr-reviewer` reviews ADR drafts and in what form it returns findings.
 
-## 目的
+## Purpose
 
-- `adr-linter` の構造検査と、ADR 草案の設計レビューを分離する
-- review comment の観点を固定し、AI ごとに「何を問題とみなすか」がぶれないようにする
-- AI が修正してよい論点と、人へ escalate すべき論点を明示する
+- Separate the structural inspection by `adr-linter` from the design review of ADR drafts
+- Fix the review comment perspective so that "what counts as a problem" does not vary by AI
+- Make explicit which issues the AI may fix and which must be escalated to a human
 
-## 非目標
+## Non-Goals
 
-- `adr-linter` の代わりに必須節や status の機械検査を再実装しない
-- `adr-reconciler` のように merge 後 drift 監査をしない
-- ADR 本文の自動修正を source of truth にしない
+- Do not re-implement mechanical inspection of required sections or status as a substitute for `adr-linter`
+- Do not perform post-merge drift auditing like `adr-reconciler`
+- Do not make automated ADR body corrections the source of truth
 
 ## Preconditions
 
-`adr-reviewer` は、現行 draft が `adr-linter` で検査済みであり、未解消の `high` / `medium` finding が残っていない状態でのみ有効とする。
+`adr-reviewer` is only valid when the current draft has been inspected by `adr-linter` and no unresolved `high` / `medium` findings remain.
+When lint findings remain, fix the draft and re-run `adr-linter` before proceeding to design review.
 
-lint finding が残っている場合は、草案を修正して `adr-linter` を再実行してから設計レビューに進む。
+## Review Focus
 
-## Review focus
-
-`adr-reviewer` は次の観点を順に確認する。
+`adr-reviewer` checks the following perspectives in order.
 
 1. decision coverage
-   - ADR が本当に 1 つの policy decision を解決しているか
-   - `why` と `how` を混同していないか
+   - Does the ADR actually resolve one policy decision?
+   - Is `why` mixed with `how`?
 2. scope and lineage
-   - 既存 ADR / spec と衝突、重複、説明不足がないか
-   - supersede や update を使うべき論点を新規 ADR に分離し過ぎていないか
+   - Are there conflicts, overlaps, or gaps with existing ADRs / specs?
+   - Are issues that should use supersede or update being unnecessarily separated into a new ADR?
 3. evidence strength
-   - `Tests`, `Code`, `Related specs` が決定内容を本当に裏付けているか
-   - consequence や claim が evidence なしに拡張されていないか
+   - Do `Tests`, `Code`, and `Related specs` genuinely back up the decision?
+   - Are consequences or claims extended without evidence?
 4. rollout and compatibility
-    - 公開契約、fallback、migration、operational impact が relevant な場合に触れられているか
-    - 公開 API / CLI / MCP が関係する場合は、対応する `docs/` を scope に含めて compatibility / break judgment の根拠を確認しているか
-    - 非目標や移行しない理由が必要なのに省略されていないか
+   - When public contracts, fallback, migration, or operational impact are relevant, are they addressed?
+   - When the public API / CLI / MCP is involved, is the corresponding `docs/` in scope, and is there a basis for the compatibility / break judgment?
+   - Are non-goals or reasons for not migrating omitted when they are needed?
 5. ownership boundary
-    - AI の責務外である public API break judgement、security / license 判断、大規模ディレクトリ再編、未確定の product / spec 方針を勝手に確定していないか
+   - Are public API break judgments, security / license decisions, large-scale directory restructuring, or undecided product / spec policies being decided unilaterally by AI?
 
 ## Verdict
 
-`adr-reviewer` の verdict は次の 3 種類に固定する。
+`adr-reviewer` verdicts are fixed to the following three values.
 
 - `ready`
-  - 高 / 中 severity の design finding がなく、AI の責務外論点も未解決でない
+  - No high / medium severity design findings, and no unresolved issues outside AI's responsibility
 - `revise`
-  - ADR 草案の内容を修正すれば解消できる review finding が残っている
+  - Review findings remain that can be resolved by updating the ADR draft
 - `escalate`
-  - 人の判断が必要な論点が残っており、AI が draft だけでは閉じられない
+  - Issues remain that require human judgment and cannot be closed with the draft alone
 
-`ready` は merge や最終承認の代替ではない。
+`ready` is not a substitute for merge or final approval.
 
-## Result envelope
+## Result Envelope
 
-review 結果は少なくとも次の top-level fields を含む。
+The review result must include at least the following top-level fields.
 
 - `verdict`
 - `scope`
@@ -63,9 +62,9 @@ review 結果は少なくとも次の top-level fields を含む。
 - `open questions`
 - `residual risks`
 
-## Finding contract
+## Finding Contract
 
-findings は severity 順に返し、各 finding は次を含む。
+Return findings in severity order; each finding must include the following.
 
 - `type`
 - `severity`
@@ -76,32 +75,32 @@ findings は severity 順に返し、各 finding は次を含む。
   - `draft`
   - `related sources`
 
-finding type は次に固定する。
+Finding types are fixed to the following.
 
 - `decision-gap`
-  - ADR が解くべき policy question を十分に決めていない
+  - The ADR does not sufficiently resolve the policy question it should address
 - `scope-conflict`
-  - 既存 ADR / spec と重複、衝突、責務混在がある
+  - There is duplication, conflict, or mixed responsibilities with an existing ADR / spec
 - `evidence-risk`
-  - cited evidence が弱い、無い、または claim を支え切れていない
+  - Cited evidence is weak, absent, or insufficient to support the claim
 - `rollout-gap`
-  - compatibility / migration / fallback / operational impact の説明が必要なのに欠けている
+  - A necessary explanation of compatibility / migration / fallback / operational impact is missing
 - `ownership-escalation`
-  - AI の責務外論点を含み、人の判断が必要である
+  - The issue is outside AI's responsibility and requires human judgment
 
-## Scope contract
+## Scope Contract
 
-review 結果には少なくとも次の scope を含める。
+The review result must include at least the following in scope.
 
-- 対象 ADR 草案
-- 調査した関連 ADR
-- 調査した関連 `docs/` (公開 API / CLI / MCP が関係する場合)
-- 調査した `dev-docs/specs/`, `src/`, `tests/`
-- 参照した issue / PR / diff context
+- Target ADR draft
+- Investigated related ADRs
+- Investigated related `docs/` (when the public API / CLI / MCP is involved)
+- Investigated `dev-docs/specs/`, `src/`, `tests/`
+- Referenced issue / PR / diff context
 
-## Relationship to other skills
+## Relationship to Other Skills
 
-- `adr-drafter` の後に使う
-- `adr-linter` で現行 draft の未解消 `high` / `medium` finding を落とした後に使う
-- 公開 surface が関係する場合は、関連する `docs/` を review scope に含める
-- review 結果が policy-level drift を示す場合は `adr-reconciler` や `adr-suggester` に戻る
+- Use after `adr-drafter`
+- Use after `adr-linter` has cleared unresolved `high` / `medium` findings from the current draft
+- When a public surface is involved, include the related `docs/` in the review scope
+- If review results indicate policy-level drift, return to `adr-reconciler` or `adr-suggester`

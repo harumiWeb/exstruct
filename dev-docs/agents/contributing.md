@@ -1,19 +1,18 @@
-# AI エージェント向けコントリビュートガイド
+# Contributing guide for AI agents
 
-このファイルは AI コーディングエージェント（ChatGPT, Cursor, Copilot 等）向けの  
-**特別なガイドライン**です。
+This file contains **special guidelines** for AI coding agents such as ChatGPT, Cursor, and Copilot.
 
-## 原則
+## Principles
 
-1. `docs/` は公開契約、`dev-docs/specs/` は内部仕様、`dev-docs/adr/` は判断理由として読む
-2. モデル定義（`dev-docs/specs/data-model.md`）と矛盾するコードは禁止
-3. core 層は「抽出のみ」。統合ロジックは `modeling.py` に集約し、`integrate.py` は pipeline 呼び出しの入口にとどめる
-4. models 層は絶対に「副作用なし」
-5. I/O 処理とコアロジックを混在させない
-6. 例外処理は fail-safe を徹底する
-7. 新機能を追加するときはロードマップを更新すること
+1. Read `docs/` as the public contract, `dev-docs/specs/` as the internal specification, and `dev-docs/adr/` as the record of decision rationale.
+2. Do not write code that contradicts model definitions in `dev-docs/specs/data-model.md`.
+3. The `core` layer is for extraction only. Integration logic is centralized in `modeling.py`, and `integrate.py` stays a thin entry point for pipeline invocation.
+4. The `models` layer must remain completely side-effect-free.
+5. Do not mix I/O processing with core logic.
+6. Keep exception handling fail-safe.
+7. Update the roadmap whenever you add a new feature.
 
-## 参照優先順位
+## Reference priority
 
 1. `docs/`
 2. `dev-docs/specs/`
@@ -21,35 +20,35 @@
 4. `tests/`
 5. `src/`
 
-役割分担:
+Responsibility split:
 
-- ADR = なぜそうしたか
-- specs = 何を保証するか
-- tests = その振る舞いの証拠
-- src = どう実装しているか
+- ADR = why a decision was made
+- specs = what is guaranteed
+- tests = evidence of the behavior
+- src = how it is implemented
 
-## AI 向けタスクセパレーション
+## Task separation for AI
 
-- 新しい抽出機能, 意味解析アルゴリズム → core/
-- 新しいデータ構造 → models/
-- 出力形式追加 → io/
-- CLI 機能 → cli/
+- New extraction features or semantic-analysis algorithms -> `core/`
+- New data structures -> `models/`
+- New output formats -> `io/`
+- CLI features -> `cli/`
 
-## コーディングガイドライン
+## Coding guidelines
 
-必ず以下を守ってください：
+Always follow these rules:
 
-- 型ヒントは全ての引数と戻り値に付ける
-- １関数 = １責務
-- 境界は BaseModel、内部は dataclass を返す
-- import を正しい順序で並べる
-- docstring（Google スタイル）を書く
-- 複雑になりすぎないよう関数を分割する
-- JSON や辞書ではなく Pydantic モデルを返す
+- Add type hints to every argument and return value
+- Keep one function to one responsibility
+- Return `BaseModel` at boundaries and dataclasses internally
+- Keep imports in the correct order
+- Write docstrings in Google style
+- Split functions before they become too complex
+- Return Pydantic models rather than JSON blobs or dictionaries
 
-## テスト方針
+## Testing policy
 
-- テスティングフレームワークは`pytest`, `pytest-mock`を使用
-- Excel ファイルのサンプルは `/tests/data/*.xlsx` に置く
-- 回帰テストとして Pydantic/dataclass モデル一致を優先する
-- 静的解析にはruff, mypyを使用する。したがって、これらのlintに通る実装をする。
+- Use `pytest` and `pytest-mock` as the testing framework
+- Place sample Excel files in `/tests/data/*.xlsx`
+- Prefer regression tests that lock down Pydantic/dataclass model agreement
+- Use Ruff and mypy for static analysis, and write implementations that pass both

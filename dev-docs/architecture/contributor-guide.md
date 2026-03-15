@@ -1,17 +1,17 @@
-# コントリビューターガイド - 内部アーキテクチャ
+# Contributor Guide — Internal Architecture
 
-## 対象読者
+## Target Audience
 
-このページは、次の人向けである。
+This page is for people who:
 
-- ExStruct の内部実装を拡張したい人
-- 新しい抽出対象（shapes, SmartArt, comments など）を追加したい人
-- backend（Openpyxl / COM / LibreOffice / 将来の XML）を拡張したい人
-- どこを触るべきか迷いながら PR を出そうとしている人
+- Want to extend ExStruct's internal implementation
+- Want to add new extraction targets (shapes, SmartArt, comments, etc.)
+- Want to extend a backend (Openpyxl / COM / LibreOffice / future XML)
+- Are trying to submit a PR but are unsure which files to touch
 
 ---
 
-## ディレクトリ構成（core）
+## Directory Structure (core)
 
 ```text
 src/exstruct/core/
@@ -30,124 +30,127 @@ src/exstruct/core/
 
 ---
 
-## 重要な設計ルール
+## Important Design Rules
 
-### 1. Pipeline は順序だけを知る
+### 1. Pipeline only knows the order
 
-- Excel parsing logic を Pipeline に置かない
-- Pipeline の責務は次だけに限定する
-  - Backend の呼び出し順序
-  - fallback の判断
-  - artifact の管理
-  - Modeling への受け渡し
+- Do not put Excel parsing logic in Pipeline
+- Limit Pipeline's responsibilities to only the following:
+  - Calling order of backends
+  - Fallback decisions
+  - Artifact management
+  - Handoff to Modeling
 
-**判断基準**
+**Decision criterion**
 
-> このコードは Excel の中身を直接読んでいるか？
-> 読んでいるなら Pipeline に置くべきではない。
-
----
-
-### 2. Backend は抽出専用
-
-Backend は **純粋な抽出** のためにある。
-
-- Excel -> raw data
-- 解釈しない
-- 統合しない
-- 可能な限り副作用を避ける
-
-#### Backend で許可すること
-
-- cell value の読み取り
-- shape position の読み取り
-- COM API の呼び出し
-- 例外の送出
-
-#### Backend で許可しないこと
-
-- WorkbookData / SheetData の構築
-- 出力形式の都合を持ち込むこと
-- fallback logging（これは Pipeline が担当する）
+> Is this code directly reading Excel content?
+> If so, it should not be in Pipeline.
 
 ---
 
-### 3. Modeling を唯一の統合点にする
+### 2. Backend is for extraction only
 
-複数 backend の結果を 1 つの **意味構造** に統合するのは Modeling だけにする。
+Backend exists for **pure extraction**.
 
-- Openpyxl + COM / LibreOffice の結果を結合する
-- 座標、方向、type を正規化する
-- 欠損データを補う
+- Excel → raw data
+- No interpretation
+- No integration
+- Avoid side effects as much as possible
 
-> 最終的な JSON/YAML/TOON の形を知ってよい層は
-> **Modeling** だけである。
+#### What is allowed in Backend
+
+- Reading cell values
+- Reading shape positions
+- Calling COM APIs
+- Raising exceptions
+
+#### What is not allowed in Backend
+
+- Building WorkbookData / SheetData
+- Bringing in concerns about the output format
+- Fallback logging (this is Pipeline's responsibility)
 
 ---
 
-## よくある拡張パターン
+### 3. Make Modeling the single integration point
+
+Only Modeling should integrate results from multiple backends into a single **semantic structure**.
+
+- Combine Openpyxl + COM / LibreOffice results
+- Normalize coordinates, directions, and types
+- Fill in missing data
+
+> The only layer that may know the final JSON/YAML/TOON shape
+> is **Modeling**.
 
 ---
 
-## ケース 1: 新しい抽出対象を追加する（例: comments）
+## Common Extension Patterns
 
-### 手順
+---
 
-1. **Backend に抽出メソッドを追加する**
+## Case 1: Adding a New Extraction Target (e.g., comments)
+
+### Steps
+
+1. **Add an extraction method to Backend**
 
    ```python
    class Backend(Protocol):
        def extract_comments(self, ...): ...
    ```
 
-2. `OpenpyxlBackend` / `ComBackend` に実装する
-   - 片側だけでもよい。未実装なら `NotImplementedError` を使う
+2. Implement in `OpenpyxlBackend` / `ComBackend`
+   - One side is enough. Use `NotImplementedError` if not implemented.
 
-3. `pipeline.py` に呼び出しを追加する
-   - fallback 対象に含めるかどうかを明示する
+3. Add the call to `pipeline.py`
+   - Explicitly state whether to include it as a fallback target.
 
-4. `modeling.py` で WorkbookData に統合する
+4. Integrate into WorkbookData in `modeling.py`
 
-5. test を追加する
+5. Add tests
 
 ---
 
-## ケース 2: 新しい Backend を追加する（例: XML または LibreOffice backend）
+## Case 2: Adding a New Backend (e.g., XML or LibreOffice backend)
 
-### 手順
+### Steps
 
-1. `backend.py` の Protocol を実装する
+1. Implement `Backend` and/or `RichBackend` from `src/exstruct/core/backends/base.py` in a new backend module
 
    ```python
    class XmlBackend:
-       def extract_cells(...)
-       def extract_shapes(...)
+        def extract_cells(self, *, include_links: bool):
+            ...
+
+        def extract_shapes(self, *, mode: str):
+            ...
    ```
 
-2. Pipeline に backend 選択を追加する
-   - 既存 backend への変更は最小にとどめる
+2. Add backend selection to Pipeline
+   - Minimize changes to existing backends.
 
-3. 可能な限り Modeling は変えない
-
----
-
-## ケース 3: 出力構造を変更する
-
-- **これは最も壊れやすい変更種別である**
-
-### 原則
-
-- 変更を `modeling.py` と Pydantic model に限定する
-- backend は変えない
-- Pipeline は変更しない
+3. Keep Modeling unchanged if possible
 
 ---
 
-## フォールバックルール
+## Case 3: Changing the Output Structure
 
-- COM または LibreOffice runtime の unavailable は **通常系** である
-- fallback は例外扱いしない
-- 常に `FallbackReason` を与える
+- **This is the most fragile type of change**
+
+### Principles
+
+- Limit changes to `modeling.py` and the Pydantic model
+- Do not change the backend
+- Do not change Pipeline
+
+---
+
+## Fallback Rules
+
+- COM or LibreOffice runtime being unavailable is **the normal case**
+- Do not treat fallback as an exception
+- Always provide a `FallbackReason`
 
 ```python
 log_fallback(
@@ -163,9 +166,9 @@ log_fallback(
 
 ---
 
-## テストガイドライン
+## Testing Guidelines
 
-### 期待する test 粒度
+### Expected test granularity
 
 | Layer    | Test focus           |
 | -------- | -------------------- |
@@ -173,39 +176,39 @@ log_fallback(
 | Pipeline | fallback / branching |
 | Modeling | integration logic    |
 
-### アンチパターン
+### Anti-patterns
 
-- 実 Excel instance に強く依存する fragile test
-- Backend と Modeling を一気に結合する巨大 test
-
----
-
-## PR 前チェックリスト
-
-- [ ] Pipeline に Excel parsing logic が入っていない
-- [ ] Backend に解釈 logic が入っていない
-- [ ] 最終構造の single source が Modeling になっている
-- [ ] Fallback reason が明示されている
-- [ ] Tests が追加されている
-- [ ] Public API を変えたなら docs が更新されている
+- Fragile tests that depend heavily on a real Excel instance
+- Massive tests that couple Backend and Modeling all at once
 
 ---
 
-## よくあるアンチパターン
+## Pre-PR Checklist
 
-- Backend の中で WorkbookData を作る
-- Pipeline から openpyxl / xlwings を直接呼ぶ
-- "とりあえずここで処理する" 型の ad-hoc logic
-- fallback reason のない catch-all exception
+- [ ] No Excel parsing logic in Pipeline
+- [ ] No interpretation logic in Backend
+- [ ] Modeling is the single source of truth for the final structure
+- [ ] Fallback reason is explicit
+- [ ] Tests have been added
+- [ ] If the public API changed, docs have been updated
 
 ---
 
-## 設計思想の要約
+## Common Anti-patterns
 
-- Excel は **fragile**
-- COM は **powerful but unstable**
-- LLM/RAG は **stable structure first** を要求する
+- Building WorkbookData inside Backend
+- Calling openpyxl / xlwings directly from Pipeline
+- Ad-hoc logic that "just handles it here"
+- Catch-all exceptions with no fallback reason
 
-そのため、
+---
 
-> 責務を分離し、失敗点を局所化する。
+## Summary of Design Philosophy
+
+- Excel is **fragile**
+- COM is **powerful but unstable**
+- LLM/RAG requires **stable structure first**
+
+Therefore,
+
+> Separate responsibilities and localize failure points.

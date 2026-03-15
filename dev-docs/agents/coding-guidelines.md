@@ -1,27 +1,25 @@
-# ExStruct コーディングガイドライン
+# ExStruct Coding Guidelines
 
-**AI（Codex）と人間が協調して長期的に保守できるコードベース** を実現するための、  
-ExStruct 独自のコーディング規約です。
-
-以下の規約は、Codex にコードを生成させる場合にも適用します。  
-AI 生成コードの品質安定化・保守性向上・Ruff / mypy / Pydantic との整合性を目的とします。
+These are ExStruct-specific coding conventions for achieving a codebase that **AI (Codex) and humans can maintain together over the long term**.
+The conventions below also apply when having Codex generate code.
+They are intended to stabilize the quality of AI-generated code, improve maintainability, and align with Ruff / mypy / Pydantic.
 
 ---
 
-# 1. 基本方針（最重要）
+# 1. Core Principles (Most Important)
 
-## 1.1 型ヒントは必須
+## 1.1 Type hints are required
 
-すべての関数・メソッド・クラスに完全な型ヒントを付けること。
+Add complete type hints to all functions, methods, and classes.
 
-**良い例**
+**Good**
 
 ```python
 def extract_shapes(sheet: xw.Sheet) -> list[Shape]:
     ...
 ```
 
-**悪い例**
+**Bad**
 
 ```python
 def extract_shapes(sheet):
@@ -30,12 +28,12 @@ def extract_shapes(sheet):
 
 ---
 
-## 1.2 関数は「1 責務」だけを持つ
+## 1.2 Functions should have a single responsibility
 
-複雑な Excel 処理は関数が肥大化しやすいため、
-**1 関数 = 1 ロジック** を徹底する。
+Because complex Excel processing tends to bloat functions,
+enforce **1 function = 1 logic** strictly.
 
-**良い例**
+**Good examples**
 
 - `extract_raw_shapes`
 - `normalize_shape`
@@ -43,48 +41,47 @@ def extract_shapes(sheet):
 
 ---
 
-## 1.3 境界は BaseModel、内部は dataclass を主なデータ構造にする
+## 1.3 Use BaseModel at boundaries, dataclass internally as primary data structures
 
-Raw*Data（例: `SheetRawData`, `WorkbookRawData`）は内部専用で、公開 API に出さない。
-public API に露出させたり、package `__init__` から再 export してはならない。
+Raw*Data (e.g., `SheetRawData`, `WorkbookRawData`) are for internal use only and must not appear in the public API
+or be re-exported from the package `__init__`.
 
-辞書やタプルではなく、**必ず Pydantic の `BaseModel` か dataclass を返す**。
+Always return a **Pydantic `BaseModel` or dataclass**, never a dictionary or tuple.
 
-メリット：
-
-- AI が誤解しにくい
-- IDE での開発が容易
-- JSON 化との相性がよい
-
----
-
-# 2. 命名規則
-
-## 2.1 snake_case（関数・変数）
-
-例：`parse_chart_labels`, `shape_items`
-
-## 2.2 PascalCase（クラス）
-
-例：`WorkbookParser`, `ChartSeries`
-
-## 2.3 モジュール名は短く責務を示す
-
-例：`shape_parser.py`, `chart_reader.py`
+Benefits:
+- Less ambiguous for AI
+- Easier to develop with an IDE
+- Better compatibility with JSON serialization
 
 ---
 
-# 3. インポート規則
+# 2. Naming Conventions
 
-Ruff の isort ルールに従う。
+## 2.1 snake_case (functions and variables)
 
-順序：
+Examples: `parse_chart_labels`, `shape_items`
 
-1. 標準ライブラリ
-2. サードパーティ
-3. 自前ライブラリ（exstruct）
+## 2.2 PascalCase (classes)
 
-**例**
+Examples: `WorkbookParser`, `ChartSeries`
+
+## 2.3 Module names should be short and indicate responsibility
+
+Examples: `shape_parser.py`, `chart_reader.py`
+
+---
+
+# 3. Import Rules
+
+Follow Ruff's isort rules.
+
+Order:
+
+1. Standard library
+2. Third-party
+3. Internal library (exstruct)
+
+**Example**
 
 ```python
 import json
@@ -98,15 +95,15 @@ from exstruct.models import Shape
 
 ---
 
-# 4. docstring 規約
+# 4. Docstring Conventions
 
-Google スタイルを採用し、下記を必ず明記：
+Use Google style and always include:
 
 - Args
 - Returns
-- Raises（例外を投げる場合）
+- Raises (if the function raises exceptions)
 
-**例**
+**Example**
 
 ```python
 def detect_shape_direction(shape: Shape) -> str | None:
@@ -122,16 +119,16 @@ def detect_shape_direction(shape: Shape) -> str | None:
 
 ---
 
-# 5. 例外処理のルール
+# 5. Exception Handling Rules
 
-## 5.1 ValueError / RuntimeError を中心に使用
+## 5.1 Use ValueError / RuntimeError as the primary exception types
 
 ```python
 if not cell:
     raise ValueError("cell must not be empty.")
 ```
 
-## 5.2 COM 例外はラップする
+## 5.2 Wrap COM exceptions
 
 ```python
 try:
@@ -142,92 +139,92 @@ except Exception as e:
 
 ---
 
-# 6. 複雑度のコントロール
+# 6. Complexity Control
 
-Ruff の `C90`（mccabe）に従い、
-**max-complexity = 12** を超えないように関数を分割する。
-
----
-
-# 7. Codex（AI）を使うときのガイドライン
-
-## 7.1 Codex に守らせるルール
-
-Codex を利用する場合、以下を事前にプロンプトに記載する：
-
-- 型ヒントは必須
-- 1 関数 = 1 責務
-- 境界は BaseModel、内部は dataclass モデルを返す
-- Docstring を Google スタイルで書く
-- import は正しい順序で書く
-- エラーハンドリングは簡潔に
-- 複雑度が高くなる場合は関数を分割する
+Following Ruff's `C90` (mccabe), split functions so that
+**max-complexity = 12** is never exceeded.
 
 ---
 
-## 7.2 Codex にアウトプットさせるための推奨プロンプト
+# 7. Guidelines for Using Codex (AI)
 
-以下を貼るだけで安定したコードを生成できる：
+## 7.1 Rules to enforce with Codex
 
+When using Codex, include the following in the prompt in advance:
+
+- Type hints are required
+- 1 function = 1 responsibility
+- Return BaseModel at boundaries, dataclass internally
+- Write docstrings in Google style
+- Write imports in the correct order
+- Keep error handling concise
+- Split functions when complexity gets too high
+
+---
+
+## 7.2 Recommended prompt for Codex output
+
+Paste the following for stable code generation:
+
+```text
+You are an experienced Python engineer who writes code following the ExStruct library standards.
+
+Always follow these rules:
+- Add type hints to all arguments and return values
+- 1 function = 1 responsibility
+- Return BaseModel at boundaries, dataclass internally
+- Order imports correctly
+- Write docstrings (Google style)
+- Split functions to avoid getting too complex
+- Return Pydantic models, not JSON or dictionaries
+
+Output Python code only.
 ```
-あなたは熟練 Python エンジニアであり、ExStruct ライブラリの標準に従ってコードを書きます。
-
-必ず以下を守ってください：
-- 型ヒントは全ての引数と戻り値に付ける
-- １関数 = １責務
-- 境界は BaseModel、内部は dataclass を返す
-- import を正しい順序で並べる
-- docstring（Google スタイル）を書く
-- 複雑になりすぎないよう関数を分割する
-- JSON や辞書ではなく Pydantic モデルを返す
-
-出力は Python のコードのみ。
-```
 
 ---
 
-# 8. AI 生成コードのレビュー項目（チェックリスト）
+# 8. Review Checklist for AI-Generated Code
 
-AI が生成したコードをレビューする際は、以下の順に確認する：
+When reviewing AI-generated code, check the following in order:
 
-1. 型ヒントが完全か
-2. docstring があるか
-3. import の順序が正しいか
-4. 境界は BaseModel、内部は dataclass モデルを返しているか
-5. 関数が単一責務か
-6. 例外処理が適切か
-7. 複雑度が max 12 を超えていないか
-8. Ruff でエラーが出ないか
-
----
-
-# 9. 禁止事項（AI 生成コードで特に注意）
-
-以下は Codex に絶対させない：
-
-- 複雑すぎる if/else ネスト
-- 多数の責務を持つ「神クラス」
-- 大きな辞書やタプルを返す
-- コメントが一切ないコード
-- 無名のマジックナンバー
+1. Are type hints complete?
+2. Are docstrings present?
+3. Is the import order correct?
+4. Does it return BaseModel at boundaries and dataclass internally?
+5. Does each function have a single responsibility?
+6. Is exception handling appropriate?
+7. Does complexity not exceed max 12?
+8. Does Ruff report no errors?
 
 ---
 
-# 10. ExStruct の設計原則まとめ
+# 9. Prohibited Patterns (Especially for AI-Generated Code)
 
-- 型安全性（type safety）
-- データ構造の明確化（境界は BaseModel、内部は dataclass）
-- モジュールの疎結合化
-- 関数責務の最小化
-- AI と人間の共存を前提にしたコード規律
+Never let Codex do the following:
 
-これらは **Ruff / mypy / CI とも高い互換性**を持つよう設計されている。
+- Overly complex if/else nesting
+- God classes with many responsibilities
+- Returning large dictionaries or tuples
+- Code with no comments at all
+- Anonymous magic numbers
 
 ---
 
-# 付録: 今後追加が推奨されるルール
+# 10. Summary of ExStruct Design Principles
 
-- mypy の厳格化
-- pydantic のフィールド制約統一
-- public API の docstring 強制
-- internal API の `_prefix` 命名
+- Type safety
+- Clear data structures (BaseModel at boundaries, dataclass internally)
+- Loose coupling between modules
+- Minimal function responsibility
+- Code discipline that assumes AI and humans work side by side
+
+These are designed to maintain **high compatibility with Ruff / mypy / CI**.
+
+---
+
+# Appendix: Rules Recommended for Future Addition
+
+- Stricter mypy enforcement
+- Unified Pydantic field constraints
+- Mandatory docstrings for public API
+- `_prefix` naming for internal APIs

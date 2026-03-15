@@ -1,33 +1,33 @@
-# ExStruct 開発用ドキュメント
+# ExStruct Developer Documentation
 
-`dev-docs/` は、メンテナと AI エージェント向けの内部ドキュメントを置く場所です。
+`dev-docs/` contains internal documentation for maintainers and AI agents.
 
-## 役割
+## Purpose
 
-- `docs/`: MkDocs で公開するユーザー向けドキュメント
-- `dev-docs/`: 実装、保守、設計判断のための内部ドキュメント
+- `docs/`: user-facing documentation published with MkDocs
+- `dev-docs/`: internal documentation for implementation, maintenance, and design decisions
 
-## 参照順
+## Reading order
 
-コードベースを変更するときは、次の順で参照します。
+When you change the codebase, read these materials in the following order:
 
-1. `docs/` で公開契約を確認する
-2. `dev-docs/specs/` で現行の内部仕様を確認する
-3. `dev-docs/adr/` で設計判断と制約を確認する
-4. `tests/` で振る舞いの証拠を確認する
-5. `src/` で実装詳細を確認する
+1. Check the public contract in `docs/`.
+2. Check the current internal specifications in `dev-docs/specs/`.
+3. Check design decisions and constraints in `dev-docs/adr/`.
+4. Check behavior evidence in `tests/`.
+5. Check implementation details in `src/`.
 
-## 役割分担
+## Responsibility split
 
-- ADR = なぜそうしたか
-- specs = 何を保証するか
-- tests = その振る舞いが実在する証拠
-- src = どう実装しているか
+- ADR = why a decision was made
+- specs = what is guaranteed
+- tests = evidence that the behavior exists
+- src = how it is implemented
 
-## ディレクトリ構成
+## Directory structure
 
-- `adr/`: 設計判断とトレードオフ
-- `agents/`: AI エージェント向け運用ガイド
-- `architecture/`: 実装構造と拡張ガイド
-- `specs/`: 現行の内部仕様
-- `testing/`: テスト要件と検証方針
+- `adr/`: design decisions and trade-offs
+- `agents/`: operating guides for AI agents
+- `architecture/`: implementation structure and extension guides
+- `specs/`: current internal specifications
+- `testing/`: test requirements and validation policy

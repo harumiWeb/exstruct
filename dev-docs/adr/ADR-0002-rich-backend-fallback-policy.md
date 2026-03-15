@@ -1,27 +1,28 @@
-# ADR-0002: Rich Backend のフォールバック方針
+# ADR-0002: Rich Backend Fallback Policy
 
-## 状態
+## Status
 
 `accepted`
 
-## 背景
+## Background
 
-rich extraction は、Windows の Excel COM や non-COM 環境の LibreOffice のように、不在または不安定になりうる runtime に依存している。rich artifact が欠ける理由を隠さず、それでも抽出結果を有用に保つためには、一貫した fallback 契約が必要である。
+Rich extraction depends on runtimes that can be absent or unstable, such as Excel COM on Windows and LibreOffice in non-COM environments.
+A consistent fallback contract is needed to keep extraction results useful while not hiding the reason that rich artifacts are missing.
 
-## 決定
+## Decision
 
-- runtime unavailable は例外的な product failure ではなく、通常の fallback 条件として扱う。
-- fallback reason は `FallbackReason` を通して明示的に記録・ログ出力する。
-- rich backend が失敗しても、ExStruct は抽出全体を落とさず、取得可能な最善の安全な結果を残す。
-- COM と LibreOffice は内部実装が異なっても、上位の fallback 方針は共通に保つ。
+- Runtime unavailability is treated as a normal fallback condition, not an exceptional product failure.
+- Fallback reasons are recorded and logged explicitly through `FallbackReason`.
+- Even when the rich backend fails, ExStruct does not discard the entire extraction result; it retains the best safe result available.
+- Although COM and LibreOffice differ internally, the high-level fallback policy is kept consistent across both.
 
-## 影響
+## Consequences
 
-- 新しい backend を導入するときは、fallback の振る舞いを最初に定義しなければならない。
-- error handling を変更する場合は、返却データ形状と fallback reason の両方を確認する regression test が必要になる。
-- 内部 runtime hardening によって public fallback contract が黙って変わってはならない。
+- When introducing a new backend, its fallback behavior must be defined upfront.
+- When changing error handling, regression tests are required that verify both the return data shape and the fallback reason.
+- Internal runtime hardening must not silently change the public fallback contract.
 
-## 根拠
+## Rationale
 
 - Tests: `tests/integration/test_integrate_fallback.py`, `tests/utils/test_logging_utils.py`
 - Code: `src/exstruct/core/pipeline.py`, `src/exstruct/errors.py`

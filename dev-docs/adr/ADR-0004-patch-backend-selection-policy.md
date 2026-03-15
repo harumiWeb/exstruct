@@ -1,27 +1,28 @@
-# ADR-0004: Patch backend 選択方針
+# ADR-0004: Patch Backend Selection Policy
 
-## 状態
+## Status
 
 `accepted`
 
-## 背景
+## Background
 
-`exstruct_patch` は、能力差と安全制約の異なる複数 backend をサポートしている。backend の選択は互換性、fallback、許可される operation に直接影響するため、call site ごとの場当たりルールではなく、明示的な判断記録が必要である。
+`exstruct_patch` supports multiple backends with different capabilities and safety constraints.
+Backend selection directly affects compatibility, fallback behavior, and allowed operations, so an explicit decision record is needed rather than ad-hoc rules at each call site.
 
-## 決定
+## Decision
 
-- `backend="auto"` は COM が使える場合に COM を優先し、許可された runtime failure に対してのみ openpyxl へ fallback する。
-- `backend="com"` は明示指定であり、openpyxl へ黙って fallback しない。
-- `backend="openpyxl"` は安全な pure-Python path として維持し、chart 作成や `.xls` 処理のような feature gap は明示する。
-- capability restriction は backend 実行時まで遅らせず、事前に分かるものは request validation として強制する。
+- `backend="auto"` prefers COM when available and falls back to openpyxl only for permitted runtime failures.
+- `backend="com"` is an explicit selection and does not silently fall back to openpyxl.
+- `backend="openpyxl"` is maintained as a safe pure-Python path; feature gaps such as chart creation and `.xls` handling are made explicit.
+- Capability restrictions are enforced as request validation where they can be determined upfront, rather than deferring to backend execution time.
 
-## 影響
+## Consequences
 
-- backend 固有機能を追加するときは、`auto`, `com`, `openpyxl` それぞれの振る舞いを明示する必要がある。
-- fallback policy を変える場合は、正負両側の test を組で追加する必要がある。
-- documentation の backend capability table は runtime validation と同期していなければならない。
+- When adding backend-specific features, the behavior for each of `auto`, `com`, and `openpyxl` must be stated explicitly.
+- Changing the fallback policy requires adding tests covering both positive and negative cases.
+- The documentation's backend capability table must be kept in sync with runtime validation.
 
-## 根拠
+## Rationale
 
 - Tests: `tests/mcp/patch/test_service.py`, `tests/mcp/patch/test_models_internal_coverage.py`
 - Code: `src/exstruct/mcp/patch/runtime.py`, `src/exstruct/mcp/patch/service.py`, `src/exstruct/mcp/server.py`

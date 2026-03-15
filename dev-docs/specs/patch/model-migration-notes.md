@@ -1,22 +1,22 @@
-# Patch Model 移行メモ（Phase 2）
+# Patch Model Migration Notes (Phase 2)
 
-`patch/models.py` を canonical model として一本化する際の依存メモです。
+Notes on dependencies when consolidating `patch/models.py` as the canonical model.
 
-## 現状の結合点
+## Current Coupling Points
 
-- `patch/models.py` に `PatchOp` / `PatchRequest` / `PatchResult` などの canonical 定義があり、`internal.py` に重複定義が残っている
-- `patch_runner.py` / `service.py` / `runtime.py` / `ops/*` は `internal.py` の private 実装に依存している
-- そのため、両系統の `BaseModel` が混在すると、mypy と実行時検証の両方で型不整合が発生
+- `patch/models.py` has canonical definitions for `PatchOp` / `PatchRequest` / `PatchResult` and similar, while `internal.py` still has duplicate definitions
+- `patch_runner.py` / `service.py` / `runtime.py` / `ops/*` depend on the private implementation in `internal.py`
+- As a result, having both lineages of `BaseModel` coexist causes type mismatches in both mypy and runtime validation
 
-## 段階移行の推奨手順
+## Recommended Incremental Migration Steps
 
-1. `internal.py` の重複モデル定義を削除し、`patch/models.py` からの import に置き換える
-2. `internal.py` 内のモデルバリデーション補助関数（`PatchOp` 関連）を `models.py` 側に移設
-3. `runtime.py` / `ops/*` / `service.py` の型注釈と返却型を `patch.models` へ統一
-4. `tests/mcp/test_patch_runner.py` の互換テストを維持したまま `internal.py` 依存テストを `tests/mcp/patch/*` へ移管
-5. 最後に `internal.py` への互換依存を縮退し、`patch_runner.py` を公開 API の薄い入口に固定
+1. Remove the duplicate model definitions in `internal.py` and replace them with imports from `patch/models.py`
+2. Move the model validation helper functions in `internal.py` (related to `PatchOp`) to the `models.py` side
+3. Unify the type annotations and return types in `runtime.py` / `ops/*` / `service.py` to use `patch.models`
+4. Keep the compatibility tests in `tests/mcp/test_patch_runner.py` intact while migrating `internal.py`-dependent tests to `tests/mcp/patch/*`
+5. Finally, wind down the compatibility dependency on `internal.py` and lock `patch_runner.py` as the thin public API entry point
 
-## 注意点
+## Cautions
 
-- `internal.py` の重複定義を残したまま呼び出し側を切り替えると、`PatchResult` 構築時に異なるクラス階層が混在して検証に失敗しやすい
-- まずは **定義元を一本化** してから呼び出し側を差し替えるのが安全
+- Switching call sites while keeping the duplicate definitions in `internal.py` makes validation fail easily because different class hierarchies mix when constructing `PatchResult`
+- The safe approach is to **consolidate the definition source first** and then swap out the call sites
