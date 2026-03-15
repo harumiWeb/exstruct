@@ -51,7 +51,7 @@
 - [x] top-level `sheet` fallback が JSON-string op にも適用されるようにする
 - [x] ADR-0006 の status を本文と index artifacts で同期する
 - [x] review regression tests を追加する
-- [ ] PR 本文を template structure に合わせて更新する
+- [x] PR 本文を template structure に合わせて更新する
 - [x] targeted pytest と `uv run task precommit-run` を実行する
 
 ### Review
@@ -61,6 +61,7 @@
 - ADR-0006 の status は `README.md`, `index.yaml`, `decision-map.md` を `accepted` に揃えた。
 - review regression tests を `tests/mcp/patch/test_normalize.py`, `tests/mcp/test_tool_models.py`, `tests/mcp/test_server.py` に追加した。
 - docstring warning 対応として、新規 `src/exstruct/edit/*.py` の不足 module docstring を補った。
+- PR 本文は `.github/pull_request_template.md` の見出し構造に合わせて更新した。
 - Verification:
   - `uv run pytest tests/mcp/patch/test_normalize.py tests/mcp/test_tool_models.py tests/mcp/test_server.py -q`
   - `uv run task precommit-run`
