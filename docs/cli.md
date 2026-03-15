@@ -48,11 +48,11 @@ exstruct validate --input book.xlsx --pretty
 | Flag | Description |
 | ---- | ----------- |
 | `--input PATH` | Existing workbook to edit. |
-| `--ops FILE|-` | JSON array of patch ops from a file or stdin. |
+| `--ops FILE\|-` | JSON array of patch ops from a file or stdin. |
 | `--output PATH` | Optional output workbook path. If omitted, the existing default patch output naming applies. |
 | `--sheet TEXT` | Top-level sheet fallback for patch ops. |
 | `--on-conflict {overwrite,skip,rename}` | Output conflict policy. |
-| `--backend {auto,openpyxl,com}` | Backend selection. |
+| `--backend {auto,com,openpyxl}` | Backend selection. |
 | `--auto-formula` | Treat `=...` values in `set_value` ops as formulas. |
 | `--dry-run` | Simulate changes without saving. |
 | `--return-inverse-ops` | Return inverse ops when supported. |

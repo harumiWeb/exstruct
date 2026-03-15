@@ -6,12 +6,14 @@ import argparse
 import json
 from pathlib import Path
 import sys
-from typing import Any
+from typing import Any, get_args
 
 from pydantic import BaseModel, ValidationError
 
 from exstruct.edit import (
     MakeRequest,
+    OnConflictPolicy,
+    PatchBackend,
     PatchOp,
     PatchRequest,
     coerce_patch_ops,
@@ -23,8 +25,21 @@ from exstruct.edit import (
 from exstruct.mcp.validate_input import ValidateInputRequest, validate_input
 
 _EDIT_SUBCOMMANDS = frozenset({"patch", "make", "ops", "validate"})
-_ON_CONFLICT_CHOICES = ["overwrite", "skip", "rename"]
-_BACKEND_CHOICES = ["auto", "openpyxl", "com"]
+
+
+def _literal_choices(literal_type: object) -> tuple[str, ...]:
+    """Return argparse choices derived from one string Literal type."""
+
+    choices: list[str] = []
+    for choice in get_args(literal_type):
+        if not isinstance(choice, str):
+            raise TypeError("CLI choices must derive from string Literal values.")
+        choices.append(choice)
+    return tuple(choices)
+
+
+_ON_CONFLICT_CHOICES = _literal_choices(OnConflictPolicy)
+_BACKEND_CHOICES = _literal_choices(PatchBackend)
 
 
 def is_edit_subcommand(argv: list[str]) -> bool:
@@ -106,7 +121,10 @@ def run_edit_cli(argv: list[str]) -> int:
     """Run the edit-subcommand CLI."""
 
     parser = build_edit_parser()
-    args = parser.parse_args(argv)
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as exc:
+        return 0 if exc.code in (None, 0) else 1
     handler = getattr(args, "handler", None)
     if handler is None:
         parser.print_help()
@@ -206,7 +224,7 @@ def _run_patch_command(args: argparse.Namespace) -> int:
             request_kwargs["out_name"] = args.output.name
         request = PatchRequest(**request_kwargs)
         result = patch_workbook(request)
-    except (OSError, ValidationError, ValueError) as exc:
+    except (OSError, RuntimeError, ValidationError, ValueError) as exc:
         _print_error(exc)
         return 1
 
@@ -231,7 +249,7 @@ def _run_make_command(args: argparse.Namespace) -> int:
             backend=args.backend,
         )
         result = make_workbook(request)
-    except (OSError, ValidationError, ValueError) as exc:
+    except (OSError, RuntimeError, ValidationError, ValueError) as exc:
         _print_error(exc)
         return 1
 

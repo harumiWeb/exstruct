@@ -29,7 +29,7 @@ This document defines the Phase 2 public editing CLI contract.
 - Shared request flags:
   - `--sheet`
   - `--on-conflict {overwrite,skip,rename}`
-  - `--backend {auto,openpyxl,com}`
+  - `--backend {auto,com,openpyxl}`
   - `--auto-formula`
   - `--dry-run`
   - `--return-inverse-ops`

@@ -125,6 +125,24 @@ def test_patch_cli_returns_nonzero_for_invalid_ops_json(tmp_path: Path) -> None:
     assert "Invalid JSON in --ops" in result.stderr
 
 
+def test_patch_cli_converts_argparse_errors_to_exit_one() -> None:
+    result = _run_cli(["patch"])
+
+    assert result.returncode == 1
+    assert result.stdout == ""
+    assert "required" in result.stderr
+
+
+def test_patch_cli_help_keeps_exit_zero() -> None:
+    result = _run_cli(["patch", "--help"])
+
+    assert result.returncode == 0
+    assert "--input INPUT" in result.stdout
+    assert "--backend {auto,com,openpyxl}" in result.stdout
+    assert "--ops OPS" in result.stdout
+    assert result.stderr == ""
+
+
 def test_patch_cli_returns_nonzero_when_patch_result_contains_error(
     tmp_path: Path,
 ) -> None:
@@ -156,6 +174,26 @@ def test_patch_cli_returns_nonzero_when_patch_result_contains_error(
     assert payload["error"]["sheet"] == "Missing"
 
 
+def test_patch_cli_returns_nonzero_when_backend_raises_runtime_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "book.xlsx"
+    ops_path = tmp_path / "ops.json"
+    _create_workbook(source)
+    ops_path.write_text("[]", encoding="utf-8")
+
+    def _raise_runtime_error(_request: object) -> object:
+        raise RuntimeError("backend boom")
+
+    monkeypatch.setattr(edit_cli_module, "patch_workbook", _raise_runtime_error)
+
+    result = _run_cli(["patch", "--input", str(source), "--ops", str(ops_path)])
+
+    assert result.returncode == 1
+    assert result.stdout == ""
+    assert "Error: backend boom" in result.stderr
+
+
 def test_make_cli_creates_workbook_and_returns_json(tmp_path: Path) -> None:
     output = tmp_path / "created.xlsx"
     ops_path = tmp_path / "ops.json"
@@ -185,6 +223,23 @@ def test_make_cli_creates_workbook_and_returns_json(tmp_path: Path) -> None:
     payload = json.loads(result.stdout)
     assert payload["error"] is None
     assert output.exists()
+
+
+def test_make_cli_returns_nonzero_when_backend_raises_runtime_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "created.xlsx"
+
+    def _raise_runtime_error(_request: object) -> object:
+        raise RuntimeError("make boom")
+
+    monkeypatch.setattr(edit_cli_module, "make_workbook", _raise_runtime_error)
+
+    result = _run_cli(["make", "--output", str(output)])
+
+    assert result.returncode == 1
+    assert result.stdout == ""
+    assert "Error: make boom" in result.stderr
 
 
 def test_make_cli_defaults_to_empty_ops(tmp_path: Path) -> None:
