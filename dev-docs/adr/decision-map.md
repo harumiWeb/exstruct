@@ -42,6 +42,6 @@ This document is a human-readable map for navigating ADRs by domain.
 
 - `ADR-0005` PathPolicy Safety Boundary (`accepted`)
 
-## Supersede Relationships
+## Supersession Relationships
 
-- There are currently no ADRs with supersede relationships
+- There are currently no ADR supersession relationships.

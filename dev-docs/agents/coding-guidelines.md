@@ -166,7 +166,7 @@ When using Codex, include the following in the prompt in advance:
 
 Paste the following for stable code generation:
 
-```
+```text
 You are an experienced Python engineer who writes code following the ExStruct library standards.
 
 Always follow these rules:

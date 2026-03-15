@@ -60,7 +60,7 @@ Overall code coverage must be **80% or higher**.
 - [SHP-01] Normalize the type of AutoShape
 - [SHP-02] Retrieve TextFrame correctly
 - [SHP-02a] Keep `type` only for Shape; do not output it for Arrow/SmartArt
-- [SHP-03] Size `w`,`h` is null only when it cannot be retrieved
+- [SHP-03] Fields `w` and `h` are null only when they cannot be retrieved
 - [SHP-04] Apply a consistent expansion policy for grouped shapes
 - [SHP-05] Retrieve coordinates `l`,`t` as integers, unaffected by zoom
 - [SHP-07] Rotation angle matches Excel

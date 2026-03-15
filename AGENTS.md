@@ -103,7 +103,7 @@ The AI must not write the following code.
 
 ### ❌ Functions full of side effects that cannot be tested
 
-If necessary, the AI may **refactor in order to avoid these prohibited patterns**.
+If necessary, the AI may **refactor to avoid these prohibited patterns**.
 
 ---
 

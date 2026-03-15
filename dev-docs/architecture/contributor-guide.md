@@ -116,12 +116,15 @@ Only Modeling should integrate results from multiple backends into a single **se
 
 ### Steps
 
-1. Implement the Protocol in `backend.py`
+1. Implement `Backend` and/or `RichBackend` from `src/exstruct/core/backends/base.py` in a new backend module
 
    ```python
    class XmlBackend:
-       def extract_cells(...)
-       def extract_shapes(...)
+        def extract_cells(self, *, include_links: bool):
+            ...
+
+        def extract_shapes(self, *, mode: str):
+            ...
    ```
 
 2. Add backend selection to Pipeline

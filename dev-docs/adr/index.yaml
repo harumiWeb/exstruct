@@ -1,6 +1,6 @@
 adrs:
   - id: ADR-0001
-    title: 抽出モードの責務境界
+    title: Extraction Mode Responsibility Boundaries
     status: accepted
     path: dev-docs/adr/ADR-0001-extraction-mode-boundaries.md
     primary_domain: extraction
@@ -14,7 +14,7 @@ adrs:
       - docs/cli.md
       - dev-docs/specs/excel-extraction.md
   - id: ADR-0002
-    title: Rich Backend のフォールバック方針
+    title: Rich Backend Fallback Policy
     status: accepted
     path: dev-docs/adr/ADR-0002-rich-backend-fallback-policy.md
     primary_domain: backend
@@ -28,7 +28,7 @@ adrs:
       - dev-docs/specs/excel-extraction.md
       - docs/concept.md
   - id: ADR-0003
-    title: 出力直列化における省略方針
+    title: Output Serialization Omission Policy
     status: accepted
     path: dev-docs/adr/ADR-0003-output-serialization-omission-policy.md
     primary_domain: schema
@@ -42,7 +42,7 @@ adrs:
       - docs/api.md
       - docs/cli.md
   - id: ADR-0004
-    title: Patch backend 選択方針
+    title: Patch Backend Selection Policy
     status: accepted
     path: dev-docs/adr/ADR-0004-patch-backend-selection-policy.md
     primary_domain: mcp
@@ -56,7 +56,7 @@ adrs:
       - docs/mcp.md
       - dev-docs/specs/patch/legacy-dependency-inventory.md
   - id: ADR-0005
-    title: PathPolicy の安全境界
+    title: PathPolicy Safety Boundary
     status: accepted
     path: dev-docs/adr/ADR-0005-path-policy-safety-boundary.md
     primary_domain: safety

@@ -35,8 +35,8 @@ ADRs record what was decided, under which constraints, and which trade-offs were
 
 | ID | Title | Status | Primary Domain |
 | --- | --- | --- | --- |
-| `ADR-0001` | Extraction mode responsibility boundaries | `accepted` | `extraction` |
-| `ADR-0002` | Rich backend fallback policy | `accepted` | `backend` |
-| `ADR-0003` | Output serialization omission policy | `accepted` | `schema` |
-| `ADR-0004` | Patch backend selection policy | `accepted` | `mcp` |
-| `ADR-0005` | PathPolicy safety boundary | `accepted` | `safety` |
+| `ADR-0001` | Extraction Mode Responsibility Boundaries | `accepted` | `extraction` |
+| `ADR-0002` | Rich Backend Fallback Policy | `accepted` | `backend` |
+| `ADR-0003` | Output Serialization Omission Policy | `accepted` | `schema` |
+| `ADR-0004` | Patch Backend Selection Policy | `accepted` | `mcp` |
+| `ADR-0005` | PathPolicy Safety Boundary | `accepted` | `safety` |

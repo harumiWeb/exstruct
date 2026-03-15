@@ -67,8 +67,8 @@ Only when AI-oriented decision guidance is needed, also read:
 ### `adr-drafter`
 
 - Create either a new ADR draft or a proposal to update an existing ADR
-- Fill in `Context`, `Decision`, `Consequences`, and `Evidence`
-- Include `Tests`, `Code`, and `Related specs` in the evidence section
+- Fill in `Background`, `Decision`, `Consequences`, and `Rationale`
+- Include `Tests`, `Code`, and `Related specs` in the `Rationale` section
 
 ### `adr-linter`
 

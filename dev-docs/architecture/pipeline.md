@@ -39,9 +39,11 @@ sequenceDiagram
 
 The processing order is as follows.
 
+`RichBackend` in this diagram refers to the conceptual rich-extraction layer; the concrete implementations are `ComRichBackend` and `LibreOfficeRichBackend`.
+
 1. **Pipeline** assembles the execution plan
 2. **Openpyxl Backend** performs pre-analysis (cells, tables, print areas)
-3. **Rich Backend** extracts shapes/charts if available (`ComBackend` or `LibreOfficeRichBackend`)
+3. **Rich Backend** extracts shapes/charts if available. Here, `RichBackend` is the conceptual layer and `ComRichBackend` / `LibreOfficeRichBackend` are the concrete implementations.
 4. **Modeling** integrates the results into WorkbookData / SheetData
 5. Output in the requested format (JSON / YAML / TOON)
 
@@ -70,6 +72,8 @@ Backend defines **how Excel is read**.
 | ComBackend             | COM-only print areas / auto page breaks / maps    |
 | ComRichBackend         | Shapes / arrows / charts / SmartArt via Excel COM |
 | LibreOfficeRichBackend | Best-effort shapes / connectors / charts          |
+
+In this document, `RichBackend` refers to the protocol-level concept, while `ComRichBackend` and `LibreOfficeRichBackend` are the concrete backend classes.
 
 This abstraction enables the following extensions.
 
