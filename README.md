@@ -15,11 +15,11 @@
 </div>
 
 <p align="center">
-  <a href="https://harumiweb.github.io/exstruct/README.md">
+  <a href="README.md">
     English
   </a>
    |
-  <a href="https://harumiweb.github.io/exstruct/README.ja.md">
+  <a href="README.ja.md">
     日本語
   </a>
 </p>
