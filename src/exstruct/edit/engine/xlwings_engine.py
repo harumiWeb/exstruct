@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, cast
 
+from exstruct.edit import internal as _internal
 from exstruct.edit.models import PatchOp
-from exstruct.mcp.patch.ops.xlwings_ops import apply_xlwings_ops
 
 
 def apply_xlwings_engine(
@@ -14,8 +15,14 @@ def apply_xlwings_engine(
     ops: list[PatchOp],
     auto_formula: bool,
 ) -> list[object]:
-    """Apply patch operations using the existing xlwings backend implementation."""
-    return apply_xlwings_ops(input_path, output_path, ops, auto_formula)
+    """Apply patch operations using the edit-owned xlwings implementation."""
+    diff = _internal._apply_ops_xlwings(
+        input_path,
+        output_path,
+        cast(list[Any], ops),
+        auto_formula,
+    )
+    return list(diff)
 
 
 __all__ = ["apply_xlwings_engine"]

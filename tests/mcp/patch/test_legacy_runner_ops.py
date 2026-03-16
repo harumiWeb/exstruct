@@ -6,6 +6,7 @@ from openpyxl import Workbook, load_workbook
 import pytest
 
 from exstruct.cli.availability import ComAvailability
+from exstruct.edit import internal as edit_internal
 from exstruct.mcp.io import PathPolicy
 from exstruct.mcp.patch import internal as legacy_runner
 from exstruct.mcp.patch.internal import PatchOp, PatchRequest
@@ -46,17 +47,17 @@ def test_run_patch_auto_fit_columns_openpyxl_uses_single_pass_collector(
         workbook.close()
 
     call_count = 0
-    original = legacy_runner._collect_openpyxl_target_column_max_lengths
+    original = edit_internal._collect_openpyxl_target_column_max_lengths
 
     def _counting_collector(
-        sheet: legacy_runner.OpenpyxlWorksheetProtocol, target_indexes: set[int]
+        sheet: edit_internal.OpenpyxlWorksheetProtocol, target_indexes: set[int]
     ) -> dict[int, int]:
         nonlocal call_count
         call_count += 1
         return original(sheet, target_indexes)
 
     monkeypatch.setattr(
-        legacy_runner,
+        edit_internal,
         "_collect_openpyxl_target_column_max_lengths",
         _counting_collector,
     )
@@ -128,14 +129,14 @@ def test_run_patch_error_includes_hint_for_known_set_fill_color_mistake(
     _create_workbook(input_path)
 
     def _raise_known_error(
-        sheet: legacy_runner.OpenpyxlWorksheetProtocol,
+        sheet: edit_internal.OpenpyxlWorksheetProtocol,
         op: PatchOp,
         index: int,
-    ) -> tuple[legacy_runner.PatchDiffItem, PatchOp | None]:
+    ) -> tuple[edit_internal.PatchDiffItem, PatchOp | None]:
         raise ValueError("set_fill_color does not accept color.")
 
     monkeypatch.setattr(
-        legacy_runner,
+        edit_internal,
         "_apply_openpyxl_set_fill_color",
         _raise_known_error,
     )

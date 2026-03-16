@@ -6,12 +6,10 @@ from pathlib import Path
 from typing import Any, cast
 
 from exstruct.cli.availability import ComAvailability
-from exstruct.mcp.extract_runner import OnConflictPolicy
-from exstruct.mcp.io import PathPolicy
-from exstruct.mcp.patch import internal as _internal
 
+from . import internal as _internal
 from .models import MakeRequest, PatchOp, PatchRequest
-from .types import PatchEngine
+from .types import OnConflictPolicy, PatchEngine
 
 PatchOpError = _internal.PatchOpError
 
@@ -41,9 +39,9 @@ def contains_design_ops(ops: list[PatchOp]) -> bool:
     return _internal._contains_design_ops(cast(list[Any], ops))
 
 
-def resolve_make_output_path(path: Path, *, policy: PathPolicy | None) -> Path:
+def resolve_make_output_path(path: Path) -> Path:
     """Resolve output path for make requests."""
-    return _internal._resolve_make_output_path(path, policy=policy)
+    return _internal._resolve_make_output_path(path, policy=None)
 
 
 def ensure_supported_extension(path: Path) -> None:
@@ -77,9 +75,9 @@ def create_seed_workbook(
     )
 
 
-def resolve_input_path(path: Path, *, policy: PathPolicy | None) -> Path:
+def resolve_input_path(path: Path) -> Path:
     """Resolve and validate input workbook path."""
-    return _internal._resolve_input_path(path, policy=policy)
+    return _internal._resolve_input_path(path, policy=None)
 
 
 def resolve_output_path(
@@ -87,14 +85,13 @@ def resolve_output_path(
     *,
     out_dir: Path | None,
     out_name: str | None,
-    policy: PathPolicy | None,
 ) -> Path:
     """Resolve and validate output workbook path."""
     return _internal._resolve_output_path(
         input_path,
         out_dir=out_dir,
         out_name=out_name,
-        policy=policy,
+        policy=None,
     )
 
 

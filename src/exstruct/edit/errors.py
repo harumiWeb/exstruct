@@ -2,6 +2,6 @@
 
 from __future__ import annotations
 
-from exstruct.mcp.patch.ops.common import PatchOpError
+from .internal import PatchOpError
 
 __all__ = ["PatchOpError"]

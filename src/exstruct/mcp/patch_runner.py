@@ -25,7 +25,7 @@ from exstruct.edit.models import (
 import exstruct.edit.runtime as edit_runtime
 
 from .io import PathPolicy
-from .patch import internal as _internal, service
+from .patch import internal as _internal, runtime as patch_runtime, service
 
 get_com_availability = _internal.get_com_availability
 
@@ -33,6 +33,7 @@ get_com_availability = _internal.get_com_availability
 def _sync_legacy_overrides() -> None:
     """Propagate supported monkeypatch overrides to edit and legacy internals."""
     _internal.get_com_availability = get_com_availability
+    patch_runtime.get_com_availability = get_com_availability
     edit_runtime.get_com_availability = get_com_availability
 
 

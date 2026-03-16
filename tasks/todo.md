@@ -1,5 +1,57 @@
 # Todo
 
+## 2026-03-16 issue #99 phase 3 legacy monkeypatch compatibility follow-up
+
+### Planning
+
+- [x] `tasks/feature_spec.md` に legacy monkeypatch compatibility 修正方針を記録する
+- [x] `patch_runner._sync_legacy_overrides()` で `patch_runner.get_com_availability` を `mcp.patch.runtime` まで同期する
+- [x] `mcp.patch.service` を live module lookup ベースの legacy engine wrapper に切り替える
+- [x] `tests/mcp/test_patch_runner.py` に `run_patch` / `run_make` の override 回帰を追加する
+- [x] `tests/mcp/patch/test_service.py` に legacy engine monkeypatch 回帰を追加する
+- [x] `tasks/lessons.md` に compat shim の monkeypatch 設計ルールを追記する
+- [x] targeted pytest と `uv run task precommit-run` を実行する
+
+### Review
+
+- `src/exstruct/mcp/patch_runner.py` は `patch_runner.get_com_availability` を `mcp.patch.runtime` にも同期するようにし、`service._sync_compat_overrides()` を経由しても caller override が失われないようにした。
+- `src/exstruct/mcp/patch/service.py` は `edit.engine.*` の copied alias ではなく、`mcp.patch.engine.*` を live module lookup する wrapper を `edit.service` に注入する形へ切り替えた。
+- これにより `mcp.patch.service.apply_*` monkeypatch と `mcp.patch.engine.*.apply_*` monkeypatch の両方が `service.run_patch()` / `run_make()` 経路で有効になった。
+- `tests/mcp/test_patch_runner.py` と `tests/mcp/test_make_runner.py` に entrypoint override precedence の回帰を追加し、`tests/mcp/patch/test_service.py` に legacy engine monkeypatch 回帰を追加した。
+- `tasks/lessons.md` には compat shim で copied function alias を避け、public entrypoint で override precedence を回帰テスト化するルールを追加した。
+- Verification:
+  - `uv run pytest tests/mcp/test_patch_runner.py tests/mcp/test_make_runner.py tests/mcp/patch/test_service.py -q`
+  - `uv run pytest tests/mcp/patch/test_ops.py tests/mcp/patch/test_legacy_runner_ops.py -q`
+  - `uv run pytest tests/edit -q`
+  - `uv run task precommit-run`
+
+## 2026-03-16 issue #99 phase 3 follow-up edit core decoupling from MCP implementation
+
+### Planning
+
+- [x] `tasks/feature_spec.md` に `src/exstruct/edit/**` から `exstruct.mcp.*` import を排除する follow-up 仕様を反映する
+- [x] `edit.errors` / `edit.a1` / `edit.runtime` / `edit.engine.*` の ownership を edit 配下へ寄せ、edit から MCP import を除去する
+- [x] `mcp.patch_runner` 側 path policy 経路を維持したまま、`edit.service` の `policy` 非依存化を完了する
+- [x] `mcp.patch.internal` / `ops.*` / `runtime` / `service` を edit-backed compatibility path に整理する
+- [x] core test を `tests/edit` に寄せ、MCP 側は shim / host behavior 回帰に絞る
+- [x] `dev-docs/specs/editing-api.md`、`dev-docs/specs/data-model.md`、`dev-docs/architecture/overview.md`、`docs/mcp.md` を現行実装に合わせて更新する
+- [x] `uv run pytest tests/edit -q` を実行する
+- [x] `uv run pytest tests/mcp/test_patch_runner.py tests/mcp/test_make_runner.py tests/mcp/test_tools_handlers.py tests/mcp/test_server.py tests/mcp/patch -q` を実行する
+- [x] `uv run task precommit-run` を実行する
+
+### Review
+
+- `src/exstruct/edit/**` から `exstruct.mcp.*` import は排除した。acceptance criteria の `rg -n "exstruct\\.mcp" src/exstruct/edit` は 0 件になった。
+- `src/exstruct/edit/internal.py` を追加し、low-level patch implementation を edit-owned に移した。`edit.runtime` / `edit.service` / `edit.engine.*` はこの edit-owned implementation を使う。
+- `src/exstruct/edit/service.py` は `policy` 非依存の pure core orchestration に戻し、MCP 側の path canonicalization は `src/exstruct/mcp/patch/service.py` の compatibility path で吸収した。
+- `src/exstruct/mcp/patch/internal.py` は `exstruct.edit.internal` の typed compatibility shim に切り替え、repo 既存 tests が使う internal surface は維持した。
+- `tests/edit/test_architecture.py` を追加し、`edit` package の import graph と fresh import での MCP side-effect 非依存を固定した。
+- 恒久文書は `dev-docs/specs/editing-api.md`、`dev-docs/specs/data-model.md`、`dev-docs/architecture/overview.md`、`docs/mcp.md` に反映した。ADR verdict は継続して `not-needed`。
+- Verification:
+  - `uv run pytest tests/edit -q`
+  - `uv run pytest tests/mcp/test_patch_runner.py tests/mcp/test_make_runner.py tests/mcp/test_tools_handlers.py tests/mcp/test_server.py tests/mcp/patch -q`
+  - `uv run task precommit-run`
+
 ## 2026-03-16 pytest collect collision follow-up
 
 ### Planning

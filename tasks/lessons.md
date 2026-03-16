@@ -83,3 +83,8 @@
 
 - When adding new pytest files under different directories, keep the basename unique across the repository unless the directories are explicit Python packages; duplicate `test_*.py` basenames can trigger `import file mismatch` during collection.
 - For new test modules, run a targeted `--collect-only` check against any similarly named legacy test files before reporting completion.
+
+## 2026-03-16 compatibility shim monkeypatch lessons
+
+- When preserving legacy monkeypatch surfaces, do not forward compatibility wrappers through copied function aliases; use live module lookup so monkeypatches on legacy modules remain observable at call time.
+- If one compatibility entrypoint re-synchronizes another layer before execution, add a regression test for override precedence at the highest public entrypoint; function identity checks alone are insufficient.

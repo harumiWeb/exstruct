@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from exstruct.mcp.patch import internal as _internal
-
-PatchOpError = _internal.PatchOpError
+from exstruct.edit.errors import PatchOpError
 
 __all__ = ["PatchOpError"]

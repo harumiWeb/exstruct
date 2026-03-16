@@ -8,6 +8,8 @@ from pydantic import ValidationError
 import pytest
 
 from exstruct.cli.availability import ComAvailability
+import exstruct.edit.runtime as edit_runtime
+import exstruct.edit.service as edit_service
 from exstruct.mcp import patch_runner
 from exstruct.mcp.io import PathPolicy
 from exstruct.mcp.patch_runner import PatchOp, PatchRequest, run_patch
@@ -90,6 +92,46 @@ def test_run_patch_backend_auto_uses_openpyxl_when_com_unavailable(
         policy=PathPolicy(root=tmp_path),
     )
     assert result.error is None
+    assert result.engine == "openpyxl"
+
+
+def test_run_patch_preserves_patch_runner_get_com_availability_override(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    seen: dict[str, object] = {}
+
+    def _fake_get_com_availability() -> ComAvailability:
+        return ComAvailability(available=False, reason="patched-by-patch-runner")
+
+    def _fake_patch_workbook(request: PatchRequest) -> patch_runner.PatchResult:
+        seen["availability"] = edit_runtime.get_com_availability()
+        return patch_runner.PatchResult(
+            out_path=str(input_path),
+            patch_diff=[],
+            warnings=[],
+            engine="openpyxl",
+        )
+
+    monkeypatch.setattr(
+        patch_runner, "get_com_availability", _fake_get_com_availability
+    )
+    monkeypatch.setattr(edit_service, "patch_workbook", _fake_patch_workbook)
+
+    result = run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="new")],
+            backend="auto",
+        ),
+        policy=PathPolicy(root=tmp_path),
+    )
+
+    availability = seen["availability"]
+    assert isinstance(availability, ComAvailability)
+    assert availability.available is False
+    assert availability.reason == "patched-by-patch-runner"
     assert result.engine == "openpyxl"
 
 

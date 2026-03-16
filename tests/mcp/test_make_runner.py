@@ -6,6 +6,8 @@ from openpyxl import Workbook, load_workbook
 import pytest
 
 from exstruct.cli.availability import ComAvailability
+import exstruct.edit.runtime as edit_runtime
+import exstruct.edit.service as edit_service
 from exstruct.mcp import patch_runner
 from exstruct.mcp.io import PathPolicy
 from exstruct.mcp.patch_runner import MakeRequest, PatchOp, run_make
@@ -65,6 +67,41 @@ def test_run_make_applies_ops(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
         assert workbook["Data"]["A1"].value == "ok"
     finally:
         workbook.close()
+
+
+def test_run_make_preserves_patch_runner_get_com_availability_override(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    out_path = tmp_path / "book.xlsx"
+    seen: dict[str, object] = {}
+
+    def _fake_get_com_availability() -> ComAvailability:
+        return ComAvailability(available=False, reason="patched-by-patch-runner")
+
+    def _fake_make_workbook(request: MakeRequest) -> patch_runner.PatchResult:
+        seen["availability"] = edit_runtime.get_com_availability()
+        return patch_runner.PatchResult(
+            out_path=str(out_path),
+            patch_diff=[],
+            warnings=[],
+            engine="openpyxl",
+        )
+
+    monkeypatch.setattr(
+        patch_runner, "get_com_availability", _fake_get_com_availability
+    )
+    monkeypatch.setattr(edit_service, "make_workbook", _fake_make_workbook)
+
+    result = run_make(
+        MakeRequest(out_path=out_path, ops=[]),
+        policy=PathPolicy(root=tmp_path),
+    )
+
+    availability = seen["availability"]
+    assert isinstance(availability, ComAvailability)
+    assert availability.available is False
+    assert availability.reason == "patched-by-patch-runner"
+    assert result.engine == "openpyxl"
 
 
 def test_run_make_uses_top_level_sheet_as_initial_sheet_when_no_matching_add_sheet(

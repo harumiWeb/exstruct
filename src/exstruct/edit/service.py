@@ -8,8 +8,6 @@ from typing import TypeVar
 
 from pydantic import BaseModel, ValidationError
 
-from exstruct.mcp.io import PathPolicy
-
 from . import runtime
 from .engine.openpyxl_engine import apply_openpyxl_engine
 from .engine.xlwings_engine import apply_xlwings_engine
@@ -27,11 +25,9 @@ from .types import PatchOpType
 TModel = TypeVar("TModel", bound=BaseModel)
 
 
-def make_workbook(
-    request: MakeRequest, *, policy: PathPolicy | None = None
-) -> PatchResult:
+def make_workbook(request: MakeRequest) -> PatchResult:
     """Create a new workbook and apply patch operations in one call."""
-    resolved_output = runtime.resolve_make_output_path(request.out_path, policy=policy)
+    resolved_output = runtime.resolve_make_output_path(request.out_path)
     runtime.ensure_supported_extension(resolved_output)
     runtime.validate_make_request_constraints(request, resolved_output)
     seed_path = runtime.build_make_seed_path(resolved_output)
@@ -55,23 +51,20 @@ def make_workbook(
             preflight_formula_check=request.preflight_formula_check,
             backend=request.backend,
         )
-        return patch_workbook(patch_request, policy=policy)
+        return patch_workbook(patch_request)
     finally:
         if seed_path.exists():
             seed_path.unlink()
 
 
-def patch_workbook(
-    request: PatchRequest, *, policy: PathPolicy | None = None
-) -> PatchResult:
+def patch_workbook(request: PatchRequest) -> PatchResult:
     """Run a patch operation and write the updated workbook."""
-    resolved_input = runtime.resolve_input_path(request.xlsx_path, policy=policy)
+    resolved_input = runtime.resolve_input_path(request.xlsx_path)
     runtime.ensure_supported_extension(resolved_input)
     output_path = runtime.resolve_output_path(
         resolved_input,
         out_dir=request.out_dir,
         out_name=request.out_name,
-        policy=policy,
     )
     warnings: list[str] = []
     runtime.append_large_ops_warning(warnings, request.ops)

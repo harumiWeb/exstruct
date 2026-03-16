@@ -68,10 +68,27 @@ def range_cell_count(range_ref: str) -> int:
     return (max_col - min_col + 1) * (max_row - min_row + 1)
 
 
+def parse_range_geometry(range_ref: str) -> tuple[str, int, int]:
+    """Parse A1 range and return top-left cell + (rows, cols)."""
+    start_ref, end_ref = normalize_range(range_ref).split(":", maxsplit=1)
+    start_col, start_row = split_a1(start_ref)
+    end_col, end_row = split_a1(end_ref)
+    min_col = min(column_label_to_index(start_col), column_label_to_index(end_col))
+    max_col = max(column_label_to_index(start_col), column_label_to_index(end_col))
+    min_row = min(start_row, end_row)
+    max_row = max(start_row, end_row)
+    return (
+        f"{column_index_to_label(min_col)}{min_row}",
+        max_row - min_row + 1,
+        max_col - min_col + 1,
+    )
+
+
 __all__ = [
     "column_index_to_label",
     "column_label_to_index",
     "normalize_range",
+    "parse_range_geometry",
     "range_cell_count",
     "split_a1",
 ]

@@ -39,6 +39,8 @@ exstruct/
       openpyxl_engine.py
       xlwings_engine.py
     errors.py
+    internal.py
+    output_path.py
     runtime.py
     service.py
     models.py
@@ -104,21 +106,22 @@ First-class public workbook editing API
 - `api.py` → public patch/make entry points for Python callers
 - `service.py` → canonical patch/make orchestration used by both Python API and MCP
 - `models.py` → canonical edit request/result models
-- `runtime.py` → canonical backend selection and conflict-handling helpers
+- `runtime.py` → canonical backend selection, fallback, and policy-free path/runtime helpers
+- `internal.py` → edit-owned low-level patch implementation and structured patch errors
+- `output_path.py` → edit-owned output/conflict helpers reusable by host shims
 - `engine/*` → canonical backend execution boundaries
 - `a1.py` → A1 helpers owned by the edit core
 - `normalize.py` / `specs.py` / `op_schema.py` → public patch-op normalization and schema metadata
-- `ops` still execute through `mcp/patch/ops/*` and `patch/internal.py` in Phase 3; `mcp/patch/*` above that layer is now compatibility glue
+- `edit/` does not import `mcp/`; MCP is allowed to depend on `edit`, not vice versa
 
 ### mcp/patch (Patch Implementation)
 
 MCP editing remains the integration layer around the public edit API.
 
 - `patch_runner.py` → compatibility facade for maintaining existing import paths and syncing host overrides
-- `patch/internal.py` → internal compatibility layer for patch implementation (non-public)
+- `patch/internal.py` → compatibility facade re-exporting edit-owned internal implementation
 - `patch/service.py` / `patch/runtime.py` / `patch/engine/*` → compatibility shims around `exstruct.edit`
-- `patch/ops/openpyxl_ops.py` → op application entry point for openpyxl
-- `patch/ops/xlwings_ops.py` → op application entry point for xlwings
+- `patch/ops/openpyxl_ops.py` / `patch/ops/xlwings_ops.py` → legacy op entry points kept for compatibility
 - `patch/normalize.py` / `patch/specs.py` → op normalization and spec metadata
 - `shared/a1.py` / `shared/output_path.py` → shared utilities for A1 notation and output paths
 

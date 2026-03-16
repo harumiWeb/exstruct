@@ -1,5 +1,93 @@
 # Feature Spec
 
+## 2026-03-16 issue #99 phase 3 legacy monkeypatch compatibility follow-up
+
+### Goal
+
+- `exstruct.edit` を canonical core のまま維持しつつ、`exstruct.mcp.patch_runner` / `exstruct.mcp.patch.service` の legacy monkeypatch 互換を修復する。
+- `patch_runner.run_patch()` / `run_make()` が `patch_runner.get_com_availability` monkeypatch を実際の engine selection に反映するよう戻す。
+- `mcp.patch.service.run_patch()` / `run_make()` が `mcp.patch.engine.*.apply_*` monkeypatch を経由して edit core に伝播するよう戻す。
+
+### Accepted findings
+
+- `patch_runner._sync_legacy_overrides()` は `mcp.patch.internal` の shim module と `edit.runtime` にしか `get_com_availability` を同期しておらず、直後の `mcp.patch.service._sync_compat_overrides()` が `patch.runtime.get_com_availability` で `edit.runtime` を上書きするため、`patch_runner.get_com_availability` monkeypatch が実効値として失われる。
+- `mcp.patch.service._sync_compat_overrides()` は `exstruct.edit.engine.*` を `edit.service` に注入しているため、`mcp.patch.engine.openpyxl_engine.apply_openpyxl_engine` / `mcp.patch.engine.xlwings_engine.apply_xlwings_engine` を monkeypatch しても `service.run_patch()` / `run_make()` では反映されない。
+
+### Chosen constraints
+
+- `exstruct.edit` 配下へ `exstruct.mcp.*` import は追加しない。
+- 互換優先順位は明示する。
+  - `patch_runner.run_*` 経由では `patch_runner.get_com_availability` を canonical source とする。
+  - `mcp.patch.service.run_*` を直接呼ぶ場合は `mcp.patch.runtime.get_com_availability` を canonical source とする。
+- `mcp.patch.service.apply_*` monkeypatch 互換は維持したまま、`mcp.patch.engine.*.apply_*` monkeypatch も有効にする。
+- public API / CLI / MCP payload shape / backend policy は変更しない。
+
+### Test plan
+
+- `tests/mcp/test_patch_runner.py` に、`patch_runner.run_patch()` / `run_make()` が `patch_runner.get_com_availability` monkeypatch を保持したまま edit core に到達する回帰を追加する。
+- `tests/mcp/patch/test_service.py` に、`mcp.patch.engine.xlwings_engine.apply_xlwings_engine` と `mcp.patch.engine.openpyxl_engine.apply_openpyxl_engine` の monkeypatch が `service.run_patch()` で効く回帰を追加する。
+- 既存の `service.apply_*` monkeypatch テストは維持し、両 compat surface の共存を確認する。
+
+### ADR verdict
+
+- `not-needed`
+- rationale: 既存 compatibility shim の実装修正であり、public contract や safety boundary は変えない。
+
+## 2026-03-16 issue #99 phase 3 follow-up edit core decoupling from MCP implementation
+
+### Goal
+
+- `src/exstruct/edit/**` から `exstruct.mcp.*` import を排除し、`exstruct.edit` を物理的にも workbook editing の canonical core にする。
+- public API / CLI / MCP tool contract、backend selection/fallback policy、warning/error payload shape、`PathPolicy` safety boundaryは維持したまま、implementation ownership を `edit` 配下へ寄せる。
+- MCP は host path policy と compatibility shim のみを持ち、editing behavior の source of truth にはならない。
+
+### Current state
+
+- `src/exstruct/edit/service.py` は canonical orchestration だが、`PathPolicy` 型を `exstruct.mcp.io` から import し、internal path canonicalization も受け持っている。
+- `src/exstruct/edit/runtime.py` は `exstruct.mcp.patch.internal` を実効実装として参照し、`OnConflictPolicy` / `PathPolicy` も MCP 側から import している。
+- `src/exstruct/edit/errors.py` は `PatchOpError` を `exstruct.mcp.patch.ops.common` から再 export している。
+- `src/exstruct/edit/normalize.py` と `src/exstruct/edit/engine/*` はそれぞれ `exstruct.mcp.shared.a1` と `exstruct.mcp.patch.ops.*` を参照している。
+- `src/exstruct/mcp/patch_runner.py` は compatibility facade だが、core 側がまだ MCP 実装に依存しているため、ownership が完全には反転していない。
+
+### Chosen scope
+
+- acceptance criteria は `rg -n "exstruct\\.mcp" src/exstruct/edit` が 0 件になることとする。
+- `PatchOp`, `PatchRequest`, `MakeRequest`, `PatchResult` など public editing model の shape は変更しない。
+- `edit.service.patch_workbook()` / `make_workbook()` は `policy` kwarg を廃止し、pure core orchestration に戻す。
+- `PathPolicy` による root/deny_glob enforcement と request path canonicalization は `mcp.patch_runner` に集約する。
+- `mcp.patch.internal`, `mcp.patch.ops.*`, `mcp.patch.runtime`, `mcp.patch.service`, `mcp.shared.*` は互換 import path を保つ shim として残してよいが、editing behavior の実体は持たない。
+
+### Implementation decisions
+
+- `src/exstruct/edit/errors.py` に `PatchOpError` の実体を置き、`src/exstruct/mcp/patch/ops/common.py` は re-export shim にする。
+- `src/exstruct/edit/a1.py` に `parse_range_geometry` を含む edit 利用分の A1 helper を集約し、`edit.normalize` は edit-owned helper のみを使う。
+- `src/exstruct/edit/runtime.py` は backend selection / fallback / conflict handling / make seed helper / supported extension / output path helper / large-op warning / range expansionを edit-owned 実装として持ち、`mcp.patch.internal` 依存を外す。
+- `src/exstruct/edit/engine/openpyxl_engine.py` と `xlwings_engine.py` は edit-owned 実装を直接呼ぶ。必要なら `src/exstruct/edit/ops/` を新設し、既存 `mcp.patch.ops.*` から実装を移す。
+- `src/exstruct/mcp/patch_runner.py` は `PathPolicy` を使って request path を許可済み絶対 path に正規化したうえで edit core を呼ぶ。`get_com_availability` monkeypatch も edit-owned runtime/helper に同期する。
+- `src/exstruct/mcp/patch/service.py` / `runtime.py` / `engine/*` / `ops/*` / `internal.py` / `shared/a1.py` / `shared/output_path.py` は、repo 既存テストが依存している import path を維持する互換 shim へ寄せる。
+
+### Contract invariants
+
+- `exstruct.edit` の public import path と `patch_workbook(request)` / `make_workbook(request)` signature は維持する。
+- CLI (`exstruct patch`, `exstruct make`, `exstruct ops`, `exstruct validate`) の引数・JSON 出力・exit code は変更しない。
+- MCP tools (`exstruct_patch`, `exstruct_make`) の入出力 shape、tool 名、artifact mirroring、server default `on_conflict` は変更しない。
+- backend selection / fallback policy と既存 warning / error payload shape は変更しない。
+- repo 既存テストが使っている legacy monkeypatch points (`mcp.patch_runner.get_com_availability`, `mcp.patch.service.apply_*`) は維持する。
+
+### Test and verification requirements
+
+- `tests/edit` に、fresh import で `import exstruct.edit` が MCP side effect に依存しないことと、`src/exstruct/edit/**` に `exstruct.mcp` import が存在しないことを固定する static/architecture test を追加する。
+- `tests/edit` は openpyxl/com/auto fallback/make seed flow/preflight/inverse ops と `PatchOpError` payload shape を core 観点で固定する。
+- `tests/mcp/test_patch_runner.py` / `tests/mcp/test_make_runner.py` は `PathPolicy` root/deny_glob/relative path canonicalization と COM availability override sync を host behavior として維持する。
+- `tests/mcp/patch/test_service.py` / `test_ops.py` / `test_models_internal_coverage.py` は legacy import path と monkeypatch compatibility が維持されることだけを確認する shim test に寄せる。
+- 最終検証は `uv run pytest tests/edit -q`、`uv run pytest tests/mcp/test_patch_runner.py tests/mcp/test_make_runner.py tests/mcp/test_tools_handlers.py tests/mcp/test_server.py tests/mcp/patch -q`、`uv run task precommit-run` とする。
+
+### ADR / docs retention
+
+- ADR verdict は現時点で `not-needed`。ADR-0006 が既に `exstruct.edit` canonical core / MCP host boundary を記録しており、今回の変更はその implementation cleanup だからである。
+- ただし public contract / backend policy / safety boundary / compatibility policy の意味変更が必要になった場合は ADR-0006 更新または新規 ADR を再判定する。
+- 恒久文書の更新対象は `dev-docs/specs/editing-api.md`、`dev-docs/specs/data-model.md` Appendix A、`dev-docs/architecture/overview.md`、`docs/mcp.md` を最低ラインとする。
+
 ## 2026-03-16 issue #99 phase 3 MCP rewiring to public edit core
 
 ### Goal

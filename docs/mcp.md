@@ -305,9 +305,10 @@ The patch implementation is layered to keep compatibility while enabling refacto
 
 - `exstruct.edit`: first-class Python editing API
 - `exstruct.mcp.patch_runner`: compatibility facade (existing import path)
-- `exstruct.edit.service` / `exstruct.edit.runtime` / `exstruct.edit.engine.*`: canonical editing core used by MCP
-- `exstruct.mcp.patch.service` / `exstruct.mcp.patch.runtime` / `exstruct.mcp.patch.engine.*`: compatibility shims around that core
-- `exstruct.mcp.patch.ops.*`: backend-specific op application entrypoints
+- `exstruct.edit.service` / `exstruct.edit.runtime` / `exstruct.edit.internal` / `exstruct.edit.engine.*`: canonical editing core used by MCP
+- `exstruct.edit` does not import `exstruct.mcp.*`; MCP resolves `PathPolicy` and other host concerns before calling the edit core
+- `exstruct.mcp.patch.service` / `exstruct.mcp.patch.runtime` / `exstruct.mcp.patch.engine.*` / `exstruct.mcp.patch.internal`: compatibility shims around that core
+- `exstruct.mcp.patch.ops.*`: legacy backend op entrypoints kept for compatibility
 
 This keeps MCP tool I/O stable while allowing the Python API and host policy to
 evolve independently.
