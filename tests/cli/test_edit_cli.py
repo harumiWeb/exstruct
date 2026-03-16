@@ -231,6 +231,25 @@ def test_patch_cli_returns_nonzero_when_backend_raises_runtime_error(
     assert "Error: backend boom" in result.stderr
 
 
+def test_patch_cli_returns_nonzero_when_sheet_resolution_breaks_contract(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "book.xlsx"
+    ops_path = tmp_path / "ops.json"
+    _create_workbook(source)
+    ops_path.write_text("[]", encoding="utf-8")
+
+    monkeypatch.setattr(
+        edit_cli_module, "resolve_top_level_sheet_for_payload", lambda _payload: []
+    )
+
+    result = _run_cli(["patch", "--input", str(source), "--ops", str(ops_path)])
+
+    assert result.returncode == 1
+    assert result.stdout == ""
+    assert "Top-level sheet resolution must return a dict payload." in result.stderr
+
+
 def test_make_cli_creates_workbook_and_returns_json(tmp_path: Path) -> None:
     output = tmp_path / "created.xlsx"
     ops_path = tmp_path / "ops.json"
@@ -310,6 +329,26 @@ def test_make_cli_returns_nonzero_when_backend_raises_runtime_error(
     assert result.returncode == 1
     assert result.stdout == ""
     assert "Error: make boom" in result.stderr
+
+
+def test_make_cli_returns_nonzero_when_resolved_ops_contract_breaks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "created.xlsx"
+    ops_path = tmp_path / "ops.json"
+    ops_path.write_text("[]", encoding="utf-8")
+
+    monkeypatch.setattr(
+        edit_cli_module,
+        "resolve_top_level_sheet_for_payload",
+        lambda _payload: {"ops": "bad"},
+    )
+
+    result = _run_cli(["make", "--output", str(output), "--ops", str(ops_path)])
+
+    assert result.returncode == 1
+    assert result.stdout == ""
+    assert "Resolved patch ops payload must contain an ops list." in result.stderr
 
 
 def test_make_cli_defaults_to_empty_ops(tmp_path: Path) -> None:
@@ -415,3 +454,47 @@ def test_main_keeps_legacy_input_on_extraction_path(
     assert result.returncode == 0
     assert called["file_path"] == source
     assert is_edit_subcommand([str(source)]) is False
+
+
+@pytest.mark.parametrize("name", ["patch", "make", "ops", "validate"])  # type: ignore[misc]
+def test_main_prefers_existing_legacy_input_for_ambiguous_command_names(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str
+) -> None:
+    source = tmp_path / name
+    source.write_bytes(b"x")
+    called: dict[str, Path] = {}
+
+    def _fake_process_excel(*, file_path: Path, **_kwargs: object) -> None:
+        called["file_path"] = file_path
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(cli_main_module, "process_excel", _fake_process_excel)
+
+    result = _run_cli([name])
+
+    assert result.returncode == 0
+    assert called["file_path"] == Path(name)
+    assert is_edit_subcommand([name]) is False
+
+
+@pytest.mark.parametrize(  # type: ignore[misc]
+    "argv",
+    [
+        ["patch", "--help"],
+        ["patch", "--input", "book.xlsx", "--ops", "ops.json"],
+        ["patch", "--input=book.xlsx", "--ops=ops.json"],
+        ["make", "--help"],
+        ["make", "--ops", "ops.json"],
+        ["make", "--ops=ops.json"],
+        ["ops", "list"],
+        ["validate", "--input", "book.xlsx"],
+        ["validate", "--input=book.xlsx"],
+    ],
+)
+def test_is_edit_subcommand_keeps_explicit_edit_syntax_even_when_name_collides(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, argv: list[str]
+) -> None:
+    (tmp_path / argv[0]).write_bytes(b"x")
+    monkeypatch.chdir(tmp_path)
+
+    assert is_edit_subcommand(argv) is True
