@@ -25,6 +25,39 @@ from exstruct.edit import (
 from exstruct.mcp.validate_input import ValidateInputRequest, validate_input
 
 _EDIT_SUBCOMMANDS = frozenset({"patch", "make", "ops", "validate"})
+_EXPLICIT_EDIT_TOKENS: dict[str, frozenset[str]] = {
+    "patch": frozenset(
+        {
+            "--help",
+            "-h",
+            "--input",
+            "--ops",
+            "--sheet",
+            "--on-conflict",
+            "--backend",
+            "--auto-formula",
+            "--dry-run",
+            "--return-inverse-ops",
+            "--preflight-formula-check",
+        }
+    ),
+    "make": frozenset(
+        {
+            "--help",
+            "-h",
+            "--ops",
+            "--sheet",
+            "--on-conflict",
+            "--backend",
+            "--auto-formula",
+            "--dry-run",
+            "--return-inverse-ops",
+            "--preflight-formula-check",
+        }
+    ),
+    "ops": frozenset({"--help", "-h", "list", "describe"}),
+    "validate": frozenset({"--help", "-h", "--input"}),
+}
 
 
 def _literal_choices(literal_type: object) -> tuple[str, ...]:
@@ -45,7 +78,21 @@ _BACKEND_CHOICES = _literal_choices(PatchBackend)
 def is_edit_subcommand(argv: list[str]) -> bool:
     """Return whether argv targets the editing CLI."""
 
-    return bool(argv) and argv[0] in _EDIT_SUBCOMMANDS
+    if not argv:
+        return False
+    command = argv[0]
+    if command not in _EDIT_SUBCOMMANDS:
+        return False
+    if _targets_edit_cli_explicitly(command, argv[1:]):
+        return True
+    return not Path(command).exists()
+
+
+def _targets_edit_cli_explicitly(command: str, remainder: list[str]) -> bool:
+    """Return whether argv contains edit-only syntax for one subcommand."""
+
+    tokens = _EXPLICIT_EDIT_TOKENS[command]
+    return any(token in tokens for token in remainder)
 
 
 def build_edit_parser() -> argparse.ArgumentParser:
@@ -306,10 +353,10 @@ def _load_patch_ops(source: str | None, *, sheet: str | None = None) -> list[Pat
         {"ops": payload, "sheet": sheet}
     )
     if not isinstance(resolved_payload, dict):
-        raise TypeError("Top-level sheet resolution must return a dict payload.")
+        raise ValueError("Top-level sheet resolution must return a dict payload.")
     resolved_ops = resolved_payload.get("ops")
     if not isinstance(resolved_ops, list):
-        raise TypeError("Resolved patch ops payload must contain an ops list.")
+        raise ValueError("Resolved patch ops payload must contain an ops list.")
     return [PatchOp(**op_payload) for op_payload in resolved_ops]
 
 

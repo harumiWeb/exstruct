@@ -1,5 +1,29 @@
 # Todo
 
+## 2026-03-16 pr #103 unresolved review follow-up
+
+### Planning
+
+- [x] issue #99 の現行実装 PR を特定し、未解決 review thread を取得する
+- [x] 指摘内容を現行コードと `editing-cli` 仕様に照らして妥当性確認する
+- [x] `_load_patch_ops` の defensive guard を CLI 契約に沿う例外型へ揃える
+- [x] 回帰テストを追加して `patch` / `make` の failure path を検証する
+- [x] command-name collision で legacy extraction が壊れないよう dispatch を調整する
+- [x] targeted pytest と `uv run task precommit-run` を実行する
+
+### Review
+
+- `harumiWeb/exstruct` には PR `#99` は存在せず、issue `#99` の現行実装 PR `#103` を対象に確認した。着手時点の未解決 thread は 3 件で、いずれも妥当だった。
+- `src/exstruct/cli/edit.py` の `_load_patch_ops()` だけ `TypeError` を投げると `patch` / `make` の clean error path から漏れる余地があったため、`ValueError` に統一した。
+- `_load_patch_ops()` の defensive guard を `ValueError` に統一し、既存の `stderr` エラー + exit `1` 契約に載せた。
+- `tests/cli/test_edit_cli.py` に helper 契約破壊を monkeypatch で注入する回帰テストを追加し、`patch` / `make` の両方で clean failure を確認した。
+- `src/exstruct/cli/edit.py` の dispatch 判定は edit 固有シグナルがない限り既存ファイル名を優先するように調整し、`patch` / `make` / `ops` / `validate` と同名の legacy input を extraction path に戻した。
+- `tests/cli/test_edit_cli.py` に command-name collision の回帰テストと、衝突時でも `--input` / `ops list` / `--help` などの explicit edit syntax が edit CLI を維持するテストを追加した。
+- 永続化が必要な新規仕様や ADR 判断はなく、この task section は session 記録としてのみ保持する。
+- Verification:
+  - `uv run pytest tests/cli/test_edit_cli.py -q`
+  - `uv run task precommit-run`
+
 ## 2026-03-15 tasks document cleanup
 
 ### Planning

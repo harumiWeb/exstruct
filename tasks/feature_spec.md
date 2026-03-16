@@ -1,5 +1,27 @@
 # Feature Spec
 
+## 2026-03-16 pr #103 unresolved review follow-up
+
+### Goal
+
+- issue `#99` の現行 PR `#103` に残っている未解決 review thread を確認し、妥当なものだけを最小差分で取り込む。
+- editing CLI の失敗契約を維持し、internal invariant break が起きても traceback ではなく `stderr` エラー + exit `1` に収束させる。
+- legacy extraction entrypoint を維持し、bare token が edit subcommand 名と衝突する場合でも既存ファイル入力を優先できるようにする。
+
+### Accepted finding
+
+- `src/exstruct/cli/edit.py` の `_load_patch_ops()` は `resolve_top_level_sheet_for_payload()` の defensive guard で `TypeError` を投げており、`patch` / `make` の caller 側 catch 範囲から外れている。
+- `dev-docs/specs/editing-cli.md` は JSON parse / validation / local I/O failure を CLI error + exit `1` と規定しており、同モジュール内の invariant guard だけ例外挙動が異なる理由はない。
+- `src/exstruct/cli/main.py` の first-token dispatch は `patch` / `make` / `ops` / `validate` と同名の既存ファイル入力を edit CLI に誤送しうるため、legacy extraction compatibility の要件と衝突する。
+- 既存回帰テストは `patch.xlsx` のような非衝突ケースしか見ておらず、command-name collision を防げない。
+
+### Chosen constraints
+
+- public CLI surface と exit-code policy は変更しない。
+- defensive guard は `TypeError` 拡張ではなく `ValueError` に統一し、既存の user-facing error path に載せる。
+- 回帰テストは monkeypatch で helper 契約破壊を注入し、`patch` と `make` の双方で clean failure を確認する。
+- edit dispatch は bare token だけではなく edit 固有シグナルも見て判定し、既存ファイル名との衝突時は extraction を優先する。
+
 ## 2026-03-15 tasks document cleanup
 
 ### Goal
