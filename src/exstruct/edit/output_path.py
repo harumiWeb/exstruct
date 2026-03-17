@@ -92,15 +92,17 @@ def apply_conflict_policy(
 
 
 def next_available_path(path: Path) -> Path:
-    """Return the next available path by appending a numeric suffix."""
-    if not path.exists():
-        return path
+    """Atomically reserve the next available path by appending a numeric suffix."""
+    reserved = _reserve_file(path)
+    if reserved is not None:
+        return reserved
     stem = path.stem
     suffix = path.suffix
     for idx in range(1, 10_000):
         candidate = path.with_name(f"{stem}_{idx}{suffix}")
-        if not candidate.exists():
-            return candidate
+        reserved = _reserve_file(candidate)
+        if reserved is not None:
+            return reserved
     raise RuntimeError(f"Failed to resolve unique path for {path}")
 
 
@@ -126,10 +128,12 @@ def resolve_image_output_dir(
 
 def next_available_directory(path: Path, *, policy: PathPolicyProtocol | None) -> Path:
     """Reserve and return a unique directory path with numeric suffix when needed."""
+    if policy is not None:
+        path = policy.ensure_allowed(path)
     reserved = _reserve_directory(path)
     if reserved is not None:
         if policy is not None:
-            policy.ensure_allowed(reserved)
+            reserved = policy.ensure_allowed(reserved)
         return reserved
     stem = path.name
     for idx in range(1, 10_000):
@@ -138,6 +142,8 @@ def next_available_directory(path: Path, *, policy: PathPolicyProtocol | None) -
             candidate = policy.ensure_allowed(candidate)
         reserved = _reserve_directory(candidate)
         if reserved is not None:
+            if policy is not None:
+                reserved = policy.ensure_allowed(reserved)
             return reserved
     raise RuntimeError(f"Failed to resolve unique path for {path}")
 
@@ -146,6 +152,16 @@ def _reserve_directory(path: Path) -> Path | None:
     """Create one directory atomically and return path when successful."""
     try:
         path.mkdir(parents=True, exist_ok=False)
+    except FileExistsError:
+        return None
+    return path.resolve()
+
+
+def _reserve_file(path: Path) -> Path | None:
+    """Create one file atomically and return its resolved path when successful."""
+    try:
+        with path.open("x", encoding="utf-8"):
+            pass
     except FileExistsError:
         return None
     return path.resolve()

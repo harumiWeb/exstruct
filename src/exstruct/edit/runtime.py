@@ -15,7 +15,7 @@ PatchOpError = _internal.PatchOpError
 
 
 def get_com_availability() -> ComAvailability:
-    """Return COM availability via the compatibility layer."""
+    """Return COM availability for the canonical edit runtime."""
     return _internal.get_com_availability()
 
 

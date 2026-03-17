@@ -8,6 +8,7 @@ import pytest
 from exstruct.cli.availability import ComAvailability
 from exstruct.edit import runtime as edit_runtime
 from exstruct.edit.models import (
+    FormulaIssue,
     MakeRequest,
     OpenpyxlEngineResult,
     PatchOp,
@@ -134,3 +135,162 @@ def test_edit_service_make_applies_ops_without_mcp_policy(
         assert workbook["Data"]["A1"].value == "ok"
     finally:
         workbook.close()
+
+
+def test_edit_service_formula_health_check_uses_first_error_issue(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+
+    monkeypatch.setattr(
+        edit_runtime,
+        "get_com_availability",
+        lambda: ComAvailability(available=False, reason="test"),
+    )
+
+    def _fake_apply_openpyxl_engine(
+        request: PatchRequest,
+        input_path: Path,
+        output_path: Path,
+    ) -> OpenpyxlEngineResult:
+        return OpenpyxlEngineResult(
+            formula_issues=[
+                FormulaIssue(
+                    sheet="Sheet1",
+                    cell="B1",
+                    level="warning",
+                    code="name_error",
+                    message="warning-first",
+                ),
+                FormulaIssue(
+                    sheet="Sheet1",
+                    cell="A1",
+                    level="error",
+                    code="ref_error",
+                    message="real-error",
+                ),
+            ]
+        )
+
+    monkeypatch.setattr(
+        edit_service, "apply_openpyxl_engine", _fake_apply_openpyxl_engine
+    )
+
+    result = edit_service.patch_workbook(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[
+                PatchOp(op="set_formula", sheet="Sheet1", cell="B1", formula="=1+1"),
+                PatchOp(op="set_formula", sheet="Sheet1", cell="A1", formula="=#REF!"),
+            ],
+            preflight_formula_check=True,
+            backend="openpyxl",
+        )
+    )
+
+    assert result.error is not None
+    assert result.error.op_index == 1
+    assert result.error.cell == "A1"
+
+
+def test_edit_service_dry_run_rename_cleans_reserved_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    default_out = tmp_path / "book_patched.xlsx"
+    default_out.write_text("existing", encoding="utf-8")
+
+    monkeypatch.setattr(
+        edit_runtime,
+        "get_com_availability",
+        lambda: ComAvailability(available=False, reason="test"),
+    )
+
+    def _fake_apply_openpyxl_engine(
+        request: PatchRequest,
+        input_path: Path,
+        output_path: Path,
+    ) -> OpenpyxlEngineResult:
+        assert output_path.name == "book_patched_1.xlsx"
+        return OpenpyxlEngineResult(
+            patch_diff=[],
+            inverse_ops=[],
+            formula_issues=[],
+            op_warnings=[],
+        )
+
+    monkeypatch.setattr(
+        edit_service, "apply_openpyxl_engine", _fake_apply_openpyxl_engine
+    )
+
+    result = edit_service.patch_workbook(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="new")],
+            on_conflict="rename",
+            dry_run=True,
+            backend="openpyxl",
+        )
+    )
+
+    assert result.error is None
+    assert result.out_path.endswith("book_patched_1.xlsx")
+    assert not Path(result.out_path).exists()
+
+
+def test_edit_service_preflight_rename_cleans_reserved_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    default_out = tmp_path / "book_patched.xlsx"
+    default_out.write_text("existing", encoding="utf-8")
+
+    monkeypatch.setattr(
+        edit_runtime,
+        "get_com_availability",
+        lambda: ComAvailability(available=False, reason="test"),
+    )
+
+    def _fake_apply_openpyxl_engine(
+        request: PatchRequest,
+        input_path: Path,
+        output_path: Path,
+    ) -> OpenpyxlEngineResult:
+        assert output_path.name == "book_patched_1.xlsx"
+        return OpenpyxlEngineResult(
+            patch_diff=[],
+            inverse_ops=[],
+            formula_issues=[
+                FormulaIssue(
+                    sheet="Sheet1",
+                    cell="A1",
+                    level="error",
+                    code="ref_error",
+                    message="real-error",
+                )
+            ],
+            op_warnings=[],
+        )
+
+    monkeypatch.setattr(
+        edit_service, "apply_openpyxl_engine", _fake_apply_openpyxl_engine
+    )
+
+    result = edit_service.patch_workbook(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[
+                PatchOp(op="set_formula", sheet="Sheet1", cell="A1", formula="=#REF!")
+            ],
+            on_conflict="rename",
+            preflight_formula_check=True,
+            backend="openpyxl",
+        )
+    )
+
+    assert result.error is not None
+    assert result.out_path.endswith("book_patched_1.xlsx")
+    assert not Path(result.out_path).exists()

@@ -5,7 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, cast
 
-from exstruct.edit.models import MakeRequest, PatchRequest, PatchResult
+from exstruct.edit.models import (
+    MakeRequest,
+    OpenpyxlEngineResult,
+    PatchOp,
+    PatchRequest,
+    PatchResult,
+)
 import exstruct.edit.runtime as edit_runtime
 import exstruct.edit.service as edit_service
 from exstruct.mcp.io import PathPolicy
@@ -20,7 +26,7 @@ def apply_openpyxl_engine(
     request: PatchRequest,
     input_path: Path,
     output_path: Path,
-) -> object:
+) -> OpenpyxlEngineResult:
     """Call the current legacy openpyxl engine boundary via live module lookup."""
     return legacy_openpyxl_engine.apply_openpyxl_engine(
         request,
@@ -32,7 +38,7 @@ def apply_openpyxl_engine(
 def apply_xlwings_engine(
     input_path: Path,
     output_path: Path,
-    ops: list[object],
+    ops: list[PatchOp],
     auto_formula: bool,
 ) -> list[object]:
     """Call the current legacy xlwings engine boundary via live module lookup."""

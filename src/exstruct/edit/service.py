@@ -84,6 +84,11 @@ def patch_workbook(request: PatchRequest) -> PatchResult:
     output_path, warning, skipped = runtime.apply_conflict_policy(
         output_path, effective_request.on_conflict
     )
+    reserved_output_path = (
+        output_path
+        if warning is not None and warning.startswith("Output exists; renamed to:")
+        else None
+    )
     if warning:
         warnings.append(warning)
     if skipped and not effective_request.dry_run:
@@ -141,8 +146,10 @@ def patch_workbook(request: PatchRequest) -> PatchResult:
                     resolved_input,
                     output_path,
                     warnings,
+                    reserved_output_path=reserved_output_path,
                 )
             error = _coerce_patch_error_detail(exc.detail)
+            _cleanup_empty_reserved_output(reserved_output_path)
             return PatchResult(
                 out_path=str(output_path),
                 patch_diff=[],
@@ -162,7 +169,9 @@ def patch_workbook(request: PatchRequest) -> PatchResult:
                     resolved_input,
                     output_path,
                     warnings,
+                    reserved_output_path=reserved_output_path,
                 )
+            _cleanup_empty_reserved_output(reserved_output_path)
             raise RuntimeError(f"COM patch failed: {exc}") from exc
 
     return _apply_with_openpyxl(
@@ -170,6 +179,7 @@ def patch_workbook(request: PatchRequest) -> PatchResult:
         resolved_input,
         output_path,
         warnings,
+        reserved_output_path=reserved_output_path,
     )
 
 
@@ -187,7 +197,7 @@ def _should_fallback_on_com_patch_error(
     if not runtime.allow_auto_openpyxl_fallback(request, input_path):
         return False
     detail = exc.detail
-    return detail.error_code == "com_runtime_error"
+    return getattr(detail, "error_code", None) == "com_runtime_error"
 
 
 def _apply_with_openpyxl(
@@ -195,6 +205,8 @@ def _apply_with_openpyxl(
     input_path: Path,
     output_path: Path,
     warnings: list[str],
+    *,
+    reserved_output_path: Path | None = None,
 ) -> PatchResult:
     """Apply patch operations using openpyxl."""
     try:
@@ -205,6 +217,7 @@ def _apply_with_openpyxl(
         )
     except runtime.PatchOpError as exc:
         error = _coerce_patch_error_detail(exc.detail)
+        _cleanup_empty_reserved_output(reserved_output_path)
         return PatchResult(
             out_path=str(output_path),
             patch_diff=[],
@@ -221,6 +234,7 @@ def _apply_with_openpyxl(
     except OSError:
         raise
     except Exception as exc:
+        _cleanup_empty_reserved_output(reserved_output_path)
         raise RuntimeError(f"openpyxl patch failed: {exc}") from exc
 
     patch_diff = _coerce_patch_diff_items(engine_result.patch_diff)
@@ -237,7 +251,11 @@ def _apply_with_openpyxl(
         and request.preflight_formula_check
         and any(issue.level == "error" for issue in typed_formula_issues)
     ):
-        issue = typed_formula_issues[0]
+        issue = next(
+            typed_issue
+            for typed_issue in typed_formula_issues
+            if typed_issue.level == "error"
+        )
         op_index, op_name = _find_preflight_issue_origin(issue, request.ops)
         error = PatchErrorDetail(
             op_index=op_index,
@@ -249,6 +267,7 @@ def _apply_with_openpyxl(
             expected_fields=[],
             example_op=None,
         )
+        _cleanup_empty_reserved_output(reserved_output_path)
         return PatchResult(
             out_path=str(output_path),
             patch_diff=[],
@@ -258,6 +277,8 @@ def _apply_with_openpyxl(
             error=error,
             engine="openpyxl",
         )
+    if request.dry_run:
+        _cleanup_empty_reserved_output(reserved_output_path)
     return PatchResult(
         out_path=str(output_path),
         patch_diff=patch_diff,
@@ -276,6 +297,15 @@ def _append_skip_warnings(warnings: list[str], diff: list[PatchDiffItem]) -> Non
         warnings.append(
             f"Skipped op[{item.op_index}] {item.op} at {item.sheet}!{item.cell} due to condition mismatch."
         )
+
+
+def _cleanup_empty_reserved_output(path: Path | None) -> None:
+    """Remove zero-byte reservation files left behind by rename resolution."""
+    if path is None or not path.exists() or not path.is_file():
+        return
+    if path.stat().st_size != 0:
+        return
+    path.unlink()
 
 
 def _find_preflight_issue_origin(

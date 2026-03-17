@@ -4,12 +4,13 @@ from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
 import pytest
+import xlwings as xw
 
 from exstruct.cli.availability import ComAvailability
 from exstruct.edit import internal as edit_internal
 from exstruct.mcp.io import PathPolicy
 from exstruct.mcp.patch import internal as legacy_runner
-from exstruct.mcp.patch.internal import PatchOp, PatchRequest
+from exstruct.mcp.patch.internal import MakeRequest, PatchOp, PatchRequest
 
 
 def _create_workbook(path: Path) -> None:
@@ -161,3 +162,32 @@ def test_run_patch_error_includes_hint_for_known_set_fill_color_mistake(
     assert "fill_color" in result.error.hint
     assert result.error.expected_fields
     assert result.error.example_op is not None
+
+
+def test_legacy_runner_make_syncs_get_com_availability_override(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    out_path = tmp_path / "book.xls"
+
+    monkeypatch.setattr(
+        legacy_runner,
+        "get_com_availability",
+        lambda: ComAvailability(available=False, reason="patched-by-legacy-runner"),
+    )
+    monkeypatch.setattr(
+        edit_internal,
+        "get_com_availability",
+        lambda: ComAvailability(available=True, reason=None),
+    )
+
+    class _SentinelApp:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            raise AssertionError("COM seed creation should not be attempted")
+
+    monkeypatch.setattr(xw, "App", _SentinelApp)
+
+    with pytest.raises(ValueError, match=r"\.xls editing requires Windows Excel COM"):
+        legacy_runner.run_make(
+            MakeRequest(out_path=out_path, ops=[]),
+            policy=PathPolicy(root=tmp_path),
+        )

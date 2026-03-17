@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from exstruct.edit.errors import PatchOpError
+import exstruct.edit.internal as edit_internal
 from exstruct.edit.models import (
     AlignmentSnapshot,
     BorderSideSnapshot,
@@ -35,6 +36,7 @@ def _sync_legacy_overrides() -> None:
     _internal.get_com_availability = get_com_availability
     patch_runtime.get_com_availability = get_com_availability
     edit_runtime.get_com_availability = get_com_availability
+    edit_internal.get_com_availability = get_com_availability
 
 
 def run_make(request: MakeRequest, *, policy: PathPolicy | None = None) -> PatchResult:

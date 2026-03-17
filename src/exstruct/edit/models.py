@@ -1464,7 +1464,7 @@ class FormulaIssue(BaseModel):
 
 
 class PatchRequest(BaseModel):
-    """Input model for ExStruct MCP patch."""
+    """Input model for workbook patch requests."""
 
     xlsx_path: Path
     ops: list[PatchOp]
@@ -1505,7 +1505,7 @@ class PatchRequest(BaseModel):
 
 
 class MakeRequest(BaseModel):
-    """Input model for ExStruct MCP workbook creation."""
+    """Input model for workbook creation requests."""
 
     out_path: Path
     ops: list[PatchOp] = Field(default_factory=list)
@@ -1560,7 +1560,7 @@ class OpenpyxlEngineResult(BaseModel):
 
 
 class PatchResult(BaseModel):
-    """Output model for ExStruct MCP patch."""
+    """Output model for workbook patch/make execution."""
 
     out_path: str
     patch_diff: list[PatchDiffItem] = Field(default_factory=list)

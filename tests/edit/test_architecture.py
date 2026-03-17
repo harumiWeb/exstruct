@@ -30,8 +30,9 @@ def test_import_exstruct_edit_does_not_load_mcp_package() -> None:
             "-c",
             "import exstruct.edit, sys; print('exstruct.mcp' in sys.modules)",
         ],
-        check=True,
+        check=False,
         capture_output=True,
         text=True,
     )
-    assert result.stdout.strip() == "False"
+    assert result.returncode == 0, result.stderr or result.stdout
+    assert result.stdout.strip() == "False", result.stderr or result.stdout

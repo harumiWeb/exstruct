@@ -1,5 +1,43 @@
 # Feature Spec
 
+## 2026-03-17 pr #105 review follow-up
+
+### Goal
+
+- PR `#105` の未解決レビュー指摘を現行実装で再検証し、妥当なものだけを最小差分で取り込む。
+- edit core の output-path / formula preflight / monkeypatch compatibility / runtime shim backward compatibility を維持する。
+- public MCP guide は stable surface に寄せ、内部実装トポロジは `dev-docs/` に残す。
+
+### Accepted findings
+
+- `src/exstruct/edit/output_path.py` の `next_available_path()` は `exists()` 判定だけで rename 候補を返しており、競合時に同じ候補を返し得る。
+- `src/exstruct/edit/output_path.py` の `next_available_directory()` は helper 単体では policy check より先に `_reserve_directory()` を実行し、副作用順序が逆転している。
+- `src/exstruct/edit/service.py` の preflight formula error attribution は `typed_formula_issues[0]` を採っており、先頭が warning の場合に誤帰属し得る。
+- `src/exstruct/mcp/patch_runner.py` は `edit.runtime` までは `get_com_availability` override を同期するが、`edit.internal` module-global は未同期で、`.xls` path の内部判定を取り逃す。
+- `src/exstruct/mcp/patch/internal.py` と `src/exstruct/mcp/patch/runtime.py` は compatibility shim を名乗る一方で、legacy monkeypatch / `policy=` kwarg surface の一部を落としている。
+- `src/exstruct/mcp/patch/service.py` の compatibility surface は実行上は動くが、legacy boundary より型情報が緩くなっている。
+- `src/exstruct/edit/models.py` / `src/exstruct/edit/runtime.py` / `docs/mcp.md` / `tasks/todo.md` には ownership rename 後の stale wording が残っている。
+
+### Chosen constraints
+
+- public API / CLI / MCP payload shape / backend selection policy は変更しない。
+- runtime shim の `policy` kwarg は legacy import path でのみ維持し、canonical `exstruct.edit.runtime` には持ち込まない。
+- `next_available_path()` の原子的予約で生じる placeholder file は、dry-run や失敗時に cleanup して既存契約を崩さない。
+- `tasks/todo.md` の旧ファイル名は、rename 再現手順として意味がある箇所は維持し、stale な成果記述だけ更新する。
+
+### Test plan
+
+- `tests/edit/test_edit_output_path.py` を追加し、rename path reservation と directory policy ordering を固定する。
+- `tests/edit/test_edit_service.py` に preflight formula issue の warning/error 混在回帰を追加する。
+- `tests/mcp/test_make_runner.py` に `patch_runner.get_com_availability` override が `.xls` make validation まで届く回帰を追加する。
+- `tests/mcp/patch/test_legacy_runner_ops.py` に `mcp.patch.internal.get_com_availability` monkeypatch が legacy make path で効く回帰を追加する。
+- `tests/mcp/patch/test_runtime_shim.py` を追加し、legacy runtime shim の `policy=` kwarg surface を固定する。
+
+### ADR verdict
+
+- `not-needed`
+- rationale: compatibility bug fix と documentation cleanup であり、public contract や safety boundary の意味変更はない。
+
 ## 2026-03-16 issue #99 phase 3 legacy monkeypatch compatibility follow-up
 
 ### Goal

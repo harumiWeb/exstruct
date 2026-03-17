@@ -1,5 +1,34 @@
 # Todo
 
+## 2026-03-17 pr #105 review follow-up
+
+### Planning
+
+- [x] PR `#105` の review threads / inline comments を取得して妥当性を確認する
+- [x] `tasks/feature_spec.md` に今回の対応境界と accepted findings を記録する
+- [x] `src/exstruct/edit/output_path.py` の rename reservation と directory policy ordering を修正する
+- [x] `src/exstruct/edit/service.py` の preflight attribution と fallback hardening を調整する
+- [x] `src/exstruct/mcp/patch_runner.py` / `patch/internal.py` / `patch/runtime.py` / `patch/service.py` の互換 surface を修正する
+- [x] docs / docstring / `tasks/todo.md` の stale wording を更新する
+- [x] 回帰テストと `uv run task precommit-run` を実行する
+
+### Review
+
+- `src/exstruct/edit/output_path.py` は file rename 候補を原子的に予約するようにし、directory helper は policy check 後に予約する順序へ揃えた。rename 予約で作る placeholder file は `src/exstruct/edit/service.py` 側で dry-run / error 時に cleanup する。
+- `src/exstruct/edit/service.py` は formula preflight で先頭 error issue を採るようにし、COM fallback 判定も `getattr(detail, "error_code", None)` ベースへ harden した。
+- `src/exstruct/mcp/patch_runner.py` は `edit.internal.get_com_availability` まで override を同期するようにし、`src/exstruct/mcp/patch/internal.py` は direct import ではなく wrapper 経由で legacy monkeypatch surface を維持するよう戻した。
+- `src/exstruct/mcp/patch/runtime.py` は legacy shim の `policy=` kwarg surface を wrapper で復元し、`src/exstruct/mcp/patch/service.py` は legacy engine boundary に合わせた型注釈へ戻した。
+- `docs/mcp.md` は stable MCP surface に絞り、内部 layering 詳細は `dev-docs/architecture/overview.md` / `dev-docs/specs/editing-api.md` を参照する形へ整理した。`src/exstruct/edit/models.py` / `src/exstruct/edit/runtime.py` の stale docstring も更新した。
+- `tasks/todo.md` の stale filename 指摘は、rename 再現手順として旧名が必要な箇所は残しつつ、成果記述の `tests/edit/test_service.py` だけ `tests/edit/test_edit_service.py` へ修正した。
+- Review 妥当性判断:
+  - 採用: output-path 2 件、preflight attribution、`patch_runner` override sync、`patch.internal` legacy override、`patch.runtime` policy kwarg 互換、docs/docstring/stale wording。
+  - 参考対応: `exc.detail` guard は現行契約上は必須ではなかったが、低リスクの hardening として取り込んだ。
+  - 非対応: `tasks/todo.md` の大規模な historical section pruning は今回の主目的ではなく、恒久情報の取りこぼしも確認できなかったため見送った。
+- Verification:
+  - `uv run pytest tests/edit/test_edit_output_path.py tests/edit/test_edit_service.py tests/edit/test_architecture.py tests/mcp/test_make_runner.py tests/mcp/patch/test_legacy_runner_ops.py tests/mcp/patch/test_runtime_shim.py -q`
+  - `uv run pytest tests/mcp/test_patch_runner.py tests/mcp/test_make_runner.py tests/mcp/patch/test_service.py tests/mcp/patch/test_legacy_runner_ops.py tests/mcp/patch/test_runtime_shim.py tests/edit/test_edit_service.py tests/edit/test_edit_output_path.py tests/edit/test_architecture.py -q`
+  - `uv run task precommit-run`
+
 ## 2026-03-16 issue #99 phase 3 legacy monkeypatch compatibility follow-up
 
 ### Planning
@@ -96,7 +125,7 @@
 - `src/exstruct/edit/service.py` に patch/make orchestration を置いたまま、public API の `policy` 非公開契約は `src/exstruct/edit/api.py` の wrapper で維持した。
 - `src/exstruct/mcp/patch_runner.py` は `get_com_availability` monkeypatch を `edit.runtime` と legacy internal の両方へ同期する compatibility facade に整理した。
 - `src/exstruct/mcp/patch/service.py` は legacy monkeypatch 先を `edit.service` / `edit.runtime` に伝播する wrapper として残し、既存 test monkeypatch 互換を維持した。
-- `tests/edit/test_service.py` を追加し、COM 優先、auto fallback、make seed flow を core 観点で固定した。既存の `tests/mcp/*` は shim / host behavior 回帰として維持した。
+- `tests/edit/test_edit_service.py` を追加し、COM 優先、auto fallback、make seed flow を core 観点で固定した。既存の `tests/mcp/*` は shim / host behavior 回帰として維持した。
 - 恒久情報は `dev-docs/specs/editing-api.md`、`dev-docs/specs/data-model.md`、`dev-docs/architecture/overview.md`、`docs/mcp.md` に反映済みで、今回の task section は session 記録として保持する。
 - ADR verdict は継続して `not-needed`。内部 ownership 移管であり、public contract / backend policy / safety boundary は変更していない。
 - Verification:

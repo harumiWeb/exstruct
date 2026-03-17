@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import exstruct.edit.internal as edit_internal
 from exstruct.edit.internal import (
     _A1_PATTERN,
     _A1_RANGE_PATTERN,
@@ -269,10 +270,32 @@ from exstruct.edit.internal import (
     _xlwings_sheet_api,
     _xlwings_target_range_ref,
     _xlwings_workbook,
-    get_com_availability,
-    run_make,
-    run_patch,
 )
+from exstruct.edit.output_path import PathPolicyProtocol
+
+get_com_availability = edit_internal.get_com_availability
+
+
+def _sync_legacy_overrides() -> None:
+    """Propagate legacy monkeypatch overrides into the edit internal module."""
+    edit_internal.get_com_availability = get_com_availability
+
+
+def run_make(
+    request: MakeRequest, *, policy: PathPolicyProtocol | None = None
+) -> PatchResult:
+    """Compatibility wrapper for legacy internal make entrypoint."""
+    _sync_legacy_overrides()
+    return edit_internal.run_make(request, policy=policy)
+
+
+def run_patch(
+    request: PatchRequest, *, policy: PathPolicyProtocol | None = None
+) -> PatchResult:
+    """Compatibility wrapper for legacy internal patch entrypoint."""
+    _sync_legacy_overrides()
+    return edit_internal.run_patch(request, policy=policy)
+
 
 __all__ = [
     "get_com_availability",

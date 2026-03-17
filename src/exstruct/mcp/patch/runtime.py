@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+from exstruct.edit import internal as edit_internal
 from exstruct.edit.runtime import (
     ComAvailability,
     PatchOpError,
@@ -18,13 +21,38 @@ from exstruct.edit.runtime import (
     expand_range_coordinates,
     get_com_availability,
     requires_openpyxl_backend,
-    resolve_input_path,
     resolve_make_initial_sheet_name,
-    resolve_make_output_path,
-    resolve_output_path,
     select_patch_engine,
     validate_make_request_constraints,
 )
+from exstruct.mcp.io import PathPolicy
+
+
+def resolve_make_output_path(path: Path, *, policy: PathPolicy | None = None) -> Path:
+    """Resolve output path for make requests via the legacy policy-aware shim."""
+    return edit_internal._resolve_make_output_path(path, policy=policy)
+
+
+def resolve_input_path(path: Path, *, policy: PathPolicy | None = None) -> Path:
+    """Resolve and validate input workbook path via the legacy policy-aware shim."""
+    return edit_internal._resolve_input_path(path, policy=policy)
+
+
+def resolve_output_path(
+    input_path: Path,
+    *,
+    out_dir: Path | None,
+    out_name: str | None,
+    policy: PathPolicy | None = None,
+) -> Path:
+    """Resolve and validate output workbook path via the legacy policy-aware shim."""
+    return edit_internal._resolve_output_path(
+        input_path,
+        out_dir=out_dir,
+        out_name=out_name,
+        policy=policy,
+    )
+
 
 __all__ = [
     "PatchOpError",
