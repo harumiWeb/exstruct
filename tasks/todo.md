@@ -1,5 +1,28 @@
 # Todo
 
+## 2026-03-18 pr #106 codacy and review follow-up
+
+### Planning
+
+- [x] Codacy issue と PR review comments を取得し、現行実装と照合して妥当性を確認する
+- [x] `tasks/feature_spec.md` に accepted findings / constraints / verification を記録する
+- [x] `docs/api.md` の TOC / heading wording を URL-safe な形へ調整する
+- [x] README 英日、`docs/api.md`、`docs/cli.md`、`docs/mcp.md` の dry-run guidance と CLI failure wording を修正する
+- [x] `dev-docs/specs/editing-cli.md` と `tasks/lessons.md` に再発防止ルールを追記する
+- [x] `uv run task build-docs` を実行する
+- [x] `uv run task precommit-run` を実行する
+
+### Review
+
+- Codacy warning 1 件と review 指摘 2 件を確認した。採用したのは `docs/api.md` の TOC/heading wording、`docs/mcp.md` の `backend="auto"` caveat、`docs/cli.md` の exit-code wording で、いずれも現行コードに照らして妥当だった。
+- `docs/api.md` は TOC と対応見出しを punctuation の少ない wording へ揃え、anchor 解決の曖昧さを減らした。
+- README 英日、`docs/api.md`、`docs/cli.md`、`docs/mcp.md` は、dry run と実適用で同じ engine を前提にしないよう修正した。same-engine 比較が必要な場合は `openpyxl` 固定、`backend="auto"` では `PatchResult.engine` 確認を促す形にした。
+- `docs/cli.md` は、`PatchResult.error` ベースの exit `1` と、JSON parse / validation / local runtime error の stderr exit `1` を区別する説明に修正した。
+- 恒久方針は `dev-docs/specs/editing-cli.md` と `tasks/lessons.md` に反映した。ADR verdict は `not-needed`。
+- Verification:
+  - `uv run task build-docs`
+  - `uv run task precommit-run`
+
 ## 2026-03-18 pr #105 unresolved review follow-up
 
 ### Planning

@@ -316,7 +316,7 @@ tool payload concerns outside that public API.
 
 For MCP users, the stable surfaces are:
 
-- `exstruct.edit`: first-class Python editing API
+- `exstruct.edit`: shared-contract Python editing API
 - `exstruct.mcp.patch_runner`: compatibility facade for existing import paths
 - MCP server / tool entrypoints: host-owned path policy, transport, and artifact behavior
 
@@ -336,8 +336,10 @@ inside Python.
 1. Inspect workbook structure with `exstruct_extract` (and `exstruct_read_json_chunk` if needed)
 2. Build patch operations (`ops`) for target cells/sheets
 3. Call `exstruct_patch` with `dry_run=true` and inspect `PatchResult`, warnings, and diff
-4. Re-run the same request without `dry_run` only after the dry-run result is acceptable
-5. Re-run `exstruct_extract` to verify results if needed
+4. If you want dry-run and apply to exercise the same engine, pin `backend="openpyxl"`
+5. If you keep `backend="auto"`, inspect `PatchResult.engine`; on Windows/Excel hosts the real apply may switch from openpyxl to COM
+6. Re-run without `dry_run` only after the reviewed result is acceptable
+7. Re-run `exstruct_extract` to verify results if needed
 
 ### `exstruct_patch` highlights
 

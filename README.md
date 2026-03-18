@@ -129,7 +129,9 @@ Recommended edit flow:
 
 1. Build patch ops.
 2. Run `exstruct patch --dry-run` and inspect `PatchResult`, warnings, and diff.
-3. Re-run without `--dry-run` only after the result is acceptable.
+3. Pin `--backend openpyxl` when you want the dry run and the real apply to use the same engine.
+4. If you keep `--backend auto`, inspect `PatchResult.engine`; on Windows/Excel hosts the real apply may switch to COM.
+5. Re-run without `--dry-run` only after the result is acceptable.
 
 ## MCP Server (stdio)
 

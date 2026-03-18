@@ -117,7 +117,9 @@ exstruct validate --input book.xlsx --pretty
 
 1. patch ops を組み立てる。
 2. `exstruct patch --dry-run` を実行し、`PatchResult`・warnings・diff を確認する。
-3. 問題がなければ `--dry-run` なしで再実行する。
+3. dry run と実適用で同じ engine を使いたい場合は `--backend openpyxl` を固定する。
+4. `--backend auto` を使う場合は `PatchResult.engine` を確認する。Windows/Excel 環境では実適用時に COM へ切り替わることがある。
+5. 問題がなければ `--dry-run` なしで再実行する。
 
 ## MCPサーバー (標準入出力)
 

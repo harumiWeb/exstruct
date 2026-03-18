@@ -19,7 +19,10 @@ This document defines the Phase 2 public editing CLI contract.
 - Public docs must describe the editing CLI as the canonical operational /
   agent interface for workbook editing.
 - Public docs should recommend the `dry_run -> inspect PatchResult -> apply`
-  workflow for edit operations.
+  workflow for edit operations, but must qualify that `backend="auto"` can
+  use openpyxl for the dry run and COM for the real apply on COM-capable
+  hosts; when same-engine comparison matters, docs should tell users to pin
+  `backend="openpyxl"`.
 - Public docs must distinguish the local CLI from:
   - `exstruct.edit` for embedded Python usage
   - MCP for host-owned path policy, transport, and artifact behavior

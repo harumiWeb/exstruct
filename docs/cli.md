@@ -37,9 +37,10 @@ exstruct ops describe create_chart --pretty
 exstruct validate --input book.xlsx --pretty
 ```
 
-- `patch` serializes `PatchResult` to stdout and exits `1` only when
-  `PatchResult.error` is present.
-- `make` serializes `PatchResult` for new workbook creation.
+- `patch` serializes `PatchResult` to stdout once request parsing and execution
+  begin. Invalid JSON, request validation failures, and local runtime errors
+  are printed to stderr and exit `1` before any JSON payload is produced.
+- `make` follows the same stdout/stderr contract for new workbook creation.
 - `ops list` returns compact `{op, description}` summaries.
 - `ops describe` returns the detailed schema for one patch op.
 - `validate` returns input readability checks (`is_readable`, `warnings`,
@@ -50,9 +51,13 @@ exstruct validate --input book.xlsx --pretty
 1. Build or load your patch op JSON.
 2. Run `exstruct patch --dry-run` and inspect `PatchResult`, warnings, and
    `patch_diff`.
-3. Apply the same request without `--dry-run` only after the dry-run result is
+3. If you want the dry run and the real apply to use the same engine, pin
+   `--backend openpyxl`.
+4. If you keep `--backend auto`, inspect `PatchResult.engine`; on
+   Windows/Excel hosts the non-dry-run apply may switch from openpyxl to COM.
+5. Apply the chosen backend without `--dry-run` only after the result is
    acceptable.
-4. Re-run extraction or another validation step if the workbook is part of a
+6. Re-run extraction or another validation step if the workbook is part of a
    larger pipeline.
 
 If you need host-managed path restrictions, transport mapping, or artifact
@@ -66,7 +71,9 @@ mirroring, switch to MCP instead of extending the local CLI path.
 - `--backend com` is required for COM-only behavior such as `create_chart` and
   `.xls` editing.
 - `--backend auto` keeps the existing backend-selection policy and reports the
-  actual backend in `PatchResult.engine`.
+  actual backend in `PatchResult.engine`. `--dry-run`,
+  `--return-inverse-ops`, and `--preflight-formula-check` still force the
+  openpyxl path.
 
 ## Editing options
 

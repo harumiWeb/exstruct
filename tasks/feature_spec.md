@@ -1,5 +1,39 @@
 # Feature Spec
 
+## 2026-03-18 pr #106 codacy and review follow-up
+
+### Goal
+
+- PR `#106` の Codacy warning 1 件と review 指摘を現行実装で再確認し、妥当な文書指摘だけを最小差分で取り込む。
+- workbook editing docs の dry-run guidance と CLI failure wording を、実際の backend selection / exit-code behavior に合わせて補正する。
+- public contract や runtime behavior は変えず、docs-only で整合性を回復する。
+
+### Accepted findings
+
+- Codacy warning `docs/api.md:24` は妥当。TOC link fragment 自体は site build では解決されていたが、punctuation を含む heading / anchor の組み合わせが lint と食い違いやすいため、見出し名と TOC を URL-safe な表現へ寄せるのが安全。
+- `docs/mcp.md` の「dry run 後に同じ request を再実行すればよい」という説明は、`backend="auto"` かつ COM 利用可能環境では不正確。`src/exstruct/edit/internal.py` の `_requires_openpyxl_backend()` と `_select_patch_engine()` により、`dry_run` は openpyxl を強制する一方で、実適用は COM に切り替わり得る。
+- `docs/cli.md` の「`patch` は `PatchResult.error` があるときだけ exit 1」という説明は過剰。`src/exstruct/cli/edit.py` の `_run_patch_command()` は JSON parse failure、request validation failure、`OSError` / `RuntimeError` でも stderr を出して exit `1` を返し、その場合 stdout に `PatchResult` JSON は出ない。
+
+### Chosen constraints
+
+- runtime code、backend selection policy、CLI exit-code semantics 自体は変更しない。
+- dry-run guidance の修正は `docs/cli.md` と `docs/mcp.md` だけでなく、同じ推奨を載せている README 英日と `docs/api.md` にも波及させる。
+- internal spec / task docs にも、`backend="auto"` caveat と CLI stderr failure distinction を反映して再発を防ぐ。
+
+### Test plan
+
+- `uv run task build-docs` を実行し、docs build が通ることを確認する。
+- `uv run task precommit-run` を実行する。
+- PR metadata として次を確認する:
+  - Codacy warning が消えること
+  - `docs/cli.md` の exit-code wording が現行実装と一致すること
+  - `docs/mcp.md` / README / `docs/api.md` の dry-run guidance が `backend="auto"` caveat を含むこと
+
+### ADR verdict
+
+- `not-needed`
+- rationale: docs-only review follow-up であり、public contract / implementation policy の意味変更はない。
+
 ## 2026-03-18 pr #105 unresolved review follow-up
 
 ### Goal

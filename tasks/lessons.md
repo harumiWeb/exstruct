@@ -93,3 +93,8 @@
 
 - When ExStruct exposes a Python wrapper over behavior that existing ecosystem libraries already handle well, do not automatically promote that wrapper as the default Python recommendation; confirm the intended positioning first.
 - For workbook editing docs, bias the primary recommendation toward the editing CLI for ExStruct-specific workflows and keep `exstruct.edit` described as an advanced/shared-contract surface unless the user explicitly wants stronger promotion.
+
+## 2026-03-18 docs review follow-up lessons
+
+- When documenting a `dry_run -> apply` edit workflow, do not imply the same engine will run both phases under `backend="auto"`; call out the openpyxl/COM split and tell users to pin `openpyxl` when same-engine comparison matters.
+- When documenting CLI failure behavior, distinguish serialized `PatchResult.error` failures from pre-execution stderr failures such as JSON parse, validation, or local runtime errors.
