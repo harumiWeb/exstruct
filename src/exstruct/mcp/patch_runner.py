@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from .io import PathPolicy
-from .patch import internal as _internal, service
-from .patch.models import (
+from exstruct.edit.errors import PatchOpError
+import exstruct.edit.internal as edit_internal
+from exstruct.edit.models import (
     AlignmentSnapshot,
     BorderSideSnapshot,
     BorderSnapshot,
@@ -23,14 +23,20 @@ from .patch.models import (
     RowDimensionSnapshot,
     XlwingsRangeProtocol,
 )
-from .patch.ops.common import PatchOpError
+import exstruct.edit.runtime as edit_runtime
+
+from .io import PathPolicy
+from .patch import internal as _internal, runtime as patch_runtime, service
 
 get_com_availability = _internal.get_com_availability
 
 
 def _sync_legacy_overrides() -> None:
-    """Propagate supported monkeypatch overrides to internal module."""
+    """Propagate supported monkeypatch overrides to edit and legacy internals."""
     _internal.get_com_availability = get_com_availability
+    patch_runtime.get_com_availability = get_com_availability
+    edit_runtime.get_com_availability = get_com_availability
+    edit_internal.get_com_availability = get_com_availability
 
 
 def run_make(request: MakeRequest, *, policy: PathPolicy | None = None) -> PatchResult:

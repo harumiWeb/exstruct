@@ -11,6 +11,10 @@ from exstruct.mcp.patch import (
     runtime as patch_runtime,
     service,
 )
+from exstruct.mcp.patch.engine import (
+    openpyxl_engine as legacy_openpyxl_engine,
+    xlwings_engine as legacy_xlwings_engine,
+)
 from exstruct.mcp.patch.models import OpenpyxlEngineResult
 from exstruct.mcp.patch_runner import MakeRequest, PatchOp, PatchRequest, PatchResult
 
@@ -121,6 +125,48 @@ def test_service_run_patch_backend_auto_prefers_com(
     assert calls["com"] is True
 
 
+def test_service_run_patch_uses_legacy_xlwings_engine_monkeypatch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    calls: dict[str, bool] = {}
+
+    monkeypatch.setattr(
+        patch_runtime,
+        "get_com_availability",
+        lambda: ComAvailability(available=True, reason=None),
+    )
+
+    def _fake_legacy_apply_xlwings_engine(
+        input_path: Path,
+        output_path: Path,
+        ops: list[PatchOp],
+        auto_formula: bool,
+    ) -> list[object]:
+        calls["legacy"] = True
+        return []
+
+    monkeypatch.setattr(
+        legacy_xlwings_engine,
+        "apply_xlwings_engine",
+        _fake_legacy_apply_xlwings_engine,
+    )
+
+    result = service.run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="new")],
+            on_conflict="rename",
+            backend="com",
+        )
+    )
+
+    assert result.error is None
+    assert result.engine == "com"
+    assert calls["legacy"] is True
+
+
 def test_service_run_patch_backend_auto_fallbacks_to_openpyxl_on_com_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -167,6 +213,47 @@ def test_service_run_patch_backend_auto_fallbacks_to_openpyxl_on_com_error(
     assert result.error is None
     assert result.engine == "openpyxl"
     assert any("falling back to openpyxl" in warning for warning in result.warnings)
+
+
+def test_service_run_patch_uses_legacy_openpyxl_engine_monkeypatch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    input_path = tmp_path / "book.xlsx"
+    _create_workbook(input_path)
+    calls: dict[str, bool] = {}
+
+    monkeypatch.setattr(
+        patch_runtime,
+        "get_com_availability",
+        lambda: ComAvailability(available=False, reason="not available"),
+    )
+
+    def _fake_legacy_apply_openpyxl_engine(
+        request: PatchRequest,
+        input_path: Path,
+        output_path: Path,
+    ) -> OpenpyxlEngineResult:
+        calls["legacy"] = True
+        return OpenpyxlEngineResult()
+
+    monkeypatch.setattr(
+        legacy_openpyxl_engine,
+        "apply_openpyxl_engine",
+        _fake_legacy_apply_openpyxl_engine,
+    )
+
+    result = service.run_patch(
+        PatchRequest(
+            xlsx_path=input_path,
+            ops=[PatchOp(op="set_value", sheet="Sheet1", cell="A1", value="new")],
+            on_conflict="rename",
+            backend="openpyxl",
+        )
+    )
+
+    assert result.error is None
+    assert result.engine == "openpyxl"
+    assert calls["legacy"] is True
 
 
 def test_service_run_patch_backend_auto_fallbacks_to_openpyxl_on_com_patch_op_error(

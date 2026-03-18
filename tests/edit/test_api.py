@@ -12,6 +12,7 @@ from exstruct.edit import (
     make_workbook,
     patch_workbook,
 )
+from exstruct.mcp.patch.models import PatchRequest as McpPatchModelRequest
 from exstruct.mcp.patch_runner import PatchRequest as McpPatchRequest
 
 
@@ -71,6 +72,7 @@ def test_make_workbook_creates_file_without_path_policy(tmp_path: Path) -> None:
 
 def test_edit_request_import_path_matches_mcp_compatibility_path() -> None:
     assert PatchRequest is McpPatchRequest
+    assert PatchRequest is McpPatchModelRequest
 
 
 def test_edit_op_schema_is_public() -> None:

@@ -52,11 +52,21 @@ remain owned by MCP / agent hosts:
 
 ## Current implementation boundary
 
-- Phase 1 promotes `exstruct.edit` as the canonical public import path.
-- The implementation intentionally reuses the existing patch execution pipeline
-  under `exstruct.mcp.patch.*` to avoid destabilizing the tested backend logic
-  during the API promotion.
-- Contract metadata moved to `exstruct.edit` in Phase 1:
+- `exstruct.edit` is now both the canonical public import path and the
+  canonical editing core implementation boundary.
+- `src/exstruct/edit/**` does not import `exstruct.mcp.*`; MCP depends downward
+  on the edit core, not the other way around.
+- Canonical edit-core modules:
+  - `exstruct.edit.models`
+  - `exstruct.edit.internal`
+  - `exstruct.edit.runtime`
+  - `exstruct.edit.engine.*`
+  - `exstruct.edit.service`
+- `exstruct.mcp.patch_runner` and `exstruct.mcp.patch.*` remain compatibility
+  and host-integration facades around that edit core.
+- `PathPolicy` path canonicalization is resolved in the MCP integration layer
+  before requests are handed to `exstruct.edit.service`.
+- Contract metadata moved to `exstruct.edit`:
   - patch op types
   - chart type metadata
   - patch op alias/spec metadata

@@ -1,3 +1,5 @@
+"""Compatibility wrapper for the legacy openpyxl engine import path."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -11,7 +13,7 @@ def apply_openpyxl_engine(
     input_path: Path,
     output_path: Path,
 ) -> OpenpyxlEngineResult:
-    """Apply patch operations using the existing openpyxl backend implementation."""
+    """Apply patch operations using the legacy openpyxl engine boundary."""
     return apply_openpyxl_ops(request, input_path, output_path)
 
 

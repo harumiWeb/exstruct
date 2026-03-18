@@ -295,23 +295,20 @@ Example:
 }
 ```
 
-### Internal implementation note
+### Implementation note
 
-Workbook editing now also has a public Python import path under `exstruct.edit`.
-MCP remains the host/integration layer and keeps path policy plus transport
-concerns outside that public API.
+Workbook editing also has a public Python import path under `exstruct.edit`.
+MCP remains the host/integration layer and keeps `PathPolicy`, transport, and
+tool payload concerns outside that public API.
 
-The patch implementation is layered to keep compatibility while enabling refactoring:
+For MCP users, the stable surfaces are:
 
 - `exstruct.edit`: first-class Python editing API
-- `exstruct.mcp.patch_runner`: compatibility facade (existing import path)
-- `exstruct.mcp.patch.service`: patch/make orchestration
-- `exstruct.mcp.patch.engine.*`: backend execution boundaries (openpyxl/com)
-- `exstruct.mcp.patch.runtime`: runtime utilities (path/backend selection)
-- `exstruct.mcp.patch.ops.*`: backend-specific op application entrypoints
+- `exstruct.mcp.patch_runner`: compatibility facade for existing import paths
+- MCP server / tool entrypoints: host-owned path policy, transport, and artifact behavior
 
-This keeps MCP tool I/O stable while allowing the Python API and host policy to
-evolve independently.
+Internal module layering is documented in
+`dev-docs/architecture/overview.md` and `dev-docs/specs/editing-api.md`.
 
 ## Edit flow (patch)
 

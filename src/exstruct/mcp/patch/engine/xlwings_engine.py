@@ -1,3 +1,5 @@
+"""Compatibility wrapper for the legacy xlwings engine import path."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -12,7 +14,7 @@ def apply_xlwings_engine(
     ops: list[PatchOp],
     auto_formula: bool,
 ) -> list[object]:
-    """Apply patch operations using the existing xlwings backend implementation."""
+    """Apply patch operations using the legacy xlwings engine boundary."""
     return apply_xlwings_ops(input_path, output_path, ops, auto_formula)
 
 

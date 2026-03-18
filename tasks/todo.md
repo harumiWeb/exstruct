@@ -1,5 +1,163 @@
 # Todo
 
+## 2026-03-18 pr #105 unresolved review follow-up
+
+### Planning
+
+- [x] GitHub から PR `#105` の未解決 review thread を再取得する
+- [x] 各指摘を現行コードと既存回帰テストで妥当性確認する
+- [x] `src/exstruct/edit/service.py` の openpyxl failure path cleanup を修正する
+- [x] `tests/edit/test_edit_service.py` に cleanup 回帰を追加する
+- [x] targeted pytest と `uv run task precommit-run` を実行する
+- [x] Review section に妥当性判定と残課題を記録する
+
+### Review
+
+- 2026-03-18 時点で PR `#105` の未解決 thread は 2 件だった。
+- 採用: `src/exstruct/edit/service.py` の `_apply_with_openpyxl()` で `ValueError` / `FileNotFoundError` / `OSError` 再送出時に zero-byte reservation file cleanup が漏れる指摘。現行コードを確認すると、`PatchOpError` / generic `Exception` / dry-run / preflight error は cleanup 済みだが、この 3 分岐だけ未処理だった。
+- 非採用: `src/exstruct/mcp/patch/service.py` の `_sync_compat_overrides()` が `edit.service` 内の imported engine reference に効かないという指摘。`edit.service` は module global 名を実行時 lookup しており、`service_module.apply_openpyxl_engine = ...` / `apply_xlwings_engine = ...` の再束縛で呼び先は差し替わる。既存 `tests/mcp/patch/test_service.py` の legacy monkeypatch regression もこの解釈と一致して通過した。
+- `src/exstruct/edit/service.py` は `ValueError` / `FileNotFoundError` / `OSError` の各 re-raise 直前にも `_cleanup_empty_reserved_output()` を呼ぶようにした。
+- `tests/edit/test_edit_service.py` には、rename reservation 済み output path で openpyxl path が上記 3 例外を送出したとき placeholder file が残らない回帰を追加した。
+- 恒久仕様や ADR に移すべき新規 policy はなく、この section は session 記録として保持する。
+- Verification:
+  - `uv run pytest tests/edit/test_edit_service.py -q`
+  - `uv run pytest tests/mcp/patch/test_service.py -q`
+  - `uv run task precommit-run`
+
+## 2026-03-17 pr #105 review follow-up
+
+### Planning
+
+- [x] PR `#105` の review threads / inline comments を取得して妥当性を確認する
+- [x] `tasks/feature_spec.md` に今回の対応境界と accepted findings を記録する
+- [x] `src/exstruct/edit/output_path.py` の rename reservation と directory policy ordering を修正する
+- [x] `src/exstruct/edit/service.py` の preflight attribution と fallback hardening を調整する
+- [x] `src/exstruct/mcp/patch_runner.py` / `patch/internal.py` / `patch/runtime.py` / `patch/service.py` の互換 surface を修正する
+- [x] docs / docstring / `tasks/todo.md` の stale wording を更新する
+- [x] 回帰テストと `uv run task precommit-run` を実行する
+
+### Review
+
+- `src/exstruct/edit/output_path.py` は file rename 候補を原子的に予約するようにし、directory helper は policy check 後に予約する順序へ揃えた。rename 予約で作る placeholder file は `src/exstruct/edit/service.py` 側で dry-run / error 時に cleanup する。
+- `src/exstruct/edit/service.py` は formula preflight で先頭 error issue を採るようにし、COM fallback 判定も `getattr(detail, "error_code", None)` ベースへ harden した。
+- `src/exstruct/mcp/patch_runner.py` は `edit.internal.get_com_availability` まで override を同期するようにし、`src/exstruct/mcp/patch/internal.py` は direct import ではなく wrapper 経由で legacy monkeypatch surface を維持するよう戻した。
+- `src/exstruct/mcp/patch/runtime.py` は legacy shim の `policy=` kwarg surface を wrapper で復元し、`src/exstruct/mcp/patch/service.py` は legacy engine boundary に合わせた型注釈へ戻した。
+- `docs/mcp.md` は stable MCP surface に絞り、内部 layering 詳細は `dev-docs/architecture/overview.md` / `dev-docs/specs/editing-api.md` を参照する形へ整理した。`src/exstruct/edit/models.py` / `src/exstruct/edit/runtime.py` の stale docstring も更新した。
+- `tasks/todo.md` の stale filename 指摘は、rename 再現手順として旧名が必要な箇所は残しつつ、成果記述の `tests/edit/test_service.py` だけ `tests/edit/test_edit_service.py` へ修正した。
+- Review 妥当性判断:
+  - 採用: output-path 2 件、preflight attribution、`patch_runner` override sync、`patch.internal` legacy override、`patch.runtime` policy kwarg 互換、docs/docstring/stale wording。
+  - 参考対応: `exc.detail` guard は現行契約上は必須ではなかったが、低リスクの hardening として取り込んだ。
+  - 非対応: `tasks/todo.md` の大規模な historical section pruning は今回の主目的ではなく、恒久情報の取りこぼしも確認できなかったため見送った。
+- Verification:
+  - `uv run pytest tests/edit/test_edit_output_path.py tests/edit/test_edit_service.py tests/edit/test_architecture.py tests/mcp/test_make_runner.py tests/mcp/patch/test_legacy_runner_ops.py tests/mcp/patch/test_runtime_shim.py -q`
+  - `uv run pytest tests/mcp/test_patch_runner.py tests/mcp/test_make_runner.py tests/mcp/patch/test_service.py tests/mcp/patch/test_legacy_runner_ops.py tests/mcp/patch/test_runtime_shim.py tests/edit/test_edit_service.py tests/edit/test_edit_output_path.py tests/edit/test_architecture.py -q`
+  - `uv run task precommit-run`
+
+## 2026-03-16 issue #99 phase 3 legacy monkeypatch compatibility follow-up
+
+### Planning
+
+- [x] `tasks/feature_spec.md` に legacy monkeypatch compatibility 修正方針を記録する
+- [x] `patch_runner._sync_legacy_overrides()` で `patch_runner.get_com_availability` を `mcp.patch.runtime` まで同期する
+- [x] `mcp.patch.service` を live module lookup ベースの legacy engine wrapper に切り替える
+- [x] `tests/mcp/test_patch_runner.py` に `run_patch` / `run_make` の override 回帰を追加する
+- [x] `tests/mcp/patch/test_service.py` に legacy engine monkeypatch 回帰を追加する
+- [x] `tasks/lessons.md` に compat shim の monkeypatch 設計ルールを追記する
+- [x] targeted pytest と `uv run task precommit-run` を実行する
+
+### Review
+
+- `src/exstruct/mcp/patch_runner.py` は `patch_runner.get_com_availability` を `mcp.patch.runtime` にも同期するようにし、`service._sync_compat_overrides()` を経由しても caller override が失われないようにした。
+- `src/exstruct/mcp/patch/service.py` は `edit.engine.*` の copied alias ではなく、`mcp.patch.engine.*` を live module lookup する wrapper を `edit.service` に注入する形へ切り替えた。
+- これにより `mcp.patch.service.apply_*` monkeypatch と `mcp.patch.engine.*.apply_*` monkeypatch の両方が `service.run_patch()` / `run_make()` 経路で有効になった。
+- `tests/mcp/test_patch_runner.py` と `tests/mcp/test_make_runner.py` に entrypoint override precedence の回帰を追加し、`tests/mcp/patch/test_service.py` に legacy engine monkeypatch 回帰を追加した。
+- `tasks/lessons.md` には compat shim で copied function alias を避け、public entrypoint で override precedence を回帰テスト化するルールを追加した。
+- Verification:
+  - `uv run pytest tests/mcp/test_patch_runner.py tests/mcp/test_make_runner.py tests/mcp/patch/test_service.py -q`
+  - `uv run pytest tests/mcp/patch/test_ops.py tests/mcp/patch/test_legacy_runner_ops.py -q`
+  - `uv run pytest tests/edit -q`
+  - `uv run task precommit-run`
+
+## 2026-03-16 issue #99 phase 3 follow-up edit core decoupling from MCP implementation
+
+### Planning
+
+- [x] `tasks/feature_spec.md` に `src/exstruct/edit/**` から `exstruct.mcp.*` import を排除する follow-up 仕様を反映する
+- [x] `edit.errors` / `edit.a1` / `edit.runtime` / `edit.engine.*` の ownership を edit 配下へ寄せ、edit から MCP import を除去する
+- [x] `mcp.patch_runner` 側 path policy 経路を維持したまま、`edit.service` の `policy` 非依存化を完了する
+- [x] `mcp.patch.internal` / `ops.*` / `runtime` / `service` を edit-backed compatibility path に整理する
+- [x] core test を `tests/edit` に寄せ、MCP 側は shim / host behavior 回帰に絞る
+- [x] `dev-docs/specs/editing-api.md`、`dev-docs/specs/data-model.md`、`dev-docs/architecture/overview.md`、`docs/mcp.md` を現行実装に合わせて更新する
+- [x] `uv run pytest tests/edit -q` を実行する
+- [x] `uv run pytest tests/mcp/test_patch_runner.py tests/mcp/test_make_runner.py tests/mcp/test_tools_handlers.py tests/mcp/test_server.py tests/mcp/patch -q` を実行する
+- [x] `uv run task precommit-run` を実行する
+
+### Review
+
+- `src/exstruct/edit/**` から `exstruct.mcp.*` import は排除した。acceptance criteria の `rg -n "exstruct\\.mcp" src/exstruct/edit` は 0 件になった。
+- `src/exstruct/edit/internal.py` を追加し、low-level patch implementation を edit-owned に移した。`edit.runtime` / `edit.service` / `edit.engine.*` はこの edit-owned implementation を使う。
+- `src/exstruct/edit/service.py` は `policy` 非依存の pure core orchestration に戻し、MCP 側の path canonicalization は `src/exstruct/mcp/patch/service.py` の compatibility path で吸収した。
+- `src/exstruct/mcp/patch/internal.py` は `exstruct.edit.internal` の typed compatibility shim に切り替え、repo 既存 tests が使う internal surface は維持した。
+- `tests/edit/test_architecture.py` を追加し、`edit` package の import graph と fresh import での MCP side-effect 非依存を固定した。
+- 恒久文書は `dev-docs/specs/editing-api.md`、`dev-docs/specs/data-model.md`、`dev-docs/architecture/overview.md`、`docs/mcp.md` に反映した。ADR verdict は継続して `not-needed`。
+- Verification:
+  - `uv run pytest tests/edit -q`
+  - `uv run pytest tests/mcp/test_patch_runner.py tests/mcp/test_make_runner.py tests/mcp/test_tools_handlers.py tests/mcp/test_server.py tests/mcp/patch -q`
+  - `uv run task precommit-run`
+
+## 2026-03-16 pytest collect collision follow-up
+
+### Planning
+
+- [x] `tests/edit/test_service.py` と `tests/mcp/patch/test_service.py` の collect 衝突を再現確認する
+- [x] edit 側 test module basename を一意な名前へ変更する
+- [x] `tasks/lessons.md` に pytest test module naming の再発防止ルールを記録する
+- [x] collect-only と関連 pytest を再実行して回帰がないことを確認する
+
+### Review
+
+- `uv run pytest tests/edit/test_service.py tests/mcp/patch/test_service.py --collect-only -q` で `import file mismatch` を再現し、指摘が妥当であることを確認した。
+- `tests/edit/test_service.py` は `tests/edit/test_edit_service.py` に rename し、`tests/mcp/patch/test_service.py` との basename 衝突を解消した。
+- 恒久ルールは `tasks/lessons.md` に移し、この section は session 記録として保持する。
+- Verification:
+  - `uv run pytest tests/edit/test_edit_service.py tests/mcp/patch/test_service.py --collect-only -q`
+  - `uv run pytest tests/edit tests/mcp/patch -q`
+  - `uv run task precommit-run`
+
+## 2026-03-16 issue #99 phase 3 MCP rewiring to public edit core
+
+### Planning
+
+- [x] `exstruct.edit` を workbook editing の canonical core にする Phase 3 境界を固定する
+- [x] `edit.models` を editing model の正本にし、`mcp.patch.models` を互換 shim に切り替える
+- [x] `edit.runtime` に backend 選択・conflict handling・make seed orchestration を集約する
+- [x] `edit.engine.*` を canonical engine boundary にし、`mcp.patch.engine.*` を互換 shim に寄せる
+- [x] `edit.service` に patch/make orchestration を移し、`mcp.patch.service` を edit-backed wrapper に整理する
+- [x] `mcp.patch_runner` で `PathPolicy` による path canonicalization と legacy monkeypatch override を吸収する
+- [x] `mcp.tools` / `mcp.server` は tool payload、default `on_conflict`、artifact mirroring、thread offload など host 責務のみを維持する
+- [x] core test と MCP shim test を分離して回帰を追加する
+- [x] `dev-docs/specs/editing-api.md`、`dev-docs/specs/data-model.md`、`dev-docs/architecture/overview.md`、`docs/mcp.md` を現行実装に合わせて更新する
+- [x] `uv run pytest tests/edit -q` を実行する
+- [x] `uv run pytest tests/mcp/test_patch_runner.py tests/mcp/test_make_runner.py tests/mcp/test_tools_handlers.py tests/mcp/test_server.py -q` を実行する
+- [x] `uv run pytest tests/mcp/patch -q` を実行する
+- [x] `uv run task precommit-run` を実行する
+
+### Review
+
+- `src/exstruct/edit/models.py` を canonical model 定義に切り替え、`src/exstruct/mcp/patch/models.py` は `edit.models` を再 export する shim に整理した。
+- `src/exstruct/edit/runtime.py` と `src/exstruct/edit/engine/*` を canonical core とし、`src/exstruct/mcp/patch/runtime.py` と `src/exstruct/mcp/patch/engine/*` は互換 shim に寄せた。
+- `src/exstruct/edit/service.py` に patch/make orchestration を置いたまま、public API の `policy` 非公開契約は `src/exstruct/edit/api.py` の wrapper で維持した。
+- `src/exstruct/mcp/patch_runner.py` は `get_com_availability` monkeypatch を `edit.runtime` と legacy internal の両方へ同期する compatibility facade に整理した。
+- `src/exstruct/mcp/patch/service.py` は legacy monkeypatch 先を `edit.service` / `edit.runtime` に伝播する wrapper として残し、既存 test monkeypatch 互換を維持した。
+- `tests/edit/test_edit_service.py` を追加し、COM 優先、auto fallback、make seed flow を core 観点で固定した。既存の `tests/mcp/*` は shim / host behavior 回帰として維持した。
+- 恒久情報は `dev-docs/specs/editing-api.md`、`dev-docs/specs/data-model.md`、`dev-docs/architecture/overview.md`、`docs/mcp.md` に反映済みで、今回の task section は session 記録として保持する。
+- ADR verdict は継続して `not-needed`。内部 ownership 移管であり、public contract / backend policy / safety boundary は変更していない。
+- Verification:
+  - `uv run pytest tests/edit -q`
+  - `uv run pytest tests/mcp/test_patch_runner.py tests/mcp/test_make_runner.py tests/mcp/test_tools_handlers.py tests/mcp/test_server.py -q`
+  - `uv run pytest tests/mcp/patch -q`
+  - `uv run task precommit-run`
+
 ## 2026-03-16 pr #103 unresolved review follow-up
 
 ### Planning

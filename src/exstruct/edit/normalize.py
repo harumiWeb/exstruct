@@ -6,8 +6,7 @@ from collections.abc import Sequence
 import json
 from typing import Any, cast
 
-from exstruct.mcp.shared.a1 import parse_range_geometry
-
+from .a1 import parse_range_geometry
 from .specs import get_alias_map_for_op
 
 
