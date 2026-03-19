@@ -121,6 +121,7 @@ MCP editing remains the integration layer around the public edit API.
 - `patch_runner.py` → compatibility facade for maintaining existing import paths and syncing host overrides
 - `patch/internal.py` → compatibility facade re-exporting edit-owned internal implementation
 - `patch/service.py` / `patch/runtime.py` / `patch/engine/*` → compatibility shims around `exstruct.edit`
+- Legacy monkeypatch compatibility in these shims should prefer live module lookup over copied function aliases, and override precedence should be verified at the highest public compatibility entrypoint.
 - `patch/ops/openpyxl_ops.py` / `patch/ops/xlwings_ops.py` → legacy op entry points kept for compatibility
 - `patch/normalize.py` / `patch/specs.py` → op normalization and spec metadata
 - `shared/a1.py` / `shared/output_path.py` → shared utilities for A1 notation and output paths
