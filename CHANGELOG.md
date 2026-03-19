@@ -4,6 +4,26 @@ All notable changes to this project are documented in this file. This changelog 
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-03-19
+
+### Added
+
+- Added a first-class public workbook editing API under `exstruct.edit`, including public patch/make entrypoints, shared patch-op schema helpers, and edit-owned request/result models.
+- Added public editing CLI commands under the existing `exstruct` console script: `patch`, `make`, `ops`, and `validate`.
+- Added maintainer-facing editing documentation coverage, including architecture/spec updates, ADR alignment, and agent workflow guidance that closes out issue `#99`.
+
+### Changed
+
+- Changed workbook editing layering so `exstruct.edit` is the canonical editing core while MCP remains a host-managed integration and compatibility layer.
+- Updated README and docs positioning to clarify canonical usage across Python, CLI, and MCP workflows, including dry-run guidance for editing operations.
+
+### Fixed
+
+- Fixed top-level `sheet` fallback handling for workbook editing requests while preserving `op.sheet` precedence.
+- Fixed legacy monkeypatch compatibility across `exstruct.mcp.patch_runner` and related compatibility shims by restoring live override visibility and entrypoint precedence coverage.
+- Fixed rename-reservation cleanup on openpyxl failure paths so placeholder output files are removed when apply fails.
+- Fixed dry-run, backend-selection, and CLI failure wording drift in the docs so it matches current runtime behavior.
+
 ## [0.6.1] - 2026-03-12
 
 ### Added
