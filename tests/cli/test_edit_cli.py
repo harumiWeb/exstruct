@@ -9,7 +9,6 @@ from openpyxl import Workbook, load_workbook
 from pydantic import BaseModel
 import pytest
 
-from exstruct.cli.availability import ComAvailability
 import exstruct.cli.edit as edit_cli_module
 from exstruct.cli.edit import is_edit_subcommand
 import exstruct.cli.main as cli_main_module
@@ -429,9 +428,7 @@ def test_validate_cli_returns_nonzero_when_validation_raises(
 
 
 def test_extraction_help_mentions_editing_commands() -> None:
-    help_text = build_parser(
-        availability=ComAvailability(available=False, reason="test")
-    ).format_help()
+    help_text = build_parser().format_help()
 
     assert "Editing commands:" in help_text
     assert "exstruct patch --input book.xlsx --ops ops.json" in help_text

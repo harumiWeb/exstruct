@@ -93,7 +93,7 @@ exstruct input.xlsx -o out.json --pretty   # write pretty JSON to a file
 exstruct input.xlsx --format yaml          # YAML (requires pyyaml)
 exstruct input.xlsx --format toon          # TOON (requires python-toon)
 exstruct input.xlsx --sheets-dir sheets/   # write one file per sheet
-exstruct input.xlsx --auto-page-breaks-dir auto_areas/  # COM only; shown only when available
+exstruct input.xlsx --auto-page-breaks-dir auto_areas/  # always shown; execution requires standard/verbose + Excel COM
 exstruct input.xlsx --alpha-col            # output column keys as A, B, ..., AA
 exstruct input.xlsx --include-backend-metadata  # include shape/chart backend metadata
 exstruct input.xlsx --mode light           # cells + table candidates only
@@ -101,8 +101,8 @@ exstruct input.xlsx --mode libreoffice     # best-effort extraction of shapes/co
 exstruct input.xlsx --pdf --image          # PDF and PNGs (Excel COM required)
 ```
 
-Auto page-break export is available from both the API and the CLI when Excel/COM is available. The CLI exposes `--auto-page-breaks-dir` only in COM-capable environments.
-`mode=libreoffice` rejects `--pdf`, `--image`, and `--auto-page-breaks-dir` early. Use `standard` or `verbose` with Excel COM for those features.
+Auto page-break export is available from both the API and the CLI when Excel/COM is available. The CLI always exposes `--auto-page-breaks-dir`, but validates it at execution time.
+`mode=libreoffice` rejects `--pdf`, `--image`, and `--auto-page-breaks-dir` early, and `mode=light` also rejects `--auto-page-breaks-dir`. Use `standard` or `verbose` with Excel COM for those features.
 By default, the CLI keeps legacy 0-based numeric string column keys (`"0"`, `"1"`, ...). Use `--alpha-col` when you need Excel-style keys (`"A"`, `"B"`, ...).
 By default, serialized shape/chart output omits backend metadata (`provenance`, `approximation_level`, `confidence`) to reduce token usage. Use `--include-backend-metadata` or the corresponding Python/MCP option when you need it.
 Note: MCP `exstruct_extract` defaults to `options.alpha_col=true`, which differs from the CLI default (`false`).

@@ -7,8 +7,9 @@ from pathlib import Path
 import sys
 
 from exstruct import process_excel
-from exstruct.cli.availability import ComAvailability, get_com_availability
+from exstruct.cli.availability import get_com_availability
 from exstruct.cli.edit import is_edit_subcommand, run_edit_cli
+from exstruct.constraints import validate_libreoffice_process_request
 
 
 def _ensure_utf8_stdout() -> None:
@@ -29,12 +30,8 @@ def _ensure_utf8_stdout() -> None:
         return
 
 
-def _add_auto_page_breaks_argument(
-    parser: argparse.ArgumentParser, availability: ComAvailability
-) -> None:
-    """Add auto page-break export option when COM is available."""
-    if not availability.available:
-        return
+def _add_auto_page_breaks_argument(parser: argparse.ArgumentParser) -> None:
+    """Add the auto page-break export option to the extraction CLI."""
     parser.add_argument(
         "--auto-page-breaks-dir",
         type=Path,
@@ -45,17 +42,8 @@ def _add_auto_page_breaks_argument(
     )
 
 
-def build_parser(
-    availability: ComAvailability | None = None,
-) -> argparse.ArgumentParser:
-    """Build the CLI argument parser.
-
-    Args:
-        availability: Optional COM availability for tests or overrides.
-
-    Returns:
-        Configured argument parser.
-    """
+def build_parser() -> argparse.ArgumentParser:
+    """Build the CLI argument parser."""
     parser = argparse.ArgumentParser(
         description="CLI for ExStruct extraction.",
         epilog=(
@@ -130,10 +118,7 @@ def build_parser(
         type=Path,
         help="Optional directory to write one file per print area (format follows --format).",
     )
-    resolved_availability = (
-        availability if availability is not None else get_com_availability()
-    )
-    _add_auto_page_breaks_argument(parser, resolved_availability)
+    _add_auto_page_breaks_argument(parser)
     parser.add_argument(
         "--alpha-col",
         action="store_true",
@@ -148,6 +133,36 @@ def build_parser(
         ),
     )
     return parser
+
+
+def _validate_auto_page_breaks_request(args: argparse.Namespace) -> None:
+    """Validate runtime requirements for auto page-break export."""
+    auto_page_breaks_dir = getattr(args, "auto_page_breaks_dir", None)
+    if auto_page_breaks_dir is None:
+        return
+
+    message = (
+        "--auto-page-breaks-dir requires --mode standard or --mode verbose "
+        "with Excel COM."
+    )
+    if args.mode == "libreoffice":
+        validate_libreoffice_process_request(
+            args.input,
+            mode=args.mode,
+            include_auto_page_breaks=True,
+            pdf=args.pdf,
+            image=args.image,
+        )
+        return
+    if args.mode == "light":
+        raise RuntimeError(message)
+
+    availability = get_com_availability()
+    if availability.available:
+        return
+
+    reason = f" Reason: {availability.reason}" if availability.reason else ""
+    raise RuntimeError(f"{message}{reason}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -173,6 +188,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     try:
+        _validate_auto_page_breaks_request(args)
         process_excel(
             file_path=input_path,
             output_path=args.output,

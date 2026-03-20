@@ -6,6 +6,7 @@ This document is a human-readable map for navigating ADRs by domain.
 
 - `ADR-0001` Extraction Mode Responsibility Boundaries (`accepted`)
 - `ADR-0002` Rich Backend Fallback Policy (`accepted`)
+- `ADR-0008` Extraction CLI Runtime Capability Validation (`accepted`)
 
 ## mode
 
@@ -33,6 +34,7 @@ This document is a human-readable map for navigating ADRs by domain.
 - `ADR-0003` Output Serialization Omission Policy (`accepted`)
 - `ADR-0004` Patch Backend Selection Policy (`accepted`)
 - `ADR-0007` Editing CLI as Public Operational Interface (`accepted`)
+- `ADR-0008` Extraction CLI Runtime Capability Validation (`accepted`)
 
 ## mcp
 
@@ -57,6 +59,7 @@ This document is a human-readable map for navigating ADRs by domain.
 ## cli
 
 - `ADR-0007` Editing CLI as Public Operational Interface (`accepted`)
+- `ADR-0008` Extraction CLI Runtime Capability Validation (`accepted`)
 
 ## Supersession Relationships
 

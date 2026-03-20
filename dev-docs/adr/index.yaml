@@ -102,3 +102,19 @@ adrs:
       - docs/api.md
       - README.md
       - README.ja.md
+  - id: ADR-0008
+    title: Extraction CLI Runtime Capability Validation
+    status: accepted
+    path: dev-docs/adr/ADR-0008-extraction-cli-runtime-capability-validation.md
+    primary_domain: cli
+    domains:
+      - cli
+      - extraction
+      - compatibility
+    supersedes: []
+    superseded_by: []
+    related_specs:
+      - docs/cli.md
+      - README.md
+      - README.ja.md
+      - dev-docs/specs/excel-extraction.md

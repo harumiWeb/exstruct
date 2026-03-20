@@ -120,6 +120,7 @@ empty workbook.
 | `--include-backend-metadata` | Include shape/chart backend metadata (`provenance`, `approximation_level`, `confidence`) in structured output. |
 | `--sheets-dir DIR` | Write one file per sheet (format follows `--format`). |
 | `--print-areas-dir DIR` | Write one file per print area (format follows `--format`). |
+| `--auto-page-breaks-dir DIR` | Write one file per auto page-break area. The flag is always shown in help, but execution requires `--mode standard` or `--mode verbose` with Excel COM. |
 
 ## Common workflows
 
@@ -157,6 +158,8 @@ exstruct sample.xlsx --pdf --image --dpi 144 -o out.json
   are usually the better fit.
 - On non-COM environments, prefer `--mode libreoffice` for best-effort rich extraction on `.xlsx/.xlsm`, or `--mode light` for minimal extraction.
 - `--mode libreoffice` is best-effort, not a strict subset of COM output. It does not render PDFs/PNGs and does not compute auto page-break areas in v1.
+- `--auto-page-breaks-dir` is always shown in help output and is validated at execution time.
 - `--mode libreoffice` combined with `--pdf`, `--image`, or `--auto-page-breaks-dir` fails early with a configuration error instead of silently ignoring the option.
+- `--mode light` also rejects `--auto-page-breaks-dir`; use `--mode standard` or `--mode verbose` with Excel COM for auto page-break export.
 - `--sheets-dir` and `--print-areas-dir` accept existing or new directories (created if missing).
 - `--alpha-col` switches row column keys from legacy numeric strings (`"0"`, `"1"`, ...) to Excel-style keys (`"A"`, `"B"`, ...). CLI default is disabled for backward compatibility.

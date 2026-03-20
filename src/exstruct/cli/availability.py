@@ -22,7 +22,7 @@ class ComAvailability(BaseModel):
 
 
 def get_com_availability() -> ComAvailability:
-    """Detect whether Excel COM is available for CLI features.
+    """Detect whether Excel COM is available for runtime CLI features.
 
     Returns:
         ComAvailability describing whether COM features can be used.

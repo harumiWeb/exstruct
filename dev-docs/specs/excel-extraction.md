@@ -56,6 +56,7 @@ What is extracted:
 
 - print_areas are retrieved via pre-com (openpyxl); COM only supplements missing parts
 - auto_page_breaks are retrieved via COM only
+- The extraction CLI always exposes auto page-break export syntax and validates the required mode/runtime at execution time instead of probing COM during parser construction
 
 ## Colors Map
 

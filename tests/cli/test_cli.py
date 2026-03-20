@@ -372,12 +372,17 @@ def test_cli_libreoffice_rejects_auto_page_breaks_dir(
 ) -> None:
     """Verify that the CLI rejects auto page-break export in LibreOffice mode."""
 
+    def _raise_process_excel(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("process_excel should not run for CLI-side rejection")
+
+    def _raise_com_probe() -> ComAvailability:
+        raise AssertionError("LibreOffice validation should not probe COM")
+
+    monkeypatch.setattr("exstruct.cli.main.process_excel", _raise_process_excel)
+    monkeypatch.setattr("exstruct.cli.main.get_com_availability", _raise_com_probe)
+
     xlsx = _prepare_sample_excel(tmp_path)
     auto_dir = tmp_path / "auto"
-    monkeypatch.setattr(
-        "exstruct.cli.main.get_com_availability",
-        lambda: ComAvailability(available=True, reason=None),
-    )
 
     result = _run_cli(
         [
@@ -399,12 +404,17 @@ def test_cli_libreoffice_rejects_rendering_and_auto_page_breaks(
 ) -> None:
     """Verify that the CLI LibreOffice rejects rendering and auto page breaks."""
 
+    def _raise_process_excel(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("process_excel should not run for CLI-side rejection")
+
+    def _raise_com_probe() -> ComAvailability:
+        raise AssertionError("LibreOffice validation should not probe COM")
+
+    monkeypatch.setattr("exstruct.cli.main.process_excel", _raise_process_excel)
+    monkeypatch.setattr("exstruct.cli.main.get_com_availability", _raise_com_probe)
+
     xlsx = _prepare_sample_excel(tmp_path)
     auto_dir = tmp_path / "auto"
-    monkeypatch.setattr(
-        "exstruct.cli.main.get_com_availability",
-        lambda: ComAvailability(available=True, reason=None),
-    )
 
     result = _run_cli(
         [
@@ -425,20 +435,106 @@ def test_cli_libreoffice_rejects_rendering_and_auto_page_breaks(
     )
 
 
-def test_cli_parser_includes_auto_page_breaks_option() -> None:
-    """Ensure the auto page-breaks option is registered when COM is available."""
-    availability = ComAvailability(available=True, reason=None)
-    parser = build_parser(availability=availability)
+def test_cli_parser_always_includes_auto_page_breaks_option() -> None:
+    """Ensure the auto page-breaks option is always registered."""
+    parser = build_parser()
     help_text = parser.format_help()
     assert "--auto-page-breaks-dir" in help_text
 
 
-def test_cli_parser_excludes_auto_page_breaks_option() -> None:
-    """Ensure the auto page-breaks option is hidden when COM is unavailable."""
-    availability = ComAvailability(available=False, reason="disabled")
-    parser = build_parser(availability=availability)
+def test_cli_parser_help_does_not_probe_com_availability(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Ensure help generation never triggers COM availability probing."""
+
+    def _raise() -> ComAvailability:
+        raise AssertionError("get_com_availability should not run during help setup")
+
+    monkeypatch.setattr("exstruct.cli.main.get_com_availability", _raise)
+
+    parser = build_parser()
     help_text = parser.format_help()
-    assert "--auto-page-breaks-dir" not in help_text
+    assert "--auto-page-breaks-dir" in help_text
+
+
+def test_cli_main_help_does_not_probe_com_availability(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Ensure the main help entrypoint never triggers COM availability probing."""
+
+    def _raise() -> ComAvailability:
+        raise AssertionError("get_com_availability should not run during --help")
+
+    monkeypatch.setattr("exstruct.cli.main.get_com_availability", _raise)
+
+    stdout_buffer = io.StringIO()
+    with redirect_stdout(stdout_buffer), pytest.raises(SystemExit) as exc_info:
+        cli_main(["--help"])
+
+    assert exc_info.value.code == 0
+    assert "--auto-page-breaks-dir" in stdout_buffer.getvalue()
+
+
+def test_cli_auto_page_breaks_rejects_light_mode(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify that light mode rejects auto page-break export explicitly."""
+
+    def _raise() -> ComAvailability:
+        raise AssertionError("light mode validation should not probe COM")
+
+    monkeypatch.setattr("exstruct.cli.main.get_com_availability", _raise)
+
+    xlsx = _prepare_sample_excel(tmp_path)
+    auto_dir = tmp_path / "auto"
+    result = _run_cli(
+        [
+            str(xlsx),
+            "--mode",
+            "light",
+            "--auto-page-breaks-dir",
+            str(auto_dir),
+        ]
+    )
+
+    assert result.returncode == 1
+    combined_output = _stdout_text(result) + _stderr_text(result)
+    assert (
+        "--auto-page-breaks-dir requires --mode standard or --mode verbose "
+        "with Excel COM."
+    ) in combined_output
+
+
+@pytest.mark.parametrize("mode", ["standard", "verbose"])  # type: ignore[misc]
+def test_cli_auto_page_breaks_requires_com_at_runtime(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mode: str
+) -> None:
+    """Verify that auto page-break export fails clearly when COM is unavailable."""
+
+    xlsx = _prepare_sample_excel(tmp_path)
+    auto_dir = tmp_path / "auto"
+    monkeypatch.setattr(
+        "exstruct.cli.main.get_com_availability",
+        lambda: ComAvailability(available=False, reason="Non-Windows platform."),
+    )
+
+    result = _run_cli(
+        [
+            str(xlsx),
+            "--mode",
+            mode,
+            "--auto-page-breaks-dir",
+            str(auto_dir),
+        ]
+    )
+
+    assert result.returncode == 1
+    combined_output = _stdout_text(result) + _stderr_text(result)
+    assert (
+        "--auto-page-breaks-dir requires --mode standard or --mode verbose "
+        "with Excel COM."
+    ) in combined_output
+    assert "Reason: Non-Windows platform." in combined_output
 
 
 def test_CLI_stdout_is_utf8_with_cp932_env(tmp_path: Path) -> None:
