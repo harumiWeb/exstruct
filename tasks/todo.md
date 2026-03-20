@@ -118,3 +118,37 @@
   - `uv run pytest tests/cli/test_cli.py -q`
   - `uv run task precommit-run`
   - `git diff --check`
+
+## 2026-03-20 issue #108 CLI startup lazy import optimization
+
+### Planning
+
+- [x] Confirm issue `#108` details with `gh issue view 108`.
+- [x] Inspect current import paths in `src/exstruct/__init__.py`, `src/exstruct/edit/__init__.py`, `src/exstruct/cli/main.py`, and `src/exstruct/cli/edit.py`.
+- [x] Classify ADR need for the startup optimization work.
+- [x] Add the issue `#108` working spec to `tasks/feature_spec.md`.
+- [x] Refactor `src/exstruct/__init__.py` to defer heavy imports while preserving exported symbol names.
+- [x] Refactor `src/exstruct/edit/__init__.py` to defer heavy imports while preserving exported symbol names.
+- [x] Refactor `src/exstruct/cli/main.py` so edit/extraction implementations load only after routing is known.
+- [x] Refactor `src/exstruct/cli/edit.py` so `ops` commands avoid extraction-path imports and handler-specific dependencies load lazily.
+- [x] Add regression tests for startup import isolation and existing CLI behavior.
+- [x] Update `dev-docs/architecture/overview.md` with the lightweight-startup import rule.
+- [x] Run targeted pytest for CLI/startup coverage.
+- [x] Run `uv run task precommit-run`.
+- [x] Record final verification and retention notes in this Review section.
+
+### Review
+
+- `src/exstruct/__init__.py` now keeps the public export surface but resolves heavy extraction/runtime symbols lazily, so importing `exstruct` no longer front-loads extraction engine modules for CLI startup.
+- `src/exstruct/edit/__init__.py` now resolves editing exports lazily, which lets CLI code import edit submodules without paying the full patch-service import cost up front.
+- `src/exstruct/cli/main.py` now keeps monkeypatch-compatible wrappers for `process_excel`, `get_com_availability`, `is_edit_subcommand`, and `run_edit_cli`, but loads the underlying implementations only after routing demands them.
+- `src/exstruct/cli/edit.py` now keeps monkeypatch-compatible wrappers for `patch_workbook`, `make_workbook`, `resolve_top_level_sheet_for_payload`, and `validate_input`, while `ops` commands load only schema metadata and avoid dragging the extraction path into startup.
+- `tests/cli/test_cli_lazy_imports.py` now locks the startup boundary with subprocess `sys.modules` probes for `import exstruct`, `import exstruct.cli.main`, `import exstruct.cli.edit`, and `main(["ops", "list"])`.
+- `dev-docs/architecture/overview.md` now records the durable rule that package `__init__` files and lightweight CLI startup paths must remain side-effect-free.
+- Retention decision:
+  - No new ADR was added. The change preserves the public contract and only changes import timing, so the durable guidance lives in `dev-docs/architecture/overview.md`.
+  - The temporary working record for implementation order and verification remains limited to this section in `tasks/feature_spec.md` and `tasks/todo.md`.
+- Verification:
+  - `uv run pytest tests/cli/test_cli.py tests/cli/test_edit_cli.py tests/cli/test_cli_lazy_imports.py tests/edit/test_architecture.py -q`
+  - `uv run task precommit-run`
+  - manual `-X importtime` sanity probe for `-m exstruct.cli.main --help` and `-m exstruct.cli.main ops list`

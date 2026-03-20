@@ -3,26 +3,15 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Callable
+from functools import lru_cache
+from importlib import import_module
 import json
 from pathlib import Path
 import sys
-from typing import Any, get_args
+from typing import Any, cast, get_args
 
 from pydantic import BaseModel, ValidationError
-
-from exstruct.edit import (
-    MakeRequest,
-    OnConflictPolicy,
-    PatchBackend,
-    PatchOp,
-    PatchRequest,
-    get_patch_op_schema,
-    list_patch_op_schemas,
-    make_workbook,
-    patch_workbook,
-    resolve_top_level_sheet_for_payload,
-)
-from exstruct.mcp.validate_input import ValidateInputRequest, validate_input
 
 _EDIT_SUBCOMMANDS = frozenset({"patch", "make", "ops", "validate"})
 _EXPLICIT_EDIT_TOKENS: dict[str, frozenset[str]] = {
@@ -60,6 +49,46 @@ _EXPLICIT_EDIT_TOKENS: dict[str, frozenset[str]] = {
 }
 
 
+def _load_symbol(module_name: str, attr_name: str) -> object:
+    return getattr(import_module(module_name), attr_name)
+
+
+def patch_workbook(request: object) -> object:
+    """Compatibility wrapper that resolves patch execution lazily."""
+
+    return cast(
+        Callable[[object], object],
+        _load_symbol("exstruct.edit.api", "patch_workbook"),
+    )(request)
+
+
+def make_workbook(request: object) -> object:
+    """Compatibility wrapper that resolves make execution lazily."""
+
+    return cast(
+        Callable[[object], object],
+        _load_symbol("exstruct.edit.api", "make_workbook"),
+    )(request)
+
+
+def resolve_top_level_sheet_for_payload(payload: object) -> object:
+    """Compatibility wrapper that resolves payload normalization lazily."""
+
+    return cast(
+        Callable[[object], object],
+        _load_symbol("exstruct.edit.normalize", "resolve_top_level_sheet_for_payload"),
+    )(payload)
+
+
+def validate_input(request: object) -> object:
+    """Compatibility wrapper that resolves validate execution lazily."""
+
+    return cast(
+        Callable[[object], object],
+        _load_symbol("exstruct.mcp.validate_input", "validate_input"),
+    )(request)
+
+
 def _literal_choices(literal_type: object) -> tuple[str, ...]:
     """Return argparse choices derived from one string Literal type."""
 
@@ -71,8 +100,14 @@ def _literal_choices(literal_type: object) -> tuple[str, ...]:
     return tuple(choices)
 
 
-_ON_CONFLICT_CHOICES = _literal_choices(OnConflictPolicy)
-_BACKEND_CHOICES = _literal_choices(PatchBackend)
+@lru_cache(maxsize=1)
+def _on_conflict_choices() -> tuple[str, ...]:
+    return _literal_choices(_load_symbol("exstruct.edit.types", "OnConflictPolicy"))
+
+
+@lru_cache(maxsize=1)
+def _backend_choices() -> tuple[str, ...]:
+    return _literal_choices(_load_symbol("exstruct.edit.types", "PatchBackend"))
 
 
 def is_edit_subcommand(argv: list[str]) -> bool:
@@ -224,13 +259,13 @@ def _add_patch_like_arguments(
     parser.add_argument("--sheet", help="Top-level sheet fallback for patch ops.")
     parser.add_argument(
         "--on-conflict",
-        choices=_ON_CONFLICT_CHOICES,
+        choices=_on_conflict_choices(),
         default="overwrite",
         help="Conflict policy for output workbook paths.",
     )
     parser.add_argument(
         "--backend",
-        choices=_BACKEND_CHOICES,
+        choices=_backend_choices(),
         default="auto",
         help="Patch backend selection policy.",
     )
@@ -266,6 +301,10 @@ def _run_patch_command(args: argparse.Namespace) -> int:
 
     try:
         ops = _load_patch_ops(args.ops, sheet=args.sheet)
+        patch_request_model = cast(
+            Callable[..., object],
+            _load_symbol("exstruct.edit.models", "PatchRequest"),
+        )
         request_kwargs: dict[str, Any] = {
             "xlsx_path": args.input,
             "ops": ops,
@@ -280,8 +319,8 @@ def _run_patch_command(args: argparse.Namespace) -> int:
         if args.output is not None:
             request_kwargs["out_dir"] = args.output.parent
             request_kwargs["out_name"] = args.output.name
-        request = PatchRequest(**request_kwargs)
-        result = patch_workbook(request)
+        request = patch_request_model(**request_kwargs)
+        result = cast(Any, patch_workbook(request))
     except (OSError, RuntimeError, ValidationError, ValueError) as exc:
         _print_error(exc)
         return 1
@@ -295,7 +334,11 @@ def _run_make_command(args: argparse.Namespace) -> int:
 
     try:
         ops = _load_patch_ops(args.ops, sheet=args.sheet)
-        request = MakeRequest(
+        make_request_model = cast(
+            Callable[..., object],
+            _load_symbol("exstruct.edit.models", "MakeRequest"),
+        )
+        request = make_request_model(
             out_path=args.output,
             ops=ops,
             sheet=args.sheet,
@@ -306,7 +349,7 @@ def _run_make_command(args: argparse.Namespace) -> int:
             preflight_formula_check=args.preflight_formula_check,
             backend=args.backend,
         )
-        result = make_workbook(request)
+        result = cast(Any, make_workbook(request))
     except (OSError, RuntimeError, ValidationError, ValueError) as exc:
         _print_error(exc)
         return 1
@@ -318,10 +361,14 @@ def _run_make_command(args: argparse.Namespace) -> int:
 def _run_ops_list_command(args: argparse.Namespace) -> int:
     """Execute the ops list subcommand."""
 
+    list_patch_op_schemas = cast(
+        Callable[[], list[object]],
+        _load_symbol("exstruct.edit.op_schema", "list_patch_op_schemas"),
+    )
+    schemas = cast(Any, list_patch_op_schemas())
     payload = {
         "ops": [
-            {"op": schema.op, "description": schema.description}
-            for schema in list_patch_op_schemas()
+            {"op": schema.op, "description": schema.description} for schema in schemas
         ]
     }
     _print_json_payload(payload, pretty=args.pretty)
@@ -331,7 +378,11 @@ def _run_ops_list_command(args: argparse.Namespace) -> int:
 def _run_ops_describe_command(args: argparse.Namespace) -> int:
     """Execute the ops describe subcommand."""
 
-    schema = get_patch_op_schema(args.op)
+    get_patch_op_schema = cast(
+        Callable[[str], object | None],
+        _load_symbol("exstruct.edit.op_schema", "get_patch_op_schema"),
+    )
+    schema = cast(Any, get_patch_op_schema(args.op))
     if schema is None:
         _print_error(ValueError(f"Unknown patch operation: {args.op}"))
         return 1
@@ -343,7 +394,17 @@ def _run_validate_command(args: argparse.Namespace) -> int:
     """Execute the validate subcommand."""
 
     try:
-        result = validate_input(ValidateInputRequest(xlsx_path=args.input))
+        validate_input_request_model = cast(
+            Callable[..., object],
+            _load_symbol(
+                "exstruct.mcp.validate_input",
+                "ValidateInputRequest",
+            ),
+        )
+        result = cast(
+            Any,
+            validate_input(validate_input_request_model(xlsx_path=args.input)),
+        )
     except (OSError, ValidationError, ValueError) as exc:
         _print_error(exc)
         return 1
@@ -352,7 +413,7 @@ def _run_validate_command(args: argparse.Namespace) -> int:
     return 0 if result.is_readable else 1
 
 
-def _load_patch_ops(source: str | None, *, sheet: str | None = None) -> list[PatchOp]:
+def _load_patch_ops(source: str | None, *, sheet: str | None = None) -> list[Any]:
     """Load patch ops from a JSON file or stdin."""
 
     if source is None:
@@ -368,7 +429,11 @@ def _load_patch_ops(source: str | None, *, sheet: str | None = None) -> list[Pat
     resolved_ops = resolved_payload.get("ops")
     if not isinstance(resolved_ops, list):
         raise ValueError("Resolved patch ops payload must contain an ops list.")
-    return [PatchOp(**op_payload) for op_payload in resolved_ops]
+    patch_op_model = cast(
+        Callable[..., object],
+        _load_symbol("exstruct.edit.models", "PatchOp"),
+    )
+    return [patch_op_model(**op_payload) for op_payload in resolved_ops]
 
 
 def _load_json_value(source: str) -> object:

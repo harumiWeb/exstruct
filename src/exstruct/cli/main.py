@@ -3,13 +3,72 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Callable
+from importlib import import_module
 from pathlib import Path
 import sys
+from typing import TYPE_CHECKING, cast
 
-from exstruct import process_excel
-from exstruct.cli.availability import get_com_availability
-from exstruct.cli.edit import is_edit_subcommand, run_edit_cli
-from exstruct.constraints import validate_libreoffice_process_request
+if TYPE_CHECKING:
+    from exstruct.cli.availability import ComAvailability
+
+ProcessExcelFn = Callable[..., None]
+EditPredicateFn = Callable[[list[str]], bool]
+RunEditCliFn = Callable[[list[str]], int]
+ComAvailabilityFn = Callable[[], "ComAvailability"]
+LibreOfficeValidatorFn = Callable[..., Path]
+
+
+def _load_process_excel() -> ProcessExcelFn:
+    module = import_module("exstruct")
+    return cast(ProcessExcelFn, module.process_excel)
+
+
+def _load_is_edit_subcommand() -> EditPredicateFn:
+    module = import_module("exstruct.cli.edit")
+    return cast(EditPredicateFn, module.is_edit_subcommand)
+
+
+def _load_run_edit_cli() -> RunEditCliFn:
+    module = import_module("exstruct.cli.edit")
+    return cast(RunEditCliFn, module.run_edit_cli)
+
+
+def _load_get_com_availability() -> ComAvailabilityFn:
+    module = import_module("exstruct.cli.availability")
+    return cast(ComAvailabilityFn, module.get_com_availability)
+
+
+def _load_libreoffice_validator() -> LibreOfficeValidatorFn:
+    module = import_module("exstruct.constraints")
+    return cast(
+        LibreOfficeValidatorFn,
+        module.validate_libreoffice_process_request,
+    )
+
+
+def process_excel(*args: object, **kwargs: object) -> None:
+    """Compatibility wrapper that resolves `exstruct.process_excel` lazily."""
+
+    _load_process_excel()(*args, **kwargs)
+
+
+def is_edit_subcommand(argv: list[str]) -> bool:
+    """Compatibility wrapper that resolves the edit router lazily."""
+
+    return _load_is_edit_subcommand()(argv)
+
+
+def run_edit_cli(argv: list[str]) -> int:
+    """Compatibility wrapper that resolves the edit CLI lazily."""
+
+    return _load_run_edit_cli()(argv)
+
+
+def get_com_availability() -> ComAvailability:
+    """Compatibility wrapper that resolves COM probing lazily."""
+
+    return _load_get_com_availability()()
 
 
 def _ensure_utf8_stdout() -> None:
@@ -147,7 +206,7 @@ def _validate_auto_page_breaks_request(args: argparse.Namespace) -> None:
         "with Excel COM."
     )
     if args.mode == "libreoffice":
-        validate_libreoffice_process_request(
+        _load_libreoffice_validator()(
             args.input,
             mode=args.mode,
             include_auto_page_breaks=True,
@@ -206,8 +265,8 @@ def main(argv: list[str] | None = None) -> int:
             include_backend_metadata=args.include_backend_metadata,
         )
         return 0
-    except Exception as e:
-        print(f"Error: {e}", flush=True)
+    except Exception as exc:
+        print(f"Error: {exc}", flush=True)
         return 1
 
 

@@ -167,3 +167,69 @@
 
 - `not-needed`
 - rationale: this is a wording-only follow-up under the existing `ADR-0008` decision.
+
+## 2026-03-20 issue #108 CLI startup lazy import optimization
+
+### Goal
+
+- Reduce startup import cost for lightweight CLI paths such as `exstruct --help` and `exstruct ops list`.
+- Keep the existing extraction and editing CLI contracts unchanged while delaying heavy implementation imports until routing is known.
+- Preserve the current module-level monkeypatch surfaces used by the CLI test suite.
+
+### Public contract
+
+- `exstruct --help` and parser construction keep the current CLI syntax, help text, and exit behavior.
+- `exstruct ops list` and `exstruct ops describe` keep their current output shape and exit behavior.
+- Extraction invocations still call `process_excel(...)` with the same arguments and keep current file-not-found and auto page-break validation behavior.
+- Public Python symbol names exported from `exstruct` and `exstruct.edit` remain unchanged; only their import timing changes.
+
+### Internal implementation guarantees
+
+- `src/exstruct/__init__.py` must not eagerly import extraction engine, IO, render, or model modules during package import; convenience functions may import those dependencies inside function bodies.
+- `src/exstruct/edit/__init__.py` must not eagerly import editing service/runtime/model modules during package import; exported names should resolve lazily.
+- `src/exstruct/cli/main.py` must route edit vs extraction commands before importing edit/extraction implementations.
+- `src/exstruct/cli/edit.py` must not import `exstruct.mcp.validate_input` or editing execution helpers at module import time; command handlers load only the functionality they need.
+- Existing CLI module patch points (`process_excel`, `get_com_availability`, `is_edit_subcommand`, `run_edit_cli`, `patch_workbook`, `make_workbook`, `resolve_top_level_sheet_for_payload`, `validate_input`) remain present as thin wrappers.
+
+### Scope and non-goals
+
+- In scope:
+  - `src/exstruct/__init__.py`
+  - `src/exstruct/edit/__init__.py`
+  - `src/exstruct/cli/main.py`
+  - `src/exstruct/cli/edit.py`
+  - targeted tests and one architecture note
+- Out of scope:
+  - changing CLI syntax, help wording, or JSON contracts
+  - changing backend selection policy
+  - optimizing `exstruct validate` startup beyond removing it from the `ops` path
+  - refactoring `src/exstruct/mcp/__init__.py` unless required by failing tests on the `ops` path
+
+### Permanent destinations
+
+- `dev-docs/architecture/overview.md`
+  - Records that package `__init__` files and lightweight CLI startup paths must remain side-effect-free and defer heavy imports.
+- `tasks/feature_spec.md` and `tasks/todo.md`
+  - Keep the temporary implementation/verification record for this issue.
+- `dev-docs/adr/`
+  - No new ADR is planned; this issue changes import timing only and does not alter the public contract or policy.
+
+### Verification plan
+
+- `tests/cli/test_cli.py`
+  - help and extraction routing still behave the same
+  - lightweight startup paths do not eagerly load edit/extraction implementation modules
+- `tests/cli/test_edit_cli.py`
+  - `ops list` / `ops describe` do not depend on extraction import paths
+  - existing monkeypatch-based tests still pass
+- `tests/edit/test_architecture.py` or a focused startup test module
+  - `import exstruct` does not eagerly load extraction engine modules
+  - `import exstruct.cli.edit` does not eagerly load `exstruct.mcp` / `exstruct.mcp.extract_runner`
+- `uv run pytest tests/cli/test_cli.py tests/cli/test_edit_cli.py tests/edit/test_architecture.py -q`
+- `uv run task precommit-run`
+- manual importtime sanity checks for `--help` and `ops list`
+
+### ADR verdict
+
+- `not-needed`
+- rationale: this is a startup-focused internal refactor that preserves existing CLI/API contracts and backend policy. The durable guidance belongs in architecture notes rather than a new policy ADR.
