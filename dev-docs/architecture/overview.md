@@ -98,6 +98,10 @@ CLI entry point
   `validate`
 - `edit.py` contains the Phase 2 editing parser, JSON serialization helpers,
   and wrappers around `exstruct.edit`
+- `exstruct.__init__`, `exstruct.edit.__init__`, and lightweight CLI startup
+  paths must remain side-effect-free: `--help` and `ops` routing should defer
+  heavy extraction/edit implementation imports until command execution needs
+  them
 
 ### edit/
 

@@ -3,26 +3,12 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Callable
+from functools import lru_cache
 import json
 from pathlib import Path
 import sys
-from typing import Any, get_args
-
-from pydantic import BaseModel, ValidationError
-
-from exstruct.edit import (
-    MakeRequest,
-    OnConflictPolicy,
-    PatchBackend,
-    PatchOp,
-    PatchRequest,
-    get_patch_op_schema,
-    list_patch_op_schemas,
-    make_workbook,
-    patch_workbook,
-    resolve_top_level_sheet_for_payload,
-)
-from exstruct.mcp.validate_input import ValidateInputRequest, validate_input
+from typing import Any, cast, get_args
 
 _EDIT_SUBCOMMANDS = frozenset({"patch", "make", "ops", "validate"})
 _EXPLICIT_EDIT_TOKENS: dict[str, frozenset[str]] = {
@@ -60,6 +46,120 @@ _EXPLICIT_EDIT_TOKENS: dict[str, frozenset[str]] = {
 }
 
 
+def _load_patch_workbook_impl() -> Callable[[object], object]:
+    from exstruct.edit.api import patch_workbook as patch_workbook_impl
+
+    return cast(Callable[[object], object], patch_workbook_impl)
+
+
+def _load_make_workbook_impl() -> Callable[[object], object]:
+    from exstruct.edit.api import make_workbook as make_workbook_impl
+
+    return cast(Callable[[object], object], make_workbook_impl)
+
+
+def _load_resolve_top_level_sheet_for_payload_impl() -> Callable[[object], object]:
+    from exstruct.edit.normalize import (
+        resolve_top_level_sheet_for_payload as resolve_top_level_sheet_for_payload_impl,
+    )
+
+    return cast(Callable[[object], object], resolve_top_level_sheet_for_payload_impl)
+
+
+def _load_validate_input_impl() -> Callable[[object], object]:
+    from exstruct.mcp.validate_input import validate_input as validate_input_impl
+
+    return cast(Callable[[object], object], validate_input_impl)
+
+
+def _load_on_conflict_policy_literal() -> object:
+    from exstruct.edit.types import OnConflictPolicy
+
+    return OnConflictPolicy
+
+
+def _load_patch_backend_literal() -> object:
+    from exstruct.edit.types import PatchBackend
+
+    return PatchBackend
+
+
+def _load_patch_request_model() -> Callable[..., object]:
+    from exstruct.edit.models import PatchRequest
+
+    return cast(Callable[..., object], PatchRequest)
+
+
+def _load_make_request_model() -> Callable[..., object]:
+    from exstruct.edit.models import MakeRequest
+
+    return cast(Callable[..., object], MakeRequest)
+
+
+def _load_patch_op_model() -> Callable[..., object]:
+    from exstruct.edit.models import PatchOp
+
+    return cast(Callable[..., object], PatchOp)
+
+
+def _load_list_patch_op_schemas() -> Callable[[], list[object]]:
+    from exstruct.edit.op_schema import list_patch_op_schemas
+
+    return cast(Callable[[], list[object]], list_patch_op_schemas)
+
+
+def _load_get_patch_op_schema() -> Callable[[str], object | None]:
+    from exstruct.edit.op_schema import get_patch_op_schema
+
+    return cast(Callable[[str], object | None], get_patch_op_schema)
+
+
+def _load_validate_input_request_model() -> Callable[..., object]:
+    from exstruct.mcp.validate_input import ValidateInputRequest
+
+    return cast(Callable[..., object], ValidateInputRequest)
+
+
+def _is_validation_error(exc: Exception) -> bool:
+    from pydantic import ValidationError
+
+    return isinstance(exc, ValidationError)
+
+
+def _is_cli_runtime_error(exc: Exception) -> bool:
+    return isinstance(exc, OSError | RuntimeError | ValueError) or _is_validation_error(
+        exc
+    )
+
+
+def _is_validate_cli_error(exc: Exception) -> bool:
+    return isinstance(exc, OSError | ValueError) or _is_validation_error(exc)
+
+
+def patch_workbook(request: object) -> object:
+    """Compatibility wrapper that resolves patch execution lazily."""
+
+    return _load_patch_workbook_impl()(request)
+
+
+def make_workbook(request: object) -> object:
+    """Compatibility wrapper that resolves make execution lazily."""
+
+    return _load_make_workbook_impl()(request)
+
+
+def resolve_top_level_sheet_for_payload(payload: object) -> object:
+    """Compatibility wrapper that resolves payload normalization lazily."""
+
+    return _load_resolve_top_level_sheet_for_payload_impl()(payload)
+
+
+def validate_input(request: object) -> object:
+    """Compatibility wrapper that resolves validate execution lazily."""
+
+    return _load_validate_input_impl()(request)
+
+
 def _literal_choices(literal_type: object) -> tuple[str, ...]:
     """Return argparse choices derived from one string Literal type."""
 
@@ -71,8 +171,14 @@ def _literal_choices(literal_type: object) -> tuple[str, ...]:
     return tuple(choices)
 
 
-_ON_CONFLICT_CHOICES = _literal_choices(OnConflictPolicy)
-_BACKEND_CHOICES = _literal_choices(PatchBackend)
+@lru_cache(maxsize=1)
+def _on_conflict_choices() -> tuple[str, ...]:
+    return _literal_choices(_load_on_conflict_policy_literal())
+
+
+@lru_cache(maxsize=1)
+def _backend_choices() -> tuple[str, ...]:
+    return _literal_choices(_load_patch_backend_literal())
 
 
 def is_edit_subcommand(argv: list[str]) -> bool:
@@ -224,13 +330,13 @@ def _add_patch_like_arguments(
     parser.add_argument("--sheet", help="Top-level sheet fallback for patch ops.")
     parser.add_argument(
         "--on-conflict",
-        choices=_ON_CONFLICT_CHOICES,
+        choices=_on_conflict_choices(),
         default="overwrite",
         help="Conflict policy for output workbook paths.",
     )
     parser.add_argument(
         "--backend",
-        choices=_BACKEND_CHOICES,
+        choices=_backend_choices(),
         default="auto",
         help="Patch backend selection policy.",
     )
@@ -280,9 +386,11 @@ def _run_patch_command(args: argparse.Namespace) -> int:
         if args.output is not None:
             request_kwargs["out_dir"] = args.output.parent
             request_kwargs["out_name"] = args.output.name
-        request = PatchRequest(**request_kwargs)
-        result = patch_workbook(request)
-    except (OSError, RuntimeError, ValidationError, ValueError) as exc:
+        request = _load_patch_request_model()(**request_kwargs)
+        result = cast(Any, patch_workbook(request))
+    except Exception as exc:
+        if not _is_cli_runtime_error(exc):
+            raise
         _print_error(exc)
         return 1
 
@@ -295,7 +403,7 @@ def _run_make_command(args: argparse.Namespace) -> int:
 
     try:
         ops = _load_patch_ops(args.ops, sheet=args.sheet)
-        request = MakeRequest(
+        request = _load_make_request_model()(
             out_path=args.output,
             ops=ops,
             sheet=args.sheet,
@@ -306,8 +414,10 @@ def _run_make_command(args: argparse.Namespace) -> int:
             preflight_formula_check=args.preflight_formula_check,
             backend=args.backend,
         )
-        result = make_workbook(request)
-    except (OSError, RuntimeError, ValidationError, ValueError) as exc:
+        result = cast(Any, make_workbook(request))
+    except Exception as exc:
+        if not _is_cli_runtime_error(exc):
+            raise
         _print_error(exc)
         return 1
 
@@ -318,10 +428,10 @@ def _run_make_command(args: argparse.Namespace) -> int:
 def _run_ops_list_command(args: argparse.Namespace) -> int:
     """Execute the ops list subcommand."""
 
+    schemas = cast(Any, _load_list_patch_op_schemas()())
     payload = {
         "ops": [
-            {"op": schema.op, "description": schema.description}
-            for schema in list_patch_op_schemas()
+            {"op": schema.op, "description": schema.description} for schema in schemas
         ]
     }
     _print_json_payload(payload, pretty=args.pretty)
@@ -331,7 +441,7 @@ def _run_ops_list_command(args: argparse.Namespace) -> int:
 def _run_ops_describe_command(args: argparse.Namespace) -> int:
     """Execute the ops describe subcommand."""
 
-    schema = get_patch_op_schema(args.op)
+    schema = cast(Any, _load_get_patch_op_schema()(args.op))
     if schema is None:
         _print_error(ValueError(f"Unknown patch operation: {args.op}"))
         return 1
@@ -343,8 +453,13 @@ def _run_validate_command(args: argparse.Namespace) -> int:
     """Execute the validate subcommand."""
 
     try:
-        result = validate_input(ValidateInputRequest(xlsx_path=args.input))
-    except (OSError, ValidationError, ValueError) as exc:
+        result = cast(
+            Any,
+            validate_input(_load_validate_input_request_model()(xlsx_path=args.input)),
+        )
+    except Exception as exc:
+        if not _is_validate_cli_error(exc):
+            raise
         _print_error(exc)
         return 1
 
@@ -352,7 +467,7 @@ def _run_validate_command(args: argparse.Namespace) -> int:
     return 0 if result.is_readable else 1
 
 
-def _load_patch_ops(source: str | None, *, sheet: str | None = None) -> list[PatchOp]:
+def _load_patch_ops(source: str | None, *, sheet: str | None = None) -> list[Any]:
     """Load patch ops from a JSON file or stdin."""
 
     if source is None:
@@ -368,7 +483,8 @@ def _load_patch_ops(source: str | None, *, sheet: str | None = None) -> list[Pat
     resolved_ops = resolved_payload.get("ops")
     if not isinstance(resolved_ops, list):
         raise ValueError("Resolved patch ops payload must contain an ops list.")
-    return [PatchOp(**op_payload) for op_payload in resolved_ops]
+    patch_op_model = _load_patch_op_model()
+    return [patch_op_model(**op_payload) for op_payload in resolved_ops]
 
 
 def _load_json_value(source: str) -> object:
@@ -388,10 +504,8 @@ def _print_json_payload(payload: object, *, pretty: bool) -> None:
     """Serialize one JSON payload to stdout."""
 
     serializable: object
-    if isinstance(payload, BaseModel):
-        serializable = payload.model_dump(mode="json")
-    else:
-        serializable = payload
+    model_dump = getattr(payload, "model_dump", None)
+    serializable = model_dump(mode="json") if callable(model_dump) else payload
     print(
         json.dumps(
             serializable,

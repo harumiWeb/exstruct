@@ -427,6 +427,21 @@ def test_validate_cli_returns_nonzero_when_validation_raises(
     assert "Error: boom" in result.stderr
 
 
+def test_validate_cli_propagates_runtime_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "input.xlsx"
+    path.write_bytes(b"x")
+
+    def _raise_runtime_error(_request: object) -> object:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(edit_cli_module, "validate_input", _raise_runtime_error)
+
+    with pytest.raises(RuntimeError, match="boom"):
+        _run_cli(["validate", "--input", str(path)])
+
+
 def test_extraction_help_mentions_editing_commands() -> None:
     help_text = build_parser().format_help()
 

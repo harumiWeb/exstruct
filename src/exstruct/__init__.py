@@ -2,53 +2,47 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import logging
 from pathlib import Path
-from typing import Literal, TextIO
+from typing import TYPE_CHECKING, Literal, TextIO
 
-from .core.cells import set_table_detection_params
-from .core.integrate import extract_workbook
-from .engine import (
-    ColorsOptions,
-    DestinationOptions,
-    ExStructEngine,
-    FilterOptions,
-    FormatOptions,
-    OutputOptions,
-    StructOptions,
-)
-from .errors import (
-    ConfigError,
-    ExstructError,
-    MissingDependencyError,
-    PrintAreaError,
-    RenderError,
-    SerializationError,
-)
-from .io import (
-    save_as_json,
-    save_as_toon,
-    save_as_yaml,
-    save_auto_page_break_views,
-    save_print_area_views,
-    save_sheets,
-    serialize_workbook,
-)
-from .models import (
-    CellRow,
-    Chart,
-    ChartSeries,
-    PrintArea,
-    PrintAreaView,
-    Shape,
-    SheetData,
-    WorkbookData,
-    col_index_to_alpha,
-    convert_row_keys_to_alpha,
-    convert_sheet_keys_to_alpha,
-    convert_workbook_keys_to_alpha,
-)
-from .render import export_pdf, export_sheet_images
+if TYPE_CHECKING:
+    from .core.cells import set_table_detection_params
+    from .core.integrate import extract_workbook
+    from .engine import (
+        ColorsOptions,
+        DestinationOptions,
+        ExStructEngine,
+        FilterOptions,
+        FormatOptions,
+        OutputOptions,
+        StructOptions,
+    )
+    from .errors import (
+        ConfigError,
+        ExstructError,
+        MissingDependencyError,
+        PrintAreaError,
+        RenderError,
+        SerializationError,
+    )
+    from .io import serialize_workbook
+    from .models import (
+        CellRow,
+        Chart,
+        ChartSeries,
+        PrintArea,
+        PrintAreaView,
+        Shape,
+        SheetData,
+        WorkbookData,
+        col_index_to_alpha,
+        convert_row_keys_to_alpha,
+        convert_sheet_keys_to_alpha,
+        convert_workbook_keys_to_alpha,
+    )
+    from .render import export_pdf, export_sheet_images
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +91,110 @@ __all__ = [
 
 ExtractionMode = Literal["light", "libreoffice", "standard", "verbose"]
 
+LazyExportLoader = Callable[[], object]
+
+
+def _load_engine_attr(name: str) -> object:
+    from . import engine as engine_module
+
+    return getattr(engine_module, name)
+
+
+def _load_error_attr(name: str) -> object:
+    from . import errors as errors_module
+
+    return getattr(errors_module, name)
+
+
+def _load_model_attr(name: str) -> object:
+    from . import models as models_module
+
+    return getattr(models_module, name)
+
+
+def _load_render_attr(name: str) -> object:
+    from . import render as render_module
+
+    return getattr(render_module, name)
+
+
+def _load_io_attr(name: str) -> object:
+    from . import io as io_module
+
+    return getattr(io_module, name)
+
+
+def _load_core_cells_attr(name: str) -> object:
+    from .core import cells as cells_module
+
+    return getattr(cells_module, name)
+
+
+def _load_core_integrate_attr(name: str) -> object:
+    from .core import integrate as integrate_module
+
+    return getattr(integrate_module, name)
+
+
+_LAZY_EXPORTS: dict[str, LazyExportLoader] = {
+    "ColorsOptions": lambda: _load_engine_attr("ColorsOptions"),
+    "ConfigError": lambda: _load_error_attr("ConfigError"),
+    "DestinationOptions": lambda: _load_engine_attr("DestinationOptions"),
+    "ExStructEngine": lambda: _load_engine_attr("ExStructEngine"),
+    "ExstructError": lambda: _load_error_attr("ExstructError"),
+    "FilterOptions": lambda: _load_engine_attr("FilterOptions"),
+    "FormatOptions": lambda: _load_engine_attr("FormatOptions"),
+    "MissingDependencyError": lambda: _load_error_attr("MissingDependencyError"),
+    "OutputOptions": lambda: _load_engine_attr("OutputOptions"),
+    "PrintArea": lambda: _load_model_attr("PrintArea"),
+    "PrintAreaError": lambda: _load_error_attr("PrintAreaError"),
+    "PrintAreaView": lambda: _load_model_attr("PrintAreaView"),
+    "RenderError": lambda: _load_error_attr("RenderError"),
+    "SerializationError": lambda: _load_error_attr("SerializationError"),
+    "StructOptions": lambda: _load_engine_attr("StructOptions"),
+    "WorkbookData": lambda: _load_model_attr("WorkbookData"),
+    "CellRow": lambda: _load_model_attr("CellRow"),
+    "Chart": lambda: _load_model_attr("Chart"),
+    "ChartSeries": lambda: _load_model_attr("ChartSeries"),
+    "Shape": lambda: _load_model_attr("Shape"),
+    "SheetData": lambda: _load_model_attr("SheetData"),
+    "col_index_to_alpha": lambda: _load_model_attr("col_index_to_alpha"),
+    "convert_row_keys_to_alpha": lambda: _load_model_attr("convert_row_keys_to_alpha"),
+    "convert_sheet_keys_to_alpha": lambda: _load_model_attr(
+        "convert_sheet_keys_to_alpha"
+    ),
+    "convert_workbook_keys_to_alpha": lambda: _load_model_attr(
+        "convert_workbook_keys_to_alpha"
+    ),
+    "export_pdf": lambda: _load_render_attr("export_pdf"),
+    "export_sheet_images": lambda: _load_render_attr("export_sheet_images"),
+    "extract_workbook": lambda: _load_core_integrate_attr("extract_workbook"),
+    "serialize_workbook": lambda: _load_io_attr("serialize_workbook"),
+    "set_table_detection_params": lambda: _load_core_cells_attr(
+        "set_table_detection_params"
+    ),
+}
+
+
+def _resolve_lazy_export(name: str) -> object:
+    value = _LAZY_EXPORTS[name]()
+    globals()[name] = value
+    return value
+
+
+def _lazy_type(name: str) -> object:
+    return _resolve_lazy_export(name)
+
+
+def __getattr__(name: str) -> object:
+    if name not in _LAZY_EXPORTS:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    return _resolve_lazy_export(name)
+
+
+def __dir__() -> list[str]:
+    return sorted(set(globals()) | set(__all__))
+
 
 def extract(
     file_path: str | Path, mode: ExtractionMode = "standard", *, alpha_col: bool = False
@@ -112,6 +210,8 @@ def extract(
     Returns:
         WorkbookData: Parsed workbook representation containing sheets, rows, shapes, charts, and print areas.
     """
+    from .engine import ExStructEngine, StructOptions
+
     include_links = True if mode == "verbose" else False
     include_colors_map = True if mode == "verbose" else None
     include_formulas_map = True if mode == "verbose" else None
@@ -157,6 +257,8 @@ def export(
         >>> export(wb, "out.json", pretty=True)
         >>> export(wb, "out.yaml", fmt="yaml")  # doctest: +SKIP
     """
+    from .io import save_as_json, save_as_toon, save_as_yaml
+
     dest = Path(path)
     format_hint = (fmt or dest.suffix.lstrip(".") or "json").lower()
     match format_hint:
@@ -202,6 +304,8 @@ def export_sheets(
         >>> "Sheet1" in paths
         True
     """
+    from .io import save_sheets
+
     return save_sheets(
         data,
         Path(dir_path),
@@ -242,6 +346,8 @@ def export_sheets_as(
         >>> wb = extract("input.xlsx")
         >>> _ = export_sheets_as(wb, "out_yaml", fmt="yaml")  # doctest: +SKIP
     """
+    from .io import save_sheets
+
     return save_sheets(
         data,
         Path(dir_path),
@@ -285,6 +391,8 @@ def export_print_areas_as(
         >>> isinstance(paths, dict)
         True
     """
+    from .io import save_print_area_views
+
     return save_print_area_views(
         data,
         Path(dir_path),
@@ -331,6 +439,9 @@ def export_auto_page_breaks(
         ... except PrintAreaError:
         ...     pass
     """
+    from .errors import PrintAreaError
+    from .io import save_auto_page_break_views
+
     if not any(sheet.auto_print_areas for sheet in data.sheets.values()):
         message = "No auto page-break areas found. Enable COM-based auto page breaks before exporting."
         logger.warning(message)
@@ -407,6 +518,15 @@ def process_excel(
 
         >>> process_excel(Path("input.xlsx"), output_path=Path("out.json"), pdf=True)  # doctest: +SKIP
     """
+    from .engine import (
+        DestinationOptions,
+        ExStructEngine,
+        FilterOptions,
+        FormatOptions,
+        OutputOptions,
+        StructOptions,
+    )
+
     engine = ExStructEngine(
         options=StructOptions(mode=mode, alpha_col=alpha_col),
         output=OutputOptions(
@@ -440,3 +560,19 @@ def process_excel(
         auto_page_breaks_dir=auto_page_breaks_dir,
         stream=stream,
     )
+
+
+def _patch_runtime_annotations() -> None:
+    annotations_map: dict[Callable[..., object], dict[str, str]] = {
+        extract: {"return": "_lazy_type('WorkbookData')"},
+        export: {"data": "_lazy_type('WorkbookData')"},
+        export_sheets: {"data": "_lazy_type('WorkbookData')"},
+        export_sheets_as: {"data": "_lazy_type('WorkbookData')"},
+        export_print_areas_as: {"data": "_lazy_type('WorkbookData')"},
+        export_auto_page_breaks: {"data": "_lazy_type('WorkbookData')"},
+    }
+    for function, function_annotations in annotations_map.items():
+        function.__annotations__.update(function_annotations)
+
+
+_patch_runtime_annotations()
