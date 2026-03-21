@@ -159,7 +159,7 @@
 - `uv run task precommit-run`
 - Manual scenario review of:
   - create-vs-edit command selection
-  - `validate -> dry-run -> apply -> verify` guidance
+  - `validate -> dry-run -> inspect -> apply -> verify` guidance
   - unsupported-op / backend-constraint handling
   - CLI-vs-MCP routing guidance
   - README English/Japanese parity

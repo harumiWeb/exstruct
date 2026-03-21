@@ -142,11 +142,12 @@ npx skills add harumiWeb/exstruct/.agents/skills --skill exstruct-cli
 
 この Skill は、`patch` / `make` / `validate` / `ops list` /
 `ops describe` の使い分けや、安全な
-`validate -> dry-run -> apply -> verify` フローが必要なときに使います。
+`validate -> dry-run -> PatchResult/diff を確認 -> apply -> verify`
+フローが必要なときに使います。
 
 エージェント向けの最小プロンプト例:
 
-> `$exstruct-cli` を使って適切な ExStruct editing CLI コマンドを選び、validate/dry-run を含む安全なフローと、このワークブック作業に関係する backend 制約を説明してください。
+> `$exstruct-cli` を使って適切な ExStruct editing CLI コマンドを選び、PatchResult/diff の確認を含む validate/dry-run の安全なフローと、このワークブック作業に関係する backend 制約を説明してください。
 
 ## MCPサーバー (標準入出力)
 

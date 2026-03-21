@@ -1,4 +1,4 @@
 interface:
   display_name: "ExStruct CLI"
   short_description: "Guide safe ExStruct CLI edit workflows"
-  default_prompt: "Use $exstruct-cli to choose the right ExStruct editing CLI command, follow a safe validate/dry-run workflow, and explain any backend constraints for this workbook task."
+  default_prompt: "Use $exstruct-cli to choose the right ExStruct editing CLI command, follow a safe validate/dry-run workflow that inspects the PatchResult/diff before applying changes, and explain any backend constraints for this workbook task."

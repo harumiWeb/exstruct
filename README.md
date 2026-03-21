@@ -156,11 +156,11 @@ folder into the equivalent local skill directory that discovers
 
 Use this Skill when the agent needs help choosing between `patch`, `make`,
 `validate`, `ops list`, and `ops describe`, or when it should follow the safe
-`validate -> dry-run -> apply -> verify` workflow.
+`validate -> dry-run -> inspect -> apply -> verify` workflow.
 
 Example prompt for agents:
 
-> Use `$exstruct-cli` to choose the right ExStruct editing CLI command, follow a safe validate/dry-run workflow, and explain any backend constraints for this workbook task.
+> Use `$exstruct-cli` to choose the right ExStruct editing CLI command, follow a safe validate/dry-run/inspect workflow, and explain any backend constraints for this workbook task.
 
 ## MCP Server (stdio)
 
