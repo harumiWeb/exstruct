@@ -43,3 +43,4 @@ ADRs record what was decided, under which constraints, and which trade-offs were
 | `ADR-0006` | Public Edit API and Host-Owned Safety Boundary | `accepted` | `editing` |
 | `ADR-0007` | Editing CLI as Public Operational Interface | `accepted` | `editing` |
 | `ADR-0008` | Extraction CLI Runtime Capability Validation | `accepted` | `cli` |
+| `ADR-0009` | Single CLI Skill for Agent Workflows | `proposed` | `agents` |

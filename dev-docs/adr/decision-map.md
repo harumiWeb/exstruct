@@ -51,6 +51,11 @@ This document is a human-readable map for navigating ADRs by domain.
 
 - `ADR-0006` Public Edit API and Host-Owned Safety Boundary (`accepted`)
 - `ADR-0007` Editing CLI as Public Operational Interface (`accepted`)
+- `ADR-0009` Single CLI Skill for Agent Workflows (`proposed`)
+
+## agents
+
+- `ADR-0009` Single CLI Skill for Agent Workflows (`proposed`)
 
 ## api
 
@@ -60,6 +65,7 @@ This document is a human-readable map for navigating ADRs by domain.
 
 - `ADR-0007` Editing CLI as Public Operational Interface (`accepted`)
 - `ADR-0008` Extraction CLI Runtime Capability Validation (`accepted`)
+- `ADR-0009` Single CLI Skill for Agent Workflows (`proposed`)
 
 ## Supersession Relationships
 

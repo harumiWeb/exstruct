@@ -98,3 +98,7 @@
 
 - When documenting a `dry_run -> apply` edit workflow, do not imply the same engine will run both phases under `backend="auto"`; call out the openpyxl/COM split and tell users to pin `openpyxl` when same-engine comparison matters.
 - When documenting CLI failure behavior, distinguish serialized `PatchResult.error` failures from pre-execution stderr failures such as JSON parse, validation, or local runtime errors.
+
+## 2026-03-21 skill installation docs lessons
+
+- When a repo-owned Skill is intended to be publicly installable from the repository, document the `npx skills add <repo>/<skill-root> --skill <name>` path as the primary install route instead of only manual copy steps.

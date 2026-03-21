@@ -118,3 +118,21 @@ adrs:
       - README.md
       - README.ja.md
       - dev-docs/specs/excel-extraction.md
+  - id: ADR-0009
+    title: Single CLI Skill for Agent Workflows
+    status: proposed
+    path: dev-docs/adr/ADR-0009-single-cli-skill-for-agent-workflows.md
+    primary_domain: agents
+    domains:
+      - agents
+      - cli
+      - editing
+    supersedes: []
+    superseded_by: []
+    related_specs:
+      - dev-docs/specs/editing-cli.md
+      - dev-docs/specs/exstruct-cli-skill.md
+      - docs/cli.md
+      - docs/mcp.md
+      - README.md
+      - README.ja.md

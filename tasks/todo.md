@@ -55,3 +55,31 @@
   - `rg -n '^version = "0\.7\.1"$' pyproject.toml uv.lock`
   - `rg -n "^## " tasks/feature_spec.md tasks/todo.md`
   - `git diff --check -- CHANGELOG.md docs/release-notes/v0.7.1.md mkdocs.yml pyproject.toml uv.lock tasks/feature_spec.md tasks/todo.md`
+
+## 2026-03-21 issue #115 ExStruct CLI Skill
+
+### Planning
+
+- [x] Confirm the ADR verdict and draft the new policy record for the CLI Skill packaging and CLI/MCP boundary decisions.
+- [x] Add an internal spec under `dev-docs/specs/` for the `exstruct-cli` Skill contract.
+- [x] Create `.agents/skills/exstruct-cli/` with `SKILL.md`, `agents/openai.yaml`, and the required `references/` files.
+- [x] Keep `SKILL.md` concise and move detailed command, verification, and backend guidance into `references/`.
+- [x] Update `README.md` and `README.ja.md` with Skill installation guidance, when-to-use guidance, and minimal example prompts.
+- [x] Run the external `skill-creator` helper scripts to generate and validate `agents/openai.yaml`.
+- [x] Run repo verification (`uv run task precommit-run`) and record the result.
+- [x] Review which #115 notes remain temporary versus durable, then compress the `tasks/` sections after the durable content is migrated.
+
+### Review
+
+- Introduced the canonical repo-owned Skill at `.agents/skills/exstruct-cli/` with a lean `SKILL.md`, five focused reference documents, and generated `agents/openai.yaml`.
+- Published `dev-docs/specs/exstruct-cli-skill.md` as the durable contract for the Skill layout, trigger/positioning rules, and verification obligations.
+- Documented the policy decision in `dev-docs/adr/ADR-0009-single-cli-skill-for-agent-workflows.md` and synchronized `dev-docs/adr/README.md`, `dev-docs/adr/index.yaml`, and `dev-docs/adr/decision-map.md`.
+- Expanded `README.md` and `README.ja.md` with installation guidance, CLI-vs-MCP usage boundaries, and example prompts.
+- The durable content for #115 now lives in `.agents/skills/exstruct-cli/`, `dev-docs/specs/exstruct-cli-skill.md`, `dev-docs/adr/ADR-0009-single-cli-skill-for-agent-workflows.md`, `README.md`, and `README.ja.md`; this `tasks/` section remains only as a compact implementation record.
+- Verification:
+  - `python <skill-creator>/scripts/generate_openai_yaml.py .agents/skills/exstruct-cli --interface 'display_name=ExStruct CLI' --interface 'short_description=Guide safe ExStruct CLI edit workflows' --interface 'default_prompt=Use $exstruct-cli to choose the right ExStruct editing CLI command, follow a safe validate/dry-run workflow that inspects the PatchResult/diff before applying changes, and explain any backend constraints for this workbook task.'`
+  - `python <skill-creator>/scripts/quick_validate.py .agents/skills/exstruct-cli`
+  - `rg -n "ExStruct CLI Skill|exstruct-cli|validate -> dry-run -> inspect -> apply -> verify|\.agents/skills/exstruct-cli" README.md README.ja.md dev-docs/specs/exstruct-cli-skill.md dev-docs/adr/ADR-0009-single-cli-skill-for-agent-workflows.md .agents/skills/exstruct-cli/ -g "*"`
+  - `rg -n "^## |Tests:|Code:|Related specs:" dev-docs/adr/ADR-0009-single-cli-skill-for-agent-workflows.md`
+  - `uv run task precommit-run`
+  - `git diff --check`

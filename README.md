@@ -133,6 +133,35 @@ Recommended edit flow:
 4. If you keep `--backend auto`, inspect `PatchResult.engine`; on Windows/Excel hosts the real apply may switch to COM.
 5. Re-run without `--dry-run` only after the result is acceptable.
 
+## ExStruct CLI Skill
+
+ExStruct also ships one repo-owned Skill for agents that should follow the
+editing CLI safely instead of rediscovering the workflow each time.
+
+Canonical repo source:
+
+- `.agents/skills/exstruct-cli/`
+
+You can install it with the following single command:
+
+```bash
+npx skills add harumiWeb/exstruct/.agents/skills --skill exstruct-cli
+```
+
+That command should install `exstruct-cli` directly from this repository's
+published Skill directory. If you are working from an unpublished branch or a
+runtime that does not support `npx skills add`, fall back to copying the same
+folder into the equivalent local skill directory that discovers
+`SKILL.md`-based skills.
+
+Use this Skill when the agent needs help choosing between `patch`, `make`,
+`validate`, `ops list`, and `ops describe`, or when it should follow the safe
+`validate -> dry-run -> inspect -> apply -> verify` workflow.
+
+Example prompt for agents:
+
+> Use `$exstruct-cli` to choose the right ExStruct editing CLI command, follow a safe validate/dry-run/inspect workflow, and explain any backend constraints for this workbook task.
+
 ## MCP Server (stdio)
 
 MCP is the integration / compatibility layer around the same editing core. Use

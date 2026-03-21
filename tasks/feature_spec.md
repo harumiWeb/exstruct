@@ -98,3 +98,73 @@
 
 - `not-needed`
 - rationale: this was release preparation and task-log retention cleanup. The shipped policy decisions already live in `ADR-0008`, the extraction docs/specs, and the architecture note.
+
+## 2026-03-21 issue #115 ExStruct CLI Skill
+
+### Goal
+
+- Add one installable Skill that teaches AI agents how to use the existing ExStruct editing CLI safely and consistently.
+- Keep the current CLI, Python API, and MCP runtime contracts unchanged while packaging operational knowledge into repo-owned skill assets and durable documentation.
+- Record the long-lived policy choices behind the Skill structure, CLI/MCP boundary, and distribution model in permanent documents before implementation logs are compressed.
+
+### Public contract summary
+
+- No changes to `exstruct patch`, `exstruct make`, `exstruct ops`, `exstruct validate`, `exstruct.edit`, or MCP tool payloads.
+- Public docs gain one new documented interface layer: a single installable Skill named `exstruct-cli` for agent-side CLI workflows.
+- `README.md` and `README.ja.md` must describe:
+  - where the Skill source lives in the repository
+  - how to install/copy it into an agent runtime
+  - when to use the Skill versus MCP guidance
+  - minimal usage examples / prompts
+
+### Internal Skill contract
+
+- Canonical repo source: `.agents/skills/exstruct-cli/`
+- Required files:
+  - `SKILL.md`
+  - `agents/openai.yaml`
+  - `references/command-selection.md`
+  - `references/safe-editing.md`
+  - `references/ops-guidance.md`
+  - `references/verify-workflows.md`
+  - `references/backend-constraints.md`
+- `SKILL.md` must stay lean and contain only trigger-oriented frontmatter, command selection rules, safety rules, workflow steps, and direct links to `references/`.
+- `references/` must hold the detailed operational knowledge and avoid duplicating long catalogs inside `SKILL.md`.
+- `scripts/` and `assets/` are out of scope for the initial implementation unless a concrete deterministic need appears during writing or validation.
+
+### Permanent destinations
+
+- `.agents/skills/exstruct-cli/`
+  - Canonical source for the installable Skill assets.
+- `README.md` and `README.ja.md`
+  - Public installation and usage guidance for the Skill.
+- `dev-docs/specs/`
+  - `dev-docs/specs/exstruct-cli-skill.md` is the canonical internal spec for the ExStruct CLI Skill contract and required reference structure.
+- `dev-docs/adr/`
+  - `ADR-0009-single-cli-skill-for-agent-workflows.md` records the policy-level decisions: single Skill, repo-owned source of truth, and CLI-versus-MCP documentation boundary.
+- `tasks/feature_spec.md` and `tasks/todo.md`
+  - Keep the working record only until the durable information above is written.
+
+### Constraints
+
+- Use the existing repository convention for skills (`.agents/skills/` + `agents/openai.yaml`); do not add `.claude/skills/` mirrors or sync automation in this issue.
+- Keep the Skill focused on local CLI workflows; MCP host-policy and transport concerns stay documented separately under the existing MCP docs.
+- Follow docs parity rules: any public README change in English must be mirrored in `README.ja.md` in the same change.
+- Reuse the external `skill-creator` helper scripts for `openai.yaml` generation and lightweight validation rather than adding new repo-local validation code for this issue.
+
+### Verification
+
+- `python <skill-creator>/scripts/generate_openai_yaml.py .agents/skills/exstruct-cli --interface ...`
+- `python <skill-creator>/scripts/quick_validate.py .agents/skills/exstruct-cli`
+- `uv run task precommit-run`
+- Manual scenario review of:
+  - create-vs-edit command selection
+  - `validate -> dry-run -> inspect -> apply -> verify` guidance
+  - unsupported-op / backend-constraint handling
+  - CLI-vs-MCP routing guidance
+  - README English/Japanese parity
+
+### ADR verdict
+
+- `recommended`
+- rationale: the change turns AI-agent operational workflow into a durable repository rule and resolves recurring tradeoffs around single-skill packaging, repo source of truth, and the CLI-versus-MCP boundary.
