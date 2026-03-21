@@ -46,6 +46,76 @@ print(json.dumps({
     }
 
 
+def test_import_engine_module_stays_lightweight() -> None:
+    payload = _run_probe(
+        """
+import json
+import sys
+import exstruct.engine
+print(json.dumps({
+    "engine": "exstruct.engine" in sys.modules,
+    "core_cells": "exstruct.core.cells" in sys.modules,
+    "core_integrate": "exstruct.core.integrate" in sys.modules,
+    "io": "exstruct.io" in sys.modules,
+    "render": "exstruct.render" in sys.modules,
+    "numpy": "numpy" in sys.modules,
+    "pandas": "pandas" in sys.modules,
+    "openpyxl": "openpyxl" in sys.modules,
+    "xlwings": "xlwings" in sys.modules,
+    "PIL": "PIL" in sys.modules,
+}))
+"""
+    )
+
+    assert payload == {
+        "engine": True,
+        "core_cells": False,
+        "core_integrate": False,
+        "io": False,
+        "render": False,
+        "numpy": False,
+        "pandas": False,
+        "openpyxl": False,
+        "xlwings": False,
+        "PIL": False,
+    }
+
+
+def test_import_public_engine_export_stays_lightweight() -> None:
+    payload = _run_probe(
+        """
+import json
+import sys
+from exstruct import ExStructEngine
+print(json.dumps({
+    "engine": "exstruct.engine" in sys.modules,
+    "core_cells": "exstruct.core.cells" in sys.modules,
+    "core_integrate": "exstruct.core.integrate" in sys.modules,
+    "io": "exstruct.io" in sys.modules,
+    "render": "exstruct.render" in sys.modules,
+    "numpy": "numpy" in sys.modules,
+    "pandas": "pandas" in sys.modules,
+    "openpyxl": "openpyxl" in sys.modules,
+    "xlwings": "xlwings" in sys.modules,
+    "PIL": "PIL" in sys.modules,
+}))
+"""
+    )
+
+    assert payload == {
+        "engine": True,
+        "core_cells": False,
+        "core_integrate": False,
+        "io": False,
+        "render": False,
+        "numpy": False,
+        "pandas": False,
+        "openpyxl": False,
+        "xlwings": False,
+        "PIL": False,
+    }
+
+
 def test_import_cli_main_does_not_load_edit_or_extraction_modules() -> None:
     payload = _run_probe(
         """
