@@ -102,3 +102,8 @@
 ## 2026-03-21 skill installation docs lessons
 
 - When a repo-owned Skill is intended to be publicly installable from the repository, document the `npx skills add <repo>/<skill-root> --skill <name>` path as the primary install route instead of only manual copy steps.
+
+## 2026-04-16 session_factory compatibility lessons
+
+- When tightening a public or semi-public extension point such as `session_factory`, preserve the previously accepted minimal method surface unless the compatibility contract is explicitly changed.
+- If a new lifecycle hook is optional for the default implementation, add a regression test for a legacy custom implementation that lacks that hook before reporting completion.

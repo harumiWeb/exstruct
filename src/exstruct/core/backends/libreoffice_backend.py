@@ -3,21 +3,71 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from contextlib import AbstractContextManager
 import logging
 import math
 from pathlib import Path
+from typing import Protocol, TypeGuard
 
 from ...models import Arrow, Chart, Shape, SmartArt
 from ..libreoffice import (
     LibreOfficeChartGeometry,
     LibreOfficeDrawPageShape,
     LibreOfficeSession,
+    LibreOfficeWorkbookHandle,
 )
 from ..ooxml_drawing import OoxmlConnectorInfo, OoxmlShapeInfo, read_sheet_drawings
 from ..shapes import angle_to_compass, compute_line_angle_deg
 from .base import ChartData, RichBackend, ShapeData
 
 logger = logging.getLogger(__name__)
+
+
+class _LibreOfficePathSessionProtocol(Protocol):
+    """Structural contract for legacy path-only rich-extraction sessions."""
+
+    def extract_chart_geometries(
+        self, file_path: Path
+    ) -> dict[str, list[LibreOfficeChartGeometry]]:
+        """Extract chart geometries for a workbook path."""
+
+    def extract_draw_page_shapes(
+        self, file_path: Path
+    ) -> dict[str, list[LibreOfficeDrawPageShape]]:
+        """Extract draw-page shapes for a workbook path."""
+
+
+class _LibreOfficeWorkbookLifecycleSessionProtocol(Protocol):
+    """Structural contract for sessions that support typed workbook handles."""
+
+    def load_workbook(self, file_path: Path) -> LibreOfficeWorkbookHandle:
+        """Open a workbook lifecycle handle."""
+
+    def close_workbook(self, workbook: LibreOfficeWorkbookHandle) -> None:
+        """Close a workbook lifecycle handle."""
+
+    def extract_chart_geometries(
+        self, workbook: Path | LibreOfficeWorkbookHandle
+    ) -> dict[str, list[LibreOfficeChartGeometry]]:
+        """Extract chart geometries for a path or workbook handle."""
+
+    def extract_draw_page_shapes(
+        self, workbook: Path | LibreOfficeWorkbookHandle
+    ) -> dict[str, list[LibreOfficeDrawPageShape]]:
+        """Extract draw-page shapes for a path or workbook handle."""
+
+
+_LibreOfficeRichSession = (
+    _LibreOfficePathSessionProtocol | _LibreOfficeWorkbookLifecycleSessionProtocol
+)
+
+
+def _supports_workbook_lifecycle(
+    session: _LibreOfficeRichSession,
+) -> TypeGuard[_LibreOfficeWorkbookLifecycleSessionProtocol]:
+    """Return whether a session exposes the typed workbook lifecycle hooks."""
+
+    return hasattr(session, "load_workbook") and hasattr(session, "close_workbook")
 
 
 class LibreOfficeRichBackend(RichBackend):
@@ -27,7 +77,9 @@ class LibreOfficeRichBackend(RichBackend):
         self,
         file_path: Path,
         *,
-        session_factory: Callable[[], LibreOfficeSession] = LibreOfficeSession.from_env,
+        session_factory: Callable[
+            [], AbstractContextManager[_LibreOfficeRichSession]
+        ] = (LibreOfficeSession.from_env),
     ) -> None:
         """Store the workbook path and session factory used for lazy LibreOffice extraction."""
 
@@ -150,8 +202,10 @@ class LibreOfficeRichBackend(RichBackend):
             return self._chart_geometries
         with self._session_factory() as session:
             if hasattr(session, "extract_chart_geometries"):
-                self._chart_geometries = session.extract_chart_geometries(
-                    self.file_path
+                self._chart_geometries = (
+                    self._extract_chart_geometries_with_optional_workbook_lifecycle(
+                        session=session,
+                    )
                 )
             else:
                 self._chart_geometries = {}
@@ -164,12 +218,44 @@ class LibreOfficeRichBackend(RichBackend):
             return self._draw_page_shapes
         with self._session_factory() as session:
             if hasattr(session, "extract_draw_page_shapes"):
-                self._draw_page_shapes = session.extract_draw_page_shapes(
-                    self.file_path
+                self._draw_page_shapes = (
+                    self._extract_draw_page_shapes_with_optional_workbook_lifecycle(
+                        session=session,
+                    )
                 )
             else:
                 self._draw_page_shapes = {}
         return self._draw_page_shapes
+
+    def _extract_chart_geometries_with_optional_workbook_lifecycle(
+        self,
+        *,
+        session: _LibreOfficeRichSession,
+    ) -> dict[str, list[LibreOfficeChartGeometry]]:
+        """Call chart extraction while preserving legacy path-only sessions."""
+
+        if not _supports_workbook_lifecycle(session):
+            return session.extract_chart_geometries(self.file_path)
+        workbook = session.load_workbook(self.file_path)
+        try:
+            return session.extract_chart_geometries(workbook)
+        finally:
+            session.close_workbook(workbook)
+
+    def _extract_draw_page_shapes_with_optional_workbook_lifecycle(
+        self,
+        *,
+        session: _LibreOfficeRichSession,
+    ) -> dict[str, list[LibreOfficeDrawPageShape]]:
+        """Call draw-page extraction while preserving legacy path-only sessions."""
+
+        if not _supports_workbook_lifecycle(session):
+            return session.extract_draw_page_shapes(self.file_path)
+        workbook = session.load_workbook(self.file_path)
+        try:
+            return session.extract_draw_page_shapes(workbook)
+        finally:
+            session.close_workbook(workbook)
 
 
 def _build_shapes_from_ooxml(

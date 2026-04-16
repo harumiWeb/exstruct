@@ -14,7 +14,7 @@ import subprocess  # nosec B404 - required for validated local runtime/process m
 import sys
 from tempfile import NamedTemporaryFile, mkdtemp
 import time
-from typing import Literal, TextIO, cast
+from typing import Literal, TextIO, cast, overload
 
 _DEFAULT_STARTUP_TIMEOUT_SEC = 15.0
 _DEFAULT_EXEC_TIMEOUT_SEC = 30.0
@@ -82,6 +82,15 @@ class LibreOfficeSessionConfig:
 
 
 @dataclass(frozen=True)
+class LibreOfficeWorkbookHandle:
+    """Typed workbook token scoped to one ``LibreOfficeSession`` instance."""
+
+    file_path: Path
+    owner_session_id: int
+    workbook_id: int
+
+
+@dataclass(frozen=True)
 class _LibreOfficeStartupAttempt:
     """Configuration for one LibreOffice startup strategy."""
 
@@ -129,7 +138,9 @@ class LibreOfficeSession:
         self._soffice_process: subprocess.Popen[str] | None = None
         self._accept_port: int | None = None
         self._python_path = _resolve_python_path(config.soffice_path)
-        self._bridge_payload_cache: dict[str, object] = {}
+        self._bridge_payload_cache: dict[tuple[str, Path], object] = {}
+        self._open_workbooks: dict[int, Path] = {}
+        self._next_workbook_id = 0
         self._soffice_stderr_sink: TextIO | None = None
         self._soffice_stderr_path: Path | None = None
 
@@ -215,31 +226,113 @@ class LibreOfficeSession:
         self._soffice_stderr_sink = None
         self._soffice_stderr_path = None
         self._accept_port = None
+        self._bridge_payload_cache.clear()
+        self._open_workbooks.clear()
         if self._temp_profile_dir is not None:
             _cleanup_profile_dir(self._temp_profile_dir)
             self._temp_profile_dir = None
 
-    def load_workbook(self, file_path: Path) -> object:
-        """Return a lightweight workbook token for future subprocess integration."""
-        return {"file_path": str(file_path.resolve())}
+    def load_workbook(self, file_path: Path) -> LibreOfficeWorkbookHandle:
+        """Register a workbook path and return a typed session-local handle."""
 
-    def close_workbook(self, workbook: object) -> None:
-        """Close a workbook token returned by ``load_workbook``."""
-        _ = workbook
+        resolved = file_path.resolve()
+        self._next_workbook_id += 1
+        handle = LibreOfficeWorkbookHandle(
+            file_path=resolved,
+            owner_session_id=id(self),
+            workbook_id=self._next_workbook_id,
+        )
+        self._open_workbooks[handle.workbook_id] = resolved
+        return handle
+
+    def close_workbook(self, workbook: LibreOfficeWorkbookHandle) -> None:
+        """Release a typed workbook handle and clear any stale workbook cache."""
+
+        file_path = self._require_handle_path(workbook, allow_closed=True)
+        if file_path is None:
+            return
+        self._open_workbooks.pop(workbook.workbook_id, None)
+        if file_path not in self._open_workbooks.values():
+            self._clear_workbook_cache(file_path)
 
     def extract_draw_page_shapes(
-        self, file_path: Path
+        self, workbook: Path | LibreOfficeWorkbookHandle
     ) -> dict[str, list[LibreOfficeDrawPageShape]]:
         """Extract best-effort draw-page shapes from the workbook."""
-        payload = self._run_bridge(file_path, kind="draw-page")
+        payload = self._run_bridge(
+            self._resolve_workbook_path(workbook),
+            kind="draw-page",
+        )
         return _parse_draw_page_payload(payload)
 
     def extract_chart_geometries(
-        self, file_path: Path
+        self, workbook: Path | LibreOfficeWorkbookHandle
     ) -> dict[str, list[LibreOfficeChartGeometry]]:
         """Extract chart geometry candidates from the workbook draw pages."""
-        payload = self._run_bridge(file_path, kind="charts")
+        payload = self._run_bridge(
+            self._resolve_workbook_path(workbook),
+            kind="charts",
+        )
         return _parse_chart_payload(payload)
+
+    def _resolve_workbook_path(
+        self, workbook: Path | LibreOfficeWorkbookHandle
+    ) -> Path:
+        """Resolve either a direct path or a typed handle into a workbook path."""
+
+        if isinstance(workbook, LibreOfficeWorkbookHandle):
+            return self._require_handle_path(workbook)
+        return workbook.resolve()
+
+    @overload
+    def _require_handle_path(
+        self,
+        workbook: LibreOfficeWorkbookHandle,
+        *,
+        allow_closed: Literal[False] = False,
+    ) -> Path: ...
+
+    @overload
+    def _require_handle_path(
+        self,
+        workbook: LibreOfficeWorkbookHandle,
+        *,
+        allow_closed: Literal[True],
+    ) -> Path | None: ...
+
+    def _require_handle_path(
+        self,
+        workbook: LibreOfficeWorkbookHandle,
+        *,
+        allow_closed: bool = False,
+    ) -> Path | None:
+        """Validate workbook ownership and return the registered file path."""
+
+        if not isinstance(workbook, LibreOfficeWorkbookHandle):
+            raise TypeError(
+                "LibreOfficeSession workbook lifecycle expects a "
+                "LibreOfficeWorkbookHandle."
+            )
+        if workbook.owner_session_id != id(self):
+            raise ValueError(
+                "LibreOffice workbook handle belongs to a different LibreOfficeSession."
+            )
+        file_path = self._open_workbooks.get(workbook.workbook_id)
+        if file_path is None and not allow_closed:
+            raise RuntimeError("LibreOffice workbook handle is closed.")
+        if file_path is not None and file_path != workbook.file_path.resolve():
+            raise ValueError(
+                "LibreOffice workbook handle does not match the registered "
+                "workbook path."
+            )
+        return file_path
+
+    def _clear_workbook_cache(self, file_path: Path) -> None:
+        """Drop cached bridge payloads for one workbook path."""
+
+        stale_keys = [key for key in self._bridge_payload_cache if key[1] == file_path]
+        for key in stale_keys:
+            self._bridge_payload_cache.pop(key, None)
 
     def _run_bridge(
         self,
@@ -263,7 +356,8 @@ class LibreOfficeSession:
 
         if self._accept_port is None or self._python_path is None:
             raise RuntimeError("LibreOfficeSession must be entered before extraction.")
-        cache_key = f"{kind}:{file_path.resolve()}"
+        resolved = file_path.resolve()
+        cache_key = (kind, resolved)
         if cache_key in self._bridge_payload_cache:
             return self._bridge_payload_cache[cache_key]
         try:
@@ -271,7 +365,7 @@ class LibreOfficeSession:
                 python_path=self._python_path,
                 host="127.0.0.1",
                 port=self._accept_port,
-                file_path=file_path.resolve(),
+                file_path=resolved,
                 kind=kind,
                 timeout_sec=self.config.exec_timeout_sec,
             )
