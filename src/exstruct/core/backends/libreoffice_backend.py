@@ -150,8 +150,10 @@ class LibreOfficeRichBackend(RichBackend):
             return self._chart_geometries
         with self._session_factory() as session:
             if hasattr(session, "extract_chart_geometries"):
-                self._chart_geometries = session.extract_chart_geometries(
-                    self.file_path
+                self._chart_geometries = (
+                    self._extract_chart_geometries_with_optional_workbook_lifecycle(
+                        session=session,
+                    )
                 )
             else:
                 self._chart_geometries = {}
@@ -164,12 +166,50 @@ class LibreOfficeRichBackend(RichBackend):
             return self._draw_page_shapes
         with self._session_factory() as session:
             if hasattr(session, "extract_draw_page_shapes"):
-                self._draw_page_shapes = session.extract_draw_page_shapes(
-                    self.file_path
+                self._draw_page_shapes = (
+                    self._extract_draw_page_shapes_with_optional_workbook_lifecycle(
+                        session=session,
+                    )
                 )
             else:
                 self._draw_page_shapes = {}
         return self._draw_page_shapes
+
+    def _extract_chart_geometries_with_optional_workbook_lifecycle(
+        self,
+        *,
+        session: LibreOfficeSession,
+    ) -> dict[str, list[LibreOfficeChartGeometry]]:
+        """Call chart extraction while preserving legacy path-only sessions."""
+
+        extract_method = session.extract_chart_geometries
+        if not hasattr(session, "load_workbook") or not hasattr(
+            session, "close_workbook"
+        ):
+            return extract_method(self.file_path)
+        workbook = session.load_workbook(self.file_path)
+        try:
+            return extract_method(workbook)
+        finally:
+            session.close_workbook(workbook)
+
+    def _extract_draw_page_shapes_with_optional_workbook_lifecycle(
+        self,
+        *,
+        session: LibreOfficeSession,
+    ) -> dict[str, list[LibreOfficeDrawPageShape]]:
+        """Call draw-page extraction while preserving legacy path-only sessions."""
+
+        extract_method = session.extract_draw_page_shapes
+        if not hasattr(session, "load_workbook") or not hasattr(
+            session, "close_workbook"
+        ):
+            return extract_method(self.file_path)
+        workbook = session.load_workbook(self.file_path)
+        try:
+            return extract_method(workbook)
+        finally:
+            session.close_workbook(workbook)
 
 
 def _build_shapes_from_ooxml(

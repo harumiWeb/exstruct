@@ -105,3 +105,27 @@
   - `uv run task precommit-run`
   - `uv run pytest -q`
   - Result summary: `pre-commit` passed (`ruff`, `ruff-format`, `mypy`), and `pytest` completed with `913 passed, 4 skipped`.
+
+## 2026-04-16 issue #77 LibreOffice typed workbook handle
+
+### Planning
+
+- [x] Confirm the issue scope, related PR review comment, and ADR verdict for the typed handle change.
+- [x] Record the compact spec and implementation constraints in `tasks/feature_spec.md`.
+- [x] Replace the raw workbook token in `src/exstruct/core/libreoffice.py` with a typed handle and meaningful `close_workbook()` cleanup.
+- [x] Update `src/exstruct/core/backends/libreoffice_backend.py` and test doubles to use the typed workbook lifecycle.
+- [x] Add regression tests for typed handle ownership, idempotent close, and cache invalidation.
+- [x] Run the targeted LibreOffice backend tests and `uv run task precommit-run`.
+- [x] Fill the Review section with verification evidence and permanent-destination notes.
+
+### Review
+
+- Added `LibreOfficeWorkbookHandle` in `src/exstruct/core/libreoffice.py` and replaced the raw `dict` workbook token with a typed, session-owned handle.
+- `LibreOfficeSession.close_workbook()` now validates session ownership, is idempotent for repeated close calls, and clears session-local bridge cache entries when the last handle for a workbook is released.
+- `LibreOfficeSession.extract_draw_page_shapes()` and `extract_chart_geometries()` now accept either a direct `Path` or a typed workbook handle, preserving the existing path-based call pattern while enabling the typed lifecycle.
+- `src/exstruct/core/backends/libreoffice_backend.py` now prefers `load_workbook() -> extract_*() -> close_workbook()` when the session implements that lifecycle, while preserving the legacy path-only `session_factory` extension point as a runtime fallback.
+- `tests/core/test_libreoffice_backend.py` now covers typed handle creation, backend lifecycle usage, legacy path-only session compatibility, foreign-session rejection, repeated close idempotence, closed-handle extraction failure, and cache invalidation after close.
+- No new `dev-docs/specs/`, `dev-docs/architecture/`, `dev-docs/adr/`, or public `docs/` updates were required; this issue only hardened the existing internal LibreOffice session contract.
+- Verification:
+  - `uv run pytest tests/core/test_libreoffice_backend.py -q`
+  - `uv run task precommit-run`

@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file. This changelog 
 
 ## [Unreleased]
 
+### Added
+
+- Added typed LibreOffice workbook handles and session-scoped workbook lifecycle tracking so rich extraction can reuse cached bridge payloads safely and reject foreign or closed workbook handles.
+
+### Fixed
+
+- Fixed LibreOffice rich backend workbook lifecycle integration so custom `session_factory` implementations that only support legacy path-based `extract_chart_geometries()` and `extract_draw_page_shapes()` continue to work without `load_workbook()` and `close_workbook()` hooks.
+
 ## [0.7.1] - 2026-03-21
 
 ### Added
