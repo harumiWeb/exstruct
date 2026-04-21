@@ -14,6 +14,12 @@ import xlwings as xw
 
 from exstruct import ConfigError, ExStructEngine, ExtractionMode, extract, process_excel
 from exstruct.core.integrate import extract_workbook
+from exstruct.core.ooxml_drawing import (
+    DrawingShapeRef,
+    OoxmlChartInfo,
+    OoxmlShapeInfo,
+    SheetDrawingData,
+)
 from exstruct.models import Arrow, Chart, Shape
 
 
@@ -72,7 +78,7 @@ def _make_shapes_book(path: Path) -> None:
 def test_lightモードではCOMに触れずセルとテーブルのみ(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Test that light mode avoids COM and returns only cell and table data."""
+    """Test that light mode avoids COM and still emits OOXML rich artifacts."""
 
     path = tmp_path / "book.xlsx"
     _make_basic_book(path)
@@ -83,10 +89,48 @@ def test_lightモードではCOMに触れずセルとテーブルのみ(
         raise AssertionError("COM should not be accessed in light mode")
 
     monkeypatch.setattr("exstruct.core.pipeline.xlwings_workbook", _boom)
+    monkeypatch.setattr(
+        "exstruct.core.backends.ooxml_backend.read_sheet_drawings",
+        lambda _path: {
+            "Sheet1": SheetDrawingData(
+                shapes=[
+                    OoxmlShapeInfo(
+                        ref=DrawingShapeRef(
+                            drawing_id=1,
+                            name="Shape 1",
+                            kind="shape",
+                            left=12,
+                            top=24,
+                            width=80,
+                            height=36,
+                        ),
+                        text="shape",
+                        shape_type="AutoShape-Rectangle",
+                    )
+                ],
+                charts=[
+                    OoxmlChartInfo(
+                        name="Chart 1",
+                        chart_type="Line",
+                        title="title",
+                        y_axis_title="Y",
+                        y_axis_range=[],
+                        series=[],
+                        anchor_left=48,
+                        anchor_top=72,
+                        anchor_width=120,
+                        anchor_height=90,
+                    )
+                ],
+            )
+        },
+    )
     data = extract(path, mode="light")
     sheet = next(iter(data.sheets.values()))
-    assert sheet.shapes == []
-    assert sheet.charts == []
+    assert len(sheet.shapes) == 1
+    assert sheet.shapes[0].provenance == "python_ooxml"
+    assert len(sheet.charts) == 1
+    assert sheet.charts[0].provenance == "python_ooxml"
 
 
 @pytest.mark.com  # type: ignore[misc]

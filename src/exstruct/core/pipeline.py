@@ -25,6 +25,7 @@ from ..models import (
 from .backends.base import RichBackend
 from .backends.com_backend import ComBackend, ComRichBackend
 from .backends.libreoffice_backend import LibreOfficeRichBackend
+from .backends.ooxml_backend import OoxmlRichBackend
 from .backends.openpyxl_backend import OpenpyxlBackend
 from .cells import (
     MergedCellRange,
@@ -938,7 +939,7 @@ def collect_sheet_raw_data(
         sheet_raw = SheetRawData(
             rows=filtered_rows,
             shapes=shape_data.get(sheet_name, []),
-            charts=chart_data.get(sheet_name, []) if mode != "light" else [],
+            charts=chart_data.get(sheet_name, []),
             table_candidates=detect_tables(sheet, mode=mode),
             print_areas=print_area_data.get(sheet_name, []) if print_area_data else [],
             auto_print_areas=auto_page_break_data.get(sheet_name, [])
@@ -958,11 +959,33 @@ def resolve_rich_backend(
     workbook: xw.Book | None = None,
 ) -> RichBackend:
     """Resolve the rich extraction backend for the requested mode."""
+    if inputs.mode == "light":
+        return OoxmlRichBackend(inputs.file_path)
     if inputs.mode == "libreoffice":
         return LibreOfficeRichBackend(inputs.file_path)
     if workbook is None:
         raise ValueError("COM workbook is required for COM-backed rich extraction.")
     return ComRichBackend(workbook)
+
+
+def _run_light_pipeline(
+    *,
+    inputs: ExtractionInputs,
+    artifacts: ExtractionArtifacts,
+    state: PipelineState,
+) -> PipelineResult:
+    """Run the pure-Python OOXML rich baseline for light mode."""
+
+    rich_backend = resolve_rich_backend(inputs=inputs)
+    artifacts.shape_data = rich_backend.extract_shapes(mode="light")
+    artifacts.chart_data = rich_backend.extract_charts(mode="light")
+    workbook = build_cells_tables_workbook(
+        inputs=inputs,
+        artifacts=artifacts,
+        reason="Light pipeline completed.",
+        include_rich_artifacts=True,
+    )
+    return PipelineResult(workbook=workbook, artifacts=artifacts, state=state)
 
 
 def _run_libreoffice_pipeline(
@@ -974,6 +997,9 @@ def _run_libreoffice_pipeline(
 ) -> PipelineResult:
     """Run LibreOffice rich extraction while preserving partial shape success."""
 
+    baseline_backend = OoxmlRichBackend(inputs.file_path)
+    artifacts.shape_data = baseline_backend.extract_shapes(mode="light")
+    artifacts.chart_data = baseline_backend.extract_charts(mode="light")
     rich_mode: Literal["libreoffice"] = "libreoffice"
     try:
         rich_backend = resolve_rich_backend(inputs=inputs)
@@ -981,39 +1007,37 @@ def _run_libreoffice_pipeline(
         return fallback(
             f"LibreOffice runtime is unavailable. ({exc!r})",
             FallbackReason.LIBREOFFICE_UNAVAILABLE,
+            include_rich_artifacts=True,
         )
     except Exception as exc:
         return fallback(
             f"LibreOffice pipeline failed ({exc!r}).",
             FallbackReason.LIBREOFFICE_PIPELINE_FAILED,
+            include_rich_artifacts=True,
         )
     try:
         artifacts.shape_data = rich_backend.extract_shapes(mode=rich_mode)
     except LibreOfficeUnavailableError as exc:
-        artifacts.shape_data = {}
-        artifacts.chart_data = {}
-        return fallback(
-            f"LibreOffice runtime is unavailable. ({exc!r})",
-            FallbackReason.LIBREOFFICE_UNAVAILABLE,
-        )
-    except Exception as exc:
-        artifacts.shape_data = {}
-        artifacts.chart_data = {}
-        return fallback(
-            f"LibreOffice pipeline failed ({exc!r}).",
-            FallbackReason.LIBREOFFICE_PIPELINE_FAILED,
-        )
-    try:
-        artifacts.chart_data = rich_backend.extract_charts(mode=rich_mode)
-    except LibreOfficeUnavailableError as exc:
-        artifacts.chart_data = {}
         return fallback(
             f"LibreOffice runtime is unavailable. ({exc!r})",
             FallbackReason.LIBREOFFICE_UNAVAILABLE,
             include_rich_artifacts=True,
         )
     except Exception as exc:
-        artifacts.chart_data = {}
+        return fallback(
+            f"LibreOffice pipeline failed ({exc!r}).",
+            FallbackReason.LIBREOFFICE_PIPELINE_FAILED,
+            include_rich_artifacts=True,
+        )
+    try:
+        artifacts.chart_data = rich_backend.extract_charts(mode=rich_mode)
+    except LibreOfficeUnavailableError as exc:
+        return fallback(
+            f"LibreOffice runtime is unavailable. ({exc!r})",
+            FallbackReason.LIBREOFFICE_UNAVAILABLE,
+            include_rich_artifacts=True,
+        )
+    except Exception as exc:
         return fallback(
             f"LibreOffice pipeline failed ({exc!r}).",
             FallbackReason.LIBREOFFICE_PIPELINE_FAILED,
@@ -1073,7 +1097,11 @@ def run_extraction_pipeline(inputs: ExtractionInputs) -> PipelineResult:
 
     if not plan.use_com:
         if inputs.mode == "light":
-            return _fallback("Light mode selected.", FallbackReason.LIGHT_MODE)
+            return _run_light_pipeline(
+                inputs=inputs,
+                artifacts=artifacts,
+                state=state,
+            )
         if inputs.mode == "libreoffice":
             result = _run_libreoffice_pipeline(
                 inputs=inputs,
@@ -1196,7 +1224,7 @@ def build_cells_tables_workbook(
             if include_rich_artifacts
             else [],
             charts=artifacts.chart_data.get(sheet_name, [])
-            if include_rich_artifacts and inputs.mode != "light"
+            if include_rich_artifacts
             else [],
             table_candidates=tables,
             print_areas=artifacts.print_area_data.get(sheet_name, [])

@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 
 from _pytest.monkeypatch import MonkeyPatch
+from openpyxl import Workbook
 import pytest
 
 from exstruct.core.backends.com_backend import ComBackend
@@ -14,6 +15,13 @@ from exstruct.core.cells import (
     SheetFormulasMap,
     WorkbookColorsMap,
     WorkbookFormulasMap,
+)
+from exstruct.core.libreoffice import LibreOfficeUnavailableError
+from exstruct.core.ooxml_drawing import (
+    DrawingShapeRef,
+    OoxmlChartInfo,
+    OoxmlShapeInfo,
+    SheetDrawingData,
 )
 from exstruct.core.pipeline import (
     ExtractionArtifacts,
@@ -39,7 +47,8 @@ from exstruct.core.pipeline import (
     step_extract_print_areas_com,
     step_extract_shapes_com,
 )
-from exstruct.models import CellRow, PrintArea, Shape
+from exstruct.errors import FallbackReason
+from exstruct.models import CellRow, Chart, PrintArea, Shape
 
 
 def test_build_pre_com_pipeline_respects_flags(
@@ -399,6 +408,61 @@ def test_build_cells_tables_workbook_excludes_merged_values_in_rows(
     wb = build_cells_tables_workbook(inputs=inputs, artifacts=artifacts, reason="test")
     sheet = wb.sheets["Sheet1"]
     assert sheet.rows[0].c == {"2": "C"}
+
+
+def test_build_cells_tables_workbook_keeps_rich_artifacts_in_light(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    """Verify that fallback workbook assembly preserves rich artifacts in light mode."""
+
+    monkeypatch.setattr(
+        "exstruct.core.backends.openpyxl_backend.detect_tables_openpyxl",
+        lambda *_args, **_kwargs: [],
+    )
+
+    inputs = ExtractionInputs(
+        file_path=tmp_path / "book.xlsx",
+        mode="light",
+        include_cell_links=False,
+        include_print_areas=False,
+        include_auto_page_breaks=False,
+        include_colors_map=False,
+        include_default_background=False,
+        ignore_colors=None,
+        include_formulas_map=False,
+        use_com_for_formulas=False,
+        include_merged_cells=False,
+        include_merged_values_in_rows=True,
+    )
+    artifacts = ExtractionArtifacts(
+        cell_data={"Sheet1": [CellRow(r=1, c={"0": "A"})]},
+        shape_data={"Sheet1": [Shape(id=1, text="shape", l=0, t=0)]},
+        chart_data={
+            "Sheet1": [
+                Chart(
+                    name="Chart 1",
+                    chart_type="Line",
+                    title=None,
+                    y_axis_title="",
+                    y_axis_range=[],
+                    series=[],
+                    l=0,
+                    t=0,
+                )
+            ]
+        },
+        merged_cell_data={"Sheet1": []},
+    )
+
+    wb = build_cells_tables_workbook(
+        inputs=inputs,
+        artifacts=artifacts,
+        reason="test",
+        include_rich_artifacts=True,
+    )
+
+    assert len(wb.sheets["Sheet1"].shapes) == 1
+    assert len(wb.sheets["Sheet1"].charts) == 1
 
 
 def test_filter_rows_excluding_merged_values_updates_links() -> None:
@@ -1104,3 +1168,159 @@ def test_run_extraction_pipeline_com_success(
     assert result.state.com_attempted is True
     assert result.state.com_succeeded is True
     assert "Sheet1" in result.workbook.sheets
+
+
+def test_run_extraction_pipeline_preserves_ooxml_baseline_when_libreoffice_unavailable(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    """Verify that LibreOffice fallback keeps the OOXML rich baseline in the workbook."""
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Sheet1"
+    sheet["A1"] = "value"
+    path = tmp_path / "book.xlsx"
+    workbook.save(path)
+    workbook.close()
+
+    monkeypatch.setattr(
+        "exstruct.core.backends.ooxml_backend.read_sheet_drawings",
+        lambda _path: {
+            "Sheet1": SheetDrawingData(
+                shapes=[
+                    OoxmlShapeInfo(
+                        ref=DrawingShapeRef(
+                            drawing_id=1,
+                            name="Shape 1",
+                            kind="shape",
+                            left=10,
+                            top=20,
+                            width=40,
+                            height=30,
+                        ),
+                        text="shape",
+                        shape_type="AutoShape-Rectangle",
+                    )
+                ],
+                charts=[
+                    OoxmlChartInfo(
+                        name="Chart 1",
+                        chart_type="Column",
+                        title="title",
+                        y_axis_title="Y",
+                        y_axis_range=[],
+                        series=[],
+                        anchor_left=50,
+                        anchor_top=60,
+                        anchor_width=120,
+                        anchor_height=90,
+                    )
+                ],
+            )
+        },
+    )
+
+    def _raise_backend(**_kwargs: object) -> object:
+        raise LibreOfficeUnavailableError("missing runtime")
+
+    monkeypatch.setattr("exstruct.core.pipeline.resolve_rich_backend", _raise_backend)
+
+    inputs = ExtractionInputs(
+        file_path=path,
+        mode="libreoffice",
+        include_cell_links=False,
+        include_print_areas=True,
+        include_auto_page_breaks=False,
+        include_colors_map=False,
+        include_default_background=False,
+        ignore_colors=None,
+        include_formulas_map=False,
+        use_com_for_formulas=False,
+        include_merged_cells=True,
+        include_merged_values_in_rows=True,
+    )
+
+    result = run_extraction_pipeline(inputs)
+
+    assert result.state.fallback_reason == FallbackReason.LIBREOFFICE_UNAVAILABLE
+    assert len(result.workbook.sheets["Sheet1"].shapes) == 1
+    assert result.workbook.sheets["Sheet1"].shapes[0].provenance == "python_ooxml"
+    assert len(result.workbook.sheets["Sheet1"].charts) == 1
+    assert result.workbook.sheets["Sheet1"].charts[0].provenance == "python_ooxml"
+
+
+def test_run_extraction_pipeline_keeps_baseline_charts_when_libreoffice_chart_step_fails(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    """Verify that chart-step fallback preserves the seeded OOXML chart baseline."""
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Sheet1"
+    sheet["A1"] = "value"
+    path = tmp_path / "book.xlsx"
+    workbook.save(path)
+    workbook.close()
+
+    monkeypatch.setattr(
+        "exstruct.core.backends.ooxml_backend.read_sheet_drawings",
+        lambda _path: {
+            "Sheet1": SheetDrawingData(
+                charts=[
+                    OoxmlChartInfo(
+                        name="Chart 1",
+                        chart_type="Column",
+                        title="title",
+                        y_axis_title="Y",
+                        y_axis_range=[],
+                        series=[],
+                        anchor_left=50,
+                        anchor_top=60,
+                        anchor_width=120,
+                        anchor_height=90,
+                    )
+                ]
+            )
+        },
+    )
+
+    class _Backend:
+        def extract_shapes(self, *, mode: str) -> dict[str, list[Shape]]:
+            _ = mode
+            return {
+                "Sheet1": [
+                    Shape(id=1, text="uno", l=0, t=0, provenance="libreoffice_uno")
+                ]
+            }
+
+        def extract_charts(self, *, mode: str) -> dict[str, list[Chart]]:
+            _ = mode
+            raise LibreOfficeUnavailableError("chart geometry failed")
+
+    monkeypatch.setattr(
+        "exstruct.core.pipeline.resolve_rich_backend",
+        lambda **_kwargs: _Backend(),
+    )
+
+    inputs = ExtractionInputs(
+        file_path=path,
+        mode="libreoffice",
+        include_cell_links=False,
+        include_print_areas=True,
+        include_auto_page_breaks=False,
+        include_colors_map=False,
+        include_default_background=False,
+        ignore_colors=None,
+        include_formulas_map=False,
+        use_com_for_formulas=False,
+        include_merged_cells=True,
+        include_merged_values_in_rows=True,
+    )
+
+    result = run_extraction_pipeline(inputs)
+
+    assert result.state.fallback_reason == FallbackReason.LIBREOFFICE_UNAVAILABLE
+    assert len(result.workbook.sheets["Sheet1"].shapes) == 1
+    assert result.workbook.sheets["Sheet1"].shapes[0].provenance == "libreoffice_uno"
+    assert len(result.workbook.sheets["Sheet1"].charts) == 1
+    assert result.workbook.sheets["Sheet1"].charts[0].provenance == "python_ooxml"

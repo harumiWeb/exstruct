@@ -231,7 +231,7 @@ def test_sheet_to_json_omits_backend_metadata_by_default() -> None:
         series=[],
         l=0,
         t=0,
-        provenance="libreoffice_uno",
+        provenance="python_ooxml",
         approximation_level="partial",
         confidence=0.8,
     )
@@ -247,7 +247,7 @@ def test_sheet_to_json_omits_backend_metadata_by_default() -> None:
     assert "approximation_level" not in default_payload["charts"][0]
     assert "confidence" not in default_payload["charts"][0]
     assert explicit_payload["shapes"][0]["provenance"] == "excel_com"
-    assert explicit_payload["charts"][0]["provenance"] == "libreoffice_uno"
+    assert explicit_payload["charts"][0]["provenance"] == "python_ooxml"
 
 
 def test_workbook_to_json_includes_backend_metadata_when_enabled() -> None:

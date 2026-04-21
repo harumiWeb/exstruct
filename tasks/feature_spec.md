@@ -332,6 +332,22 @@
 - Treat any new provenance literal as a public serialization/schema change that requires coordinated model/docs/schema updates.
 - If `light` is changed to include rich artifacts, treat that as an explicit mode-boundary change rather than an internal optimization.
 
+### Implementation status
+
+- Completed in the first implementation pass:
+  - added `src/exstruct/core/backends/ooxml_backend.py` as the pure-Python OOXML rich backend for `.xlsx/.xlsm`
+  - wired `light` to use that backend and preserve emitted shapes/charts in workbook assembly
+  - changed `libreoffice` fallback handling so the OOXML baseline is preserved when LibreOffice runtime enrichment is unavailable
+  - introduced `python_ooxml` as a `provenance` literal in models and generated schemas
+  - added regression tests for:
+    - light-mode OOXML rich extraction without COM
+    - workbook assembly retaining rich artifacts in light mode
+    - LibreOffice-unavailable fallback preserving the OOXML baseline
+    - light-mode raw-data collection retaining charts
+- Still pending:
+  - custom row-height / column-width aware geometry in `src/exstruct/core/ooxml_drawing.py`
+  - permanent spec/public-doc updates reflecting the new `light` contract
+
 ### Permanent destinations
 
 - `dev-docs/adr/`

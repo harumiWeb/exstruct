@@ -144,11 +144,11 @@
 - [x] Decide the ADR verdict and likely permanent-document destinations for the eventual implementation.
 - [x] Draft `ADR-0010` for changing `light` into the pure-Python OOXML-rich baseline and link the ADR index artifacts.
 - [x] Run an ADR-linter-style structural check on the draft and confirm the supersede/index links are consistent.
-- [ ] Build the pure-Python rich extraction baseline from OOXML parsing.
+- [x] Build the pure-Python rich extraction baseline from OOXML parsing.
 - [ ] Improve pure-Python geometry fidelity for shapes/connectors/charts on sheets with custom row heights or column widths.
 - [x] Decide that the new capability is exposed by strengthening `light` itself.
-- [ ] Add regression coverage for OOXML-only rich extraction and optional LibreOffice enrichment.
-- [ ] Update ADR/spec/docs/schema artifacts once the policy decision is accepted.
+- [x] Add regression coverage for OOXML-only rich extraction and optional LibreOffice enrichment.
+- [ ] Update ADR/spec/docs/public contract artifacts once the policy decision is accepted.
 
 ### Review
 
@@ -172,3 +172,16 @@
 - Permanent-document note:
   - this section is still a temporary planning record
   - the draft policy now lives in `ADR-0010`; once implementation starts, the durable follow-up must update `dev-docs/specs/excel-extraction.md` and, if metadata changes, `dev-docs/specs/data-model.md` / `schemas/` / public docs
+- Implementation status after the first code pass:
+  - added `src/exstruct/core/backends/ooxml_backend.py` as the pure-Python OOXML rich backend
+  - `light` now runs that backend and keeps shapes/charts in the assembled workbook instead of forcing the old empty-rich-artifact fallback
+  - `libreoffice` now seeds the same OOXML baseline first, so runtime-unavailable fallback preserves `python_ooxml` shapes/charts when they are available from OOXML
+  - public model/schema provenance now includes `python_ooxml`
+- Verification:
+  - `uv run pytest tests/core/test_mode_output.py tests/core/test_pipeline.py tests/integration/test_integrate_raw_data.py tests/models/test_models_export.py tests/models/test_schemas_generated.py -q`
+    - result: `75 passed, 2 skipped`
+  - `uv run task precommit-run`
+    - result: passed after aligning `ComRichBackend` method signatures with the widened `RichBackend` protocol
+- Remaining work:
+  - geometry fidelity in `src/exstruct/core/ooxml_drawing.py` is still the largest functional gap for pure-Python placement quality
+  - durable spec/docs updates are still pending even though the code path and schema literal are now in place
