@@ -34,4 +34,4 @@ Without an explicit decision record, the responsibilities of `light`, `libreoffi
 
 ## Superseded by
 
-- None
+- `ADR-0010`

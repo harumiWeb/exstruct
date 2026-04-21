@@ -132,3 +132,43 @@
 - Verification:
   - `uv run pytest tests/core/test_libreoffice_backend.py -q`
   - `uv run task precommit-run`
+
+## 2026-04-21 Pure-Python rich extraction for light-mode environments
+
+### Planning
+
+- [x] Review the current non-COM extraction contract in `docs/`, `dev-docs/specs/`, ADRs, and task guidance before proposing backend changes.
+- [x] Inspect the current LibreOffice-mode code path in `src/exstruct/core/backends/libreoffice_backend.py`, `src/exstruct/core/ooxml_drawing.py`, `src/exstruct/core/libreoffice.py`, and the related tests.
+- [x] Identify which rich artifacts already come from pure OOXML and which ones still depend on LibreOffice runtime enrichment.
+- [x] Re-scope the task after the user clarified that the goal is richer extraction in light-mode environments, not removing LibreOffice dependency from the existing LibreOffice path.
+- [x] Decide the ADR verdict and likely permanent-document destinations for the eventual implementation.
+- [x] Draft `ADR-0010` for changing `light` into the pure-Python OOXML-rich baseline and link the ADR index artifacts.
+- [x] Run an ADR-linter-style structural check on the draft and confirm the supersede/index links are consistent.
+- [ ] Build the pure-Python rich extraction baseline from OOXML parsing.
+- [ ] Improve pure-Python geometry fidelity for shapes/connectors/charts on sheets with custom row heights or column widths.
+- [x] Decide that the new capability is exposed by strengthening `light` itself.
+- [ ] Add regression coverage for OOXML-only rich extraction and optional LibreOffice enrichment.
+- [ ] Update ADR/spec/docs/schema artifacts once the policy decision is accepted.
+
+### Review
+
+- Investigation result: the repository already has most of the needed Python-only parsing logic.
+  - `src/exstruct/core/ooxml_drawing.py` already parses shapes, connectors, and charts from OOXML drawing parts.
+  - `src/exstruct/core/backends/libreoffice_backend.py` already has `_build_shapes_from_ooxml(...)`, and chart extraction already builds metadata from OOXML before optionally refining geometry with LibreOffice.
+- Root cause: the pure-Python capability exists in pieces, but the current non-COM product path does not expose it to environments that only receive `light`-level extraction.
+- Main implementation risk: OOXML geometry is not yet strong enough to replace LibreOffice geometry on its own because `_marker_to_points()` still relies on fixed default row/column sizes and does not model custom sheet dimensions.
+- Recommended rollout:
+  - first build the pure-Python rich baseline
+  - then tighten geometry fidelity and regression coverage
+  - then wire that baseline into `light` and keep `libreoffice` as the optional enrichment layer
+  - finally update ADR/spec/docs/schema artifacts once the contract details, especially mode exposure and `provenance`, are settled
+- ADR verdict for the future code change: `required`.
+  - related ADRs: `ADR-0001` and `ADR-0002`
+  - draft created: `dev-docs/adr/ADR-0010-light-mode-as-the-pure-python-rich-ooxml-baseline.md`
+- ADR draft check:
+  - no unresolved structural holes were found in `ADR-0010`; required sections and evidence headings are present
+  - supersede references are linked in `ADR-0010`, `ADR-0001`, `dev-docs/adr/README.md`, `dev-docs/adr/index.yaml`, and `dev-docs/adr/decision-map.md`
+  - residual risk: `ADR-0001` still has status `accepted` while `ADR-0010` is only `proposed`; the final status flip should happen when `ADR-0010` is accepted
+- Permanent-document note:
+  - this section is still a temporary planning record
+  - the draft policy now lives in `ADR-0010`; once implementation starts, the durable follow-up must update `dev-docs/specs/excel-extraction.md` and, if metadata changes, `dev-docs/specs/data-model.md` / `schemas/` / public docs

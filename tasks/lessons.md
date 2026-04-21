@@ -107,3 +107,8 @@
 
 - When tightening a public or semi-public extension point such as `session_factory`, preserve the previously accepted minimal method surface unless the compatibility contract is explicitly changed.
 - If a new lifecycle hook is optional for the default implementation, add a regression test for a legacy custom implementation that lacks that hook before reporting completion.
+
+## 2026-04-21 extraction-mode scoping lessons
+
+- When a user asks to improve non-COM extraction capability, do not assume they want to redefine the existing `libreoffice` path; first separate the environment goal from the public mode contract.
+- Before proposing to reuse or reinterpret a mode, re-check the explicit mode-boundary sources (`docs/cli.md`, `dev-docs/specs/excel-extraction.md`, `ADR-0001`) and confirm whether the user wants a backend change or a mode-semantics change.

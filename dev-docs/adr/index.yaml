@@ -8,7 +8,8 @@ adrs:
       - extraction
       - mode
     supersedes: []
-    superseded_by: []
+    superseded_by:
+      - ADR-0010
     related_specs:
       - docs/api.md
       - docs/cli.md
@@ -136,3 +137,22 @@ adrs:
       - docs/mcp.md
       - README.md
       - README.ja.md
+  - id: ADR-0010
+    title: Light Mode as the Pure-Python Rich OOXML Baseline
+    status: proposed
+    path: dev-docs/adr/ADR-0010-light-mode-as-the-pure-python-rich-ooxml-baseline.md
+    primary_domain: extraction
+    domains:
+      - extraction
+      - mode
+      - backend
+      - compatibility
+    supersedes:
+      - ADR-0001
+    superseded_by: []
+    related_specs:
+      - dev-docs/specs/excel-extraction.md
+      - dev-docs/specs/data-model.md
+      - docs/api.md
+      - docs/cli.md
+      - docs/mcp.md

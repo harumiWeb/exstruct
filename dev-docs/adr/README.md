@@ -44,3 +44,4 @@ ADRs record what was decided, under which constraints, and which trade-offs were
 | `ADR-0007` | Editing CLI as Public Operational Interface | `accepted` | `editing` |
 | `ADR-0008` | Extraction CLI Runtime Capability Validation | `accepted` | `cli` |
 | `ADR-0009` | Single CLI Skill for Agent Workflows | `proposed` | `agents` |
+| `ADR-0010` | Light Mode as the Pure-Python Rich OOXML Baseline | `proposed` | `extraction` |

@@ -251,3 +251,124 @@
 
 - `not-needed`
 - rationale: this is an internal contract hardening change that preserves existing extraction policy and runtime behavior; the durable rationale can stay in the task record.
+
+## 2026-04-21 Pure-Python rich extraction for light-mode environments
+
+### Goal
+
+- Provide shapes/connectors/charts from pure-Python OOXML parsing on `.xlsx/.xlsm` even in environments that currently only get `light`-level extraction.
+- Treat this as strengthening the non-COM/no-LibreOffice environment, not as removing or redefining the current LibreOffice runtime path.
+- Record the now-chosen policy that the richer pure-Python artifacts will be exposed by strengthening `light` itself.
+
+### Investigation summary
+
+- `src/exstruct/core/ooxml_drawing.py` already parses OOXML worksheet drawings into `SheetDrawingData` with:
+  - shapes (`OoxmlShapeInfo`)
+  - connectors (`OoxmlConnectorInfo`)
+  - charts (`OoxmlChartInfo`)
+- `src/exstruct/core/backends/libreoffice_backend.py` already contains a pure-OOXML path:
+  - `_build_shapes_from_ooxml(...)` emits shapes/arrows without UNO snapshots
+  - `extract_charts(...)` already builds chart metadata from OOXML and uses LibreOffice only to refine geometry/confidence
+- The current blocker is architectural, not fundamental parsing capability:
+  - `extract_shapes()` always calls `_read_draw_page_shapes()`
+  - `extract_charts()` always calls `_read_chart_geometries()`
+  - if the LibreOffice session is unavailable, the whole rich path falls back before the existing OOXML-only builders can be used
+- Current OOXML geometry still needs hardening for Python-only use:
+  - `_marker_to_points()` uses fixed default column/row sizes
+  - `sample/flowchart/sample-shape-connector.xlsx` uses custom worksheet column widths, so pure anchor-based placement will drift unless sheet metrics are parsed
+  - many shapes/connectors also carry `a:xfrm` offsets/extents, which can serve as a higher-quality pure-Python geometry source than the current default anchor approximation
+- Chart extraction is closest to ready for Python-only use:
+  - OOXML already provides chart type, title, series, axis range, and anchor geometry
+  - LibreOffice chart geometry is an optional refinement layer today, not the primary metadata source
+- A public-contract question remains for backend metadata:
+  - `src/exstruct/models/__init__.py` and `schemas/*.json` currently allow only `excel_com` and `libreoffice_uno` in `provenance`
+  - a true Python-only path should either introduce a new provenance label or explicitly decide that `libreoffice` mode provenance remains mode-oriented rather than runtime-oriented
+
+### Proposed contract direction
+
+- The user-selected contract direction is to strengthen `light` itself rather than add another non-COM rich mode.
+- Environment capability and mode semantics are therefore intentionally aligned:
+  - non-COM/non-LibreOffice hosts gain pure-Python shapes/connectors/charts on `.xlsx/.xlsm`
+  - `light` becomes the public entrypoint for that baseline capability
+- Current codebase evidence says changing `light` directly is a public-contract change:
+  - [docs/cli.md](/mnt/c/dev/python/exstruct/docs/cli.md:114) defines `light` as cells + table candidates + print areas only.
+  - [dev-docs/specs/excel-extraction.md](/mnt/c/dev/python/exstruct/dev-docs/specs/excel-extraction.md:19) defines `light` as cells/tables only, no rich artifacts.
+  - [dev-docs/testing/test-requirements.md](/mnt/c/dev/python/exstruct/dev-docs/testing/test-requirements.md:203) locks `MODE-02` to shapes/charts empty in `light`.
+  - [dev-docs/adr/ADR-0001-extraction-mode-boundaries.md](/mnt/c/dev/python/exstruct/dev-docs/adr/ADR-0001-extraction-mode-boundaries.md:15) treats mode responsibility boundaries as an explicit decision.
+- The chosen policy path is therefore:
+  - keep building the pure-Python rich backend first
+  - expose it through `light`
+  - update the mode contract, docs, schemas if needed, and tests in the same change
+- Preserve the existing fallback policy from `ADR-0002`:
+  - when the pure-Python rich path cannot safely extract rich artifacts, fall back to cells + table candidates + pre-com artifacts
+- Keep `.xls` out of scope for this phase; this work applies only to OOXML workbooks.
+- Keep SmartArt and grouped-shape reconstruction out of the first phase unless a specific fixture proves they are required for the first usable release.
+
+### Staged implementation plan
+
+1. Build a pure-Python rich extraction path independent of LibreOffice runtime.
+   - Reuse [ooxml_drawing.py](/mnt/c/dev/python/exstruct/src/exstruct/core/ooxml_drawing.py:126) as the canonical source for OOXML shapes/connectors/charts.
+   - Avoid tying the baseline implementation to [libreoffice_backend.py](/mnt/c/dev/python/exstruct/src/exstruct/core/backends/libreoffice_backend.py:73) naming or runtime assumptions more than necessary.
+2. Improve pure-Python geometry fidelity in `src/exstruct/core/ooxml_drawing.py`.
+   - Parse sheet row heights and column widths from worksheet XML instead of relying on `_DEFAULT_COLUMN_WIDTH_POINTS` / `_DEFAULT_ROW_HEIGHT_POINTS` alone.
+   - Prefer child `a:xfrm` left/top/width/height for shapes/connectors when present and valid; use anchor geometry as the fallback or for chart frames with zero transforms.
+   - Add focused tests for custom-width/custom-height sheets so geometry does not regress silently.
+3. Apply the chosen exposure path in the pipeline and public entrypoints.
+   - `light` should surface the new pure-Python rich baseline for `.xlsx/.xlsm`.
+   - `libreoffice` should remain the optional enrichment path above that baseline.
+   - Update `MODE-02` expectations explicitly instead of letting the old empty-shape assumption linger.
+4. Lock down Python-only connector resolution and chart extraction with tests.
+   - Add tests that assert emitted shapes/connectors/charts without any LibreOffice session snapshots.
+   - Add regression tests for mixed cases: OOXML-only and OOXML + LibreOffice enrichment.
+5. Resolve metadata/documentation policy before merging behavior changes.
+   - Decide whether to add a new `provenance` literal such as `python_ooxml` / `ooxml`.
+   - Update `dev-docs/specs/excel-extraction.md`, `dev-docs/specs/data-model.md`, `docs/cli.md`, `docs/api.md`, and `docs/mcp.md` once the final exposure path is chosen.
+
+### Constraints
+
+- Do not weaken `ADR-0002` fallback behavior; the change should improve rich extraction availability, not change the safe fallback shape on true failure.
+- Do not route `.xls` through a partially supported pseudo-OOXML path.
+- Do not introduce Excel/LibreOffice-specific logic into `pipeline.py`; backend composition stays inside the rich backend layer.
+- Treat any new provenance literal as a public serialization/schema change that requires coordinated model/docs/schema updates.
+- If `light` is changed to include rich artifacts, treat that as an explicit mode-boundary change rather than an internal optimization.
+
+### Permanent destinations
+
+- `dev-docs/adr/`
+  - `dev-docs/adr/ADR-0010-light-mode-as-the-pure-python-rich-ooxml-baseline.md` now holds the draft policy decision that changes `light` into the pure-Python OOXML-rich baseline for `.xlsx/.xlsm`.
+- `dev-docs/specs/excel-extraction.md`
+  - Expected destination for the updated non-COM rich extraction contract after implementation begins.
+- `dev-docs/specs/data-model.md` and `schemas/`
+  - Expected destination if backend metadata literals or semantics change.
+- `tasks/feature_spec.md` and `tasks/todo.md`
+  - Temporary planning record until the ADR/spec updates are authored alongside the implementation.
+
+### ADR verdict
+
+- `required`
+- rationale:
+  - this change alters the `light` mode boundary for non-COM rich extraction
+  - it may also change the meaning of backend metadata (`provenance`) exposed through public models and schemas
+- affected domains:
+  - extraction mode
+  - backend fallback
+  - backend metadata / serialization
+- existing ADR candidates:
+  - `dev-docs/adr/ADR-0001-extraction-mode-boundaries.md`
+  - `dev-docs/adr/ADR-0002-rich-backend-fallback-policy.md`
+- suggested next action:
+  - `new-adr` completed via `ADR-0010` draft
+- evidence triad:
+  - specs:
+    - `dev-docs/specs/excel-extraction.md`
+    - `dev-docs/specs/data-model.md`
+    - `docs/cli.md`
+    - `docs/mcp.md`
+  - src:
+    - `src/exstruct/core/backends/libreoffice_backend.py`
+    - `src/exstruct/core/ooxml_drawing.py`
+    - `src/exstruct/core/pipeline.py`
+    - `src/exstruct/models/__init__.py`
+  - tests:
+    - `tests/core/test_libreoffice_backend.py`
+    - `tests/core/test_libreoffice_smoke.py`
