@@ -1,7 +1,7 @@
 adrs:
   - id: ADR-0001
     title: Extraction Mode Responsibility Boundaries
-    status: accepted
+    status: superseded
     path: dev-docs/adr/ADR-0001-extraction-mode-boundaries.md
     primary_domain: extraction
     domains:
@@ -139,7 +139,7 @@ adrs:
       - README.ja.md
   - id: ADR-0010
     title: Light Mode as the Pure-Python Rich OOXML Baseline
-    status: proposed
+    status: accepted
     path: dev-docs/adr/ADR-0010-light-mode-as-the-pure-python-rich-ooxml-baseline.md
     primary_domain: extraction
     domains:

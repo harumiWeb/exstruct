@@ -2,7 +2,7 @@
 
 ## Status
 
-`accepted`
+`superseded`
 
 ## Background
 

@@ -400,6 +400,28 @@ def test_process_excel_sheets_dir_output(tmp_path: Path) -> None:
     assert "Data 02" in names
 
 
+def test_process_excel_light_print_areas_dir_output(tmp_path: Path) -> None:
+    """Verify that light-mode process_excel writes print-area files."""
+
+    path = tmp_path / "book.xlsx"
+    _make_basic_book(path)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws["A1"] = "v1"
+    ws["B1"] = "v2"
+    ws.print_area = "A1:B1"
+    wb.save(path)
+    wb.close()
+
+    areas_dir = tmp_path / "areas"
+    process_excel(path, output_path=None, mode="light", print_areas_dir=areas_dir)
+
+    files = list(areas_dir.glob("*.json"))
+    assert len(files) == 1
+    assert files[0].stem == "Sheet1_area1_r1-1_c0-1"
+
+
 def test_CLI_defaults_to_stdout(tmp_path: Path) -> None:
     """Verify that the CLI writes JSON to stdout by default."""
 

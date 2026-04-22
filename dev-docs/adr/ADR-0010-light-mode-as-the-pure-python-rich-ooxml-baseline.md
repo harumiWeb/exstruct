@@ -2,7 +2,7 @@
 
 ## Status
 
-`proposed`
+`accepted`
 
 ## Background
 
@@ -99,14 +99,15 @@ Non-goals for this decision:
 
 - Tests:
   - `tests/core/test_mode_output.py`
+  - `tests/core/test_ooxml_drawing.py`
+  - `tests/core/test_pipeline.py`
+  - `tests/integration/test_integrate_raw_data.py`
   - `tests/integration/test_end_to_end_light.py`
   - `tests/core/test_libreoffice_backend.py`
   - `tests/core/test_libreoffice_smoke.py`
-  - Additional `light`-mode regression tests for rich OOXML output do not exist
-    yet and are required before this ADR can move from `proposed` to
-    `accepted`.
 - Code:
   - `src/exstruct/core/ooxml_drawing.py`
+  - `src/exstruct/core/backends/ooxml_backend.py`
   - `src/exstruct/core/backends/libreoffice_backend.py`
   - `src/exstruct/core/pipeline.py`
   - `src/exstruct/models/__init__.py`

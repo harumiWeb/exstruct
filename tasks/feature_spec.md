@@ -1,5 +1,35 @@
 # Feature Spec
 
+## 2026-04-22 light-mode print areas / OOXML drawing resilience
+
+### Goal
+
+- Align `light` mode print-area behavior across `extract`, `process_excel`, CLI, and engine export so the accepted ADR/docs contract is consistent on every public path.
+- Limit OOXML drawing parse failures to the malformed worksheet so healthy sheets keep their best-effort shapes/charts.
+
+### Public contract summary
+
+- `mode="light"` keeps `print_areas` in default structured output and allows `print_areas_dir` side-output generation on `process_excel` and CLI paths.
+- `FilterOptions.include_print_areas=None` means automatic inclusion for all modes; callers must pass `False` explicitly to suppress print areas.
+- OOXML rich extraction remains best-effort, but a malformed drawing part on one sheet must not erase healthy rich artifacts from other sheets in the same workbook.
+
+### Permanent destinations
+
+- `dev-docs/specs/excel-extraction.md`, `docs/api.md`, `docs/cli.md`, and `ADR-0010` already hold the durable mode contract; no new permanent spec is needed.
+- `dev-docs/testing/test-requirements.md` must reflect the corrected `light` print-area default.
+- `docs/generated/models.md` must be regenerated because the `FilterOptions.include_print_areas` description changes.
+
+### Verification
+
+- `uv run pytest tests/engine/test_engine.py tests/core/test_mode_output.py tests/cli/test_cli.py tests/core/test_ooxml_drawing.py -q`
+- `uv run python scripts/gen_model_docs.py`
+- `uv run task precommit-run`
+
+### ADR verdict
+
+- `not-needed`
+- rationale: this work restores the accepted `ADR-0010` contract and fallback behavior; it does not introduce a new policy decision.
+
 ## 2026-03-19 v0.7.0 release closeout
 
 ### Goal
@@ -338,26 +368,32 @@
   - added `src/exstruct/core/backends/ooxml_backend.py` as the pure-Python OOXML rich backend for `.xlsx/.xlsm`
   - wired `light` to use that backend and preserve emitted shapes/charts in workbook assembly
   - changed `libreoffice` fallback handling so the OOXML baseline is preserved when LibreOffice runtime enrichment is unavailable
+- Completed in the geometry-fidelity follow-up:
+  - `src/exstruct/core/ooxml_drawing.py` now parses worksheet row heights and column widths into `SheetDrawingMetrics`, and anchor fallback uses those metrics instead of fixed defaults alone
+  - shapes and connectors now prefer `a:xfrm` absolute left/top when the transform also carries a non-zero size, which fixes large placement drift on `sample/flowchart/sample-shape-connector.xlsx`
+  - charts keep the same safe fallback behavior: if `graphicFrame/xfrm` is a zero placeholder, anchor geometry remains the source of placement and size
+  - regression coverage now includes dedicated `tests/core/test_ooxml_drawing.py` cases for custom metrics, two-cell anchors, and transform-preferred fixture placement
   - introduced `python_ooxml` as a `provenance` literal in models and generated schemas
   - added regression tests for:
     - light-mode OOXML rich extraction without COM
     - workbook assembly retaining rich artifacts in light mode
     - LibreOffice-unavailable fallback preserving the OOXML baseline
     - light-mode raw-data collection retaining charts
-- Still pending:
-  - custom row-height / column-width aware geometry in `src/exstruct/core/ooxml_drawing.py`
-  - permanent spec/public-doc updates reflecting the new `light` contract
+- Completed in the durable-contract follow-up:
+  - `ADR-0010` is accepted and supersedes `ADR-0001`, which is now marked `superseded`
+  - internal specs now describe `light` as the pure-Python OOXML-rich baseline and document `python_ooxml` as a public backend-metadata provenance value
+  - public docs now describe `light` as the preferred non-COM baseline for `.xlsx/.xlsm` and `libreoffice` as the optional enrichment path above it
 
 ### Permanent destinations
 
 - `dev-docs/adr/`
-  - `dev-docs/adr/ADR-0010-light-mode-as-the-pure-python-rich-ooxml-baseline.md` now holds the draft policy decision that changes `light` into the pure-Python OOXML-rich baseline for `.xlsx/.xlsm`.
+  - `dev-docs/adr/ADR-0010-light-mode-as-the-pure-python-rich-ooxml-baseline.md` now holds the accepted policy decision that changes `light` into the pure-Python OOXML-rich baseline for `.xlsx/.xlsm`.
 - `dev-docs/specs/excel-extraction.md`
-  - Expected destination for the updated non-COM rich extraction contract after implementation begins.
+  - Canonical internal spec for the updated non-COM rich extraction contract.
 - `dev-docs/specs/data-model.md` and `schemas/`
-  - Expected destination if backend metadata literals or semantics change.
+  - Canonical internal destination for backend metadata literals and serialization semantics.
 - `tasks/feature_spec.md` and `tasks/todo.md`
-  - Temporary planning record until the ADR/spec updates are authored alongside the implementation.
+  - Temporary implementation record now that the ADR/spec updates have been authored.
 
 ### ADR verdict
 

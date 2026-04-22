@@ -328,7 +328,7 @@ class FilterOptions(BaseModel):
     )
     include_print_areas: bool | None = Field(
         default=None,
-        description="Include print areas; None -> auto (light=False, others=True).",
+        description="Include print areas; None -> auto (all modes=True).",
     )
     include_auto_print_areas: bool = Field(
         default=False, description="Include COM-computed auto page-break areas."
@@ -470,10 +470,10 @@ class ExStructEngine:
     def _include_print_areas(self) -> bool:
         """
         Decide whether to include print areas in output.
-        Auto: light -> False, others -> True.
+        Auto: all modes -> True.
         """
         if self.output.filters.include_print_areas is None:
-            return self.options.mode != "light"
+            return True
         return self.output.filters.include_print_areas
 
     def _include_auto_print_areas(self) -> bool:

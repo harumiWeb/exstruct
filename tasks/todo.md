@@ -1,5 +1,35 @@
 # Todo
 
+## 2026-04-22 light-mode print areas / OOXML drawing resilience
+
+### Planning
+
+- [x] Align `process_excel` / engine auto-filter defaults with the accepted `light` print-area contract.
+- [x] Make `read_sheet_drawings()` skip only malformed sheets instead of dropping the whole workbook.
+- [x] Add regression coverage for light-mode print-area side outputs and partial OOXML drawing failure.
+- [x] Regenerate generated model docs and run verification.
+
+### Review
+
+- `process_excel()`, CLI, and engine export now keep `print_areas` in `light` mode by default, matching the accepted `ADR-0010` and current public docs.
+- `read_sheet_drawings()` now degrades per sheet: malformed drawing XML on one worksheet logs a warning and skips that sheet without erasing healthy OOXML-rich artifacts from sibling sheets.
+- Added regression coverage for:
+  - `light` engine export writing `print_areas_dir`
+  - `process_excel(..., mode="light", print_areas_dir=...)`
+  - `exstruct --mode light --print-areas-dir ...`
+  - direct OOXML parser behavior when one sheet drawing is malformed
+- Permanent-document follow-up:
+  - updated `dev-docs/testing/test-requirements.md` `MODE-08`
+  - regenerated `docs/generated/models.md` for the `FilterOptions.include_print_areas` auto-description
+- Verification:
+  - `uv run pytest tests/engine/test_engine.py tests/core/test_mode_output.py tests/cli/test_cli.py tests/core/test_ooxml_drawing.py -q`
+    - result: `49 passed, 3 skipped`
+  - `uv run python scripts/gen_model_docs.py`
+    - result: passed
+  - `uv run task precommit-run`
+    - result: passed
+
+
 ## 2026-03-19 v0.7.0 release closeout
 
 ### Planning
@@ -145,10 +175,10 @@
 - [x] Draft `ADR-0010` for changing `light` into the pure-Python OOXML-rich baseline and link the ADR index artifacts.
 - [x] Run an ADR-linter-style structural check on the draft and confirm the supersede/index links are consistent.
 - [x] Build the pure-Python rich extraction baseline from OOXML parsing.
-- [ ] Improve pure-Python geometry fidelity for shapes/connectors/charts on sheets with custom row heights or column widths.
+- [x] Improve pure-Python geometry fidelity for shapes/connectors/charts on sheets with custom row heights or column widths.
 - [x] Decide that the new capability is exposed by strengthening `light` itself.
 - [x] Add regression coverage for OOXML-only rich extraction and optional LibreOffice enrichment.
-- [ ] Update ADR/spec/docs/public contract artifacts once the policy decision is accepted.
+- [x] Update ADR/spec/docs/public contract artifacts once the policy decision is accepted.
 
 ### Review
 
@@ -177,11 +207,26 @@
   - `light` now runs that backend and keeps shapes/charts in the assembled workbook instead of forcing the old empty-rich-artifact fallback
   - `libreoffice` now seeds the same OOXML baseline first, so runtime-unavailable fallback preserves `python_ooxml` shapes/charts when they are available from OOXML
   - public model/schema provenance now includes `python_ooxml`
+- Geometry-fidelity follow-up completed in the second code pass:
+  - added worksheet-driven `SheetDrawingMetrics` parsing in `src/exstruct/core/ooxml_drawing.py` so anchor fallback uses sheet XML row heights and column widths instead of fixed defaults alone
+  - shape and connector placement now prefers `a:xfrm` absolute position when the transform carries a non-zero size, while chart frames still fall back cleanly to anchor geometry when `xfrm` is a zero placeholder
+  - added focused regression coverage in `tests/core/test_ooxml_drawing.py` for custom row/column metrics, two-cell-anchor geometry, and `sample/flowchart/sample-shape-connector.xlsx` transform placement
+- Permanent-document follow-up completed:
+  - `ADR-0010` is now `accepted`, `ADR-0001` is now `superseded`, and the ADR index artifacts (`README.md`, `index.yaml`, `decision-map.md`) were synchronized to match the source ADRs
+  - `dev-docs/specs/excel-extraction.md`, `dev-docs/specs/data-model.md`, `dev-docs/testing/test-requirements.md`, `docs/cli.md`, `docs/api.md`, and `docs/mcp.md` now describe `light` as the pure-Python OOXML-rich baseline and document `python_ooxml` backend metadata
 - Verification:
   - `uv run pytest tests/core/test_mode_output.py tests/core/test_pipeline.py tests/integration/test_integrate_raw_data.py tests/models/test_models_export.py tests/models/test_schemas_generated.py -q`
     - result: `75 passed, 2 skipped`
+  - `uv run pytest tests/core/test_ooxml_drawing.py tests/core/test_mode_output.py tests/core/test_pipeline.py tests/integration/test_integrate_raw_data.py tests/models/test_models_export.py tests/models/test_schemas_generated.py -q`
+    - result: `80 passed, 2 skipped`
+  - `uv run pytest tests/core/test_ooxml_drawing.py tests/core/test_libreoffice_backend.py -q`
+    - result: `59 passed`
   - `uv run task precommit-run`
     - result: passed after aligning `ComRichBackend` method signatures with the widened `RichBackend` protocol
+  - `uv run task precommit-run`
+    - result: passed after the geometry follow-up and durable docs updates
+  - `uv run task build-docs`
+    - result: still fails in `docs/api.md` mkdocstrings signature rendering with `AttributeError: 'NoneType' object has no attribute 'replace'`
+    - baseline check: the same failure reproduces in a detached worktree at commit `c4d9acf`, so the docs-build failure is pre-existing and not introduced by this task
 - Remaining work:
-  - geometry fidelity in `src/exstruct/core/ooxml_drawing.py` is still the largest functional gap for pure-Python placement quality
-  - durable spec/docs updates are still pending even though the code path and schema literal are now in place
+  - no task-local follow-up remains; the only unresolved item observed during verification is the pre-existing `build-docs` failure in mkdocstrings for `docs/api.md`
