@@ -1,5 +1,24 @@
 # Todo
 
+## 2026-04-22 README English/Japanese parity refresh
+
+### Planning
+
+- [x] Compare `README.ja.md` against `README.md` and identify English-only sections/details that should be removed.
+- [x] Update `README.md` so its structure and examples match the edited Japanese README.
+- [x] Run a lightweight documentation verification pass and record the result.
+
+### Review
+
+- `README.md` now follows the same top-level structure as `README.ja.md`, including the language switcher, quick-start ordering, sample sections, and closing reference sections.
+- Removed English-only content that the Japanese README no longer keeps, including the `Choose an Interface` section, extra MCP operational notes, and extra positioning commentary around editing workflows.
+- Reworked the English README intro, feature list, installation notes, CLI/MCP guidance, and example assets so they match the edited Japanese README more closely.
+- Expanded the English version of Example 2 so the LLM-output section now covers the same spouse / income / asset / applicant subsections that remain in `README.ja.md`.
+- Verification:
+  - `rg -n '^#{1,6} ' README.md README.ja.md`
+  - `git diff --check -- README.md tasks/feature_spec.md tasks/todo.md`
+  - result: passed
+
 ## 2026-04-22 light-mode print areas / OOXML drawing resilience
 
 ### Planning

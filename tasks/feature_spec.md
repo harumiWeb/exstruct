@@ -1,5 +1,36 @@
 # Feature Spec
 
+## 2026-04-22 README English/Japanese parity refresh
+
+### Goal
+
+- Bring `README.md` back in line with the heavily edited `README.ja.md`.
+- Remove English-only sections or details that no longer exist in the Japanese README.
+- Preserve the same public structure, examples, and interface positioning across both README files while keeping the English text idiomatic.
+
+### Public contract summary
+
+- `README.md` should describe the same interfaces, quick starts, examples, and support notes as `README.ja.md`.
+- The English README should not retain extra positioning guidance, extra MCP operational notes, or longer example explanations that the Japanese README no longer ships.
+- This task is documentation parity only; no code, CLI behavior, API behavior, or ADR policy changes are introduced.
+
+### Permanent destinations
+
+- `README.md`
+  - Updated English public-facing project overview, quick starts, examples, and reference links.
+- `README.ja.md`
+  - Remains the parity source for this specific cleanup pass; no content changes required in this task.
+- No additional `dev-docs/` or `docs/` migration is required because this change only re-syncs an already-public README.
+
+### Verification
+
+- `git diff --check -- README.md tasks/feature_spec.md tasks/todo.md`
+
+### ADR verdict
+
+- `not-needed`
+- rationale: this is a documentation parity refresh for an existing public README, not a new design or policy decision.
+
 ## 2026-04-22 light-mode print areas / OOXML drawing resilience
 
 ### Goal
