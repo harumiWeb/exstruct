@@ -1012,8 +1012,22 @@ def _run_libreoffice_pipeline(
     """Run LibreOffice rich extraction while preserving partial shape success."""
 
     baseline_backend = OoxmlRichBackend(inputs.file_path)
-    artifacts.shape_data = baseline_backend.extract_shapes(mode="light")
-    artifacts.chart_data = baseline_backend.extract_charts(mode="light")
+    try:
+        artifacts.shape_data = baseline_backend.extract_shapes(mode="light")
+    except Exception as exc:
+        logger.warning(
+            "Failed to seed OOXML shape baseline for %s before LibreOffice enrichment. (%r)",
+            inputs.file_path,
+            exc,
+        )
+    try:
+        artifacts.chart_data = baseline_backend.extract_charts(mode="light")
+    except Exception as exc:
+        logger.warning(
+            "Failed to seed OOXML chart baseline for %s before LibreOffice enrichment. (%r)",
+            inputs.file_path,
+            exc,
+        )
     rich_mode: Literal["libreoffice"] = "libreoffice"
     try:
         rich_backend = resolve_rich_backend(inputs=inputs)

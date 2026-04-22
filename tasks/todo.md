@@ -102,6 +102,58 @@
   - `uv run task precommit-run`
     - result: passed
 
+## 2026-04-22 PR #129 review follow-up (third pass)
+
+### Planning
+
+- [x] Re-check the latest unresolved review threads after commit `478db2a`.
+- [x] Make LibreOffice OOXML baseline seeding best-effort instead of an uncaught failure path.
+- [x] Add regression coverage for baseline seed failure with successful LibreOffice enrichment.
+- [x] Run the targeted pipeline tests and `uv run task precommit-run`.
+
+### Review
+
+- Re-checked the latest unresolved review threads and found one remaining actionable comment: `_run_libreoffice_pipeline()` seeded the OOXML baseline without protection, so an unexpected OOXML conversion failure could crash the whole pipeline before UNO enrichment or fallback.
+- `src/exstruct/core/pipeline.py` now treats both OOXML baseline seed steps in LibreOffice mode as best-effort:
+  - shape seed failure logs a warning and still allows LibreOffice enrichment to continue
+  - chart seed failure logs a warning and still allows LibreOffice enrichment to continue
+- Added a regression test in `tests/core/test_pipeline.py` that forces OOXML baseline seeding to fail while LibreOffice enrichment succeeds, and verifies the pipeline returns the UNO-enriched shapes/charts without setting a fallback reason.
+- Verification:
+  - `uv run pytest tests/core/test_pipeline.py -q`
+    - result: `46 passed`
+  - `uv run task precommit-run`
+    - result: passed
+
+## 2026-04-22 v0.8.0 release closeout
+
+### Planning
+
+- [x] Add the `0.8.0` changelog entry with `Added` / `Changed` / `Fixed`.
+- [x] Create `docs/release-notes/v0.8.0.md` for the April 2026 extraction work.
+- [x] Add `v0.8.0` to the `Release Notes` nav in `mkdocs.yml`.
+- [x] Verify release-note references against `pyproject.toml` and `uv.lock` version `0.8.0`.
+- [x] Run verification for the code/docs changes and record the result.
+
+### Review
+
+- Added the `0.8.0` release entry to `CHANGELOG.md`, covering:
+  - typed LibreOffice workbook handles and lifecycle hardening
+  - the pure-Python OOXML rich backend for `light`
+  - print-area default alignment, OOXML/LibreOffice fallback hardening, and review follow-ups
+- Added `docs/release-notes/v0.8.0.md` with highlights, compatibility notes, and release notes for the April 2026 extraction changes.
+- Added `v0.8.0` to the MkDocs `Release Notes` navigation in `mkdocs.yml`.
+- Version references are now aligned across the release artifacts and package metadata for `0.8.0`.
+- Verification:
+  - `rg -n "0\.8\.0|v0\.8\.0" CHANGELOG.md mkdocs.yml docs/release-notes/v0.8.0.md pyproject.toml uv.lock`
+    - result: matched the expected release artifacts and package metadata
+  - `uv run pytest tests/core/test_pipeline.py -q`
+    - result: `46 passed`
+  - `uv run task precommit-run`
+    - result: passed
+  - `uv run task build-docs`
+    - result: failed with the existing `docs/api.md` mkdocstrings error: `AttributeError: 'NoneType' object has no attribute 'replace'`
+    - note: this matches the already-observed docs-build failure noted in the earlier April extraction task records and was not addressed in this release closeout
+
 
 ## 2026-03-19 v0.7.0 release closeout
 

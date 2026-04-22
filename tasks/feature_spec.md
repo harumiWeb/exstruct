@@ -120,6 +120,68 @@
 - `not-needed`
 - rationale: this is review-driven contract wording cleanup and newline normalization on top of the existing accepted design.
 
+## 2026-04-22 PR #129 review follow-up (third pass)
+
+### Goal
+
+- Address the remaining PR review feedback about unprotected OOXML baseline seeding in the LibreOffice pipeline.
+- Preserve the accepted fallback contract by making the OOXML baseline seed best-effort instead of a crash point.
+
+### Public contract summary
+
+- `mode="libreoffice"` should continue trying UNO enrichment even if the OOXML baseline seed raises unexpectedly.
+- If OOXML baseline seeding fails, extraction must still degrade safely instead of aborting the pipeline.
+
+### Permanent destinations
+
+- `src/exstruct/core/pipeline.py` should treat OOXML baseline seeding for LibreOffice mode as best-effort with warnings instead of uncaught exceptions.
+- `tests/core/test_pipeline.py` should cover the case where baseline seeding fails but LibreOffice enrichment still succeeds.
+
+### Verification
+
+- `uv run pytest tests/core/test_pipeline.py -q`
+- `uv run task precommit-run`
+
+### ADR verdict
+
+- `not-needed`
+- rationale: this is review-driven hardening of an already accepted fallback design.
+
+## 2026-04-22 v0.8.0 release closeout
+
+### Goal
+
+- Publish the `v0.8.0` release artifacts for the LibreOffice lifecycle hardening and light-mode OOXML-rich extraction work.
+- Record the shipped public behavior and durable documentation destinations, then keep the `tasks/` record compact.
+
+### Public contract summary
+
+- `light` is now the pure-Python OOXML-rich baseline for `.xlsx` / `.xlsm`, including best-effort shapes / connectors / charts and default print-area inclusion.
+- `libreoffice` remains the optional enrichment layer above the OOXML baseline and preserves already recovered rich artifacts on safe fallback paths.
+- Serialized backend metadata may now report `python_ooxml` provenance when backend metadata output is enabled.
+
+### Permanent destinations
+
+- `CHANGELOG.md`
+  - Holds the `0.8.0` release summary in Keep a Changelog format.
+- `docs/`
+  - `docs/release-notes/v0.8.0.md` records the user-facing release narrative.
+  - `mkdocs.yml` keeps the canonical Release Notes navigation entry for `v0.8.0`.
+- `dev-docs/specs/`, `docs/api.md`, `docs/cli.md`, `docs/mcp.md`, and `ADR-0010`
+  - Already hold the durable behavior contract for the released extraction changes.
+
+### Verification
+
+- `uv run pytest tests/core/test_pipeline.py tests/core/test_ooxml_drawing.py -q`
+- `uv run task precommit-run`
+- `uv run task build-docs`
+- `rg -n "0\\.8\\.0|v0\\.8\\.0" CHANGELOG.md mkdocs.yml docs/release-notes/v0.8.0.md pyproject.toml uv.lock`
+
+### ADR verdict
+
+- `not-needed`
+- rationale: this is release closeout for already accepted policy and shipped implementation work.
+
 ## 2026-03-19 v0.7.0 release closeout
 
 ### Goal

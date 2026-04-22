@@ -1326,6 +1326,82 @@ def test_run_extraction_pipeline_keeps_baseline_charts_when_libreoffice_chart_st
     assert result.workbook.sheets["Sheet1"].charts[0].provenance == "python_ooxml"
 
 
+def test_run_extraction_pipeline_continues_when_libreoffice_ooxml_seed_fails(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    """Verify LibreOffice enrichment still runs when OOXML baseline seeding fails."""
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Sheet1"
+    sheet["A1"] = "value"
+    path = tmp_path / "book.xlsx"
+    workbook.save(path)
+    workbook.close()
+
+    class _Backend:
+        def extract_shapes(self, *, mode: str) -> dict[str, list[Shape]]:
+            _ = mode
+            return {
+                "Sheet1": [
+                    Shape(id=1, text="uno", l=1, t=2, provenance="libreoffice_uno")
+                ]
+            }
+
+        def extract_charts(self, *, mode: str) -> dict[str, list[Chart]]:
+            _ = mode
+            return {
+                "Sheet1": [
+                    Chart(
+                        name="Chart 1",
+                        chart_type="Column",
+                        title="title",
+                        y_axis_title="Y",
+                        y_axis_range=[],
+                        series=[],
+                        l=10,
+                        t=20,
+                        provenance="libreoffice_uno",
+                    )
+                ]
+            }
+
+    def _raise_seed_failure(self: object, *, mode: str) -> dict[str, list[Shape]]:
+        raise RuntimeError(f"bad {mode} seed")
+
+    monkeypatch.setattr(
+        "exstruct.core.pipeline.OoxmlRichBackend.extract_shapes",
+        _raise_seed_failure,
+    )
+    monkeypatch.setattr(
+        "exstruct.core.pipeline.resolve_rich_backend",
+        lambda **_kwargs: _Backend(),
+    )
+
+    inputs = ExtractionInputs(
+        file_path=path,
+        mode="libreoffice",
+        include_cell_links=False,
+        include_print_areas=True,
+        include_auto_page_breaks=False,
+        include_colors_map=False,
+        include_default_background=False,
+        ignore_colors=None,
+        include_formulas_map=False,
+        use_com_for_formulas=False,
+        include_merged_cells=True,
+        include_merged_values_in_rows=True,
+    )
+
+    result = run_extraction_pipeline(inputs)
+
+    assert result.state.fallback_reason is None
+    assert len(result.workbook.sheets["Sheet1"].shapes) == 1
+    assert result.workbook.sheets["Sheet1"].shapes[0].provenance == "libreoffice_uno"
+    assert len(result.workbook.sheets["Sheet1"].charts) == 1
+    assert result.workbook.sheets["Sheet1"].charts[0].provenance == "libreoffice_uno"
+
+
 def test_run_extraction_pipeline_falls_back_when_light_chart_step_fails(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:

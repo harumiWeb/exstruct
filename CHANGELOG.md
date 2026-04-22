@@ -4,13 +4,26 @@ All notable changes to this project are documented in this file. This changelog 
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-04-22
+
 ### Added
 
-- Added typed LibreOffice workbook handles and session-scoped workbook lifecycle tracking so rich extraction can reuse cached bridge payloads safely and reject foreign or closed workbook handles.
+- Added typed LibreOffice workbook handles and session-scoped workbook lifecycle tracking so rich extraction can reuse cached bridge payloads safely while rejecting foreign or closed workbook handles.
+- Added a pure-Python OOXML rich backend for `.xlsx` / `.xlsm`, allowing `mode="light"` to emit best-effort shapes, connectors, and charts without Excel COM or LibreOffice.
+- Added regression coverage for light-mode OOXML rich extraction, print-area side outputs, per-sheet OOXML drawing failures, and LibreOffice baseline/enrichment fallback behavior.
+
+### Changed
+
+- Changed the `light` mode contract so public API, engine, and CLI paths keep print areas by default and expose the OOXML-rich baseline consistently across `extract`, `process_excel`, and CLI output paths.
+- Changed `libreoffice` mode to seed the same OOXML baseline before optional UNO enrichment so non-COM fallback can preserve already recovered rich artifacts.
+- Updated ADR/spec/docs/schema artifacts to describe `light` as the pure-Python OOXML-rich baseline and to expose `python_ooxml` backend metadata in serialized models.
 
 ### Fixed
 
 - Fixed LibreOffice rich backend workbook lifecycle integration so custom `session_factory` implementations that only support legacy path-based `extract_chart_geometries()` and `extract_draw_page_shapes()` continue to work without `load_workbook()` and `close_workbook()` hooks.
+- Fixed OOXML drawing resilience so malformed or corrupt worksheet drawing parts only skip the affected sheet instead of clearing healthy workbook siblings.
+- Fixed `process_excel()` and engine filter alignment so `FilterOptions.include_print_areas=None` once again means automatic inclusion instead of an implicit hard-coded override.
+- Fixed light/libreoffice review follow-up edge cases by hardening OOXML baseline seeding, streaming worksheet metrics reads, caching cumulative row/column offsets, and correcting stale README / architecture wording.
 
 ## [0.7.1] - 2026-03-21
 
