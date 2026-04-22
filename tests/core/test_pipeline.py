@@ -1324,3 +1324,58 @@ def test_run_extraction_pipeline_keeps_baseline_charts_when_libreoffice_chart_st
     assert result.workbook.sheets["Sheet1"].shapes[0].provenance == "libreoffice_uno"
     assert len(result.workbook.sheets["Sheet1"].charts) == 1
     assert result.workbook.sheets["Sheet1"].charts[0].provenance == "python_ooxml"
+
+
+def test_run_extraction_pipeline_falls_back_when_light_chart_step_fails(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    """Verify light-mode rich extraction degrades to the fallback workbook on errors."""
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Sheet1"
+    sheet["A1"] = "value"
+    path = tmp_path / "book.xlsx"
+    workbook.save(path)
+    workbook.close()
+
+    class _Backend:
+        def extract_shapes(self, *, mode: str) -> dict[str, list[Shape]]:
+            _ = mode
+            return {
+                "Sheet1": [
+                    Shape(id=1, text="shape", l=5, t=6, provenance="python_ooxml")
+                ]
+            }
+
+        def extract_charts(self, *, mode: str) -> dict[str, list[Chart]]:
+            _ = mode
+            raise RuntimeError("bad chart payload")
+
+    monkeypatch.setattr(
+        "exstruct.core.pipeline.resolve_rich_backend",
+        lambda **_kwargs: _Backend(),
+    )
+
+    inputs = ExtractionInputs(
+        file_path=path,
+        mode="light",
+        include_cell_links=False,
+        include_print_areas=True,
+        include_auto_page_breaks=False,
+        include_colors_map=False,
+        include_default_background=False,
+        ignore_colors=None,
+        include_formulas_map=False,
+        use_com_for_formulas=False,
+        include_merged_cells=True,
+        include_merged_values_in_rows=True,
+    )
+
+    result = run_extraction_pipeline(inputs)
+
+    assert result.state.fallback_reason == FallbackReason.LIGHT_PIPELINE_FAILED
+    assert result.workbook.sheets["Sheet1"].rows
+    assert len(result.workbook.sheets["Sheet1"].shapes) == 1
+    assert result.workbook.sheets["Sheet1"].shapes[0].provenance == "python_ooxml"
+    assert result.workbook.sheets["Sheet1"].charts == []

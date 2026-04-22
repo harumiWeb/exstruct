@@ -4,6 +4,7 @@ from zipfile import ZipFile
 from defusedxml import ElementTree
 
 from exstruct.core.ooxml_drawing import (
+    SheetDrawingMetrics,
     _column_width_to_points,
     _marker_to_points,
     _merge_anchor_geometry,
@@ -206,6 +207,24 @@ def test_parse_anchor_geometry_uses_custom_metrics_for_two_cell_anchor() -> None
     expected_height = int(round((25 + 22) - 1))
 
     assert geometry == (expected_left, expected_top, expected_width, expected_height)
+
+
+def test_sheet_drawing_metrics_offset_cache_supports_out_of_order_reads() -> None:
+    """Verify cached row/column offsets remain correct across repeated lookups."""
+
+    metrics = SheetDrawingMetrics(
+        default_column_width_points=10.0,
+        default_row_height_points=5.0,
+        column_width_points={1: 20.0, 3: 15.0},
+        row_height_points={0: 7.0, 2: 8.0},
+    )
+
+    assert metrics.column_offset_points(4) == 55.0
+    assert metrics.column_offset_points(2) == 30.0
+    assert metrics.column_offset_points(5) == 65.0
+    assert metrics.row_offset_points(3) == 20.0
+    assert metrics.row_offset_points(1) == 7.0
+    assert metrics.row_offset_points(4) == 25.0
 
 
 def test_merge_anchor_geometry_prefers_transform_position_when_sized() -> None:

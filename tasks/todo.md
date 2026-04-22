@@ -48,6 +48,34 @@
   - `uv run task precommit-run`
     - result: passed
 
+## 2026-04-22 PR #129 review follow-up
+
+### Planning
+
+- [x] Inspect unresolved PR review threads and cluster the actionable comments by code path.
+- [x] Fix the `process_excel()` filter default, light-pipeline fallback handling, and stale pipeline docs.
+- [x] Reduce OOXML sheet-metrics overhead with cached offsets and a streaming worksheet metrics reader.
+- [x] Add or update regression tests for the review follow-ups.
+- [x] Run targeted pytest coverage and `uv run task precommit-run`.
+
+### Review
+
+- Addressed all six unresolved actionable review threads on PR `#129`.
+- `process_excel()` now leaves `FilterOptions.include_print_areas=None`, so it follows the engine's auto-default contract instead of re-hardcoding print-area inclusion.
+- `_run_light_pipeline()` now degrades through the existing fallback path when OOXML rich extraction raises unexpectedly, while preserving already extracted rich artifacts when only the chart step fails.
+- `SheetDrawingMetrics` now caches cumulative row/column offsets, and `_read_sheet_metrics()` now streams worksheet XML with `iterparse()` so drawing geometry no longer requires a full worksheet DOM parse.
+- `dev-docs/architecture/pipeline.md` now documents `OoxmlRichBackend` as the concrete `RichBackend` used by `light` mode.
+- Added regression coverage for:
+  - `process_excel()` keeping the engine auto print-area default
+  - light-mode fallback when chart extraction fails
+  - out-of-order cached row/column offset lookups
+- Verification:
+  - `uv run pytest tests/core/test_pipeline.py tests/core/test_mode_output.py tests/core/test_ooxml_drawing.py -q`
+    - result: `69 passed`
+    - note: pytest still emitted the pre-existing Windows COM fatal-exception noise after success, but exited with code `0`
+  - `uv run task precommit-run`
+    - result: passed
+
 
 ## 2026-03-19 v0.7.0 release closeout
 

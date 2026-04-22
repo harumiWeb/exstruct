@@ -41,11 +41,11 @@ sequenceDiagram
 
 The processing order is as follows.
 
-`RichBackend` in this diagram refers to the conceptual rich-extraction layer; the concrete implementations are `ComRichBackend` and `LibreOfficeRichBackend`.
+`RichBackend` in this diagram refers to the conceptual rich-extraction layer; the concrete implementations are `OoxmlRichBackend`, `ComRichBackend`, and `LibreOfficeRichBackend`.
 
 1. **Pipeline** assembles the execution plan
 2. **Openpyxl Backend** performs pre-analysis (cells, tables, print areas)
-3. **Rich Backend** extracts shapes/charts if available. Here, `RichBackend` is the conceptual layer and `ComRichBackend` / `LibreOfficeRichBackend` are the concrete implementations.
+3. **Rich Backend** extracts shapes/charts if available. Here, `RichBackend` is the conceptual layer and `light` uses `OoxmlRichBackend`, while COM-backed modes use `ComRichBackend` and optional LibreOffice enrichment uses `LibreOfficeRichBackend`.
 4. **Modeling** integrates the results into WorkbookData / SheetData
 5. Output in the requested format (JSON / YAML / TOON)
 
@@ -72,10 +72,11 @@ Backend defines **how Excel is read**.
 | ---------------------- | ------------------------------------------------- |
 | OpenpyxlBackend        | Cells / tables / print areas / colors map         |
 | ComBackend             | COM-only print areas / auto page breaks / maps    |
+| OoxmlRichBackend       | Pure-Python OOXML shapes / connectors / charts    |
 | ComRichBackend         | Shapes / arrows / charts / SmartArt via Excel COM |
-| LibreOfficeRichBackend | Best-effort shapes / connectors / charts          |
+| LibreOfficeRichBackend | LibreOffice-enriched shapes / connectors / charts |
 
-In this document, `RichBackend` refers to the protocol-level concept, while `ComRichBackend` and `LibreOfficeRichBackend` are the concrete backend classes.
+In this document, `RichBackend` refers to the protocol-level concept, while `OoxmlRichBackend`, `ComRichBackend`, and `LibreOfficeRichBackend` are the concrete backend classes.
 
 This abstraction enables the following extensions.
 

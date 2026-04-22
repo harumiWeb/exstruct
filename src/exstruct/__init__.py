@@ -532,7 +532,7 @@ def process_excel(
         output=OutputOptions(
             format=FormatOptions(fmt=out_fmt, pretty=pretty, indent=indent),
             filters=FilterOptions(
-                include_print_areas=True,
+                include_print_areas=None,
                 include_shape_size=True if mode == "verbose" else False,
                 include_chart_size=True if mode == "verbose" else False,
                 include_backend_metadata=include_backend_metadata,

@@ -909,7 +909,7 @@ def collect_sheet_raw_data(
     """
     Collect per-sheet raw extraction data and assemble SheetRawData for each sheet.
 
-    For each sheet in cell_data this returns a SheetRawData containing rows (optionally excluding values contributed by merged cells), shapes, charts (omitted in "light" mode), detected table candidates, print/auto-print areas, per-sheet formulas map, per-sheet colors map, and merged cell ranges.
+    For each sheet in cell_data this returns a SheetRawData containing rows (optionally excluding values contributed by merged cells), shapes, charts, detected table candidates, print/auto-print areas, per-sheet formulas map, per-sheet colors map, and merged cell ranges.
 
     Parameters:
         cell_data (CellData): Extracted cell rows keyed by sheet name.
@@ -917,7 +917,7 @@ def collect_sheet_raw_data(
         chart_data (ChartData): Extracted charts keyed by sheet name.
         merged_cell_data (MergedCellData): Merged cell ranges keyed by sheet name.
         workbook (xw.Book): xlwings workbook used to resolve sheets and detect tables.
-        mode (ExtractionMode): Extraction mode; when "light", charts are omitted.
+        mode (ExtractionMode): Extraction mode used for table detection and row shaping.
         include_merged_values_in_rows (bool): If False, remove values that originate from merged cells when building row data.
         print_area_data (PrintAreaData | None): Optional print areas keyed by sheet name.
         auto_page_break_data (PrintAreaData | None): Optional auto page-break areas keyed by sheet name.
@@ -973,12 +973,26 @@ def _run_light_pipeline(
     inputs: ExtractionInputs,
     artifacts: ExtractionArtifacts,
     state: PipelineState,
+    fallback: Callable[..., PipelineResult],
 ) -> PipelineResult:
     """Run the pure-Python OOXML rich baseline for light mode."""
 
-    rich_backend = resolve_rich_backend(inputs=inputs)
-    artifacts.shape_data = rich_backend.extract_shapes(mode="light")
-    artifacts.chart_data = rich_backend.extract_charts(mode="light")
+    try:
+        rich_backend = resolve_rich_backend(inputs=inputs)
+        artifacts.shape_data = rich_backend.extract_shapes(mode="light")
+    except Exception as exc:
+        return fallback(
+            f"Light OOXML rich extraction failed ({exc!r}).",
+            FallbackReason.LIGHT_PIPELINE_FAILED,
+        )
+    try:
+        artifacts.chart_data = rich_backend.extract_charts(mode="light")
+    except Exception as exc:
+        return fallback(
+            f"Light OOXML rich extraction failed ({exc!r}).",
+            FallbackReason.LIGHT_PIPELINE_FAILED,
+            include_rich_artifacts=True,
+        )
     workbook = build_cells_tables_workbook(
         inputs=inputs,
         artifacts=artifacts,
@@ -1101,6 +1115,7 @@ def run_extraction_pipeline(inputs: ExtractionInputs) -> PipelineResult:
                 inputs=inputs,
                 artifacts=artifacts,
                 state=state,
+                fallback=_fallback,
             )
         if inputs.mode == "libreoffice":
             result = _run_libreoffice_pipeline(

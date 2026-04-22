@@ -20,9 +20,13 @@ _NS = {
     "spreadsheetml": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
     "xdr": "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing",
 }
+_SPREADSHEETML_NS = _NS["spreadsheetml"]
 _EMU_PER_POINT = 12700.0
 _DEFAULT_COLUMN_WIDTH_POINTS = 48.0
 _DEFAULT_ROW_HEIGHT_POINTS = 15.0
+_SHEET_FORMAT_TAG = f"{{{_SPREADSHEETML_NS}}}sheetFormatPr"
+_COL_TAG = f"{{{_SPREADSHEETML_NS}}}col"
+_ROW_TAG = f"{{{_SPREADSHEETML_NS}}}row"
 _CHART_TAGS = {
     "areaChart",
     "barChart",
@@ -147,28 +151,36 @@ class SheetDrawingMetrics:
     default_row_height_points: float = _DEFAULT_ROW_HEIGHT_POINTS
     column_width_points: dict[int, float] = field(default_factory=dict)
     row_height_points: dict[int, float] = field(default_factory=dict)
+    _column_offsets_points: list[float] = field(
+        default_factory=lambda: [0.0],
+        init=False,
+        repr=False,
+    )
+    _row_offsets_points: list[float] = field(
+        default_factory=lambda: [0.0],
+        init=False,
+        repr=False,
+    )
 
     def column_offset_points(self, col_index: int) -> float:
         """Return the horizontal offset before a zero-based column index."""
 
-        offset = 0.0
-        for index in range(col_index):
-            offset += self.column_width_points.get(
-                index,
-                self.default_column_width_points,
-            )
-        return offset
+        return _offset_points(
+            col_index,
+            self.column_width_points,
+            self.default_column_width_points,
+            self._column_offsets_points,
+        )
 
     def row_offset_points(self, row_index: int) -> float:
         """Return the vertical offset before a zero-based row index."""
 
-        offset = 0.0
-        for index in range(row_index):
-            offset += self.row_height_points.get(
-                index,
-                self.default_row_height_points,
-            )
-        return offset
+        return _offset_points(
+            row_index,
+            self.row_height_points,
+            self.default_row_height_points,
+            self._row_offsets_points,
+        )
 
 
 def read_sheet_drawings(file_path: Path) -> dict[str, SheetDrawingData]:
@@ -736,52 +748,107 @@ def _read_sheet_metrics(
 ) -> SheetDrawingMetrics:
     """Read worksheet row/column sizing from a sheet XML part."""
 
-    sheet_root = ElementTree.fromstring(archive.read(sheet_xml_path))
-    return _parse_sheet_metrics(sheet_root)
+    metrics = SheetDrawingMetrics()
+    with archive.open(sheet_xml_path) as sheet_xml:
+        for _, element in ElementTree.iterparse(sheet_xml, events=("end",)):
+            _update_metrics_from_sheet_element(metrics, element)
+            element.clear()
+    return metrics
 
 
 def _parse_sheet_metrics(sheet_root: ElementTree.Element) -> SheetDrawingMetrics:
     """Parse worksheet row heights and column widths into drawing metrics."""
 
     metrics = SheetDrawingMetrics()
-    sheet_format = sheet_root.find("spreadsheetml:sheetFormatPr", _NS)
-    if sheet_format is not None:
-        default_row_height = _float_attr(sheet_format, "defaultRowHeight")
-        if default_row_height is not None and default_row_height > 0:
-            metrics.default_row_height_points = default_row_height
-        default_column_width = _float_attr(sheet_format, "defaultColWidth")
-        if default_column_width is not None and default_column_width > 0:
-            metrics.default_column_width_points = _column_width_to_points(
-                default_column_width
-            )
-
-    cols = sheet_root.find("spreadsheetml:cols", _NS)
-    if cols is not None:
-        for col in cols.findall("spreadsheetml:col", _NS):
-            min_index = _int_attr(col, "min")
-            max_index = _int_attr(col, "max")
-            width = _float_attr(col, "width")
-            if (
-                min_index is None
-                or max_index is None
-                or width is None
-                or min_index <= 0
-                or max_index < min_index
-                or width <= 0
-            ):
-                continue
-            width_points = _column_width_to_points(width)
-            for index in range(min_index - 1, max_index):
-                metrics.column_width_points[index] = width_points
-
-    for row in sheet_root.findall("spreadsheetml:sheetData/spreadsheetml:row", _NS):
-        row_index = _int_attr(row, "r")
-        height = _float_attr(row, "ht")
-        if row_index is None or row_index <= 0 or height is None or height <= 0:
-            continue
-        metrics.row_height_points[row_index - 1] = height
-
+    for element in sheet_root.iter():
+        _update_metrics_from_sheet_element(metrics, element)
     return metrics
+
+
+def _offset_points(
+    index: int,
+    explicit_sizes: dict[int, float],
+    default_size: float,
+    prefix_offsets: list[float],
+) -> float:
+    """Return the offset before ``index`` while caching prior widths/heights."""
+
+    if index <= 0:
+        return 0.0
+    while len(prefix_offsets) <= index:
+        next_index = len(prefix_offsets) - 1
+        prefix_offsets.append(
+            prefix_offsets[-1] + explicit_sizes.get(next_index, default_size)
+        )
+    return prefix_offsets[index]
+
+
+def _update_metrics_from_sheet_element(
+    metrics: SheetDrawingMetrics,
+    element: ElementTree.Element,
+) -> None:
+    """Apply relevant worksheet sizing information from one parsed XML element."""
+
+    if element.tag == _SHEET_FORMAT_TAG:
+        _apply_sheet_format_metrics(metrics, element)
+        return
+    if element.tag == _COL_TAG:
+        _apply_column_metrics(metrics, element)
+        return
+    if element.tag == _ROW_TAG:
+        _apply_row_metrics(metrics, element)
+
+
+def _apply_sheet_format_metrics(
+    metrics: SheetDrawingMetrics,
+    sheet_format: ElementTree.Element,
+) -> None:
+    """Apply worksheet default sizing from ``sheetFormatPr``."""
+
+    default_row_height = _float_attr(sheet_format, "defaultRowHeight")
+    if default_row_height is not None and default_row_height > 0:
+        metrics.default_row_height_points = default_row_height
+    default_column_width = _float_attr(sheet_format, "defaultColWidth")
+    if default_column_width is not None and default_column_width > 0:
+        metrics.default_column_width_points = _column_width_to_points(
+            default_column_width
+        )
+
+
+def _apply_column_metrics(
+    metrics: SheetDrawingMetrics,
+    col: ElementTree.Element,
+) -> None:
+    """Apply one OOXML ``col`` width span to the metrics map."""
+
+    min_index = _int_attr(col, "min")
+    max_index = _int_attr(col, "max")
+    width = _float_attr(col, "width")
+    if (
+        min_index is None
+        or max_index is None
+        or width is None
+        or min_index <= 0
+        or max_index < min_index
+        or width <= 0
+    ):
+        return
+    width_points = _column_width_to_points(width)
+    for index in range(min_index - 1, max_index):
+        metrics.column_width_points[index] = width_points
+
+
+def _apply_row_metrics(
+    metrics: SheetDrawingMetrics,
+    row: ElementTree.Element,
+) -> None:
+    """Apply one OOXML row height override to the metrics map."""
+
+    row_index = _int_attr(row, "r")
+    height = _float_attr(row, "ht")
+    if row_index is None or row_index <= 0 or height is None or height <= 0:
+        return
+    metrics.row_height_points[row_index - 1] = height
 
 
 def _column_width_to_points(width: float) -> float:

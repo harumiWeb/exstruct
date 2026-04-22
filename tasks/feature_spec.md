@@ -61,6 +61,36 @@
 - `not-needed`
 - rationale: this work restores the accepted `ADR-0010` contract and fallback behavior; it does not introduce a new policy decision.
 
+## 2026-04-22 PR #129 review follow-up
+
+### Goal
+
+- Address the actionable PR review feedback for the light-mode OOXML rich baseline without changing the accepted mode contract.
+- Keep `light` mode resilient to unexpected OOXML rich-extraction failures and reduce worksheet-metrics overhead in the new OOXML drawing path.
+
+### Public contract summary
+
+- `process_excel()` should continue to inherit the engine default `include_print_areas=None` behavior rather than hard-coding print-area inclusion.
+- `light` mode still supports best-effort OOXML shapes/charts, but unexpected rich-extraction failures must degrade to the existing cells/tables fallback instead of aborting extraction.
+- Architecture docs must describe `OoxmlRichBackend` as the concrete `RichBackend` for `light`.
+
+### Permanent destinations
+
+- `src/exstruct/__init__.py` should keep `process_excel()` aligned with the engine auto-filter contract.
+- `src/exstruct/core/pipeline.py` and `src/exstruct/core/ooxml_drawing.py` should hold the resilience and performance fixes for light-mode OOXML enrichment.
+- `dev-docs/architecture/pipeline.md` should reflect the current backend set and light-mode routing.
+- No new ADR/spec document is needed; this is implementation/doc follow-up within the accepted `ADR-0010` direction.
+
+### Verification
+
+- `uv run pytest tests/core/test_pipeline.py tests/core/test_mode_output.py tests/core/test_ooxml_drawing.py -q`
+- `uv run task precommit-run`
+
+### ADR verdict
+
+- `not-needed`
+- rationale: this is review-driven hardening and architecture-doc alignment for an already accepted design.
+
 ## 2026-03-19 v0.7.0 release closeout
 
 ### Goal
