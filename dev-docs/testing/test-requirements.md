@@ -200,7 +200,7 @@ Overall code coverage must be **80% or higher**.
 # 9. Mode / Integration Requirements
 
 - [MODE-01] CLI `--mode` / API `extract(..., mode=)` accepts light/libreoffice/standard/verbose (default: standard)
-- [MODE-02] light: cells + tables only, shapes/charts empty, no COM
+- [MODE-02] light: no COM; return cells + table candidates + pre-com artifacts, and on `.xlsx/.xlsm` emit best-effort OOXML shapes/connectors/charts when present
 - [MODE-03] standard: existing behavior (text-bearing shapes / arrows, and charts if COM is enabled)
 - [MODE-04] verbose: all shapes (with size) and charts (with size, except for specific exclusions)
 - [MODE-05] process_excel propagates mode when combined with PDF/image options
@@ -214,7 +214,7 @@ Overall code coverage must be **80% or higher**.
 - [INT-02] Preserve print_areas even during COM fallback
 - [IO-05] `dict_without_empty_values` removes None/empty list/empty dict and preserves nesting
 - [RENDER-01] PDF/PNG smoke tests for Excel+COM+pypdfium2 (env ON/OFF)
-- [MODE-08] In light, extract print_areas with openpyxl and exclude them from default output (automatic determination)
+- [MODE-08] In light, extract print_areas with openpyxl and keep them in default output unless include_print_areas=False is explicitly requested
 
 ## 9.1 Pipeline
 

@@ -4,18 +4,21 @@ This document is a human-readable map for navigating ADRs by domain.
 
 ## extraction
 
-- `ADR-0001` Extraction Mode Responsibility Boundaries (`accepted`)
+- `ADR-0001` Extraction Mode Responsibility Boundaries (`superseded`)
 - `ADR-0002` Rich Backend Fallback Policy (`accepted`)
 - `ADR-0008` Extraction CLI Runtime Capability Validation (`accepted`)
+- `ADR-0010` Light Mode as the Pure-Python Rich OOXML Baseline (`accepted`)
 
 ## mode
 
-- `ADR-0001` Extraction Mode Responsibility Boundaries (`accepted`)
+- `ADR-0001` Extraction Mode Responsibility Boundaries (`superseded`)
+- `ADR-0010` Light Mode as the Pure-Python Rich OOXML Baseline (`accepted`)
 
 ## backend
 
 - `ADR-0002` Rich Backend Fallback Policy (`accepted`)
 - `ADR-0004` Patch Backend Selection Policy (`accepted`)
+- `ADR-0010` Light Mode as the Pure-Python Rich OOXML Baseline (`accepted`)
 
 ## fallback
 
@@ -35,6 +38,7 @@ This document is a human-readable map for navigating ADRs by domain.
 - `ADR-0004` Patch Backend Selection Policy (`accepted`)
 - `ADR-0007` Editing CLI as Public Operational Interface (`accepted`)
 - `ADR-0008` Extraction CLI Runtime Capability Validation (`accepted`)
+- `ADR-0010` Light Mode as the Pure-Python Rich OOXML Baseline (`accepted`)
 
 ## mcp
 
@@ -69,4 +73,4 @@ This document is a human-readable map for navigating ADRs by domain.
 
 ## Supersession Relationships
 
-- There are currently no ADR supersession relationships.
+- `ADR-0010` supersedes `ADR-0001`

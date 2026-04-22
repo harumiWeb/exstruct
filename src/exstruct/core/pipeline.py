@@ -25,6 +25,7 @@ from ..models import (
 from .backends.base import RichBackend
 from .backends.com_backend import ComBackend, ComRichBackend
 from .backends.libreoffice_backend import LibreOfficeRichBackend
+from .backends.ooxml_backend import OoxmlRichBackend
 from .backends.openpyxl_backend import OpenpyxlBackend
 from .cells import (
     MergedCellRange,
@@ -908,7 +909,7 @@ def collect_sheet_raw_data(
     """
     Collect per-sheet raw extraction data and assemble SheetRawData for each sheet.
 
-    For each sheet in cell_data this returns a SheetRawData containing rows (optionally excluding values contributed by merged cells), shapes, charts (omitted in "light" mode), detected table candidates, print/auto-print areas, per-sheet formulas map, per-sheet colors map, and merged cell ranges.
+    For each sheet in cell_data this returns a SheetRawData containing rows (optionally excluding values contributed by merged cells), shapes, charts, detected table candidates, print/auto-print areas, per-sheet formulas map, per-sheet colors map, and merged cell ranges.
 
     Parameters:
         cell_data (CellData): Extracted cell rows keyed by sheet name.
@@ -916,7 +917,7 @@ def collect_sheet_raw_data(
         chart_data (ChartData): Extracted charts keyed by sheet name.
         merged_cell_data (MergedCellData): Merged cell ranges keyed by sheet name.
         workbook (xw.Book): xlwings workbook used to resolve sheets and detect tables.
-        mode (ExtractionMode): Extraction mode; when "light", charts are omitted.
+        mode (ExtractionMode): Extraction mode used for table detection and row shaping.
         include_merged_values_in_rows (bool): If False, remove values that originate from merged cells when building row data.
         print_area_data (PrintAreaData | None): Optional print areas keyed by sheet name.
         auto_page_break_data (PrintAreaData | None): Optional auto page-break areas keyed by sheet name.
@@ -938,7 +939,7 @@ def collect_sheet_raw_data(
         sheet_raw = SheetRawData(
             rows=filtered_rows,
             shapes=shape_data.get(sheet_name, []),
-            charts=chart_data.get(sheet_name, []) if mode != "light" else [],
+            charts=chart_data.get(sheet_name, []),
             table_candidates=detect_tables(sheet, mode=mode),
             print_areas=print_area_data.get(sheet_name, []) if print_area_data else [],
             auto_print_areas=auto_page_break_data.get(sheet_name, [])
@@ -958,11 +959,47 @@ def resolve_rich_backend(
     workbook: xw.Book | None = None,
 ) -> RichBackend:
     """Resolve the rich extraction backend for the requested mode."""
+    if inputs.mode == "light":
+        return OoxmlRichBackend(inputs.file_path)
     if inputs.mode == "libreoffice":
         return LibreOfficeRichBackend(inputs.file_path)
     if workbook is None:
         raise ValueError("COM workbook is required for COM-backed rich extraction.")
     return ComRichBackend(workbook)
+
+
+def _run_light_pipeline(
+    *,
+    inputs: ExtractionInputs,
+    artifacts: ExtractionArtifacts,
+    state: PipelineState,
+    fallback: Callable[..., PipelineResult],
+) -> PipelineResult:
+    """Run the pure-Python OOXML rich baseline for light mode."""
+
+    try:
+        rich_backend = resolve_rich_backend(inputs=inputs)
+        artifacts.shape_data = rich_backend.extract_shapes(mode="light")
+    except Exception as exc:
+        return fallback(
+            f"Light OOXML rich extraction failed ({exc!r}).",
+            FallbackReason.LIGHT_PIPELINE_FAILED,
+        )
+    try:
+        artifacts.chart_data = rich_backend.extract_charts(mode="light")
+    except Exception as exc:
+        return fallback(
+            f"Light OOXML rich extraction failed ({exc!r}).",
+            FallbackReason.LIGHT_PIPELINE_FAILED,
+            include_rich_artifacts=True,
+        )
+    workbook = build_cells_tables_workbook(
+        inputs=inputs,
+        artifacts=artifacts,
+        reason="Light pipeline completed.",
+        include_rich_artifacts=True,
+    )
+    return PipelineResult(workbook=workbook, artifacts=artifacts, state=state)
 
 
 def _run_libreoffice_pipeline(
@@ -974,6 +1011,23 @@ def _run_libreoffice_pipeline(
 ) -> PipelineResult:
     """Run LibreOffice rich extraction while preserving partial shape success."""
 
+    baseline_backend = OoxmlRichBackend(inputs.file_path)
+    try:
+        artifacts.shape_data = baseline_backend.extract_shapes(mode="light")
+    except Exception as exc:
+        logger.warning(
+            "Failed to seed OOXML shape baseline for %s before LibreOffice enrichment. (%r)",
+            inputs.file_path,
+            exc,
+        )
+    try:
+        artifacts.chart_data = baseline_backend.extract_charts(mode="light")
+    except Exception as exc:
+        logger.warning(
+            "Failed to seed OOXML chart baseline for %s before LibreOffice enrichment. (%r)",
+            inputs.file_path,
+            exc,
+        )
     rich_mode: Literal["libreoffice"] = "libreoffice"
     try:
         rich_backend = resolve_rich_backend(inputs=inputs)
@@ -981,39 +1035,37 @@ def _run_libreoffice_pipeline(
         return fallback(
             f"LibreOffice runtime is unavailable. ({exc!r})",
             FallbackReason.LIBREOFFICE_UNAVAILABLE,
+            include_rich_artifacts=True,
         )
     except Exception as exc:
         return fallback(
             f"LibreOffice pipeline failed ({exc!r}).",
             FallbackReason.LIBREOFFICE_PIPELINE_FAILED,
+            include_rich_artifacts=True,
         )
     try:
         artifacts.shape_data = rich_backend.extract_shapes(mode=rich_mode)
     except LibreOfficeUnavailableError as exc:
-        artifacts.shape_data = {}
-        artifacts.chart_data = {}
-        return fallback(
-            f"LibreOffice runtime is unavailable. ({exc!r})",
-            FallbackReason.LIBREOFFICE_UNAVAILABLE,
-        )
-    except Exception as exc:
-        artifacts.shape_data = {}
-        artifacts.chart_data = {}
-        return fallback(
-            f"LibreOffice pipeline failed ({exc!r}).",
-            FallbackReason.LIBREOFFICE_PIPELINE_FAILED,
-        )
-    try:
-        artifacts.chart_data = rich_backend.extract_charts(mode=rich_mode)
-    except LibreOfficeUnavailableError as exc:
-        artifacts.chart_data = {}
         return fallback(
             f"LibreOffice runtime is unavailable. ({exc!r})",
             FallbackReason.LIBREOFFICE_UNAVAILABLE,
             include_rich_artifacts=True,
         )
     except Exception as exc:
-        artifacts.chart_data = {}
+        return fallback(
+            f"LibreOffice pipeline failed ({exc!r}).",
+            FallbackReason.LIBREOFFICE_PIPELINE_FAILED,
+            include_rich_artifacts=True,
+        )
+    try:
+        artifacts.chart_data = rich_backend.extract_charts(mode=rich_mode)
+    except LibreOfficeUnavailableError as exc:
+        return fallback(
+            f"LibreOffice runtime is unavailable. ({exc!r})",
+            FallbackReason.LIBREOFFICE_UNAVAILABLE,
+            include_rich_artifacts=True,
+        )
+    except Exception as exc:
         return fallback(
             f"LibreOffice pipeline failed ({exc!r}).",
             FallbackReason.LIBREOFFICE_PIPELINE_FAILED,
@@ -1073,7 +1125,12 @@ def run_extraction_pipeline(inputs: ExtractionInputs) -> PipelineResult:
 
     if not plan.use_com:
         if inputs.mode == "light":
-            return _fallback("Light mode selected.", FallbackReason.LIGHT_MODE)
+            return _run_light_pipeline(
+                inputs=inputs,
+                artifacts=artifacts,
+                state=state,
+                fallback=_fallback,
+            )
         if inputs.mode == "libreoffice":
             result = _run_libreoffice_pipeline(
                 inputs=inputs,
@@ -1196,7 +1253,7 @@ def build_cells_tables_workbook(
             if include_rich_artifacts
             else [],
             charts=artifacts.chart_data.get(sheet_name, [])
-            if include_rich_artifacts and inputs.mode != "light"
+            if include_rich_artifacts
             else [],
             table_candidates=tables,
             print_areas=artifacts.print_area_data.get(sheet_name, [])

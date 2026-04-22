@@ -89,10 +89,10 @@ def test_collect_sheet_raw_data_includes_extracted_fields(
     assert raw.colors_map == {"#FFFFFF": [(1, 0)]}
 
 
-def test_collect_sheet_raw_data_skips_charts_in_light_mode(
+def test_collect_sheet_raw_data_keeps_charts_in_light_mode(
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """Skip chart extraction in light mode.
+    """Keep pre-extracted chart data in light mode.
 
     Args:
         monkeypatch: Pytest monkeypatch fixture.
@@ -107,7 +107,7 @@ def test_collect_sheet_raw_data_skips_charts_in_light_mode(
     result = collect_sheet_raw_data(
         cell_data={"Sheet1": []},
         shape_data={"Sheet1": []},
-        chart_data={"Sheet1": []},
+        chart_data={"Sheet1": [_make_chart()]},
         merged_cell_data={"Sheet1": []},
         workbook=workbook,
         mode="light",
@@ -118,4 +118,4 @@ def test_collect_sheet_raw_data_skips_charts_in_light_mode(
         colors_map_data=None,
     )
 
-    assert result["Sheet1"].charts == []
+    assert len(result["Sheet1"].charts) == 1

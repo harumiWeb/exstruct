@@ -137,7 +137,8 @@
         {
           "enum": [
             "excel_com",
-            "libreoffice_uno"
+            "libreoffice_uno",
+            "python_ooxml"
           ],
           "type": "string"
         },

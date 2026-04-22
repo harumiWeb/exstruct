@@ -356,6 +356,22 @@ def test_CLI_print_areas_dir_outputs_files(tmp_path: Path) -> None:
     )
 
 
+def test_CLI_light_print_areas_dir_outputs_files(tmp_path: Path) -> None:
+    """Verify that light mode keeps print-area side outputs."""
+
+    xlsx = _prepare_print_area_excel(tmp_path)
+    areas_dir = tmp_path / "areas_light"
+    result = _run_cli(
+        [str(xlsx), "--print-areas-dir", str(areas_dir), "--mode", "light"]
+    )
+    assert result.returncode == 0
+    files = list(areas_dir.glob("*.json"))
+    assert files, (
+        "No light-mode print area files created. "
+        f"stdout={_stdout_text(result)} stderr={_stderr_text(result)}"
+    )
+
+
 def test_cli_libreoffice_rejects_pdf_and_image(tmp_path: Path) -> None:
     """Verify that the CLI LibreOffice rejects PDF and image."""
 

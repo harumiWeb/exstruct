@@ -193,14 +193,14 @@ class ComRichBackend(RichBackend):
     workbook: xw.Book
 
     def extract_shapes(
-        self, *, mode: Literal["libreoffice", "standard", "verbose"]
+        self, *, mode: Literal["light", "libreoffice", "standard", "verbose"]
     ) -> ShapeData:
         """Extract sheet shapes through Excel COM using the requested richness mode."""
 
         return get_shapes_with_position(self.workbook, mode=mode)
 
     def extract_charts(
-        self, *, mode: Literal["libreoffice", "standard", "verbose"]
+        self, *, mode: Literal["light", "libreoffice", "standard", "verbose"]
     ) -> ChartData:
         """Extract sheet charts through Excel COM using the requested richness mode."""
 

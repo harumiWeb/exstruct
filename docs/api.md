@@ -81,6 +81,12 @@ process_excel(
 # Same as: exstruct input.xlsx --format json --include-backend-metadata --pdf --image --mode standard --pretty --sheets-dir out_sheets > out.json
 ```
 
+## Extraction Mode Guide
+
+- `mode="light"` is the pure-Python baseline. It skips COM entirely and, for `.xlsx/.xlsm`, returns best-effort OOXML shapes, connectors, and charts in addition to cells, table candidates, and print areas.
+- `mode="libreoffice"` starts from the same OOXML baseline as `light` and then applies optional LibreOffice enrichment when the runtime is available.
+- `mode="standard"` and `mode="verbose"` remain the COM-backed paths when you need native Excel fidelity.
+
 ## Editing API
 
 ExStruct also exposes workbook editing under `exstruct.edit`, but this is a

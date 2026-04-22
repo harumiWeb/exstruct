@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import logging
 from pathlib import Path, PurePosixPath
 from typing import Literal
-from zipfile import ZipFile
+from zipfile import BadZipFile, ZipFile
 
 from defusedxml import ElementTree
 
@@ -19,9 +20,13 @@ _NS = {
     "spreadsheetml": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
     "xdr": "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing",
 }
+_SPREADSHEETML_NS = _NS["spreadsheetml"]
 _EMU_PER_POINT = 12700.0
 _DEFAULT_COLUMN_WIDTH_POINTS = 48.0
 _DEFAULT_ROW_HEIGHT_POINTS = 15.0
+_SHEET_FORMAT_TAG = f"{{{_SPREADSHEETML_NS}}}sheetFormatPr"
+_COL_TAG = f"{{{_SPREADSHEETML_NS}}}col"
+_ROW_TAG = f"{{{_SPREADSHEETML_NS}}}row"
 _CHART_TAGS = {
     "areaChart",
     "barChart",
@@ -51,6 +56,8 @@ _DRAWING_REL_TYPE = (
 _CHART_REL_TYPE = (
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart"
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -136,15 +143,74 @@ class SheetDrawingData:
     charts: list[OoxmlChartInfo] = field(default_factory=list)
 
 
+@dataclass
+class SheetDrawingMetrics:
+    """Worksheet row/column sizing used to resolve drawing anchor coordinates."""
+
+    default_column_width_points: float = _DEFAULT_COLUMN_WIDTH_POINTS
+    default_row_height_points: float = _DEFAULT_ROW_HEIGHT_POINTS
+    column_width_points: dict[int, float] = field(default_factory=dict)
+    row_height_points: dict[int, float] = field(default_factory=dict)
+    _column_offsets_points: list[float] = field(
+        default_factory=lambda: [0.0],
+        init=False,
+        repr=False,
+    )
+    _row_offsets_points: list[float] = field(
+        default_factory=lambda: [0.0],
+        init=False,
+        repr=False,
+    )
+
+    def column_offset_points(self, col_index: int) -> float:
+        """Return the horizontal offset before a zero-based column index."""
+
+        return _offset_points(
+            col_index,
+            self.column_width_points,
+            self.default_column_width_points,
+            self._column_offsets_points,
+        )
+
+    def row_offset_points(self, row_index: int) -> float:
+        """Return the vertical offset before a zero-based row index."""
+
+        return _offset_points(
+            row_index,
+            self.row_height_points,
+            self.default_row_height_points,
+            self._row_offsets_points,
+        )
+
+
 def read_sheet_drawings(file_path: Path) -> dict[str, SheetDrawingData]:
     """Read worksheet drawing metadata directly from OOXML parts."""
     result: dict[str, SheetDrawingData] = {}
     with ZipFile(file_path) as archive:
         for sheet_name, sheet_xml_path in _iter_sheet_xml_paths(archive):
-            drawing_path = _resolve_sheet_drawing_path(archive, sheet_xml_path)
-            if drawing_path is None:
-                continue
-            result[sheet_name] = _parse_sheet_drawing(archive, drawing_path)
+            try:
+                drawing_path = _resolve_sheet_drawing_path(archive, sheet_xml_path)
+                if drawing_path is None:
+                    continue
+                result[sheet_name] = _parse_sheet_drawing(
+                    archive,
+                    drawing_path,
+                    _read_sheet_metrics(archive, sheet_xml_path),
+                )
+            except (
+                BadZipFile,
+                ElementTree.ParseError,
+                FileNotFoundError,
+                KeyError,
+                OSError,
+                ValueError,
+            ) as exc:
+                logger.warning(
+                    "Skipping OOXML drawing metadata for sheet %s in %s. (%r)",
+                    sheet_name,
+                    file_path,
+                    exc,
+                )
     return result
 
 
@@ -181,7 +247,11 @@ def _resolve_sheet_drawing_path(archive: ZipFile, sheet_xml_path: str) -> str | 
     return None
 
 
-def _parse_sheet_drawing(archive: ZipFile, drawing_path: str) -> SheetDrawingData:
+def _parse_sheet_drawing(
+    archive: ZipFile,
+    drawing_path: str,
+    sheet_metrics: SheetDrawingMetrics,
+) -> SheetDrawingData:
     """Parse shapes, connectors, and charts from a drawing part."""
 
     root = ElementTree.fromstring(archive.read(drawing_path))
@@ -201,17 +271,25 @@ def _parse_sheet_drawing(archive: ZipFile, drawing_path: str) -> SheetDrawingDat
         }:
             continue
         if (shape_node := anchor.find("xdr:sp", _NS)) is not None:
-            shape_info = _parse_shape_node(anchor, shape_node)
+            shape_info = _parse_shape_node(anchor, shape_node, sheet_metrics)
             if shape_info is not None:
                 shapes.append(shape_info)
             continue
         if (connector_node := anchor.find("xdr:cxnSp", _NS)) is not None:
-            connector_info = _parse_connector_node(anchor, connector_node)
+            connector_info = _parse_connector_node(
+                anchor, connector_node, sheet_metrics
+            )
             if connector_info is not None:
                 connectors.append(connector_info)
             continue
         if (graphic_frame := anchor.find("xdr:graphicFrame", _NS)) is not None:
-            chart_info = _parse_chart_node(archive, anchor, graphic_frame, rel_map)
+            chart_info = _parse_chart_node(
+                archive,
+                anchor,
+                graphic_frame,
+                rel_map,
+                sheet_metrics,
+            )
             if chart_info is not None:
                 charts.append(chart_info)
     return SheetDrawingData(shapes=shapes, connectors=connectors, charts=charts)
@@ -220,6 +298,7 @@ def _parse_sheet_drawing(archive: ZipFile, drawing_path: str) -> SheetDrawingDat
 def _parse_shape_node(
     anchor: ElementTree.Element,
     node: ElementTree.Element,
+    sheet_metrics: SheetDrawingMetrics,
 ) -> OoxmlShapeInfo | None:
     """Parse an OOXML shape node into an ``OoxmlShapeInfo`` record."""
 
@@ -237,6 +316,8 @@ def _parse_shape_node(
         top=top,
         width=width,
         height=height,
+        sheet_metrics=sheet_metrics,
+        prefer_transform_position_when_sized=True,
     )
     ref = DrawingShapeRef(
         drawing_id=drawing_id or 0,
@@ -262,6 +343,7 @@ def _parse_shape_node(
 def _parse_connector_node(
     anchor: ElementTree.Element,
     node: ElementTree.Element,
+    sheet_metrics: SheetDrawingMetrics,
 ) -> OoxmlConnectorInfo | None:
     """Parse an OOXML connector node into an ``OoxmlConnectorInfo`` record."""
 
@@ -279,6 +361,8 @@ def _parse_connector_node(
         top=top,
         width=width,
         height=height,
+        sheet_metrics=sheet_metrics,
+        prefer_transform_position_when_sized=True,
     )
     ref = DrawingShapeRef(
         drawing_id=drawing_id or 0,
@@ -324,6 +408,7 @@ def _parse_chart_node(
     anchor: ElementTree.Element,
     node: ElementTree.Element,
     rel_map: dict[str, OoxmlRelationship],
+    sheet_metrics: SheetDrawingMetrics,
 ) -> OoxmlChartInfo | None:
     """Parse an OOXML graphic-frame chart node into chart metadata."""
 
@@ -350,6 +435,8 @@ def _parse_chart_node(
         top=top,
         width=width,
         height=height,
+        sheet_metrics=sheet_metrics,
+        prefer_transform_position_when_sized=True,
     )
     return OoxmlChartInfo(
         name=name,
@@ -567,14 +654,25 @@ def _merge_anchor_geometry(
     top: int | None,
     width: int | None,
     height: int | None,
+    sheet_metrics: SheetDrawingMetrics | None = None,
+    prefer_transform_position_when_sized: bool = False,
 ) -> tuple[int | None, int | None, int | None, int | None]:
     """Use parent anchors for placement and child transforms for size when present."""
 
     anchor_left, anchor_top, anchor_width, anchor_height = _parse_anchor_geometry(
-        anchor
+        anchor,
+        sheet_metrics,
     )
-    resolved_left = anchor_left if anchor_left is not None else left
-    resolved_top = anchor_top if anchor_top is not None else top
+    if (
+        prefer_transform_position_when_sized
+        and width not in {None, 0}
+        and height not in {None, 0}
+    ):
+        resolved_left = left if left is not None else anchor_left
+        resolved_top = top if top is not None else anchor_top
+    else:
+        resolved_left = anchor_left if anchor_left is not None else left
+        resolved_top = anchor_top if anchor_top is not None else top
     resolved_width = width if width not in {None, 0} else anchor_width
     resolved_height = height if height not in {None, 0} else anchor_height
     return (resolved_left, resolved_top, resolved_width, resolved_height)
@@ -582,6 +680,7 @@ def _merge_anchor_geometry(
 
 def _parse_anchor_geometry(
     anchor: ElementTree.Element,
+    sheet_metrics: SheetDrawingMetrics | None = None,
 ) -> tuple[int | None, int | None, int | None, int | None]:
     """Parse approximate placement from a parent drawing anchor."""
 
@@ -598,7 +697,7 @@ def _parse_anchor_geometry(
     if tag == "oneCellAnchor":
         marker = anchor.find("xdr:from", _NS)
         ext = anchor.find("xdr:ext", _NS)
-        left, top = _marker_to_points(marker)
+        left, top = _marker_to_points(marker, sheet_metrics)
         return (
             left,
             top,
@@ -606,8 +705,8 @@ def _parse_anchor_geometry(
             _emu_attr_to_points(ext, "cy"),
         )
     if tag == "twoCellAnchor":
-        start = _marker_to_points(anchor.find("xdr:from", _NS))
-        end = _marker_to_points(anchor.find("xdr:to", _NS))
+        start = _marker_to_points(anchor.find("xdr:from", _NS), sheet_metrics)
+        end = _marker_to_points(anchor.find("xdr:to", _NS), sheet_metrics)
         if start[0] is None or start[1] is None or end[0] is None or end[1] is None:
             return (None, None, None, None)
         return (
@@ -621,11 +720,14 @@ def _parse_anchor_geometry(
 
 def _marker_to_points(
     marker: ElementTree.Element | None,
+    sheet_metrics: SheetDrawingMetrics | None = None,
 ) -> tuple[int | None, int | None]:
     """Convert an OOXML anchor marker to approximate point coordinates."""
 
     if marker is None:
         return (None, None)
+    if sheet_metrics is None:
+        sheet_metrics = SheetDrawingMetrics()
     col = _find_int_text(marker, "xdr:col")
     col_off = _find_int_text(marker, "xdr:colOff")
     row = _find_int_text(marker, "xdr:row")
@@ -633,10 +735,129 @@ def _marker_to_points(
     if col is None or row is None:
         return (None, None)
     left = int(
-        round(col * _DEFAULT_COLUMN_WIDTH_POINTS + (col_off or 0) / _EMU_PER_POINT)
+        round(sheet_metrics.column_offset_points(col) + (col_off or 0) / _EMU_PER_POINT)
     )
-    top = int(round(row * _DEFAULT_ROW_HEIGHT_POINTS + (row_off or 0) / _EMU_PER_POINT))
+    top = int(
+        round(sheet_metrics.row_offset_points(row) + (row_off or 0) / _EMU_PER_POINT)
+    )
     return (left, top)
+
+
+def _read_sheet_metrics(
+    archive: ZipFile,
+    sheet_xml_path: str,
+) -> SheetDrawingMetrics:
+    """Read worksheet row/column sizing from a sheet XML part."""
+
+    metrics = SheetDrawingMetrics()
+    with archive.open(sheet_xml_path) as sheet_xml:
+        for _, element in ElementTree.iterparse(sheet_xml, events=("end",)):
+            _update_metrics_from_sheet_element(metrics, element)
+            element.clear()
+    return metrics
+
+
+def _parse_sheet_metrics(sheet_root: ElementTree.Element) -> SheetDrawingMetrics:
+    """Parse worksheet row heights and column widths into drawing metrics."""
+
+    metrics = SheetDrawingMetrics()
+    for element in sheet_root.iter():
+        _update_metrics_from_sheet_element(metrics, element)
+    return metrics
+
+
+def _offset_points(
+    index: int,
+    explicit_sizes: dict[int, float],
+    default_size: float,
+    prefix_offsets: list[float],
+) -> float:
+    """Return the offset before ``index`` while caching prior widths/heights."""
+
+    if index <= 0:
+        return 0.0
+    while len(prefix_offsets) <= index:
+        next_index = len(prefix_offsets) - 1
+        prefix_offsets.append(
+            prefix_offsets[-1] + explicit_sizes.get(next_index, default_size)
+        )
+    return prefix_offsets[index]
+
+
+def _update_metrics_from_sheet_element(
+    metrics: SheetDrawingMetrics,
+    element: ElementTree.Element,
+) -> None:
+    """Apply relevant worksheet sizing information from one parsed XML element."""
+
+    if element.tag == _SHEET_FORMAT_TAG:
+        _apply_sheet_format_metrics(metrics, element)
+        return
+    if element.tag == _COL_TAG:
+        _apply_column_metrics(metrics, element)
+        return
+    if element.tag == _ROW_TAG:
+        _apply_row_metrics(metrics, element)
+
+
+def _apply_sheet_format_metrics(
+    metrics: SheetDrawingMetrics,
+    sheet_format: ElementTree.Element,
+) -> None:
+    """Apply worksheet default sizing from ``sheetFormatPr``."""
+
+    default_row_height = _float_attr(sheet_format, "defaultRowHeight")
+    if default_row_height is not None and default_row_height > 0:
+        metrics.default_row_height_points = default_row_height
+    default_column_width = _float_attr(sheet_format, "defaultColWidth")
+    if default_column_width is not None and default_column_width > 0:
+        metrics.default_column_width_points = _column_width_to_points(
+            default_column_width
+        )
+
+
+def _apply_column_metrics(
+    metrics: SheetDrawingMetrics,
+    col: ElementTree.Element,
+) -> None:
+    """Apply one OOXML ``col`` width span to the metrics map."""
+
+    min_index = _int_attr(col, "min")
+    max_index = _int_attr(col, "max")
+    width = _float_attr(col, "width")
+    if (
+        min_index is None
+        or max_index is None
+        or width is None
+        or min_index <= 0
+        or max_index < min_index
+        or width <= 0
+    ):
+        return
+    width_points = _column_width_to_points(width)
+    for index in range(min_index - 1, max_index):
+        metrics.column_width_points[index] = width_points
+
+
+def _apply_row_metrics(
+    metrics: SheetDrawingMetrics,
+    row: ElementTree.Element,
+) -> None:
+    """Apply one OOXML row height override to the metrics map."""
+
+    row_index = _int_attr(row, "r")
+    height = _float_attr(row, "ht")
+    if row_index is None or row_index <= 0 or height is None or height <= 0:
+        return
+    metrics.row_height_points[row_index - 1] = height
+
+
+def _column_width_to_points(width: float) -> float:
+    """Approximate an OOXML column width attribute in point units."""
+
+    if width <= 0:
+        return 0.0
+    return (width * 7.0 + 5.0) * 72.0 / 96.0
 
 
 def _read_relationships(

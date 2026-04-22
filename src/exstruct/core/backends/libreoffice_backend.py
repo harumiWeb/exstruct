@@ -261,6 +261,8 @@ class LibreOfficeRichBackend(RichBackend):
 def _build_shapes_from_ooxml(
     shapes: Sequence[OoxmlShapeInfo],
     connectors: Sequence[OoxmlConnectorInfo],
+    *,
+    provenance: str = "libreoffice_uno",
 ) -> list[Shape | Arrow | SmartArt]:
     """Build emitted shape models directly from OOXML drawing metadata.
 
@@ -299,7 +301,7 @@ def _build_shapes_from_ooxml(
                 h=shape_info.ref.height,
                 rotation=shape_info.rotation,
                 type=shape_info.shape_type,
-                provenance="libreoffice_uno",
+                provenance=provenance,
                 approximation_level="partial",
                 confidence=0.75,
             )
@@ -332,7 +334,7 @@ def _build_shapes_from_ooxml(
                     end_id=end_id,
                     shape_boxes=shape_boxes,
                 ),
-                provenance="libreoffice_uno",
+                provenance=provenance,
                 approximation_level=approximation_level,
                 confidence=confidence,
             )

@@ -1,5 +1,160 @@
 # Todo
 
+## 2026-04-22 README English/Japanese parity refresh
+
+### Planning
+
+- [x] Compare `README.ja.md` against `README.md` and identify English-only sections/details that should be removed.
+- [x] Update `README.md` so its structure and examples match the edited Japanese README.
+- [x] Run a lightweight documentation verification pass and record the result.
+
+### Review
+
+- `README.md` now follows the same top-level structure as `README.ja.md`, including the language switcher, quick-start ordering, sample sections, and closing reference sections.
+- Removed English-only content that the Japanese README no longer keeps, including the `Choose an Interface` section, extra MCP operational notes, and extra positioning commentary around editing workflows.
+- Reworked the English README intro, feature list, installation notes, CLI/MCP guidance, and example assets so they match the edited Japanese README more closely.
+- Expanded the English version of Example 2 so the LLM-output section now covers the same spouse / income / asset / applicant subsections that remain in `README.ja.md`.
+- Verification:
+  - `rg -n '^#{1,6} ' README.md README.ja.md`
+  - `git diff --check -- README.md tasks/feature_spec.md tasks/todo.md`
+  - result: passed
+
+## 2026-04-22 light-mode print areas / OOXML drawing resilience
+
+### Planning
+
+- [x] Align `process_excel` / engine auto-filter defaults with the accepted `light` print-area contract.
+- [x] Make `read_sheet_drawings()` skip only malformed sheets instead of dropping the whole workbook.
+- [x] Add regression coverage for light-mode print-area side outputs and partial OOXML drawing failure.
+- [x] Regenerate generated model docs and run verification.
+
+### Review
+
+- `process_excel()`, CLI, and engine export now keep `print_areas` in `light` mode by default, matching the accepted `ADR-0010` and current public docs.
+- `read_sheet_drawings()` now degrades per sheet: malformed drawing XML on one worksheet logs a warning and skips that sheet without erasing healthy OOXML-rich artifacts from sibling sheets.
+- Added regression coverage for:
+  - `light` engine export writing `print_areas_dir`
+  - `process_excel(..., mode="light", print_areas_dir=...)`
+  - `exstruct --mode light --print-areas-dir ...`
+  - direct OOXML parser behavior when one sheet drawing is malformed
+- Permanent-document follow-up:
+  - updated `dev-docs/testing/test-requirements.md` `MODE-08`
+  - regenerated `docs/generated/models.md` for the `FilterOptions.include_print_areas` auto-description
+- Verification:
+  - `uv run pytest tests/engine/test_engine.py tests/core/test_mode_output.py tests/cli/test_cli.py tests/core/test_ooxml_drawing.py -q`
+    - result: `49 passed, 3 skipped`
+  - `uv run python scripts/gen_model_docs.py`
+    - result: passed
+  - `uv run task precommit-run`
+    - result: passed
+
+## 2026-04-22 PR #129 review follow-up
+
+### Planning
+
+- [x] Inspect unresolved PR review threads and cluster the actionable comments by code path.
+- [x] Fix the `process_excel()` filter default, light-pipeline fallback handling, and stale pipeline docs.
+- [x] Reduce OOXML sheet-metrics overhead with cached offsets and a streaming worksheet metrics reader.
+- [x] Add or update regression tests for the review follow-ups.
+- [x] Run targeted pytest coverage and `uv run task precommit-run`.
+
+### Review
+
+- Addressed all six unresolved actionable review threads on PR `#129`.
+- `process_excel()` now leaves `FilterOptions.include_print_areas=None`, so it follows the engine's auto-default contract instead of re-hardcoding print-area inclusion.
+- `_run_light_pipeline()` now degrades through the existing fallback path when OOXML rich extraction raises unexpectedly, while preserving already extracted rich artifacts when only the chart step fails.
+- `SheetDrawingMetrics` now caches cumulative row/column offsets, and `_read_sheet_metrics()` now streams worksheet XML with `iterparse()` so drawing geometry no longer requires a full worksheet DOM parse.
+- `dev-docs/architecture/pipeline.md` now documents `OoxmlRichBackend` as the concrete `RichBackend` used by `light` mode.
+- Added regression coverage for:
+  - `process_excel()` keeping the engine auto print-area default
+  - light-mode fallback when chart extraction fails
+  - out-of-order cached row/column offset lookups
+- Verification:
+  - `uv run pytest tests/core/test_pipeline.py tests/core/test_mode_output.py tests/core/test_ooxml_drawing.py -q`
+    - result: `69 passed`
+    - note: pytest still emitted the pre-existing Windows COM fatal-exception noise after success, but exited with code `0`
+  - `uv run task precommit-run`
+    - result: passed
+
+## 2026-04-22 PR #129 review follow-up (second pass)
+
+### Planning
+
+- [x] Re-check unresolved review threads after commit `14efdda` and separate already-fixed/outdated items from new actionable findings.
+- [x] Fix the remaining per-sheet OOXML drawing exception hole and stale `README` wording about `light` / non-COM extraction.
+- [x] Normalize the specific YAML/Markdown files flagged for CRLF line endings back to LF.
+- [x] Run the relevant pytest coverage and `uv run task precommit-run`.
+- [x] Push the follow-up commit to refresh PR `#129`.
+
+### Review
+
+- Re-checked the unresolved PR threads after commit `14efdda` and confirmed the earlier `process_excel`, light-pipeline fallback, metrics caching, and architecture-doc comments were already addressed; the remaining actionable items were one `BadZipFile` exception gap, stale README wording, and newline-only cleanup.
+- `read_sheet_drawings()` now treats `BadZipFile` the same as the other sheet-local drawing parse failures, so one corrupt drawing member no longer forces workbook-wide OOXML rich artifacts to `{}` through the outer backend fallback.
+- `README.md` and `README.ja.md` now describe the current `light` contract consistently in the CLI quick start, non-COM note, output-mode section, and fallback section.
+- Normalized the specific files flagged by review bots back to LF:
+  - `.agents/skills/exstruct-cli/agents/openai.yaml`
+  - `dev-docs/agents/coding-guidelines.md`
+  - `mkdocs.yml`
+- Added regression coverage for the per-sheet `BadZipFile` case in `tests/core/test_ooxml_drawing.py`.
+- Verification:
+  - `uv run pytest tests/core/test_ooxml_drawing.py -q`
+    - result: `7 passed`
+  - `uv run task precommit-run`
+    - result: passed
+
+## 2026-04-22 PR #129 review follow-up (third pass)
+
+### Planning
+
+- [x] Re-check the latest unresolved review threads after commit `478db2a`.
+- [x] Make LibreOffice OOXML baseline seeding best-effort instead of an uncaught failure path.
+- [x] Add regression coverage for baseline seed failure with successful LibreOffice enrichment.
+- [x] Run the targeted pipeline tests and `uv run task precommit-run`.
+
+### Review
+
+- Re-checked the latest unresolved review threads and found one remaining actionable comment: `_run_libreoffice_pipeline()` seeded the OOXML baseline without protection, so an unexpected OOXML conversion failure could crash the whole pipeline before UNO enrichment or fallback.
+- `src/exstruct/core/pipeline.py` now treats both OOXML baseline seed steps in LibreOffice mode as best-effort:
+  - shape seed failure logs a warning and still allows LibreOffice enrichment to continue
+  - chart seed failure logs a warning and still allows LibreOffice enrichment to continue
+- Added a regression test in `tests/core/test_pipeline.py` that forces OOXML baseline seeding to fail while LibreOffice enrichment succeeds, and verifies the pipeline returns the UNO-enriched shapes/charts without setting a fallback reason.
+- Verification:
+  - `uv run pytest tests/core/test_pipeline.py -q`
+    - result: `46 passed`
+  - `uv run task precommit-run`
+    - result: passed
+
+## 2026-04-22 v0.8.0 release closeout
+
+### Planning
+
+- [x] Add the `0.8.0` changelog entry with `Added` / `Changed` / `Fixed`.
+- [x] Create `docs/release-notes/v0.8.0.md` for the April 2026 extraction work.
+- [x] Add `v0.8.0` to the `Release Notes` nav in `mkdocs.yml`.
+- [x] Verify release-note references against `pyproject.toml` and `uv.lock` version `0.8.0`.
+- [x] Run verification for the code/docs changes and record the result.
+
+### Review
+
+- Added the `0.8.0` release entry to `CHANGELOG.md`, covering:
+  - typed LibreOffice workbook handles and lifecycle hardening
+  - the pure-Python OOXML rich backend for `light`
+  - print-area default alignment, OOXML/LibreOffice fallback hardening, and review follow-ups
+- Added `docs/release-notes/v0.8.0.md` with highlights, compatibility notes, and release notes for the April 2026 extraction changes.
+- Added `v0.8.0` to the MkDocs `Release Notes` navigation in `mkdocs.yml`.
+- Version references are now aligned across the release artifacts and package metadata for `0.8.0`.
+- Verification:
+  - `rg -n "0\.8\.0|v0\.8\.0" CHANGELOG.md mkdocs.yml docs/release-notes/v0.8.0.md pyproject.toml uv.lock`
+    - result: matched the expected release artifacts and package metadata
+  - `uv run pytest tests/core/test_pipeline.py -q`
+    - result: `46 passed`
+  - `uv run task precommit-run`
+    - result: passed
+  - `uv run task build-docs`
+    - result: failed with the existing `docs/api.md` mkdocstrings error: `AttributeError: 'NoneType' object has no attribute 'replace'`
+    - note: this matches the already-observed docs-build failure noted in the earlier April extraction task records and was not addressed in this release closeout
+
+
 ## 2026-03-19 v0.7.0 release closeout
 
 ### Planning
@@ -132,3 +287,71 @@
 - Verification:
   - `uv run pytest tests/core/test_libreoffice_backend.py -q`
   - `uv run task precommit-run`
+
+## 2026-04-21 Pure-Python rich extraction for light-mode environments
+
+### Planning
+
+- [x] Review the current non-COM extraction contract in `docs/`, `dev-docs/specs/`, ADRs, and task guidance before proposing backend changes.
+- [x] Inspect the current LibreOffice-mode code path in `src/exstruct/core/backends/libreoffice_backend.py`, `src/exstruct/core/ooxml_drawing.py`, `src/exstruct/core/libreoffice.py`, and the related tests.
+- [x] Identify which rich artifacts already come from pure OOXML and which ones still depend on LibreOffice runtime enrichment.
+- [x] Re-scope the task after the user clarified that the goal is richer extraction in light-mode environments, not removing LibreOffice dependency from the existing LibreOffice path.
+- [x] Decide the ADR verdict and likely permanent-document destinations for the eventual implementation.
+- [x] Draft `ADR-0010` for changing `light` into the pure-Python OOXML-rich baseline and link the ADR index artifacts.
+- [x] Run an ADR-linter-style structural check on the draft and confirm the supersede/index links are consistent.
+- [x] Build the pure-Python rich extraction baseline from OOXML parsing.
+- [x] Improve pure-Python geometry fidelity for shapes/connectors/charts on sheets with custom row heights or column widths.
+- [x] Decide that the new capability is exposed by strengthening `light` itself.
+- [x] Add regression coverage for OOXML-only rich extraction and optional LibreOffice enrichment.
+- [x] Update ADR/spec/docs/public contract artifacts once the policy decision is accepted.
+
+### Review
+
+- Investigation result: the repository already has most of the needed Python-only parsing logic.
+  - `src/exstruct/core/ooxml_drawing.py` already parses shapes, connectors, and charts from OOXML drawing parts.
+  - `src/exstruct/core/backends/libreoffice_backend.py` already has `_build_shapes_from_ooxml(...)`, and chart extraction already builds metadata from OOXML before optionally refining geometry with LibreOffice.
+- Root cause: the pure-Python capability exists in pieces, but the current non-COM product path does not expose it to environments that only receive `light`-level extraction.
+- Main implementation risk: OOXML geometry is not yet strong enough to replace LibreOffice geometry on its own because `_marker_to_points()` still relies on fixed default row/column sizes and does not model custom sheet dimensions.
+- Recommended rollout:
+  - first build the pure-Python rich baseline
+  - then tighten geometry fidelity and regression coverage
+  - then wire that baseline into `light` and keep `libreoffice` as the optional enrichment layer
+  - finally update ADR/spec/docs/schema artifacts once the contract details, especially mode exposure and `provenance`, are settled
+- ADR verdict for the future code change: `required`.
+  - related ADRs: `ADR-0001` and `ADR-0002`
+  - draft created: `dev-docs/adr/ADR-0010-light-mode-as-the-pure-python-rich-ooxml-baseline.md`
+- ADR draft check:
+  - no unresolved structural holes were found in `ADR-0010`; required sections and evidence headings are present
+  - supersede references are linked in `ADR-0010`, `ADR-0001`, `dev-docs/adr/README.md`, `dev-docs/adr/index.yaml`, and `dev-docs/adr/decision-map.md`
+  - residual risk: `ADR-0001` still has status `accepted` while `ADR-0010` is only `proposed`; the final status flip should happen when `ADR-0010` is accepted
+- Permanent-document note:
+  - this section is still a temporary planning record
+  - the draft policy now lives in `ADR-0010`; once implementation starts, the durable follow-up must update `dev-docs/specs/excel-extraction.md` and, if metadata changes, `dev-docs/specs/data-model.md` / `schemas/` / public docs
+- Implementation status after the first code pass:
+  - added `src/exstruct/core/backends/ooxml_backend.py` as the pure-Python OOXML rich backend
+  - `light` now runs that backend and keeps shapes/charts in the assembled workbook instead of forcing the old empty-rich-artifact fallback
+  - `libreoffice` now seeds the same OOXML baseline first, so runtime-unavailable fallback preserves `python_ooxml` shapes/charts when they are available from OOXML
+  - public model/schema provenance now includes `python_ooxml`
+- Geometry-fidelity follow-up completed in the second code pass:
+  - added worksheet-driven `SheetDrawingMetrics` parsing in `src/exstruct/core/ooxml_drawing.py` so anchor fallback uses sheet XML row heights and column widths instead of fixed defaults alone
+  - shape and connector placement now prefers `a:xfrm` absolute position when the transform carries a non-zero size, while chart frames still fall back cleanly to anchor geometry when `xfrm` is a zero placeholder
+  - added focused regression coverage in `tests/core/test_ooxml_drawing.py` for custom row/column metrics, two-cell-anchor geometry, and `sample/flowchart/sample-shape-connector.xlsx` transform placement
+- Permanent-document follow-up completed:
+  - `ADR-0010` is now `accepted`, `ADR-0001` is now `superseded`, and the ADR index artifacts (`README.md`, `index.yaml`, `decision-map.md`) were synchronized to match the source ADRs
+  - `dev-docs/specs/excel-extraction.md`, `dev-docs/specs/data-model.md`, `dev-docs/testing/test-requirements.md`, `docs/cli.md`, `docs/api.md`, and `docs/mcp.md` now describe `light` as the pure-Python OOXML-rich baseline and document `python_ooxml` backend metadata
+- Verification:
+  - `uv run pytest tests/core/test_mode_output.py tests/core/test_pipeline.py tests/integration/test_integrate_raw_data.py tests/models/test_models_export.py tests/models/test_schemas_generated.py -q`
+    - result: `75 passed, 2 skipped`
+  - `uv run pytest tests/core/test_ooxml_drawing.py tests/core/test_mode_output.py tests/core/test_pipeline.py tests/integration/test_integrate_raw_data.py tests/models/test_models_export.py tests/models/test_schemas_generated.py -q`
+    - result: `80 passed, 2 skipped`
+  - `uv run pytest tests/core/test_ooxml_drawing.py tests/core/test_libreoffice_backend.py -q`
+    - result: `59 passed`
+  - `uv run task precommit-run`
+    - result: passed after aligning `ComRichBackend` method signatures with the widened `RichBackend` protocol
+  - `uv run task precommit-run`
+    - result: passed after the geometry follow-up and durable docs updates
+  - `uv run task build-docs`
+    - result: still fails in `docs/api.md` mkdocstrings signature rendering with `AttributeError: 'NoneType' object has no attribute 'replace'`
+    - baseline check: the same failure reproduces in a detached worktree at commit `c4d9acf`, so the docs-build failure is pre-existing and not introduced by this task
+- Remaining work:
+  - no task-local follow-up remains; the only unresolved item observed during verification is the pre-existing `build-docs` failure in mkdocstrings for `docs/api.md`

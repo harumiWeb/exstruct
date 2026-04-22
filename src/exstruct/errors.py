@@ -41,6 +41,7 @@ class FallbackReason(StrEnum):
     """Reason codes for extraction fallbacks."""
 
     LIGHT_MODE = "light_mode"
+    LIGHT_PIPELINE_FAILED = "light_pipeline_failed"
     SKIP_COM_TESTS = "skip_com_tests"
     COM_UNAVAILABLE = "com_unavailable"
     COM_PIPELINE_FAILED = "com_pipeline_failed"

@@ -63,6 +63,7 @@ Notes:
 - Arrow styles correspond to Excel enums
 - `begin_id` / `end_id` are the `id` of the shape the connector is connected to
 - `SmartArtNode` is represented as a nested structure, with `nodes` as the tree root
+- When backend metadata is included during serialization, shape-like outputs may also carry `provenance`, `approximation_level`, and `confidence`
 
 ---
 
@@ -110,6 +111,10 @@ Chart {
   error: str | null            // set only on parse failure
 }
 ```
+
+Notes:
+
+- When backend metadata is included during serialization, charts may also carry `provenance`, `approximation_level`, and `confidence`
 
 ---
 
@@ -218,6 +223,7 @@ Common:
   - Unsupported extensions raise `ValueError`
 - After `model_dump(exclude_none=True)`, remove empty values with `dict_without_empty_values`
 - By default, backend metadata (`provenance`, `approximation_level`, `confidence`) is not included in serialized output
+- `provenance` is one of `excel_com`, `libreoffice_uno`, or `python_ooxml`
 
 `SheetData`:
 

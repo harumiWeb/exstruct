@@ -35,7 +35,7 @@ ADRs record what was decided, under which constraints, and which trade-offs were
 
 | ID | Title | Status | Primary Domain |
 | --- | --- | --- | --- |
-| `ADR-0001` | Extraction Mode Responsibility Boundaries | `accepted` | `extraction` |
+| `ADR-0001` | Extraction Mode Responsibility Boundaries | `superseded` | `extraction` |
 | `ADR-0002` | Rich Backend Fallback Policy | `accepted` | `backend` |
 | `ADR-0003` | Output Serialization Omission Policy | `accepted` | `schema` |
 | `ADR-0004` | Patch Backend Selection Policy | `accepted` | `mcp` |
@@ -44,3 +44,4 @@ ADRs record what was decided, under which constraints, and which trade-offs were
 | `ADR-0007` | Editing CLI as Public Operational Interface | `accepted` | `editing` |
 | `ADR-0008` | Extraction CLI Runtime Capability Validation | `accepted` | `cli` |
 | `ADR-0009` | Single CLI Skill for Agent Workflows | `proposed` | `agents` |
+| `ADR-0010` | Light Mode as the Pure-Python Rich OOXML Baseline | `accepted` | `extraction` |

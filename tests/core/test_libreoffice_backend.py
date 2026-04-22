@@ -46,6 +46,7 @@ from exstruct.core.ooxml_drawing import (
     OoxmlConnectorInfo,
     OoxmlShapeInfo,
     SheetDrawingData,
+    SheetDrawingMetrics,
     _extract_chart_series,
     _merge_anchor_geometry,
     _parse_connector_node,
@@ -729,7 +730,7 @@ def test_ooxml_connector_tail_end_maps_to_end_arrow_style() -> None:
         </xdr:twoCellAnchor>
         """
     )
-    connector = _parse_connector_node(anchor, node)
+    connector = _parse_connector_node(anchor, node, SheetDrawingMetrics())
     assert connector is not None
     assert connector.begin_arrow_style is None
     assert connector.end_arrow_style == 2
@@ -766,7 +767,7 @@ def test_ooxml_connector_head_end_maps_to_begin_arrow_style() -> None:
         </xdr:twoCellAnchor>
         """
     )
-    connector = _parse_connector_node(anchor, node)
+    connector = _parse_connector_node(anchor, node, SheetDrawingMetrics())
     assert connector is not None
     assert connector.begin_arrow_style == 2
     assert connector.end_arrow_style is None

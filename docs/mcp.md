@@ -141,13 +141,14 @@ Example:
 
 | Mode | When to use | Main output characteristics |
 |---|---|---|
-| `light` | Fast, structure-first extraction | cells + table candidates + print areas |
-| `libreoffice` | Best-effort rich extraction without Excel COM | `light` + merged cells + shapes + connectors + charts |
+| `light` | Fast pure-Python extraction on any host | cells + table candidates + print areas, and on `.xlsx/.xlsm` best-effort OOXML shapes + connectors + charts |
+| `libreoffice` | Optional non-COM enrichment for `.xlsx/.xlsm` | `light` baseline + LibreOffice refinement for merged cells + shapes + connectors + charts when runtime is available |
 | `standard` | Default for Windows + Excel agent flows | balanced COM-backed detail and size |
 | `verbose` | Need the richest COM metadata | adds links/maps and richer metadata |
 
 Notes:
 
+- `light` is now the default non-COM baseline for OOXML rich artifacts; prefer it unless you specifically want LibreOffice refinement.
 - `libreoffice` is available for `.xlsx/.xlsm` only.
 - `libreoffice` is best-effort and not a strict subset of COM output.
 - `libreoffice` does not render PDFs/PNGs and does not compute auto page-break areas in v1.

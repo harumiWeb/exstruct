@@ -14,6 +14,12 @@ import xlwings as xw
 
 from exstruct import ConfigError, ExStructEngine, ExtractionMode, extract, process_excel
 from exstruct.core.integrate import extract_workbook
+from exstruct.core.ooxml_drawing import (
+    DrawingShapeRef,
+    OoxmlChartInfo,
+    OoxmlShapeInfo,
+    SheetDrawingData,
+)
 from exstruct.models import Arrow, Chart, Shape
 
 
@@ -72,7 +78,7 @@ def _make_shapes_book(path: Path) -> None:
 def test_lightモードではCOMに触れずセルとテーブルのみ(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Test that light mode avoids COM and returns only cell and table data."""
+    """Test that light mode avoids COM and still emits OOXML rich artifacts."""
 
     path = tmp_path / "book.xlsx"
     _make_basic_book(path)
@@ -83,10 +89,48 @@ def test_lightモードではCOMに触れずセルとテーブルのみ(
         raise AssertionError("COM should not be accessed in light mode")
 
     monkeypatch.setattr("exstruct.core.pipeline.xlwings_workbook", _boom)
+    monkeypatch.setattr(
+        "exstruct.core.backends.ooxml_backend.read_sheet_drawings",
+        lambda _path: {
+            "Sheet1": SheetDrawingData(
+                shapes=[
+                    OoxmlShapeInfo(
+                        ref=DrawingShapeRef(
+                            drawing_id=1,
+                            name="Shape 1",
+                            kind="shape",
+                            left=12,
+                            top=24,
+                            width=80,
+                            height=36,
+                        ),
+                        text="shape",
+                        shape_type="AutoShape-Rectangle",
+                    )
+                ],
+                charts=[
+                    OoxmlChartInfo(
+                        name="Chart 1",
+                        chart_type="Line",
+                        title="title",
+                        y_axis_title="Y",
+                        y_axis_range=[],
+                        series=[],
+                        anchor_left=48,
+                        anchor_top=72,
+                        anchor_width=120,
+                        anchor_height=90,
+                    )
+                ],
+            )
+        },
+    )
     data = extract(path, mode="light")
     sheet = next(iter(data.sheets.values()))
-    assert sheet.shapes == []
-    assert sheet.charts == []
+    assert len(sheet.shapes) == 1
+    assert sheet.shapes[0].provenance == "python_ooxml"
+    assert len(sheet.charts) == 1
+    assert sheet.charts[0].provenance == "python_ooxml"
 
 
 @pytest.mark.com  # type: ignore[misc]
@@ -163,6 +207,33 @@ def test_process_excel_can_enable_backend_metadata(
     assert captured["file_path"] == path
     assert captured["output_path"] == out
     assert captured["include_backend_metadata"] is True
+
+
+def test_process_excel_keeps_print_area_filter_on_engine_auto_default(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    """Verify that process_excel leaves print-area inclusion on the engine default."""
+
+    captured: dict[str, object] = {}
+
+    def _fake_process(
+        self: ExStructEngine,
+        file_path: Path,
+        output_path: Path | None = None,
+        **_kwargs: object,
+    ) -> None:
+        captured["file_path"] = file_path
+        captured["output_path"] = output_path
+        captured["include_print_areas"] = self.output.filters.include_print_areas
+
+    monkeypatch.setattr("exstruct.ExStructEngine.process", _fake_process)
+    path = tmp_path / "book.xlsx"
+    out = tmp_path / "out.json"
+    _make_basic_book(path)
+    process_excel(path, out, mode="light")
+    assert captured["file_path"] == path
+    assert captured["output_path"] == out
+    assert captured["include_print_areas"] is None
 
 
 def test_libreofficeモードを受け付ける(
@@ -354,6 +425,28 @@ def test_process_excel_sheets_dir_output(tmp_path: Path) -> None:
     names = {f.stem for f in files}
     assert "Sheet1" in names
     assert "Data 02" in names
+
+
+def test_process_excel_light_print_areas_dir_output(tmp_path: Path) -> None:
+    """Verify that light-mode process_excel writes print-area files."""
+
+    path = tmp_path / "book.xlsx"
+    _make_basic_book(path)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws["A1"] = "v1"
+    ws["B1"] = "v2"
+    ws.print_area = "A1:B1"
+    wb.save(path)
+    wb.close()
+
+    areas_dir = tmp_path / "areas"
+    process_excel(path, output_path=None, mode="light", print_areas_dir=areas_dir)
+
+    files = list(areas_dir.glob("*.json"))
+    assert len(files) == 1
+    assert files[0].stem == "Sheet1_area1_r1-1_c0-1"
 
 
 def test_CLI_defaults_to_stdout(tmp_path: Path) -> None:

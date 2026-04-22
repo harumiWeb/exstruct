@@ -258,7 +258,7 @@ class StructOptions:
 
     Attributes:
         mode: Extraction mode. One of "light", "libreoffice", "standard", "verbose".
-              - light: cells + table candidates only (no COM, shapes/charts empty)
+              - light: pure-Python OOXML baseline for `.xlsx/.xlsm`; cells + table candidates + print areas + best-effort shapes/charts (no COM)
               - libreoffice: best-effort non-COM mode using the LibreOffice backend
               - standard: texted shapes + arrows + charts (if COM available)
               - verbose: all shapes (width/height), charts, table candidates
@@ -328,7 +328,7 @@ class FilterOptions(BaseModel):
     )
     include_print_areas: bool | None = Field(
         default=None,
-        description="Include print areas; None -> auto (light=False, others=True).",
+        description="Include print areas; None -> auto (all modes=True).",
     )
     include_auto_print_areas: bool = Field(
         default=False, description="Include COM-computed auto page-break areas."
@@ -390,7 +390,7 @@ class ExStructEngine:
         - Main methods:
             extract(path, mode=None) -> WorkbookData
                 - Modes: light/libreoffice/standard/verbose
-                - light: COM-free; cells + tables + print areas only (shapes/charts empty)
+                - light: COM-free OOXML baseline; cells + tables + print areas + best-effort shapes/charts for `.xlsx/.xlsm`
             serialize(workbook, ...) -> str
                 - Applies include_* filters, then serializes
             export(workbook, ...)
@@ -470,10 +470,10 @@ class ExStructEngine:
     def _include_print_areas(self) -> bool:
         """
         Decide whether to include print areas in output.
-        Auto: light -> False, others -> True.
+        Auto: all modes -> True.
         """
         if self.output.filters.include_print_areas is None:
-            return self.options.mode != "light"
+            return True
         return self.output.filters.include_print_areas
 
     def _include_auto_print_areas(self) -> bool:

@@ -34,35 +34,26 @@ automation.
 
 - In COM/Excel environments (Windows), it performs rich extraction.
 - In non-COM environments (Linux/macOS):
-  - if the LibreOffice runtime is available, it performs best-effort extraction for cells, table candidates, shapes, connectors, and charts
-  - otherwise, it safely falls back to cells + table candidates + print areas
+  - direct OOXML parsing extracts cells, shapes, charts, table candidates, and print areas on a best-effort basis
+  - if the LibreOffice runtime is available, cells, table candidates, shapes, and charts are also extracted on a best-effort basis
 
 Detection heuristics, editing workflows, and output modes are adjustable for
 LLM/RAG pipelines and local automation.
 
-## Choose an Interface
-
-| Use case | Recommended interface | Why |
-| --- | --- | --- |
-| Write direct Python Excel-editing code | `openpyxl` / `xlwings` | Usually the better fit for imperative Python editing. Reach for `exstruct.edit` only when you specifically want ExStruct's patch contract in Python. |
-| Run local operator or AI-agent edit workflows | `exstruct patch`, `make`, `ops`, `validate` | Canonical operational interface; JSON-first and dry-run friendly. |
-| Run sandboxed or host-managed integrations | `exstruct-mcp` / MCP tools | Integration / compatibility layer that owns `PathPolicy`, transport, and artifact behavior. |
-
-Extraction keeps the existing top-level Python API (`extract`, `process_excel`,
-`ExStructEngine`) and the legacy `exstruct INPUT.xlsx ...` CLI entrypoint.
-
 ## Main Features
 
 - **Excel -> structured JSON**: outputs cells, shapes, charts, SmartArt, table candidates, merged-cell ranges, print areas, and auto page-break areas by sheet or by area.
-- **Output modes**: `light` (cells + table candidates + print areas only), `libreoffice` (best-effort non-COM mode for `.xlsx/.xlsm`; adds merged cells, shapes, connectors, and charts when the LibreOffice runtime is available), `standard` (Excel COM mode with texted shapes + arrows, charts, SmartArt, and merged-cell ranges), `verbose` (all shapes with width/height plus cell hyperlinks).
+- **Output modes**:
+  - `light`: cells + table candidates + print areas + shapes/charts (best-effort via direct OOXML parsing)
+  - `libreoffice`: best-effort non-COM mode for `.xlsx/.xlsm`. When the LibreOffice runtime is available, it adds merged cells, shapes, connectors, and charts
+  - `standard`: Excel COM mode with texted shapes + arrows, charts, SmartArt, and merged-cell ranges
+  - `verbose`: outputs all shapes with width/height and also emits cell hyperlinks
 - **Formula extraction**: emits `formulas_map` (formula string -> cell coordinates) via openpyxl/COM. It is enabled by default in `verbose` and can be controlled with `include_formulas_map`.
 - **Formats**: JSON (compact by default, `--pretty` for formatting), YAML, and TOON (optional dependencies).
-- **Backend metadata is opt-in**: shape/chart `provenance`, `approximation_level`, and `confidence` are omitted from serialized output by default. Enable them with `--include-backend-metadata` or `include_backend_metadata=True`.
 - **Workbook editing interfaces**: use the editing CLI for primary ExStruct edit flows, keep MCP for host-owned safety controls, and use `exstruct.edit` only when you need the same patch contract from Python.
 - **Table detection tuning**: heuristics can be adjusted dynamically through the API.
 - **Hyperlink extraction**: in `verbose` mode, or with `include_cell_links=True`, cell links are emitted in `links`.
-- **CLI rendering**: in `standard` / `verbose`, PDF and sheet images can be generated when Excel COM is available.
-- **Safe fallback**: if Excel COM or the LibreOffice runtime is unavailable, the process does not crash and falls back to cells + table candidates + print areas.
+- **Safe fallback**: if Excel COM or the LibreOffice runtime is unavailable, the process does not crash and falls back to direct OOXML parsing.
 
 ## Installation
 
@@ -79,11 +70,9 @@ Optional extras:
 
 Platform note:
 
-- Full COM extraction for shapes/charts targets Windows + Excel (xlwings/COM). On Linux/macOS/server environments, use `mode=libreoffice` as the best-effort rich mode or `mode=light` for minimal extraction. `.xls` is not supported in `mode=libreoffice`.
 - On Debian/Ubuntu/WSL, install LibreOffice together with `python3-uno`. ExStruct probes a compatible system Python automatically for `mode=libreoffice`; if your environment needs an explicit interpreter, set `EXSTRUCT_LIBREOFFICE_PYTHON_PATH=/usr/bin/python3`.
 - LibreOffice Python detection now runs the bundled bridge in `--probe` mode before selection. An incompatible `EXSTRUCT_LIBREOFFICE_PYTHON_PATH` fails fast instead of surfacing a delayed bridge `SyntaxError` during extraction.
 - If the isolated temporary LibreOffice profile fails before the UNO socket becomes ready, ExStruct retries once with the shared/default LibreOffice profile as a compatibility fallback and reports per-attempt startup detail if both launches fail.
-- GitHub Actions includes dedicated LibreOffice smoke jobs on `ubuntu-24.04` and `windows-2025`. Linux installs `libreoffice` + `python3-uno`; Windows installs `libreoffice-fresh`, sets `EXSTRUCT_LIBREOFFICE_PATH`, and both jobs run `tests/core/test_libreoffice_smoke.py` with `RUN_LIBREOFFICE_SMOKE=1`.
 
 ## Quick Start CLI
 
@@ -96,7 +85,7 @@ exstruct input.xlsx --sheets-dir sheets/   # write one file per sheet
 exstruct input.xlsx --auto-page-breaks-dir auto_areas/  # always shown; execution requires standard/verbose + Excel COM
 exstruct input.xlsx --alpha-col            # output column keys as A, B, ..., AA
 exstruct input.xlsx --include-backend-metadata  # include shape/chart backend metadata
-exstruct input.xlsx --mode light           # cells + table candidates only
+exstruct input.xlsx --mode light           # cells + table candidates + best-effort OOXML shapes/charts
 exstruct input.xlsx --mode libreoffice     # best-effort extraction of shapes/connectors/charts without COM
 exstruct input.xlsx --pdf --image          # PDF and PNGs (Excel COM required)
 ```
@@ -105,7 +94,6 @@ Auto page-break export is available from both the API and the CLI when Excel/COM
 `mode=libreoffice` rejects `--pdf`, `--image`, and `--auto-page-breaks-dir` early, and `mode=light` also rejects `--auto-page-breaks-dir`. Use `standard` or `verbose` with Excel COM for those features.
 By default, the CLI keeps legacy 0-based numeric string column keys (`"0"`, `"1"`, ...). Use `--alpha-col` when you need Excel-style keys (`"A"`, `"B"`, ...).
 By default, serialized shape/chart output omits backend metadata (`provenance`, `approximation_level`, `confidence`) to reduce token usage. Use `--include-backend-metadata` or the corresponding Python/MCP option when you need it.
-Note: MCP `exstruct_extract` defaults to `options.alpha_col=true`, which differs from the CLI default (`false`).
 
 ## Quick Start Editing CLI
 
@@ -119,11 +107,8 @@ exstruct validate --input book.xlsx --pretty
 ```
 
 - `patch` and `make` print JSON `PatchResult` to stdout.
-- This is the canonical operational / agent interface for workbook editing.
 - `ops list` / `ops describe` expose the public patch-op schema.
 - `validate` reports workbook readability (`is_readable`, `warnings`, `errors`).
-- Phase 2 keeps the legacy extraction CLI unchanged; it does not add
-  `exstruct extract` or interactive safety flags yet.
 
 Recommended edit flow:
 
@@ -148,11 +133,8 @@ You can install it with the following single command:
 npx skills add harumiWeb/exstruct/.agents/skills --skill exstruct-cli
 ```
 
-That command should install `exstruct-cli` directly from this repository's
-published Skill directory. If you are working from an unpublished branch or a
-runtime that does not support `npx skills add`, fall back to copying the same
-folder into the equivalent local skill directory that discovers
-`SKILL.md`-based skills.
+If your runtime cannot use `npx skills add`, place the same folder manually
+into a local skill directory that discovers `SKILL.md`-based skills.
 
 Use this Skill when the agent needs help choosing between `patch`, `make`,
 `validate`, `ops list`, and `ops describe`, or when it should follow the safe
@@ -169,11 +151,6 @@ it when you need host-managed path restrictions, transport mapping, artifact
 mirroring, or approval-aware agent execution. For ordinary Python workbook
 editing, `openpyxl` / `xlwings` are usually a better fit. For local shell or
 agent workflows, prefer the editing CLI.
-
-If you previously used `exstruct_patch` / `exstruct_make` only because editing
-was MCP-first, migrate new local workflows to `exstruct patch` or
-`exstruct make` unless you specifically need MCP host controls or the shared
-patch contract inside Python.
 
 ### Quick Start with `uvx` (recommended)
 
@@ -201,48 +178,19 @@ exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict re
 
 Available tools:
 
-- `exstruct_extract`
-- `exstruct_capture_sheet_images`
-- `exstruct_make`
-- `exstruct_patch`
-- `exstruct_read_json_chunk`
-- `exstruct_read_range`
-- `exstruct_read_cells`
-- `exstruct_read_formulas`
-- `exstruct_validate_input`
+| Tool name | Description |
+| ------------------------------- | -------------------------------------- |
+| `exstruct_extract` | Extracts data from a workbook. |
+| `exstruct_capture_sheet_images` | Captures sheet images. |
+| `exstruct_make` | Creates a new workbook. |
+| `exstruct_patch` | Applies editing patches to a workbook. |
+| `exstruct_read_json_chunk` | Reads extracted JSON chunks. |
+| `exstruct_read_range` | Reads cells from a specified range. |
+| `exstruct_read_cells` | Reads data cell by cell. |
+| `exstruct_read_formulas` | Reads cell formulas. |
+| `exstruct_validate_input` | Validates input data. |
 
-Notes:
-
-- `exstruct_capture_sheet_images` is COM-only (Experimental) and supports optional `sheet` / `range` targeting (`A1:B2`, `Sheet1!A1:B2`, `'Sheet 1'!A1:B2`). When `out_dir` is omitted, it creates a unique `<workbook_stem>_images` directory under MCP `--root`.
-- MCP server startup defaults `EXSTRUCT_RENDER_SUBPROCESS=1` via `setdefault`. If you want in-process execution instead, set `EXSTRUCT_RENDER_SUBPROCESS=0` before launching the server.
-- Timeout tuning for `exstruct_capture_sheet_images`: `EXSTRUCT_MCP_CAPTURE_SHEET_IMAGES_TIMEOUT_SEC` (overall tool timeout), `EXSTRUCT_RENDER_SUBPROCESS_STARTUP_TIMEOUT_SEC` (worker startup), `EXSTRUCT_RENDER_SUBPROCESS_JOIN_TIMEOUT_SEC` (primary wait budget), and `EXSTRUCT_RENDER_SUBPROCESS_RESULT_TIMEOUT_SEC` (post-exit grace).
-- Subprocess failures return `stage=startup|join|result|worker`, which lets MCP clients distinguish bootstrap failures, timeouts, and worker-side rendering failures.
-- Trade-off of `EXSTRUCT_RENDER_SUBPROCESS=1`: extra subprocess startup/coordination overhead and more dependency on worker-side module resolution.
-- Trade-off of `EXSTRUCT_RENDER_SUBPROCESS=0`: weaker crash isolation and higher memory pressure risk in long-running processes.
-- Logs are written to stderr, and optionally to `--log-file`, to keep stdio responses clean.
-- On Windows with Excel, `standard` / `verbose` use COM for the richest extraction.
-- On Linux/macOS/server environments, `libreoffice` is the best-effort rich mode. It is not a strict subset of COM output; shapes, connectors, and charts are reconstructed from LibreOffice + OOXML metadata and may differ in fidelity.
-- In v1, `libreoffice` does not render PDFs/PNGs and does not compute auto page-break areas.
-- `exstruct_patch` supports `backend` selection.
-  - `auto` (default): prefer COM when available, otherwise openpyxl
-  - `com`: force COM (`dry_run` / `return_inverse_ops` / `preflight_formula_check` are not allowed)
-  - `openpyxl`: force openpyxl (`.xls` is not supported)
-- `create_chart` is COM-only. Requests that include `create_chart` cannot use `backend="openpyxl"`, and they also reject `dry_run`, `return_inverse_ops`, and `preflight_formula_check`.
-- `create_chart` supports `chart_type` values `line`, `column`, `bar`, `area`, `pie`, `doughnut`, `scatter`, and `radar` (aliases: `column_clustered`, `bar_clustered`, `xy_scatter`, `donut`).
-- `create_chart` accepts either a single range string or `list[str]` for `data_range`, and both `data_range` and `category_range` support sheet-qualified ranges such as `Sheet2!A1:B10` and `'Sales Data'!A1:B10`.
-- `create_chart` also supports explicit titles with `chart_title`, `x_axis_title`, and `y_axis_title`.
-- `create_chart` and `apply_table_style` can be combined in one request when the backend resolves to COM (`backend="com"` or COM-capable `backend="auto"`).
-- For stable COM execution of `apply_table_style` on Windows, make sure desktop Excel is installed and runnable, and that the target `range` is a contiguous A1 range including the header row.
-- `exstruct_patch` error details may include `error_code`, `failed_field`, and `raw_com_message`. Table-related codes include `table_style_invalid`, `list_object_add_failed`, and `com_api_missing`.
-- `exstruct_patch` responses include the actual backend in `engine` (`com` / `openpyxl`). `restore_design_snapshot` remains openpyxl-only.
-- Use `exstruct_make` for creating new workbooks and `exstruct_patch` for editing existing ones.
-- `exstruct_make` creates a new workbook and applies `ops` in one call (`out_path` required, `ops` optional).
-  - supported extensions: `.xlsx` / `.xlsm` / `.xls`
-  - the initial sheet name is normalized to `Sheet1`
-  - `.xls` requires COM, so `backend=openpyxl` is not allowed
-
-MCP setup guide for each AI agent:
-
+For more details and API usage, see the documentation site:
 [MCP Server](https://harumiweb.github.io/exstruct/mcp/)
 
 ## Quick Start Python Extraction
@@ -312,7 +260,7 @@ engine_auto.export(wb_auto, Path("out_with_auto.json"))
 export_auto_page_breaks(wb_auto, "auto_areas", fmt="json", pretty=True)
 ```
 
-**Note (non-COM environments):** even when Excel COM is unavailable, cells + `table_candidates` are still returned, but `shapes` / `charts` will be empty.
+**Note (non-COM environments):** even when Excel COM is unavailable, cells + `table_candidates` are still returned, and `.xlsx` / `.xlsm` keep best-effort OOXML `shapes` / `charts` when available.
 
 ## Table Detection Parameters
 
@@ -331,14 +279,14 @@ Higher values reduce false positives. Lower values reduce missed detections.
 
 ## Output Modes
 
-- **light**: cells + table candidates only (no COM required).
-- **standard**: texted shapes + arrows, charts (when COM is available), table candidates, and merged-cell ranges. Cell hyperlinks are emitted only when `include_cell_links=True`.
-- **verbose**: all shapes (with width/height), charts, table candidates, merged-cell ranges, hyperlinks, `colors_map`, and `formulas_map`.
+- **light**: cells + table candidates + best-effort OOXML shapes/connectors/charts for `.xlsx` / `.xlsm` (no COM required).
+- **standard**: texted shapes + arrows, charts (when COM is available), and table candidates. Cell hyperlinks are emitted only when `include_cell_links=True`.
+- **verbose**: all shapes, charts, `table_candidates`, hyperlinks, and `colors_map`.
 
 ## Error Handling / Fallback
 
-- If Excel COM is unavailable, extraction falls back to cells + table candidates automatically, and shapes/charts remain empty.
-- If shape extraction fails, ExStruct still returns cells + table candidates and only emits a warning.
+- If Excel COM is unavailable, extraction falls back to cells + table candidates automatically; `.xlsx` / `.xlsm` still preserve best-effort OOXML shapes/charts when available.
+- If a rich-extraction step fails, ExStruct still returns cells + table candidates and keeps any already recovered best-effort artifacts where safe.
 - The CLI writes errors to stdout/stderr and exits with a non-zero status on failure.
 
 ## Optional Rendering
@@ -359,8 +307,9 @@ To show how far exstruct can structure Excel, we parse an Excel workbook that co
 - a line chart
 - a flowchart built only with shapes
 
-(The image below is the actual sample Excel sheet.)
-<img width="1842" height="1242" alt="demo_sheet" src="https://github.com/user-attachments/assets/91f32b64-02a9-4269-a13f-9909e6e5b06f" />
+The image below is the actual sample Excel sheet.
+![Sample Excel](docs/assets/demo_sheet.png)
+
 Sample Excel: `sample/sample.xlsx`
 
 ### 1. Input: Excel Sheet Overview
@@ -539,7 +488,7 @@ flowchart TD
 
 ### Excel data
 
-<img width="1040" height="1615" alt="demo_form ja" src="https://github.com/user-attachments/assets/1997c5d7-eb93-4370-b2ff-6e8da34e79a0" />
+![General application form Excel](docs/assets/demo_form.ja.png)
 
 ### ExStruct JSON
 
@@ -622,6 +571,65 @@ If "No", the following spouse section is not required.
 
 ---
 
+## Spouse Information
+
+| Item | Value |
+| ---- | ----- |
+| Furigana | |
+| Name | |
+| Date of Birth | Meiji / Taisho / Showa Year Month Day |
+| Personal Number | |
+| Address | Postal code |
+| Contact | |
+| Address as of January 1 of this year (if different) | Postal code |
+| Tax status | Municipal resident tax: taxable / non-taxable |
+
+---
+
+## Declaration of Income and Other Status
+
+Check the applicable item below.
+
+- □ 1. Livelihood protection recipient
+- □ 2. Old-age welfare pension recipient in a household exempt from municipal resident tax
+- □ 3. Person exempt from municipal resident tax whose taxable pension income + survivor/disability pension + other income totals **800,000 JPY or less per year**
+- □ 4. Same as above, but **over 800,000 JPY up to 1,200,000 JPY**
+- □ 5. Same as above, but **over 1,200,000 JPY**
+
+Survivor pension includes widow's pension, widower's pension, mother's pension, quasi-mother's pension, and orphan's pension.
+
+---
+
+## Declaration of Deposits and Other Assets
+
+- □ The total amount of deposits, securities, and other assets is below the following threshold:
+  - Category 2: 10 million JPY (20 million JPY for couples)
+  - Category 3: 6.5 million JPY (16.5 million JPY for couples)
+  - Category 4: 5.5 million JPY (15.5 million JPY for couples)
+  - Category 5: 5 million JPY (15 million JPY for couples)
+  - Second insured persons (ages 40-64): Categories 3-5 must be 10 million JPY or less (20 million JPY for couples)
+
+### Asset breakdown
+
+| Item | Amount |
+| ---- | ------ |
+| Deposits | JPY |
+| Securities (estimated value) | JPY |
+| Other (including cash / debt) | JPY (describe) |
+
+---
+
+## Applicant Information (not required when the applicant is the insured person)
+
+| Item | Value |
+| ---- | ----- |
+| Applicant name | |
+| Contact (home / office) | |
+| Applicant address | |
+| Relationship to insured person | |
+
+---
+
 ## Notes
 
 1. In this application, "spouse" includes a spouse living separately and a common-law partner.
@@ -655,7 +663,7 @@ In short, **exstruct = "an engine that converts Excel into a format AI can under
 
 ## Benchmark
 
-<img width="1440" height="720" alt="markdown_quality" src="https://github.com/user-attachments/assets/537bbc8c-8e09-433d-a910-6521274d2df5" />
+![Benchmark Chart](benchmark/public/plots/markdown_quality.png)
 
 This repository includes benchmark reports focused on RAG/LLM preprocessing of Excel documents.
 We track two perspectives: (1) core extraction accuracy and (2) reconstruction utility for downstream structure queries (RUB).

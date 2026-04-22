@@ -231,7 +231,7 @@ def test_engine_export_print_areas_respects_include_flag(tmp_path: Path) -> None
     assert not areas_dir.exists() or not list(areas_dir.glob("*"))
 
 
-def test_engine_export_print_areas_light_mode_skips_shapes_and_charts(
+def test_engine_export_print_areas_light_mode_keeps_print_areas(
     tmp_path: Path,
 ) -> None:
     wb = _sample_workbook()
@@ -245,8 +245,8 @@ def test_engine_export_print_areas_light_mode_skips_shapes_and_charts(
     out = tmp_path / "out.json"
     engine.export(wb, output_path=out, fmt="json")
     assert out.exists()
-    # light mode should not emit per-area files (print areas are absent in light extraction)
-    assert not areas_dir.exists() or not list(areas_dir.glob("*"))
+    files = list(areas_dir.glob("*.json"))
+    assert files
 
 
 def test_engine_export_accepts_string_paths(tmp_path: Path) -> None:

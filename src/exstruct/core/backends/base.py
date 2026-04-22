@@ -58,11 +58,11 @@ class RichBackend(Protocol):
     """Protocol for rich shape/chart extraction backends."""
 
     def extract_shapes(
-        self, *, mode: Literal["libreoffice", "standard", "verbose"]
+        self, *, mode: Literal["light", "libreoffice", "standard", "verbose"]
     ) -> ShapeData:
         """Extract shapes, arrows, and SmartArt per worksheet."""
 
     def extract_charts(
-        self, *, mode: Literal["libreoffice", "standard", "verbose"]
+        self, *, mode: Literal["light", "libreoffice", "standard", "verbose"]
     ) -> ChartData:
         """Extract charts per worksheet."""

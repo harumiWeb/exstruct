@@ -21,37 +21,35 @@ patch-based な編集フローも扱えます。抽出 API、JSON-first editing 
 host-managed integration 向けの MCP サーバーを提供し、LLM/RAG 向け前処理、
 レビューしやすい編集フロー、ローカル自動化に使える設計になっています。
 
-- COM/Excel 環境 (Windows) ではリッチ抽出
-- 非 COM 環境 (Linux/macOS) では
+- COM/Excel 環境 ではリッチ抽出
+- 非 COM 環境 では
+  - OOXML を直接解析してセル・図形・グラフ・テーブル候補・印刷範囲を抽出 (best-effort)
   - LibreOffice runtime があればセル・テーブル候補・図形・グラフ（best-effort）
-  - それ以外の環境ではセル＋テーブル候補＋印刷範囲へのフォールバックで安全に動作します。
 
 LLM/RAG 向けに検出ヒューリスティックや出力モードを調整でき、編集ワーク
 フローも同じ責務分離で扱えます。
 
-## インターフェースの選び方
-
-| 用途 | 推奨インターフェース | 理由 |
-| --- | --- | --- |
-| Python で直接 Excel 編集コードを書く | `openpyxl` / `xlwings` | imperative な Python 編集にはこちらの方が普通は適しています。`exstruct.edit` は ExStruct の patch contract を Python から再利用したい場合だけ使います。 |
-| ローカル運用や AI エージェントの編集フローを回す | `exstruct patch` / `make` / `ops` / `validate` | canonical operational interface。JSON-first で `dry_run` に向きます。 |
-| sandboxed / host-managed integration を動かす | `exstruct-mcp` / MCP tools | `PathPolicy`、transport、artifact behavior を持つ integration / compatibility layer です。 |
-
-抽出については、従来どおり top-level Python API（`extract`,
-`process_excel`, `ExStructEngine`）と `exstruct INPUT.xlsx ...` CLI を使います。
-
 ## 主な特徴
 
-- **Excel → 構造化 JSON**: セル、図形、チャート、SmartArt、テーブル候補、セル結合範囲、印刷範囲/自動改ページ範囲（PrintArea/PrintAreaView）をシート単位・範囲単位で出力。
-- **出力モード**: `light`（セル＋テーブル候補＋印刷範囲のみ）、`libreoffice`（`.xlsx/.xlsm` 向けの best-effort 非 COM モード。LibreOffice runtime があれば結合セル・図形・コネクタ・チャートを追加）、`standard`（Excel COM でテキスト付き図形＋矢印、チャート、SmartArt、セル結合範囲）、`verbose`（全図形を幅高さ付きで出力、セルのハイパーリンクも出力）。
-- **数式取得**: `formulas_map`（数式文字列 → セル座標）を openpyxl/COM で取得。`verbose` 既定、`include_formulas_map` で制御。
-- **フォーマット**: JSON（デフォルトはコンパクト、`--pretty` で整形）、YAML、TOON（任意依存）。
-- **backend metadata は opt-in**: shape/chart の `provenance` / `approximation_level` / `confidence` は、トークン節約のため既定では直列化出力に含めません。必要な場合だけ `--include-backend-metadata` または `include_backend_metadata=True` を使います。
-- **ワークブック編集インターフェース**: ExStruct の主な編集導線は editing CLI、host 側制御が必要な場合は MCP tools、Python から `exstruct.edit` を使うのは同じ patch contract を再利用したい場合に限ります。
-- **テーブル検出のチューニング**: API でヒューリスティックを動的に変更可能。
-- **ハイパーリンク抽出**: `verbose` モード（または `include_cell_links=True` 指定）でセルのリンクを `links` に出力。
-- **CLI レンダリング**（Excel COM 必須）: `standard` / `verbose` では PDF とシート画像を生成可能。
-- **安全なフォールバック**: Excel COM または LibreOffice runtime が不在でもプロセスは落ちず、セル＋テーブル候補＋印刷範囲に切り替えます（図形・チャートは空）。
+- **Excel → 構造化 JSON**
+  - セル、図形、チャート、SmartArt、テーブル候補、セル結合範囲、印刷範囲/自動改ページ範囲をシート単位・範囲単位で出力。
+- **出力モード**
+  - `light`: セル＋テーブル候補＋印刷範囲+図形・グラフ（OOXML直接解析によるbest-effort）
+  - `libreoffice`: `.xlsx/.xlsm` 向けの best-effort 非 COM モード。LibreOffice runtime があれば結合セル・図形・コネクタ・チャートを追加
+  - `standard`: Excel COM でテキスト付き図形＋矢印、チャート、SmartArt、セル結合範囲
+  - `verbose`: 全図形を幅高さ付きで出力、セルのハイパーリンクも出力。
+- **数式取得**
+  - `formulas_map`（数式文字列 → セル座標）を openpyxl/COM で取得。`verbose` 既定、`include_formulas_map` で制御。
+- **フォーマット**
+  - JSON（デフォルトはコンパクト、`--pretty` で整形）、YAML、TOON（任意依存）。
+- **ワークブック編集インターフェース**
+  - ExStruct の主な編集導線は editing CLI、host 側制御が必要な場合は MCP tools、Python から `exstruct.edit` を使うのは同じ patch contract を再利用したい場合に限ります。
+- **テーブル検出のチューニング**
+  - API でヒューリスティックを動的に変更可能。
+- **ハイパーリンク抽出**
+  - `verbose` モード（または `include_cell_links=True` 指定）でセルのリンクを `links` に出力。
+- **安全なフォールバック**
+  - Excel COM または LibreOffice runtime が不在でもプロセスは落ちず、OOXML直接解析に切り替えます。
 
 ## インストール
 
@@ -68,11 +66,9 @@ pip install exstruct
 
 プラットフォーム注意:
 
-- 図形・チャートを含む COM 抽出は Windows + Excel (xlwings/COM) 前提です。Linux/macOS/server 環境では `mode=libreoffice` を best-effort rich mode として使うか、`mode=light` で最小抽出を使ってください。`.xls` は `mode=libreoffice` 非対応です。
-- Debian/Ubuntu/WSL では LibreOffice と `python3-uno` を一緒に導入してください。`mode=libreoffice` は互換な system Python を自動検出し、必要なら `EXSTRUCT_LIBREOFFICE_PYTHON_PATH=/usr/bin/python3` で明示指定できます。
+- Debian/Ubuntu/WSL で `mode=libreoffice` を使う場合、 LibreOffice と `python3-uno` を一緒に導入してください。`mode=libreoffice` は互換な system Python を自動検出し、必要なら `EXSTRUCT_LIBREOFFICE_PYTHON_PATH=/usr/bin/python3` で明示指定できます。
 - LibreOffice 用 Python の検出では、候補 interpreter に対して bundled bridge の `--probe` を実行してから採用します。互換性のない `EXSTRUCT_LIBREOFFICE_PYTHON_PATH` は、抽出中の遅延 `SyntaxError` ではなく早期の互換性エラーとして失敗します。
 - 一時的な孤立 LibreOffice profile で UNO socket の起動に失敗した場合、ExStruct は互換性 fallback として shared/default profile で 1 回だけ再試行し、両方失敗したときは各試行の起動詳細をエラーに含めます。
-- GitHub Actions では `ubuntu-24.04` と `windows-2025` に LibreOffice smoke job があります。Linux は `libreoffice` と `python3-uno`、Windows は `libreoffice-fresh` と `EXSTRUCT_LIBREOFFICE_PATH` を設定し、どちらも `RUN_LIBREOFFICE_SMOKE=1` 付きで `tests/core/test_libreoffice_smoke.py` を実行します。
 
 ## クイックスタート CLI
 
@@ -85,16 +81,15 @@ exstruct input.xlsx --sheets-dir sheets/   # シートごとに分割出力
 exstruct input.xlsx --auto-page-breaks-dir auto_areas/  # 常時表示。実行には standard/verbose + Excel COM が必要
 exstruct input.xlsx --alpha-col           # 列キーを A, B, ..., AA 形式で出力
 exstruct input.xlsx --include-backend-metadata  # shape/chart の backend metadata を含める
-exstruct input.xlsx --mode light           # セル＋テーブル候補のみ
+exstruct input.xlsx --mode light           # セル＋テーブル候補＋OOXML ベースの best-effort shape/chart
 exstruct input.xlsx --mode libreoffice     # COM なしで図形/コネクタ/チャートを best-effort 抽出
 exstruct input.xlsx --pdf --image          # PDF と PNG（Excel COM 必須）
 ```
 
-自動改ページ範囲の書き出しは API/CLI 両方に対応（Excel/COM が必要）し、CLI では `--auto-page-breaks-dir` を常時表示したうえで実行時に検証します。
-`mode=libreoffice` では `--pdf` / `--image` / `--auto-page-breaks-dir` を早期エラーにし、`mode=light` でも `--auto-page-breaks-dir` を拒否します。これらの機能は `standard` または `verbose` + Excel COM を前提にします。
-CLI の既定では列キーは従来どおり 0 始まりの数値文字列（`"0"`, `"1"`, ...）です。Excel 形式（`"A"`, `"B"`, ...）が必要な場合は `--alpha-col` を指定してください。
-CLI の既定では shape/chart の `provenance` / `approximation_level` / `confidence` も出力しません。必要な場合は `--include-backend-metadata` を指定してください。
-注意: MCP の `exstruct_extract` は `options.alpha_col=true` が既定で、CLI の既定（`false`）とは異なります。
+- 自動改ページ範囲の書き出しは API/CLI 両方に対応（Excel/COM が必要）し、CLI では `--auto-page-breaks-dir` を常時表示したうえで実行時に検証します。
+- `mode=libreoffice` では `--pdf` / `--image` / `--auto-page-breaks-dir` を早期エラーにし、`mode=light` でも `--auto-page-breaks-dir` を拒否します。これらの機能は `standard` または `verbose` + Excel COM を前提にします。
+- CLI の既定では列キーは従来どおり 0 始まりの数値文字列（`"0"`, `"1"`, ...）です。Excel 形式（`"A"`, `"B"`, ...）が必要な場合は `--alpha-col` を指定してください。
+- CLI の既定では shape/chart の `provenance` / `approximation_level` / `confidence` も出力しません。必要な場合は `--include-backend-metadata` を指定してください。
 
 ## クイックスタート Editing CLI
 
@@ -108,10 +103,8 @@ exstruct validate --input book.xlsx --pretty
 ```
 
 - `patch` / `make` は JSON の `PatchResult` を標準出力に出します。
-- workbook editing の canonical operational / agent interface はこの editing CLI です。
 - `ops list` / `ops describe` で public patch-op schema を確認できます。
 - `validate` はワークブックの読取可否（`is_readable`, `warnings`, `errors`）を返します。
-- Phase 2 では既存の抽出 CLI はそのまま維持し、`exstruct extract` や対話的な safety flag はまだ追加しません。
 
 推奨フロー:
 
@@ -135,8 +128,6 @@ repo 上の正本:
 npx skills add harumiWeb/exstruct/.agents/skills --skill exstruct-cli
 ```
 
-このコマンドは、このリポジトリで公開される Skill ディレクトリから
-`exstruct-cli` を直接追加する想定です。まだ未公開ブランチで作業している場合や、
 `npx skills add` を使えない実行環境では、従来どおり `SKILL.md` ベースの Skill が
 検出されるローカルディレクトリへ同じフォルダを手動配置してください。
 
@@ -156,12 +147,6 @@ path restriction、transport mapping、artifact mirroring、approval-aware な
 agent 実行が必要なときに使ってください。通常の Python workbook editing には
 `openpyxl` / `xlwings` の方が合っています。ローカル shell / agent workflow
 では editing CLI を優先します。
-
-もし editing が MCP-first だった時期の名残で `exstruct_patch` /
-`exstruct_make` を直接使っているだけなら、MCP host control が必要な場合を
-除いて、新規のローカル workflow は `exstruct patch` / `exstruct make`
-へ寄せてください。Python から同じ patch contract を使いたい場合だけ
-`exstruct.edit` を検討してください。
 
 ### uvx を使ったクイックスタート（推奨）
 
@@ -189,48 +174,19 @@ exstruct-mcp --root C:\data --log-file C:\logs\exstruct-mcp.log --on-conflict re
 
 利用可能なツール:
 
-- `exstruct_extract`
-- `exstruct_capture_sheet_images`
-- `exstruct_make`
-- `exstruct_patch`
-- `exstruct_read_json_chunk`
-- `exstruct_read_range`
-- `exstruct_read_cells`
-- `exstruct_read_formulas`
-- `exstruct_validate_input`
+| ツール名                        | 説明                                   |
+| ------------------------------- | -------------------------------------- |
+| `exstruct_extract`              | ワークブックからデータを抽出します。   |
+| `exstruct_capture_sheet_images` | シートの画像をキャプチャします。       |
+| `exstruct_make`                 | ワークブックを新規作成します。         |
+| `exstruct_patch`                | ワークブックに編集パッチを適用します。 |
+| `exstruct_read_json_chunk`      | 抽出した JSON チャンクを読み取ります。 |
+| `exstruct_read_range`           | 指定範囲のセルを読み取ります。         |
+| `exstruct_read_cells`           | セル単位でデータを読み取ります。       |
+| `exstruct_read_formulas`        | セルの数式を読み取ります。             |
+| `exstruct_validate_input`       | 入力データの検証を行います。           |
 
-注意点:
-
-- `exstruct_capture_sheet_images` は COM 専用（Experimental）で、`sheet` / `range`（`A1:B2`, `Sheet1!A1:B2`, `'Sheet 1'!A1:B2`）の指定に対応します。`out_dir` 未指定時は MCP `--root` 配下に一意な `<workbook_stem>_images` ディレクトリを作成します。
-- MCP サーバー起動時は `EXSTRUCT_RENDER_SUBPROCESS=1` が既定（`setdefault`）です。同一プロセスで実行したい場合は、起動前に `EXSTRUCT_RENDER_SUBPROCESS=0` を明示指定してください。
-- `exstruct_capture_sheet_images` のタイムアウト調整: `EXSTRUCT_MCP_CAPTURE_SHEET_IMAGES_TIMEOUT_SEC`（ツール全体）, `EXSTRUCT_RENDER_SUBPROCESS_STARTUP_TIMEOUT_SEC`（worker 起動）, `EXSTRUCT_RENDER_SUBPROCESS_JOIN_TIMEOUT_SEC`（主待機予算）, `EXSTRUCT_RENDER_SUBPROCESS_RESULT_TIMEOUT_SEC`（終了後の結果待ち猶予）。
-- サブプロセス失敗は `stage=startup|join|result|worker` の形で返るため、起動失敗・タイムアウト・worker 側失敗を切り分けできます。
-- `EXSTRUCT_RENDER_SUBPROCESS=1` のトレードオフ: サブプロセス起動/同期オーバーヘッドと、worker 側のモジュール解決依存が増えます。
-- `EXSTRUCT_RENDER_SUBPROCESS=0` のトレードオフ: クラッシュ分離が弱くなり、長時間稼働時のメモリ圧迫リスクが上がります。
-- 標準入出力の応答を汚染しないよう、ログは標準エラー出力（およびオプションで`--log-file`で指定したファイル）に出力されます。
-- Windows の Excel 環境では `standard` / `verbose` が COM を使って最もリッチな抽出を行います。
-- Linux/macOS/server 環境では `libreoffice` が best-effort rich mode です。COM 出力の strict subset ではなく、LibreOffice + OOXML 由来の再構成なので精度差があります。
-- `libreoffice` は v1 では PDF/PNG rendering と auto page-break 計算を行いません。
-- `exstruct_patch` は `backend` 指定をサポートします。
-  - `auto`（既定）: COM が使える場合は COM を優先し、不可なら openpyxl
-  - `com`: COM を強制（`dry_run` / `return_inverse_ops` / `preflight_formula_check` は指定不可）
-  - `openpyxl`: openpyxl を強制（`.xls` は非対応）
-- `create_chart` は COM 専用です（`create_chart` を含むリクエストでは `backend="openpyxl"` は指定不可）。また、`dry_run` / `return_inverse_ops` / `preflight_formula_check` も指定できません。
-- `create_chart` の `chart_type` は `line` / `column` / `bar` / `area` / `pie` / `doughnut` / `scatter` / `radar` に対応します（エイリアス: `column_clustered` / `bar_clustered` / `xy_scatter` / `donut`）。
-- `create_chart` の `data_range` は単一範囲文字列または `list[str]`（複数系列）を受け付け、`data_range` / `category_range` ともにシート名付き範囲（`Sheet2!A1:B10`, `'Sales Data'!A1:B10`）を指定できます。
-- `create_chart` では `chart_title` / `x_axis_title` / `y_axis_title` による明示タイトル設定が可能です。
-- `create_chart` と `apply_table_style` は、バックエンドが COM に解決される場合（`backend="com"` または COM 利用可能な `backend="auto"`）は1回のリクエストで同時指定できます。
-- Windows で `apply_table_style` を COM で安定実行するには、デスクトップ版 Excel が起動可能で、`range` がヘッダー行を含む連続 A1 範囲であることを確認してください。
-- `exstruct_patch` のエラー詳細には `error_code` / `failed_field` / `raw_com_message` が含まれる場合があります。テーブル関連コードは `table_style_invalid` / `list_object_add_failed` / `com_api_missing` です。
-- `exstruct_patch` の応答には実際に使われたバックエンドを示す `engine`（`com` / `openpyxl`）が含まれます。`restore_design_snapshot` は引き続き openpyxl 専用です。
-- 新規ブック作成は `exstruct_make`、既存ブック編集は `exstruct_patch` を使い分けてください。
-- `exstruct_make` は新規ブック作成と `ops` 適用を1回で実行します（`out_path` 必須、`ops` は任意）。
-  - 対応拡張子: `.xlsx` / `.xlsm` / `.xls`
-  - 初期シート名は `Sheet1` に正規化されます
-  - `.xls` は COM 必須で、`backend=openpyxl` は指定できません
-
-各AIエージェントでのMCP設定ガイド:
-
+その他、詳しい使用方法や API についてはドキュメントサイトを参照してください:
 [MCPサーバー](https://harumiweb.github.io/exstruct/mcp/)
 
 ## クイックスタート Python Extraction
@@ -300,7 +256,7 @@ engine_auto.export(wb_auto, Path("out_with_auto.json"))  # 自動改ページご
 export_auto_page_breaks(wb_auto, "auto_areas", fmt="json", pretty=True)
 ```
 
-**備考 (COM 非対応環境):** Excel COM が使えない場合でもセル＋`table_candidates` は返りますが、`shapes` / `charts` は空になります。
+**備考 (COM 非対応環境):** Excel COM が使えない場合でもセル＋`table_candidates` は返り、`.xlsx` / `.xlsm` では利用可能な範囲で OOXML ベースの `shapes` / `charts` も best-effort で保持されます。
 
 ## テーブル検出パラメータ
 
@@ -319,14 +275,14 @@ set_table_detection_params(
 
 ## 出力モード
 
-- **light**: セル＋テーブル候補のみ（COM 不要）。
+- **light**: セル＋テーブル候補＋`.xlsx` / `.xlsm` の best-effort OOXML 図形/コネクタ/チャート（COM 不要）。
 - **standard**: テキスト付き図形＋矢印、チャート（COM ありで取得）、テーブル候補。セルのハイパーリンクは `include_cell_links=True` を指定したときのみ出力。
-- **verbose**: all shapes, charts, table_candidates, hyperlinks, and `colors_map`.
+- **verbose**: すべての図形、チャート、`table_candidates`、ハイパーリンク、`colors_map`。
 
 ## エラーハンドリング / フォールバック
 
-- Excel COM 不在時はセル＋テーブル候補に自動フォールバック（図形・チャートは空）。
-- 図形抽出失敗時も警告を出しつつセル＋テーブル候補を返却。
+- Excel COM 不在時はセル＋テーブル候補に自動フォールバックし、`.xlsx` / `.xlsm` では利用可能な OOXML 図形/チャートも best-effort で保持します。
+- rich extraction の一部が失敗しても、ExStruct はセル＋テーブル候補を返しつつ、安全に保持できる既存の best-effort artifact は残します。
 - CLI はエラーを stdout/stderr に出し、失敗時は非ゼロ終了コード。
 
 ## 任意レンダリング
@@ -704,7 +660,6 @@ X 市長
 - AI（LLM）がその JSON を直接読み取り、Excel 内容を再構築できる
 
 つまり **exstruct = “Excel を AI が理解できるフォーマットに変換するエンジン”** です。
-
 
 ## ベンチマーク
 
