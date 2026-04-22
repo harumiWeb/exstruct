@@ -81,7 +81,7 @@ exstruct input.xlsx --sheets-dir sheets/   # シートごとに分割出力
 exstruct input.xlsx --auto-page-breaks-dir auto_areas/  # 常時表示。実行には standard/verbose + Excel COM が必要
 exstruct input.xlsx --alpha-col           # 列キーを A, B, ..., AA 形式で出力
 exstruct input.xlsx --include-backend-metadata  # shape/chart の backend metadata を含める
-exstruct input.xlsx --mode light           # セル＋テーブル候補のみ
+exstruct input.xlsx --mode light           # セル＋テーブル候補＋OOXML ベースの best-effort shape/chart
 exstruct input.xlsx --mode libreoffice     # COM なしで図形/コネクタ/チャートを best-effort 抽出
 exstruct input.xlsx --pdf --image          # PDF と PNG（Excel COM 必須）
 ```
@@ -256,7 +256,7 @@ engine_auto.export(wb_auto, Path("out_with_auto.json"))  # 自動改ページご
 export_auto_page_breaks(wb_auto, "auto_areas", fmt="json", pretty=True)
 ```
 
-**備考 (COM 非対応環境):** Excel COM が使えない場合でもセル＋`table_candidates` は返りますが、`shapes` / `charts` は空になります。
+**備考 (COM 非対応環境):** Excel COM が使えない場合でもセル＋`table_candidates` は返り、`.xlsx` / `.xlsm` では利用可能な範囲で OOXML ベースの `shapes` / `charts` も best-effort で保持されます。
 
 ## テーブル検出パラメータ
 
@@ -275,14 +275,14 @@ set_table_detection_params(
 
 ## 出力モード
 
-- **light**: セル＋テーブル候補のみ（COM 不要）。
+- **light**: セル＋テーブル候補＋`.xlsx` / `.xlsm` の best-effort OOXML 図形/コネクタ/チャート（COM 不要）。
 - **standard**: テキスト付き図形＋矢印、チャート（COM ありで取得）、テーブル候補。セルのハイパーリンクは `include_cell_links=True` を指定したときのみ出力。
-- **verbose**: all shapes, charts, table_candidates, hyperlinks, and `colors_map`.
+- **verbose**: すべての図形、チャート、`table_candidates`、ハイパーリンク、`colors_map`。
 
 ## エラーハンドリング / フォールバック
 
-- Excel COM 不在時はセル＋テーブル候補に自動フォールバック（図形・チャートは空）。
-- 図形抽出失敗時も警告を出しつつセル＋テーブル候補を返却。
+- Excel COM 不在時はセル＋テーブル候補に自動フォールバックし、`.xlsx` / `.xlsm` では利用可能な OOXML 図形/チャートも best-effort で保持します。
+- rich extraction の一部が失敗しても、ExStruct はセル＋テーブル候補を返しつつ、安全に保持できる既存の best-effort artifact は残します。
 - CLI はエラーを stdout/stderr に出し、失敗時は非ゼロ終了コード。
 
 ## 任意レンダリング

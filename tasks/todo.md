@@ -76,6 +76,32 @@
   - `uv run task precommit-run`
     - result: passed
 
+## 2026-04-22 PR #129 review follow-up (second pass)
+
+### Planning
+
+- [x] Re-check unresolved review threads after commit `14efdda` and separate already-fixed/outdated items from new actionable findings.
+- [x] Fix the remaining per-sheet OOXML drawing exception hole and stale `README` wording about `light` / non-COM extraction.
+- [x] Normalize the specific YAML/Markdown files flagged for CRLF line endings back to LF.
+- [x] Run the relevant pytest coverage and `uv run task precommit-run`.
+- [x] Push the follow-up commit to refresh PR `#129`.
+
+### Review
+
+- Re-checked the unresolved PR threads after commit `14efdda` and confirmed the earlier `process_excel`, light-pipeline fallback, metrics caching, and architecture-doc comments were already addressed; the remaining actionable items were one `BadZipFile` exception gap, stale README wording, and newline-only cleanup.
+- `read_sheet_drawings()` now treats `BadZipFile` the same as the other sheet-local drawing parse failures, so one corrupt drawing member no longer forces workbook-wide OOXML rich artifacts to `{}` through the outer backend fallback.
+- `README.md` and `README.ja.md` now describe the current `light` contract consistently in the CLI quick start, non-COM note, output-mode section, and fallback section.
+- Normalized the specific files flagged by review bots back to LF:
+  - `.agents/skills/exstruct-cli/agents/openai.yaml`
+  - `dev-docs/agents/coding-guidelines.md`
+  - `mkdocs.yml`
+- Added regression coverage for the per-sheet `BadZipFile` case in `tests/core/test_ooxml_drawing.py`.
+- Verification:
+  - `uv run pytest tests/core/test_ooxml_drawing.py -q`
+    - result: `7 passed`
+  - `uv run task precommit-run`
+    - result: passed
+
 
 ## 2026-03-19 v0.7.0 release closeout
 

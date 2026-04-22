@@ -1,9 +1,11 @@
 from pathlib import Path
-from zipfile import ZipFile
+from zipfile import BadZipFile, ZipFile
 
+from _pytest.monkeypatch import MonkeyPatch
 from defusedxml import ElementTree
 
 from exstruct.core.ooxml_drawing import (
+    SheetDrawingData,
     SheetDrawingMetrics,
     _column_width_to_points,
     _marker_to_points,
@@ -118,6 +120,122 @@ def test_read_sheet_drawings_skips_only_malformed_sheets(tmp_path: Path) -> None
             """,
         )
         archive.writestr("xl/drawings/drawing2.xml", "<xdr:wsDr")
+
+    drawings = read_sheet_drawings(book)
+
+    assert set(drawings) == {"Sheet1"}
+    assert len(drawings["Sheet1"].shapes) == 1
+
+
+def test_read_sheet_drawings_skips_only_badzip_sheets(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    """Verify a BadZipFile raised for one sheet does not clear sibling sheets."""
+
+    book = tmp_path / "partial-badzip.xlsx"
+    with ZipFile(book, "w") as archive:
+        archive.writestr(
+            "xl/workbook.xml",
+            """
+            <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+                      xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+              <sheets>
+                <sheet name="Sheet1" sheetId="1" r:id="rId1" />
+                <sheet name="Sheet2" sheetId="2" r:id="rId2" />
+              </sheets>
+            </workbook>
+            """,
+        )
+        archive.writestr(
+            "xl/_rels/workbook.xml.rels",
+            """
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml" />
+              <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml" />
+            </Relationships>
+            """,
+        )
+        archive.writestr(
+            "xl/worksheets/sheet1.xml",
+            """
+            <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+              <sheetFormatPr defaultRowHeight="15" />
+            </worksheet>
+            """,
+        )
+        archive.writestr(
+            "xl/worksheets/sheet2.xml",
+            """
+            <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+              <sheetFormatPr defaultRowHeight="15" />
+            </worksheet>
+            """,
+        )
+        archive.writestr(
+            "xl/worksheets/_rels/sheet1.xml.rels",
+            """
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml" />
+            </Relationships>
+            """,
+        )
+        archive.writestr(
+            "xl/worksheets/_rels/sheet2.xml.rels",
+            """
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing2.xml" />
+            </Relationships>
+            """,
+        )
+        archive.writestr(
+            "xl/drawings/drawing1.xml",
+            """
+            <xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"
+                      xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <xdr:oneCellAnchor>
+                <xdr:from>
+                  <xdr:col>0</xdr:col>
+                  <xdr:colOff>0</xdr:colOff>
+                  <xdr:row>0</xdr:row>
+                  <xdr:rowOff>0</xdr:rowOff>
+                </xdr:from>
+                <xdr:ext cx="127000" cy="127000" />
+                <xdr:sp>
+                  <xdr:nvSpPr>
+                    <xdr:cNvPr id="1" name="Shape 1" />
+                    <xdr:cNvSpPr />
+                  </xdr:nvSpPr>
+                  <xdr:spPr>
+                    <a:xfrm>
+                      <a:off x="0" y="0" />
+                      <a:ext cx="127000" cy="127000" />
+                    </a:xfrm>
+                    <a:prstGeom prst="rect"><a:avLst /></a:prstGeom>
+                  </xdr:spPr>
+                </xdr:sp>
+              </xdr:oneCellAnchor>
+            </xdr:wsDr>
+            """,
+        )
+        archive.writestr("xl/drawings/drawing2.xml", "<xdr:wsDr />")
+
+    from exstruct.core import ooxml_drawing
+
+    original_parse = ooxml_drawing._parse_sheet_drawing
+
+    def _patched_parse_sheet_drawing(
+        archive: ZipFile,
+        drawing_path: str,
+        sheet_metrics: SheetDrawingMetrics,
+    ) -> SheetDrawingData:
+        if drawing_path == "xl/drawings/drawing2.xml":
+            raise BadZipFile("bad member")
+        return original_parse(archive, drawing_path, sheet_metrics)
+
+    monkeypatch.setattr(
+        "exstruct.core.ooxml_drawing._parse_sheet_drawing",
+        _patched_parse_sheet_drawing,
+    )
 
     drawings = read_sheet_drawings(book)
 

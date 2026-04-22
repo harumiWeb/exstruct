@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 import logging
 from pathlib import Path, PurePosixPath
 from typing import Literal
-from zipfile import ZipFile
+from zipfile import BadZipFile, ZipFile
 
 from defusedxml import ElementTree
 
@@ -198,6 +198,7 @@ def read_sheet_drawings(file_path: Path) -> dict[str, SheetDrawingData]:
                     _read_sheet_metrics(archive, sheet_xml_path),
                 )
             except (
+                BadZipFile,
                 ElementTree.ParseError,
                 FileNotFoundError,
                 KeyError,

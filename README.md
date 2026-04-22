@@ -85,7 +85,7 @@ exstruct input.xlsx --sheets-dir sheets/   # write one file per sheet
 exstruct input.xlsx --auto-page-breaks-dir auto_areas/  # always shown; execution requires standard/verbose + Excel COM
 exstruct input.xlsx --alpha-col            # output column keys as A, B, ..., AA
 exstruct input.xlsx --include-backend-metadata  # include shape/chart backend metadata
-exstruct input.xlsx --mode light           # cells + table candidates only
+exstruct input.xlsx --mode light           # cells + table candidates + best-effort OOXML shapes/charts
 exstruct input.xlsx --mode libreoffice     # best-effort extraction of shapes/connectors/charts without COM
 exstruct input.xlsx --pdf --image          # PDF and PNGs (Excel COM required)
 ```
@@ -260,7 +260,7 @@ engine_auto.export(wb_auto, Path("out_with_auto.json"))
 export_auto_page_breaks(wb_auto, "auto_areas", fmt="json", pretty=True)
 ```
 
-**Note (non-COM environments):** even when Excel COM is unavailable, cells + `table_candidates` are still returned, but `shapes` / `charts` will be empty.
+**Note (non-COM environments):** even when Excel COM is unavailable, cells + `table_candidates` are still returned, and `.xlsx` / `.xlsm` keep best-effort OOXML `shapes` / `charts` when available.
 
 ## Table Detection Parameters
 
@@ -279,14 +279,14 @@ Higher values reduce false positives. Lower values reduce missed detections.
 
 ## Output Modes
 
-- **light**: cells + table candidates only (no COM required).
+- **light**: cells + table candidates + best-effort OOXML shapes/connectors/charts for `.xlsx` / `.xlsm` (no COM required).
 - **standard**: texted shapes + arrows, charts (when COM is available), and table candidates. Cell hyperlinks are emitted only when `include_cell_links=True`.
 - **verbose**: all shapes, charts, `table_candidates`, hyperlinks, and `colors_map`.
 
 ## Error Handling / Fallback
 
-- If Excel COM is unavailable, extraction falls back to cells + table candidates automatically, and shapes/charts remain empty.
-- If shape extraction fails, ExStruct still returns cells + table candidates and only emits a warning.
+- If Excel COM is unavailable, extraction falls back to cells + table candidates automatically; `.xlsx` / `.xlsm` still preserve best-effort OOXML shapes/charts when available.
+- If a rich-extraction step fails, ExStruct still returns cells + table candidates and keeps any already recovered best-effort artifacts where safe.
 - The CLI writes errors to stdout/stderr and exits with a non-zero status on failure.
 
 ## Optional Rendering

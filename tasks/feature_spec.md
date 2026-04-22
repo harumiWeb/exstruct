@@ -91,6 +91,35 @@
 - `not-needed`
 - rationale: this is review-driven hardening and architecture-doc alignment for an already accepted design.
 
+## 2026-04-22 PR #129 review follow-up (second pass)
+
+### Goal
+
+- Address the next review pass for PR `#129`, focusing on one remaining OOXML per-sheet resilience hole and stale public/docs wording.
+- Normalize the specific YAML/Markdown files flagged for CRLF line endings so repo tooling and review bots stop reporting newline-only issues.
+
+### Public contract summary
+
+- README examples and non-COM fallback wording must describe the current `light` / OOXML-rich contract accurately.
+- A corrupt OOXML zip member for one worksheet drawing must still be handled at the per-sheet boundary when possible.
+- Line-ending-only cleanup must not change behavior; it only restores LF normalization for the flagged files.
+
+### Permanent destinations
+
+- `README.md` and `README.ja.md` should keep the public extraction-mode wording aligned with `ADR-0010` and the current implementation.
+- `src/exstruct/core/ooxml_drawing.py` should keep the per-sheet OOXML drawing error boundary as narrow as safely possible.
+- `.agents/skills/exstruct-cli/agents/openai.yaml`, `dev-docs/agents/coding-guidelines.md`, and `mkdocs.yml` should be normalized back to LF.
+
+### Verification
+
+- `uv run pytest tests/core/test_ooxml_drawing.py -q`
+- `uv run task precommit-run`
+
+### ADR verdict
+
+- `not-needed`
+- rationale: this is review-driven contract wording cleanup and newline normalization on top of the existing accepted design.
+
 ## 2026-03-19 v0.7.0 release closeout
 
 ### Goal
