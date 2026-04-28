@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/harumiweb-exstruct-badge.png)](https://mseep.ai/app/harumiweb-exstruct)
+
 <p align="center">
   <a href="https://harumiweb.github.io/exstruct/">
     <img width="600" alt="ExStruct Logo" src="https://github.com/user-attachments/assets/c1d4e616-890f-435c-9d53-fba054f861a8" />
