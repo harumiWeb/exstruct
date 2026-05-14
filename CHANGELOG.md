@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. This changelog 
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-05-14
+
+- Applied security updates for dependent packages.
+
 ## [0.8.0] - 2026-04-22
 
 ### Added
