@@ -800,6 +800,9 @@ def _resolve_python_path(soffice_path: Path) -> Path | None:
     return None
 
 
+_MACOS_BUNDLE_MACOS_DIR = Path("/Applications/LibreOffice.app/Contents/MacOS")
+
+
 def _soffice_program_dirs(soffice_path: Path) -> tuple[Path, ...]:
     """Return candidate LibreOffice program directories for the given ``soffice`` path."""
 
@@ -810,6 +813,18 @@ def _soffice_program_dirs(soffice_path: Path) -> tuple[Path, ...]:
         return tuple(program_dirs)
     if resolved_parent not in program_dirs:
         program_dirs.append(resolved_parent)
+    # macOS keeps soffice in Contents/MacOS but the bundled Python in the sibling
+    # Contents/Resources, so the executable's own dir never finds it. Homebrew
+    # compounds this by putting a bash wrapper on PATH that execs into the bundle,
+    # leaving the resolved path outside the bundle entirely -- hence the fixed
+    # bundle location as a last resort.
+    if sys.platform == "darwin":
+        for parent in (*program_dirs, _MACOS_BUNDLE_MACOS_DIR):
+            if parent.name != "MacOS":
+                continue
+            resources_dir = parent.parent / "Resources"
+            if resources_dir.is_dir() and resources_dir not in program_dirs:
+                program_dirs.append(resources_dir)
     return tuple(program_dirs)
 
 
