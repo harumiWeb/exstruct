@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from copy import copy
+from datetime import date, datetime, time
 from pathlib import Path
 import re
 from typing import Any, Protocol, cast, runtime_checkable
@@ -40,9 +41,12 @@ from .types import (
     PatchBackend,
     PatchEngine,
     PatchOpType,
+    PatchScalar,
     PatchStatus,
     PatchValueKind,
+    PatchValueType,
     VerticalAlignType,
+    coerce_patch_scalar,
 )
 
 _ALLOWED_EXTENSIONS = {".xlsx", ".xlsm", ".xls"}
@@ -165,7 +169,7 @@ class DesignSnapshot(BaseModel):
 class OpenpyxlCellProtocol(Protocol):
     """Protocol for openpyxl cell access used by patch runner."""
 
-    value: str | int | float | None
+    value: PatchScalar
     data_type: str | None
     font: OpenpyxlFontProtocol
     fill: OpenpyxlFillProtocol
@@ -523,17 +527,21 @@ class PatchOp(BaseModel):
         default=None,
         description="Base cell for formula translation in fill_formula (e.g. 'C2').",
     )
-    expected: str | int | float | None = Field(
+    expected: PatchScalar = Field(
         default=None,
         description="Expected current value for conditional ops (set_value_if, set_formula_if). Operation is skipped if mismatch.",
     )
-    value: str | int | float | None = Field(
+    value: PatchScalar = Field(
         default=None,
         description="Value to set. Use null to clear a cell. For set_value and set_value_if.",
     )
-    values: list[list[str | int | float | None]] | None = Field(
+    values: list[list[PatchScalar]] | None = Field(
         default=None,
         description="2D list of values for set_range_values. Shape must match the range dimensions.",
+    )
+    value_type: PatchValueType = Field(
+        default="auto",
+        description="Interpretation hint for value. 'date' parses an ISO string into a real date/time cell instead of text (JSON has no date literal). For set_value and set_value_if.",
     )
     formula: str | None = Field(
         default=None,
@@ -818,6 +826,7 @@ class PatchOp(BaseModel):
 
     @model_validator(mode="after")
     def _validate_op(self) -> PatchOp:
+        self.value = coerce_patch_scalar(self.value, self.value_type)
         validator = _validator_for_op(self.op)
         if validator is None:
             return self
@@ -1523,7 +1532,7 @@ class PatchValue(BaseModel):
     """Normalized before/after value in patch diff."""
 
     kind: PatchValueKind
-    value: str | int | float | None
+    value: PatchScalar
 
 
 class PatchDiffItem(BaseModel):
@@ -2865,7 +2874,7 @@ def _apply_openpyxl_cell_op(
 
 def _set_cell_value(
     cell: OpenpyxlCellProtocol,
-    value: str | int | float | None,
+    value: PatchScalar,
     auto_formula: bool,
     *,
     op_name: str,
@@ -3129,7 +3138,7 @@ def _build_merge_value_loss_warning(
     )
 
 
-def _has_non_empty_cell_value(value: str | int | float | None) -> bool:
+def _has_non_empty_cell_value(value: PatchScalar) -> bool:
     """Return True when cell has a non-empty value."""
     if value is None:
         return False
@@ -3520,7 +3529,7 @@ def _translate_formula(formula: str, origin: str, target: str) -> str:
     return str(translated)
 
 
-def _patch_value_to_primitive(value: PatchValue | None) -> str | int | float | None:
+def _patch_value_to_primitive(value: PatchValue | None) -> PatchScalar:
     """Convert PatchValue into primitive value for condition checks."""
     if value is None:
         return None
@@ -3528,8 +3537,8 @@ def _patch_value_to_primitive(value: PatchValue | None) -> str | int | float | N
 
 
 def _values_equal_for_condition(
-    current: str | int | float | None,
-    expected: str | int | float | None,
+    current: PatchScalar,
+    expected: PatchScalar,
 ) -> bool:
     """Compare values for conditional update checks."""
     return current == expected
@@ -3552,7 +3561,15 @@ def _build_inverse_cell_op(
             cell=cell_ref,
             formula=str(before.value),
         )
-    return PatchOp(op="set_value", sheet=op.sheet, cell=cell_ref, value=before.value)
+    return PatchOp(
+        op="set_value",
+        sheet=op.sheet,
+        cell=cell_ref,
+        value=before.value,
+        # Without the hint the ISO string this serializes to replays as text,
+        # silently downgrading a date cell on undo.
+        value_type="date" if isinstance(before.value, datetime | date | time) else "auto",
+    )
 
 
 def _collect_formula_issues_openpyxl(
@@ -4621,7 +4638,7 @@ def _apply_xlwings_cell_op(
 
 def _set_xlwings_cell_value(
     cell: XlwingsRangeProtocol,
-    value: str | int | float | None,
+    value: PatchScalar,
     auto_formula: bool,
     *,
     op_name: str,
