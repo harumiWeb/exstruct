@@ -10,7 +10,7 @@
 - [x] Resolve static-analysis incompatibilities introduced by the newly locked tool and library versions without changing runtime behavior.
 - [x] Check lockfile consistency, install the complete dependency set, run the configured static checks, and inspect the complete diff.
 - [x] Re-query Dependabot alerts; all 43 remain open on the base branch until the updates merge.
-- [ ] Commit, push, and open a PR with the verified results.
+- [x] Commit, push, and open a PR with the verified results.
 
 ### Review
 
@@ -20,7 +20,7 @@
 - Verification passed: `uv lock --check`, `uv sync --locked --all-packages --all-groups --all-extras`, `uv run task ruff`, `uv run task mypy`, `uv run task precommit-run`, `uv run task build-docs`, and `git diff --check`.
 - The documentation build succeeded with its existing `generated/models.md` navigation warning. The full pytest suite was not run.
 - The 43 Dependabot alerts are still open on `main` pending merge of this PR.
-- PR: pending.
+- PR: [#140](https://github.com/harumiWeb/exstruct/pull/140), `fix(deps): refresh Python dependencies`.
 
 ## 2026-04-22 README English/Japanese parity refresh
 
