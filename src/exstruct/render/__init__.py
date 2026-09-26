@@ -974,7 +974,7 @@ def _read_worker_result(result_path: Path) -> _RenderWorkerResult:
         payload = json.loads(result_path.read_text(encoding="utf-8"))
     except Exception as exc:
         raise RenderError(
-            "Failed to render PDF pages: stage=result " f"invalid payload ({exc})."
+            f"Failed to render PDF pages: stage=result invalid payload ({exc})."
         ) from exc
     if not isinstance(payload, dict):
         raise RenderError(

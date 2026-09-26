@@ -324,8 +324,9 @@ def build_pre_com_pipeline(inputs: ExtractionInputs) -> list[ExtractionStep]:
             StepConfig(
                 name="formulas_map_openpyxl",
                 step=step_extract_formulas_map_openpyxl,
-                enabled=lambda _inputs: _inputs.include_formulas_map
-                and not _inputs.use_com_for_formulas,
+                enabled=lambda _inputs: (
+                    _inputs.include_formulas_map and not _inputs.use_com_for_formulas
+                ),
             ),
             StepConfig(
                 name="colors_map_openpyxl",
@@ -352,8 +353,9 @@ def build_pre_com_pipeline(inputs: ExtractionInputs) -> list[ExtractionStep]:
             StepConfig(
                 name="formulas_map_openpyxl",
                 step=step_extract_formulas_map_openpyxl,
-                enabled=lambda _inputs: _inputs.include_formulas_map
-                and not _inputs.use_com_for_formulas,
+                enabled=lambda _inputs: (
+                    _inputs.include_formulas_map and not _inputs.use_com_for_formulas
+                ),
             ),
             StepConfig(
                 name="colors_map_openpyxl",
@@ -380,14 +382,16 @@ def build_pre_com_pipeline(inputs: ExtractionInputs) -> list[ExtractionStep]:
             StepConfig(
                 name="formulas_map_openpyxl",
                 step=step_extract_formulas_map_openpyxl,
-                enabled=lambda _inputs: _inputs.include_formulas_map
-                and not _inputs.use_com_for_formulas,
+                enabled=lambda _inputs: (
+                    _inputs.include_formulas_map and not _inputs.use_com_for_formulas
+                ),
             ),
             StepConfig(
                 name="colors_map_openpyxl_if_skip_com",
                 step=step_extract_colors_map_openpyxl,
-                enabled=lambda _inputs: _inputs.include_colors_map
-                and bool(os.getenv("SKIP_COM_TESTS")),
+                enabled=lambda _inputs: (
+                    _inputs.include_colors_map and bool(os.getenv("SKIP_COM_TESTS"))
+                ),
             ),
             StepConfig(
                 name="merged_cells_openpyxl",
@@ -409,14 +413,16 @@ def build_pre_com_pipeline(inputs: ExtractionInputs) -> list[ExtractionStep]:
             StepConfig(
                 name="formulas_map_openpyxl",
                 step=step_extract_formulas_map_openpyxl,
-                enabled=lambda _inputs: _inputs.include_formulas_map
-                and not _inputs.use_com_for_formulas,
+                enabled=lambda _inputs: (
+                    _inputs.include_formulas_map and not _inputs.use_com_for_formulas
+                ),
             ),
             StepConfig(
                 name="colors_map_openpyxl_if_skip_com",
                 step=step_extract_colors_map_openpyxl,
-                enabled=lambda _inputs: _inputs.include_colors_map
-                and bool(os.getenv("SKIP_COM_TESTS")),
+                enabled=lambda _inputs: (
+                    _inputs.include_colors_map and bool(os.getenv("SKIP_COM_TESTS"))
+                ),
             ),
             StepConfig(
                 name="merged_cells_openpyxl",
@@ -467,8 +473,9 @@ def build_com_pipeline(inputs: ExtractionInputs) -> list[ComExtractionStep]:
         ComStepConfig(
             name="formulas_map_com",
             step=step_extract_formulas_map_com,
-            enabled=lambda _inputs: _inputs.include_formulas_map
-            and _inputs.use_com_for_formulas,
+            enabled=lambda _inputs: (
+                _inputs.include_formulas_map and _inputs.use_com_for_formulas
+            ),
         ),
         ComStepConfig(
             name="colors_map_com",

@@ -553,9 +553,9 @@ def test_internal_create_chart_allows_name_matching_new_default_name() -> None:
     chart_collection.Count = 0
     chart_collection.Add.return_value = chart_object
     chart_objects = MagicMock(
-        side_effect=lambda index=None: chart_collection
-        if index is None
-        else chart_object
+        side_effect=lambda index=None: (
+            chart_collection if index is None else chart_object
+        )
     )
 
     anchor_range = MagicMock()

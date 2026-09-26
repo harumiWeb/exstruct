@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Final, cast
+from typing import Final
 
 from pydantic import BaseModel, Field
 
@@ -57,7 +57,7 @@ def get_alias_map_for_op(op_name: str) -> dict[str, str]:
 
     if op_name not in PATCH_OP_SPECS:
         return {}
-    spec = PATCH_OP_SPECS[cast(PatchOpType, op_name)]
+    spec = PATCH_OP_SPECS[op_name]
     return dict(spec.aliases)
 
 

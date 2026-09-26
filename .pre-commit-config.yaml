@@ -1,15 +1,17 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.5
+    rev: a56c0b927e6465d37cae3e97d35d4d18ab2b96cd  # frozen: v0.16.9
     hooks:
       - id: ruff
         exclude: ^benchmark/
       - id: ruff-format
+        types_or: [python, pyi, jupyter]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.1
+    rev: 7ff8d35ae36a7d2b968f2f90b4c723e292e594ee  # frozen: v2.3.1
     hooks:
       - id: mypy
+        files: ^src/exstruct/
         additional_dependencies:
           - pydantic>=2.0.0
           - types-PyYAML

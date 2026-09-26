@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 import math
 from typing import Literal, Protocol, SupportsInt, cast, runtime_checkable
 
@@ -73,7 +73,8 @@ def coord_to_cell_by_edges(
     c = find_index(col_edges, x)
     if r is None or c is None:
         return None
-    return f"{xw.utils.col_name(c)}{r}"
+    column_name = cast(Callable[[int], str], xw.utils.col_name)(c)
+    return f"{column_name}{r}"
 
 
 def has_arrow(style_val: object) -> bool:
