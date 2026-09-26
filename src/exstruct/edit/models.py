@@ -24,9 +24,12 @@ from .types import (
     PatchBackend,
     PatchEngine,
     PatchOpType,
+    PatchScalar,
     PatchStatus,
     PatchValueKind,
+    PatchValueType,
     VerticalAlignType,
+    coerce_patch_scalar,
 )
 
 _A1_PATTERN = re.compile(r"^[A-Za-z]{1,3}[1-9][0-9]*$")
@@ -121,7 +124,7 @@ class DesignSnapshot(BaseModel):
 class OpenpyxlCellProtocol(Protocol):
     """Protocol for openpyxl cell access used by patch runner."""
 
-    value: str | int | float | None
+    value: PatchScalar
     data_type: str | None
     font: OpenpyxlFontProtocol
     fill: OpenpyxlFillProtocol
@@ -422,17 +425,21 @@ class PatchOp(BaseModel):
         default=None,
         description="Base cell for formula translation in fill_formula (e.g. 'C2').",
     )
-    expected: str | int | float | None = Field(
+    expected: PatchScalar = Field(
         default=None,
         description="Expected current value for conditional ops (set_value_if, set_formula_if). Operation is skipped if mismatch.",
     )
-    value: str | int | float | None = Field(
+    value: PatchScalar = Field(
         default=None,
         description="Value to set. Use null to clear a cell. For set_value and set_value_if.",
     )
-    values: list[list[str | int | float | None]] | None = Field(
+    values: list[list[PatchScalar]] | None = Field(
         default=None,
         description="2D list of values for set_range_values. Shape must match the range dimensions.",
+    )
+    value_type: PatchValueType = Field(
+        default="auto",
+        description="Interpretation hint for value. 'date' parses an ISO string into a real date/time cell instead of text (JSON has no date literal). For set_value and set_value_if.",
     )
     formula: str | None = Field(
         default=None,
@@ -717,6 +724,7 @@ class PatchOp(BaseModel):
 
     @model_validator(mode="after")
     def _validate_op(self) -> PatchOp:
+        self.value = coerce_patch_scalar(self.value, self.value_type)
         validator = _validator_for_op(self.op)
         if validator is None:
             return self
@@ -1422,7 +1430,7 @@ class PatchValue(BaseModel):
     """Normalized before/after value in patch diff."""
 
     kind: PatchValueKind
-    value: str | int | float | None
+    value: PatchScalar
 
 
 class PatchDiffItem(BaseModel):

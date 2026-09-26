@@ -115,10 +115,11 @@ _PATCH_OP_SCHEMA_BY_NAME: dict[str, PatchOpSchema] = {
         op="set_value",
         description="Set a scalar value to one cell.",
         required=["sheet", "cell", "value"],
-        optional=[],
+        optional=["value_type"],
         constraints=[
             "cell target only",
             "use auto_formula=true to allow values starting with '='",
+            "value_type='date' parses an ISO value into a real date cell (default 'auto' writes it as text)",
         ],
         example={"op": "set_value", "sheet": "Sheet1", "cell": "A1", "value": "Hello"},
     ),
@@ -175,8 +176,11 @@ _PATCH_OP_SCHEMA_BY_NAME: dict[str, PatchOpSchema] = {
         op="set_value_if",
         description="Set value when current value matches expected.",
         required=["sheet", "cell", "expected", "value"],
-        optional=[],
-        constraints=["no-op when expected mismatch"],
+        optional=["value_type"],
+        constraints=[
+            "no-op when expected mismatch",
+            "value_type='date' parses an ISO value into a real date cell (default 'auto' writes it as text)",
+        ],
         example={
             "op": "set_value_if",
             "sheet": "Sheet1",
