@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. This changelog 
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-09-26
+
+- Updated project dependencies to resolve the reported Dependabot vulnerability alerts.
+
 ## [0.8.1] - 2026-05-14
 
 - Applied security updates for dependent packages.

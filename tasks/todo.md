@@ -1,5 +1,22 @@
 # Todo
 
+## 2026-09-26 Release v0.8.2 after dependency security updates
+
+### Planning
+
+- [x] Confirm dependency refresh PR #140 is merged into `main`.
+- [x] Bump the package version and `uv.lock` to `0.8.2`; record the security update in `CHANGELOG.md`.
+- [x] Check lockfile consistency and inspect the release diff.
+- [x] Create a release PR against `main` and verify its saved description.
+
+### Review
+
+- `pyproject.toml` and the editable `exstruct` entry in `uv.lock` are both `0.8.2`.
+- Added a `0.8.2` changelog entry dated 2026-09-26 describing the dependency security updates.
+- Verification passed: `uv lock --check`, `uv run task precommit-run`, and `git -c core.whitespace=cr-at-eol diff --check`.
+- The pytest suite was not run; this release PR changes package metadata and changelog only.
+- Opened [PR #141](https://github.com/harumiWeb/exstruct/pull/141) against `main`; read back and validated the saved PR body. Hosted checks were pending at initial inspection.
+
 ## 2026-09-26 Dependabot alerts and Python dependency refresh
 
 ### Planning
