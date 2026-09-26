@@ -27,12 +27,10 @@ _FixtureParam = ParamSpec("_FixtureParam")
 _FixtureReturn = TypeVar("_FixtureReturn")
 
 
-def _typed_autouse_fixture() -> (
-    Callable[
-        [Callable[_FixtureParam, _FixtureReturn]],
-        Callable[_FixtureParam, _FixtureReturn],
-    ]
-):
+def _typed_autouse_fixture() -> Callable[
+    [Callable[_FixtureParam, _FixtureReturn]],
+    Callable[_FixtureParam, _FixtureReturn],
+]:
     """Return a typed autouse fixture decorator for strict mypy runs."""
 
     return cast(

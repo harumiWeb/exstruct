@@ -663,13 +663,8 @@ def test_run_render_worker_subprocess_success_when_join_timeout(
         monkeypatch.setattr(
             render,
             "_wait_for_worker_result",
-            lambda proc,
-            *,
-            result_path,
-            join_timeout_deadline,
-            join_timeout_seconds,
-            post_exit_timeout_seconds: render._RenderWorkerResult.success(
-                [str(output_dir / "01_Sheet1.png")]
+            lambda proc, *, result_path, join_timeout_deadline, join_timeout_seconds, post_exit_timeout_seconds: (
+                render._RenderWorkerResult.success([str(output_dir / "01_Sheet1.png")])
             ),
         )
         result = render._run_render_worker_subprocess(
@@ -781,13 +776,8 @@ def test_run_render_worker_subprocess_uses_single_join_budget(
         monkeypatch.setattr(
             render,
             "_wait_for_worker_result",
-            lambda proc,
-            *,
-            result_path,
-            join_timeout_deadline,
-            join_timeout_seconds,
-            post_exit_timeout_seconds: render._RenderWorkerResult.success(
-                [str(output_dir / "01_Sheet1.png")]
+            lambda proc, *, result_path, join_timeout_deadline, join_timeout_seconds, post_exit_timeout_seconds: (
+                render._RenderWorkerResult.success([str(output_dir / "01_Sheet1.png")])
             ),
         )
 

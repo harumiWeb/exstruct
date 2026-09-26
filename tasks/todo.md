@@ -1,5 +1,27 @@
 # Todo
 
+## 2026-09-26 Dependabot alerts and Python dependency refresh
+
+### Planning
+
+- [x] Review all open GitHub Dependabot alerts and the dependency constraints in `pyproject.toml` / `uv.lock`.
+- [x] Upgrade every locked Python dependency to the newest version allowed by the existing project and Python-version constraints.
+- [x] Refresh the Ruff and mypy pre-commit hook revisions to match the updated toolchain.
+- [x] Resolve static-analysis incompatibilities introduced by the newly locked tool and library versions without changing runtime behavior.
+- [x] Check lockfile consistency, install the complete dependency set, run the configured static checks, and inspect the complete diff.
+- [x] Re-query Dependabot alerts; all 43 remain open on the base branch until the updates merge.
+- [x] Commit, push, and open a PR with the verified results.
+
+### Review
+
+- `uv lock --upgrade` resolved 128 packages across the root and `benchmark` workspace members; all 43 open lockfile alerts have patched versions in the updated lock.
+- Refreshed pre-commit hooks to Ruff 0.16.9 and mypy 2.3.1, limited formatter inputs to Python-family files, and aligned mypy's file scope with `src/exstruct/`.
+- Adjusted type annotations/casts at the xlwings boundary and removed a redundant type cast; no runtime or public API behavior changed.
+- Verification passed: `uv lock --check`, `uv sync --locked --all-packages --all-groups --all-extras`, `uv run task ruff`, `uv run task mypy`, `uv run task precommit-run`, `uv run task build-docs`, and `git diff --check`.
+- The documentation build succeeded with its existing `generated/models.md` navigation warning. The full pytest suite was not run.
+- The 43 Dependabot alerts are still open on `main` pending merge of this PR.
+- PR: [#140](https://github.com/harumiWeb/exstruct/pull/140), `fix(deps): refresh Python dependencies`.
+
 ## 2026-04-22 README English/Japanese parity refresh
 
 ### Planning

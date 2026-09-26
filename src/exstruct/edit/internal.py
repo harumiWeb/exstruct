@@ -2065,7 +2065,7 @@ def _create_xls_seed_with_com(seed_path: Path, *, initial_sheet_name: str) -> No
     app = xw.App(add_book=False, visible=False)
     app.display_alerts = False
     app.screen_updating = False
-    workbook = app.books.add()
+    workbook = cast(XlwingsWorkbookProtocol, app.books.add())
     try:
         workbook.sheets[0].name = initial_sheet_name
         workbook.save(str(seed_path))
@@ -4459,8 +4459,7 @@ def _xlwings_add_list_object(list_objects: object, source_range_api: object) -> 
                 errors.append(f"{attempt.signature} [{source_label}] -> {exc!r}")
     tail = " | ".join(errors[-4:])
     raise ValueError(
-        "apply_table_style failed to add table after COM Add signature retries. "
-        f"{tail}"
+        f"apply_table_style failed to add table after COM Add signature retries. {tail}"
     )
 
 
@@ -4743,7 +4742,7 @@ def _xlwings_workbook(file_path: Path) -> Iterator[XlwingsWorkbookProtocol]:
     app = xw.App(add_book=False, visible=False)
     app.display_alerts = False
     app.screen_updating = False
-    workbook = app.books.open(str(file_path))
+    workbook = cast(XlwingsWorkbookProtocol, app.books.open(str(file_path)))
     try:
         yield workbook
     finally:

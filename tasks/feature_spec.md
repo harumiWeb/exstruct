@@ -1,5 +1,32 @@
 # Feature Spec
 
+## 2026-09-26 Dependabot alerts and Python dependency refresh
+
+### Goal
+
+- Resolve the currently open Dependabot alerts for `uv.lock` and refresh the other locked Python dependencies in the same dependency set.
+
+### Dependency update contract
+
+- Upgrade locked packages to the newest versions resolvable under the existing `pyproject.toml` dependency bounds and `requires-python = ">=3.11"`.
+- Refresh the Ruff and mypy hook revisions in `.pre-commit-config.yaml` to match the updated locked tool versions.
+- Preserve the existing direct dependency ranges, optional extras, and public package/API contracts unless a documented constraint prevents a patched version from resolving.
+- Do not change runtime behavior or public APIs as part of this dependency refresh.
+- Static typing compatibility edits are allowed when the updated package types expose existing annotation mismatches; they must not change runtime behavior.
+
+### Scope and verification
+
+- GitHub repository: `harumiWeb/exstruct`.
+- Open Dependabot inventory at task start: 43 alerts, all reported against `uv.lock`; repeated alerts include multiple advisories and package-name casing variants.
+- Update the workspace lockfile and include the `benchmark` workspace member in resolution.
+- Verify with lockfile consistency, a locked full workspace sync, the repository pre-commit hooks, current Ruff/mypy checks, documentation build, diff review, and a fresh Dependabot alert query.
+- Record local results separately from GitHub PR/check status.
+
+### ADR verdict
+
+- `not-needed`
+- rationale: the lockfile/tool refresh and static typing compatibility edits do not change the public contract or introduce a lasting design policy.
+
 ## 2026-04-22 README English/Japanese parity refresh
 
 ### Goal
