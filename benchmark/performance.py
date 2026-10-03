@@ -181,13 +181,20 @@ def fresh_process(arguments: list[str], timeout: float) -> tuple[float, str]:
         timeout=timeout,
         check=True,
     )
-    return (perf_counter() - started) * 1000, completed.stdout
+    elapsed_ms = (perf_counter() - started) * 1000
+    if completed.stderr:
+        print(completed.stderr, file=sys.stderr, end="")
+    return elapsed_ms, completed.stdout
 
 
-def source_metadata() -> dict[str, Any]:
+def source_metadata(timeout: float) -> dict[str, Any]:
     try:
         revision = subprocess.run(
-            ["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True
+            ["git", "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
         ).stdout.strip()
         dirty = bool(
             subprocess.run(
@@ -195,10 +202,11 @@ def source_metadata() -> dict[str, Any]:
                 check=True,
                 capture_output=True,
                 text=True,
+                timeout=timeout,
             ).stdout.strip()
         )
         return {"revision": revision, "dirty": dirty}
-    except (OSError, subprocess.CalledProcessError):
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
         return {"revision": None, "dirty": None}
 
 
@@ -258,7 +266,7 @@ def run_benchmark(
     return {
         "schema_version": 1,
         "recorded_at": datetime.now(UTC).isoformat(),
-        "source": source_metadata(),
+        "source": source_metadata(timeout),
         "environment": {
             "python": sys.version,
             "executable": sys.executable,

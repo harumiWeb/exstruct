@@ -1,5 +1,39 @@
 # Todo
 
+## 2026-10-03 PR #144 review and CI follow-up
+
+- [x] Inspect all review threads and failed CI logs; validate findings against code/contracts.
+- [x] Identify Windows smoke failure as a LibreOffice download connection error before pytest; rerun that job to distinguish transient failure.
+- [x] Add bounded installation retries and terminal installer diagnostics after the rerun reproduces the same external download failure; preserve mandatory smoke tests.
+- [x] Preserve successful subprocess stderr without including forwarding time in measured child latency.
+- [x] Bound both Git metadata commands by the configured timeout, retaining null fallback.
+- [x] Stage fixture generation and roll back only files created by this call if publication fails; preserve existing files and deterministic hashes.
+- [x] Redact the local interpreter path from the 12 published baseline records without changing measurements.
+- [x] Add focused regression tests, update permanent measurement constraints, and run checks before pushing to the existing PR.
+- [x] Inspect the latest remote CI state and all four review comments; report the next commit's remote checks separately.
+
+### Review
+
+Confirmed review findings: successful child stderr is discarded; Git metadata
+commands are unbounded; generation writes directly to final fixture paths; the
+published baseline includes identifying interpreter paths. No arbitrary command
+injection is confirmed: the Git argument lists are fixed and `shell=False`.
+CI failure evidence: run 37090510517, job 111109650634, Chocolatey LibreOffice
+download failed with `Unable to connect to the remote server`; pytest never ran.
+
+- Rerun attempt 2 reproduced the same download error (job 111111105922).
+  Installation now has three bounded attempts, terminal diagnostics and an
+  unchanged mandatory smoke gate; no external service recovery is claimed.
+- Validation: 82 focused tests passed (18 benchmark tests); precommit Ruff,
+  formatter and mypy passed; benchmark Ruff checked explicitly.
+- Validated workflow YAML and parsed the extracted install script with the
+  PowerShell parser. Stubbed native exit codes verified immediate success,
+  retry success and exhausted retries with expected call counts/delays.
+- Verified baseline redaction changes only 12 interpreter path values. Fixture
+  hashes still match the recorded local generation environment.
+- Permanent constraints migrated to extraction-performance spec, baseline README
+  and test-requirements; the task-specific working draft is summarized after migration.
+
 ## 2026-10-03 Issue #143 extraction performance baseline
 
 - [x] Inspect #143, parent #142, extraction contracts, pipeline, and existing benchmark.

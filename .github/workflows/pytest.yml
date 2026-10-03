@@ -95,8 +95,20 @@ jobs:
           pip install pytest pytest-cov pytest-mock
       - name: Install LibreOffice runtime
         shell: powershell
+        timeout-minutes: 10
         run: |
-          choco install libreoffice-fresh -y --no-progress
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            choco install libreoffice-fresh -y --no-progress
+            if ($LASTEXITCODE -eq 0) {
+              break
+            }
+            if ($attempt -eq 3) {
+              Get-Content -LiteralPath 'C:\ProgramData\chocolatey\logs\chocolatey.log' -Tail 100 -ErrorAction SilentlyContinue
+              throw "LibreOffice installation failed after $attempt attempts (exit $LASTEXITCODE)"
+            }
+            Write-Warning "LibreOffice installation failed; retrying (attempt $attempt of 3)"
+            Start-Sleep -Seconds (15 * $attempt)
+          }
       - name: Discover LibreOffice runtime paths
         shell: powershell
         run: |

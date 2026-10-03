@@ -6,6 +6,8 @@ default profile flags. Measured on Windows 10.0.22631, Python 3.11.13, ExStruct
 0.8.2 / extraction revision `563da66347dc343150b863ad699f8eb8d94da708`.
 The working tree was dirty with benchmark/test/docs additions; production source
 was unchanged. Dependencies and input hashes are recorded in every result.
+The published interpreter path was redacted to `<local-python>` during review;
+all other metadata and measured values are preserved.
 `SKIP_COM_TESTS` was unset; all standard **profile** runs succeeded with Excel COM.
 Runtime state is observed in the separate profile, not in each latency sample.
 

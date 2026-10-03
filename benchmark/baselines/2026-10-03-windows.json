@@ -8,7 +8,7 @@
     },
     "environment": {
       "python": "3.11.13 (main, Jul 23 2025, 00:29:09) [MSC v.1944 64 bit (AMD64)]",
-      "executable": "C:\\Users\\HARUMI\\orca\\workspaces\\exstruct\\opah\\.venv\\Scripts\\python.exe",
+      "executable": "<local-python>",
       "platform": "Windows-10-10.0.22631-SP0",
       "dependencies": {
         "exstruct": "0.8.2",
@@ -135,7 +135,7 @@
     },
     "environment": {
       "python": "3.11.13 (main, Jul 23 2025, 00:29:09) [MSC v.1944 64 bit (AMD64)]",
-      "executable": "C:\\Users\\HARUMI\\orca\\workspaces\\exstruct\\opah\\.venv\\Scripts\\python.exe",
+      "executable": "<local-python>",
       "platform": "Windows-10-10.0.22631-SP0",
       "dependencies": {
         "exstruct": "0.8.2",
@@ -262,7 +262,7 @@
     },
     "environment": {
       "python": "3.11.13 (main, Jul 23 2025, 00:29:09) [MSC v.1944 64 bit (AMD64)]",
-      "executable": "C:\\Users\\HARUMI\\orca\\workspaces\\exstruct\\opah\\.venv\\Scripts\\python.exe",
+      "executable": "<local-python>",
       "platform": "Windows-10-10.0.22631-SP0",
       "dependencies": {
         "exstruct": "0.8.2",
@@ -389,7 +389,7 @@
     },
     "environment": {
       "python": "3.11.13 (main, Jul 23 2025, 00:29:09) [MSC v.1944 64 bit (AMD64)]",
-      "executable": "C:\\Users\\HARUMI\\orca\\workspaces\\exstruct\\opah\\.venv\\Scripts\\python.exe",
+      "executable": "<local-python>",
       "platform": "Windows-10-10.0.22631-SP0",
       "dependencies": {
         "exstruct": "0.8.2",
@@ -516,7 +516,7 @@
     },
     "environment": {
       "python": "3.11.13 (main, Jul 23 2025, 00:29:09) [MSC v.1944 64 bit (AMD64)]",
-      "executable": "C:\\Users\\HARUMI\\orca\\workspaces\\exstruct\\opah\\.venv\\Scripts\\python.exe",
+      "executable": "<local-python>",
       "platform": "Windows-10-10.0.22631-SP0",
       "dependencies": {
         "exstruct": "0.8.2",
@@ -643,7 +643,7 @@
     },
     "environment": {
       "python": "3.11.13 (main, Jul 23 2025, 00:29:09) [MSC v.1944 64 bit (AMD64)]",
-      "executable": "C:\\Users\\HARUMI\\orca\\workspaces\\exstruct\\opah\\.venv\\Scripts\\python.exe",
+      "executable": "<local-python>",
       "platform": "Windows-10-10.0.22631-SP0",
       "dependencies": {
         "exstruct": "0.8.2",
@@ -770,7 +770,7 @@
     },
     "environment": {
       "python": "3.11.13 (main, Jul 23 2025, 00:29:09) [MSC v.1944 64 bit (AMD64)]",
-      "executable": "C:\\Users\\HARUMI\\orca\\workspaces\\exstruct\\opah\\.venv\\Scripts\\python.exe",
+      "executable": "<local-python>",
       "platform": "Windows-10-10.0.22631-SP0",
       "dependencies": {
         "exstruct": "0.8.2",
@@ -897,7 +897,7 @@
     },
     "environment": {
       "python": "3.11.13 (main, Jul 23 2025, 00:29:09) [MSC v.1944 64 bit (AMD64)]",
-      "executable": "C:\\Users\\HARUMI\\orca\\workspaces\\exstruct\\opah\\.venv\\Scripts\\python.exe",
+      "executable": "<local-python>",
       "platform": "Windows-10-10.0.22631-SP0",
       "dependencies": {
         "exstruct": "0.8.2",
@@ -1024,7 +1024,7 @@
     },
     "environment": {
       "python": "3.11.13 (main, Jul 23 2025, 00:29:09) [MSC v.1944 64 bit (AMD64)]",
-      "executable": "C:\\Users\\HARUMI\\orca\\workspaces\\exstruct\\opah\\.venv\\Scripts\\python.exe",
+      "executable": "<local-python>",
       "platform": "Windows-10-10.0.22631-SP0",
       "dependencies": {
         "exstruct": "0.8.2",
@@ -1151,7 +1151,7 @@
     },
     "environment": {
       "python": "3.11.13 (main, Jul 23 2025, 00:29:09) [MSC v.1944 64 bit (AMD64)]",
-      "executable": "C:\\Users\\HARUMI\\orca\\workspaces\\exstruct\\opah\\.venv\\Scripts\\python.exe",
+      "executable": "<local-python>",
       "platform": "Windows-10-10.0.22631-SP0",
       "dependencies": {
         "exstruct": "0.8.2",
@@ -1278,7 +1278,7 @@
     },
     "environment": {
       "python": "3.11.13 (main, Jul 23 2025, 00:29:09) [MSC v.1944 64 bit (AMD64)]",
-      "executable": "C:\\Users\\HARUMI\\orca\\workspaces\\exstruct\\opah\\.venv\\Scripts\\python.exe",
+      "executable": "<local-python>",
       "platform": "Windows-10-10.0.22631-SP0",
       "dependencies": {
         "exstruct": "0.8.2",
@@ -1405,7 +1405,7 @@
     },
     "environment": {
       "python": "3.11.13 (main, Jul 23 2025, 00:29:09) [MSC v.1944 64 bit (AMD64)]",
-      "executable": "C:\\Users\\HARUMI\\orca\\workspaces\\exstruct\\opah\\.venv\\Scripts\\python.exe",
+      "executable": "<local-python>",
       "platform": "Windows-10-10.0.22631-SP0",
       "dependencies": {
         "exstruct": "0.8.2",

@@ -14,6 +14,8 @@ Internal runner entry points (not public ExStruct APIs):
   timeout: float, profile_all_features: bool = False) -> dict[str, Any]`
 - `worker(path: Path, mode: Literal["light", "standard"], repeats: int,
   profile_all_features: bool = False) -> dict[str, Any]`
+- `fresh_process(arguments: list[str], timeout: float) -> tuple[float, str]`
+- `source_metadata(timeout: float) -> dict[str, Any]`
 - `main(argv: list[str] | None = None) -> int`
 
 The CLI requires at least one repeat, a finite positive timeout and an existing
@@ -43,7 +45,12 @@ Fresh-process latency is not filesystem/OS cache coldness. Startup probes are
 individual raw observations, not statistical estimates; repeat commands for
 startup distributions. No timing subtraction is used to estimate import cost.
 Child errors and timeouts return a failing command; timeout is per child, not a
-shared end-to-end budget. The worker's entire process duration includes repeats
+shared end-to-end budget. Both Git metadata subprocesses also use the configured
+timeout; a timeout or unavailable Git produces null revision/dirty metadata,
+without discarding completed measurements. Successful child stderr is forwarded
+to supervisor stderr after its wall-clock measurement ends, so fallback warnings
+remain visible without contaminating JSON stdout or inflating child latency.
+The worker's entire process duration includes repeats
 and profiling and is **not** the cold-extraction metric.
 
 ## JSON schema version 1
@@ -107,7 +114,14 @@ are for attribution, not substitutes for the uninstrumented latency observations
 `benchmark.performance_fixtures` generates six fixed synthetic categories; see
 `benchmark/README.md` for dimensions and commands. ZIP/workbook timestamps are
 fixed, and identical generator/dependency versions produce identical hashes.
-Existing fixture files are never overwritten. Record and compare input hashes,
+Existing fixture files are never overwritten.
+Generation takes place in a temporary staging directory before any fixture is
+published. Exceptions/interruption during generation leave the final fixture
+names absent, allowing retry in the same directory. Publication exclusively
+creates files; if publication raises, only files created by this call are removed.
+Unrelated files and concurrent writers' pre-existing files are preserved. This
+is exception recovery, not crash-atomic publication of all six files.
+Record and compare input hashes,
 locked dependencies, machine/load, source revision, mode and runtime state.
 Synthetic fixtures are reproducible workload probes, not claims of production
 representativeness; existing sample workbooks can be passed with `--input` too.
@@ -117,3 +131,6 @@ The extraction implementation is revision `563da66` (v0.8.2); `dirty=true` recor
 the added benchmark/doc/test files. No production extraction code is changed.
 Results are local observations, not universal performance targets. CI should
 test measurement contracts without strict shared-runner wall-clock thresholds.
+The committed baseline's `environment.executable` is replaced with `<local-python>`
+to omit the identifying local path; local runner output still records its actual
+interpreter path. Timing samples and other reproducibility metadata are retained.

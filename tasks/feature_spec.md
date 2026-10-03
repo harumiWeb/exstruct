@@ -610,3 +610,12 @@ profile flags and verification constraints are documented in
 `dev-docs/specs/extraction-performance.md`. Fixture reproduction and baseline
 observations are in `benchmark/README.md` and `benchmark/baselines/README.md`.
 Only this task's working draft was summarized after migration.
+
+## PR #144 review follow-up working specification
+
+Review follow-up signatures and recovery/measurement constraints were migrated to
+`dev-docs/specs/extraction-performance.md`; published baseline redaction is also
+documented in `benchmark/baselines/README.md`. Bounded Windows CI installation
+and its unchanged smoke gate are documented in `dev-docs/testing/test-requirements.md`.
+Regression evidence covers stderr/timing isolation, both Git timeouts, fixture
+interruption/publication collisions and published baseline metadata.
