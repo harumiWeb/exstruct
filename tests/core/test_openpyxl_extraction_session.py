@@ -20,7 +20,7 @@ from exstruct.core.backends import openpyxl_backend
 from exstruct.core.backends.openpyxl_backend import OpenpyxlBackend
 from exstruct.core.integrate import extract_workbook
 from exstruct.core.openpyxl_session import OpenpyxlExtractionSession
-from exstruct.core.pipeline import ExtractionInputs
+from exstruct.core.pipeline import ExtractionInputs, ExtractionMode
 
 
 def make_workbook(path: Path, sheets: int = 3) -> None:
@@ -53,7 +53,7 @@ def inputs_for(path: Path, *, formulas: bool = False) -> ExtractionInputs:
         include_print_areas=True,
         include_auto_page_breaks=False,
         include_colors_map=True,
-        include_default_background=True,
+        include_default_background=False,
         ignore_colors=set(),
         include_formulas_map=formulas,
         include_merged_cells=True,
@@ -195,6 +195,65 @@ def test_standalone_helpers_match_shared_backend(tmp_path: Path) -> None:
             assert actual[5:] == expected[5:]
 
 
+def test_default_background_merged_cell_fallback_parity(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Keep the preexisting merged-cell color error and warning contract."""
+    path = tmp_path / "book.xlsx"
+    make_workbook(path)
+    assert (
+        OpenpyxlBackend(path).extract_colors_map(
+            include_default_background=True,
+            ignore_colors=set(),
+        )
+        is None
+    )
+    with OpenpyxlExtractionSession(path) as session:
+        assert (
+            OpenpyxlBackend(path, session=session).extract_colors_map(
+                include_default_background=True,
+                ignore_colors=set(),
+            )
+            is None
+        )
+    assert caplog.text.count("Color map extraction failed; skipping colors_map") == 2
+
+
+def test_all_feature_model_matches_standalone_helpers(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = tmp_path / "book.xlsx"
+    make_workbook(path)
+    inputs = inputs_for(path, formulas=True)
+    shared = pipeline.run_extraction_pipeline(inputs).workbook
+    monkeypatch.setattr(openpyxl_backend, "_use_session", lambda *_: False)
+    standalone = pipeline.run_extraction_pipeline(inputs).workbook
+    assert shared.model_dump() == standalone.model_dump()
+
+
+def test_prestep_exception_releases_loaded_workbook(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = tmp_path / "book.xlsx"
+    make_workbook(path)
+    _, closes = track_loads(monkeypatch)
+
+    def fail_after_load(
+        inputs: ExtractionInputs, artifacts: pipeline.ExtractionArtifacts
+    ) -> None:
+        assert artifacts.openpyxl_session is not None
+        artifacts.openpyxl_session.workbook()
+        raise RuntimeError("prestep failure")
+
+    monkeypatch.setattr(pipeline, "build_pre_com_pipeline", lambda _: [fail_after_load])
+    with pytest.raises(RuntimeError, match="prestep failure"):
+        pipeline.run_extraction_pipeline(inputs_for(path))
+    assert len(closes) == 1 and closes[0].call_count == 1
+
+
 def test_fresh_extraction_observes_file_changes(tmp_path: Path) -> None:
     path = tmp_path / "book.xlsx"
     make_workbook(path, 1)
@@ -279,3 +338,23 @@ def test_mock_com_success_and_fallback_share_session(
     assert all(
         "A1:B2" in sheet.table_candidates for sheet in result.workbook.sheets.values()
     )
+
+
+@pytest.mark.parametrize("mode", ["light", "standard", "verbose"])
+def test_public_xls_extraction_preserves_cells_and_com_formula_boundary(
+    monkeypatch: pytest.MonkeyPatch,
+    mode: ExtractionMode,
+) -> None:
+    path = Path(__file__).resolve().parents[1] / "assets" / "sample.xls"
+    monkeypatch.setenv("SKIP_COM_TESTS", "1")
+    original = workbook.load_workbook
+    variants: list[bool] = []
+
+    def load(path: Path, *, data_only: bool, read_only: bool) -> Any:  # noqa: ANN401
+        variants.append(data_only)
+        return original(path, data_only=data_only, read_only=read_only)
+
+    monkeypatch.setattr(workbook, "load_workbook", load)
+    result = extract_workbook(path, mode=mode)
+    assert result.sheets and any(sheet.rows for sheet in result.sheets.values())
+    assert False not in variants  # BIFF formulas must remain COM-only.

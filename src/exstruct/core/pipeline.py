@@ -133,9 +133,6 @@ class ExtractionArtifacts:
         merged_cell_data: Extracted merged cell ranges per sheet.
     """
 
-    openpyxl_session: OpenpyxlExtractionSession | None = field(
-        default=None, repr=False, compare=False
-    )
     cell_data: CellData = field(default_factory=dict)
     print_area_data: PrintAreaData = field(default_factory=dict)
     auto_page_break_data: PrintAreaData = field(default_factory=dict)
@@ -144,6 +141,9 @@ class ExtractionArtifacts:
     shape_data: ShapeData = field(default_factory=dict)
     chart_data: ChartData = field(default_factory=dict)
     merged_cell_data: MergedCellData = field(default_factory=dict)
+    openpyxl_session: OpenpyxlExtractionSession | None = field(
+        default=None, repr=False, compare=False
+    )
 
 
 ExtractionStep = Callable[[ExtractionInputs, ExtractionArtifacts], None]

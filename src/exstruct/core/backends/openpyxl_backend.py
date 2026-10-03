@@ -80,7 +80,9 @@ class OpenpyxlBackend:
         helper = (
             "extract_sheet_cells_with_links" if include_links else "extract_sheet_cells"
         )
-        if _use_session(helper, self.session):
+        if self.file_path.suffix.lower() in {".xlsx", ".xlsm"} and _use_session(
+            helper, self.session
+        ):
             assert self.session is not None
             return {
                 ws.title: cells.extract_sheet_cells_openpyxl_ws(
