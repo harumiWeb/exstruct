@@ -75,7 +75,7 @@ diagram = exstruct.extract("sample/flowchart/sample-shape-connector.xlsx", mode=
 assert any(s.shapes for s in diagram.sheets.values())
 for s in diagram.sheets.values():
     assert all(shape.provenance == "python_ooxml" for shape in s.shapes)
-forbidden = ["xlwings", "scipy", "exstruct.core.backends.com_backend",
+forbidden = ["xlwings", "scipy", "pandas", "xlrd", "exstruct.core.backends.com_backend",
              "exstruct.core.backends.libreoffice_backend", "exstruct.core.charts",
              "exstruct.core.shapes", "exstruct.render", "pypdfium2"]
 print(json.dumps({{
@@ -147,6 +147,11 @@ import json
 from types import SimpleNamespace
 from exstruct.core import charts, pipeline, shapes, workbook
 import openpyxl
+import xlwings
+original_app = xlwings.App
+workbook.xw.App = "live module override"
+assert xlwings.App == "live module override"
+workbook.xw.App = original_app
 shapes.get_shapes_with_position = lambda workbook, mode: {"live": []}
 charts.get_charts = lambda sheet, mode: []
 assert pipeline.get_shapes_with_position(object()) == {"live": []}
