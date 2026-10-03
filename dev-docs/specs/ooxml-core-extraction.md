@@ -100,6 +100,13 @@ with OoxmlExtractionSession(path) as session:
   heuristics to produce `table_candidates` on the direct OOXML path. It passes
   `cluster_backend="python"` per call so the normal path avoids importing SciPy
   without reading or changing `EXSTRUCT_BORDER_CLUSTER_BACKEND`.
+- The table worksheet view indexes merged rectangles by row-boundary bands
+  and column-boundary segments. Each cell lookup uses two binary searches;
+  construction never expands all rows or cells covered by a merge. Overlaps
+  retain the first merge in XML order, and anchor values and inherited outer
+  borders keep their existing semantics. Index storage depends on boundary
+  segments (potentially quadratic in merge count for adversarial overlaps),
+  rather than merged-cell area or the table scan extent.
 
 ## Pipeline selection and recovery
 

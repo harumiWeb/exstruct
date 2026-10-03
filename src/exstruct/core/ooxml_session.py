@@ -5,6 +5,7 @@ from __future__ import annotations
 from bisect import bisect_left, bisect_right
 from collections.abc import Iterator
 from dataclasses import dataclass, field
+from heapq import heappop, heappush
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
@@ -242,6 +243,69 @@ class _OoxmlCellView:
     border: _BorderView
 
 
+class _MergeIndex:
+    """Index merge boundaries without allocating every covered coordinate.
+
+    Row bands share the same active merges. Within each band, column segments
+    select the earliest input merge, preserving the previous overlap semantics.
+    Lookup uses two binary searches rather than scanning merge rectangles.
+    """
+
+    def __init__(self, merges: list[tuple[int, int, int, int]]) -> None:
+        """Build row bands and their first-match column segments once."""
+        events: dict[int, list[tuple[int, bool]]] = {}
+        for index, (_, top, _, bottom) in enumerate(merges):
+            events.setdefault(top, []).append((index, True))
+            events.setdefault(bottom + 1, []).append((index, False))
+        self.rows = sorted(events)
+        self.columns: list[list[int]] = []
+        self.matches: list[list[tuple[int, int, int, int] | None]] = []
+        active: set[int] = set()
+        for row in self.rows:
+            for index, starts in events[row]:
+                if starts:
+                    active.add(index)
+                else:
+                    active.remove(index)
+            columns, matches = self._column_segments(merges, active)
+            self.columns.append(columns)
+            self.matches.append(matches)
+
+    @staticmethod
+    def _column_segments(
+        merges: list[tuple[int, int, int, int]], active_rows: set[int]
+    ) -> tuple[list[int], list[tuple[int, int, int, int] | None]]:
+        """Sweep column endpoints, resolving overlaps in input order."""
+        events: dict[int, list[tuple[int, bool]]] = {}
+        for index in active_rows:
+            left, _, right, _ = merges[index]
+            events.setdefault(left, []).append((index, True))
+            events.setdefault(right + 1, []).append((index, False))
+        columns = sorted(events)
+        matches: list[tuple[int, int, int, int] | None] = []
+        active: set[int] = set()
+        priority: list[int] = []
+        for column in columns:
+            for index, starts in events[column]:
+                if starts:
+                    active.add(index)
+                    heappush(priority, index)
+                else:
+                    active.remove(index)
+            while priority and priority[0] not in active:
+                heappop(priority)
+            matches.append(merges[priority[0]] if priority else None)
+        return columns, matches
+
+    def at(self, row: int, column: int) -> tuple[int, int, int, int] | None:
+        """Find the first covering merge in logarithmic lookup work."""
+        band = bisect_right(self.rows, row) - 1
+        if band < 0:
+            return None
+        segment = bisect_right(self.columns[band], column) - 1
+        return self.matches[band][segment] if segment >= 0 else None
+
+
 class _OoxmlWorksheetView:
     """Worksheet-shaped view over parsed OOXML values, styles and tables."""
 
@@ -254,6 +318,7 @@ class _OoxmlWorksheetView:
         self._data = data
         self._borders = borders
         self._merges = [_bounds(reference) for reference in data.merged]
+        self._merge_index = _MergeIndex(self._merges)
         self.tables = {
             str(index): _TableRefView(table.ref) for index, table in enumerate(tables)
         }
@@ -294,14 +359,7 @@ class _OoxmlWorksheetView:
 
     def _merge_at(self, row: int, column: int) -> tuple[int, int, int, int] | None:
         """Return the merge covering a coordinate, if present."""
-        return next(
-            (
-                bounds
-                for bounds in self._merges
-                if bounds[1] <= row <= bounds[3] and bounds[0] <= column <= bounds[2]
-            ),
-            None,
-        )
+        return self._merge_index.at(row, column)
 
     def _raw_border(self, row: int, column: int) -> _BorderView:
         """Resolve a cell's direct border style record."""

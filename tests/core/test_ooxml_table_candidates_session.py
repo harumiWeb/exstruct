@@ -8,7 +8,63 @@ from openpyxl.worksheet.table import Table
 import pytest
 
 from exstruct.core.backends.openpyxl_backend import OpenpyxlBackend
-from exstruct.core.ooxml_session import OoxmlExtractionSession
+from exstruct.core.ooxml_session import (
+    _NO_BORDER,
+    OoxmlExtractionSession,
+    _MergeIndex,
+    _OoxmlWorksheetView,
+    _SheetData,
+)
+
+
+def test_merge_index_preserves_first_match_and_all_boundaries() -> None:
+    """Check overlap precedence, gaps and endpoints against linear lookup."""
+    merges = [(4, 3, 8, 6), (1, 1, 5, 4), (7, 5, 10, 9)]
+    index = _MergeIndex(merges)
+    for row in range(0, 11):
+        for column in range(0, 12):
+            expected = next(
+                (m for m in merges if m[1] <= row <= m[3] and m[0] <= column <= m[2]),
+                None,
+            )
+            assert index.at(row, column) == expected
+
+
+def test_sheet_wide_merge_index_does_not_expand_rows_or_cells() -> None:
+    """Full worksheet merges cost boundary entries, not covered area."""
+    bounds = (1, 1, 16384, 1048576)
+    index = _MergeIndex([bounds])
+    assert len(index.rows) == 2
+    assert sum(map(len, index.columns)) == 2
+    assert index.at(1048576, 16384) == bounds
+    assert index.at(1048577, 1) is None
+
+
+def test_dense_scan_does_not_search_all_merges(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """One million lookups use bounded binary searches on 500 merges."""
+    import exstruct.core.ooxml_session as module
+
+    data = _SheetData(merged=[f"A{row}:B{row}" for row in range(1, 5001, 10)])
+    view = _OoxmlWorksheetView(data, (_NO_BORDER,), [])
+    original = module.bisect_right
+    calls = 0
+    maximum_size = 0
+
+    def count_search(values: list[int], value: int) -> int:
+        nonlocal calls, maximum_size
+        calls += 1
+        maximum_size = max(maximum_size, len(values))
+        return original(values, value)
+
+    monkeypatch.setattr(module, "bisect_right", count_search)
+    for row in range(1, 5001):
+        for column in range(1, 201):
+            expected = (1, row, 2, row) if row % 10 == 1 and column <= 2 else None
+            assert view._merge_at(row, column) == expected
+    assert calls == 2_000_000
+    assert maximum_size <= 1000
 
 
 def make_bordered_table_book(path: Path) -> None:
