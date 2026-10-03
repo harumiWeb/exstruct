@@ -6,6 +6,13 @@ All notable changes to this project are documented in this file. This changelog 
 
 ### Changed
 
+- Switched `.xlsx` / `.xlsm` `light` extraction to the direct OOXML core and
+  rich pipeline using one shared ZIP. Unsupported OOXML and `colors_map` opt-in
+  restart the complete openpyxl compatibility pipeline with an
+  `ooxml_compatibility` warning; per-sheet drawing resilience is preserved.
+- Kept ADR-0012's configured SciPy selection for other modes and compatibility
+  extraction while the direct light table heuristic selects Python BFS per
+  call without changing the environment variable.
 - Replaced production pandas cell extraction with direct openpyxl worksheet
   iteration and lazy xlrd reading for legacy `.xls` files, preserving existing
   cell normalization and serialized output.
@@ -18,6 +25,11 @@ All notable changes to this project are documented in this file. This changelog 
 
 ### Added
 
+- Added light-pipeline parity, archive lifecycle and compatibility-restart
+  coverage, plus a comparison runner for the previous openpyxl path. The
+  recorded seven-input Windows benchmark and raw baseline are available in
+  `benchmark/issue150-results.md` and
+  `benchmark/baselines/issue150-2026-10-03-windows.json`.
 - Added an internal streaming OOXML core extraction session for cells, shared
   strings, formulas, hyperlinks, merged cells, defined names, print areas and
   explicit tables, with shared ZIP access for optional shapes and charts.

@@ -135,7 +135,9 @@ def worker(
             else serialized
         )
         with ExitStack() as stack:
-            recorder.install(stack)
+            recorder.install(
+                stack, direct_ooxml=mode == "light" and not profile_all_features
+            )
             started = perf_counter()
             profiled_workbook = profile_extract()
             profile_ms = (perf_counter() - started) * 1000

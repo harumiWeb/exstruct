@@ -215,7 +215,8 @@ Overall code coverage must be **80% or higher**.
 - [INT-02] Preserve print_areas even during COM fallback
 - [IO-05] `dict_without_empty_values` removes None/empty list/empty dict and preserves nesting
 - [RENDER-01] PDF/PNG smoke tests for Excel+COM+pypdfium2 (env ON/OFF)
-- [MODE-08] In light, extract print_areas with openpyxl and keep them in default output unless include_print_areas=False is explicitly requested
+- [MODE-08] In light, include print_areas by default unless include_print_areas=False is explicitly requested; supported .xlsx / .xlsm reads them from OOXML
+- [MODE-09] Normal supported .xlsx / .xlsm light extraction imports none of openpyxl, pandas, SciPy, or xlwings and shares one ZIP between core and rich extraction
 
 ## 9.1 Pipeline
 
@@ -228,6 +229,9 @@ Overall code coverage must be **80% or higher**.
 - [PIPE-07] PipelineState holds com_attempted/com_succeeded/fallback_reason
 - [PIPE-08] Do not include the COM step for auto_page_breaks when include_auto_page_breaks=False
 - [PIPE-09] Do not include the extraction step for merged_cells when include_merged_cells=False
+- [PIPE-10] An uncaught failure or unsupported construct in any direct light OOXML stage discards partial data, closes the session, and restarts the complete openpyxl pipeline with `ooxml_compatibility`
+- [PIPE-11] colors_map opt-in and active legacy helper/pipeline/workbook overrides select complete compatibility before OOXML ZIP access where detectable
+- [PIPE-12] Direct light OOXML table heuristics pass `cluster_backend="python"` per call without changing `EXSTRUCT_BORDER_CLUSTER_BACKEND`; other modes and compatibility preserve ADR-0012 selection
 - [PIPE-MOD-01] build_workbook_data builds WorkbookData/SheetData from raw containers
 - [PIPE-MOD-02] collect_sheet_raw_data collects extracted data into raw containers
 

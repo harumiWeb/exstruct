@@ -13,20 +13,24 @@ production cell reader adds a substantial dependency without providing a
 public abstraction. Independent path-based helpers also parse the same OOXML
 workbook repeatedly, including from nested table detection helpers.
 
-ADR-0010 already defines light as a pure-Python rich OOXML baseline. This
-decision improves its implementation while retaining that mode boundary,
-serialization, coordinate conventions and fallback behavior. It does not
-introduce a new public extraction backend or change COM-first/pre-COM ordering.
+ADR-0010 defines light as a pure-Python rich OOXML baseline. This decision
+records direct openpyxl reading and workbook ownership for paths that select
+the compatibility backend. Issue #150 selects direct OOXML for normal
+`.xlsx` / `.xlsm` light extraction; ADR-0013 records that light-only refinement.
+The output model and coordinate conventions remain unchanged.
 
 ## 決定
 
-- Read `.xlsx` and `.xlsm` cells directly through openpyxl worksheet iteration;
-  build `CellRow` without a pandas DataFrame. Preserve the previous reader's
-  observable normalization, empty-cell filtering and cached-formula behavior.
+- On the openpyxl compatibility path, read `.xlsx` and `.xlsm` cells directly
+  through worksheet iteration; build `CellRow` without a pandas DataFrame.
+  Normal `.xlsx` / `.xlsm` light extraction uses the direct OOXML path in
+  ADR-0013. Preserve the previous reader's observable normalization,
+  empty-cell filtering and cached-formula behavior on the openpyxl path.
 - Retain `.xls` cell reading through a lazily imported direct xlrd reader. This
   preserves the public input format without retaining pandas or requiring Excel
   COM for cell reading. It does not add OOXML artifacts to BIFF workbooks.
-- Scope openpyxl workbook ownership to one extraction invocation. Compatible
+- Scope openpyxl workbook ownership to one extraction invocation whenever the
+  openpyxl path is selected. Compatible
   stages reuse a regular `data_only=True` workbook. Open a separate
   `data_only=False` workbook only when openpyxl formula extraction is requested.
 - Close owned workbooks when the extraction finishes or raises, including
@@ -44,7 +48,9 @@ introduce a new public extraction backend or change COM-first/pre-COM ordering.
 ## 影響
 
 - Direct cell construction removes production DataFrame allocation and the
-  pandas runtime requirement; pandas may remain in development/benchmark tools.
+  pandas runtime requirement. The normal light OOXML path also avoids importing
+  openpyxl; openpyxl remains installed for compatibility fallback and paths
+  that select it. Pandas may remain in development/benchmark tools.
 - Per-invocation ownership reduces parsing cost without stale data across calls
   or cross-extraction resource sharing. Formula extraction still needs a second
   workbook because its load semantics differ from cached cell values.
@@ -74,9 +80,11 @@ introduce a new public extraction backend or change COM-first/pre-COM ordering.
   `src/exstruct/core/pipeline.py`, `src/exstruct/core/openpyxl_session.py`,
   `src/exstruct/core/cell_types.py`, and `src/exstruct/core/backends/`.
 - Related specs: `dev-docs/specs/excel-extraction.md`,
+  `dev-docs/specs/ooxml-core-extraction.md`,
   `dev-docs/specs/extraction-performance.md`, and `docs/api.md`.
 - Related decisions: ADR-0002 fallback policy, ADR-0003 serialization policy,
-  and ADR-0010 light-mode responsibility boundary.
+  ADR-0010 light-mode responsibility boundary, and ADR-0013 light OOXML backend
+  selection.
 
 ## Supersedes
 

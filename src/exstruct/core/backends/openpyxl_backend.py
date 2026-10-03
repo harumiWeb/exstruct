@@ -23,7 +23,7 @@ from ..cells import (
 )
 from ..openpyxl_session import OpenpyxlExtractionSession
 from ..ranges import parse_range_zero_based
-from ..workbook import openpyxl_workbook
+from ..workbook import openpyxl_workbook as openpyxl_workbook
 from .base import CellData, MergedCellData, PrintAreaData
 
 logger = logging.getLogger(__name__)

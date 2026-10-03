@@ -59,6 +59,12 @@ import json
 import os
 import sys
 
+class MissingHeavyDependencies(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname.split(".", 1)[0] in {{"openpyxl", "xlwings", "scipy", "pandas"}}:
+            raise ModuleNotFoundError("Heavy dependency unavailable", name=fullname)
+sys.meta_path.insert(0, MissingHeavyDependencies())
+
 if {without_pillow!r}:
     class MissingPillow(importlib.abc.MetaPathFinder):
         def find_spec(self, fullname, path=None, target=None):
@@ -66,7 +72,7 @@ if {without_pillow!r}:
                 raise ModuleNotFoundError("Pillow unavailable", name=fullname)
     sys.meta_path.insert(0, MissingPillow())
 
-os.environ["EXSTRUCT_BORDER_CLUSTER_BACKEND"] = "python"
+os.environ.pop("EXSTRUCT_BORDER_CLUSTER_BACKEND", None)
 import exstruct
 workbook = exstruct.extract({str(path)!r}, mode="light")
 sheet = workbook.sheets["Data"]
@@ -79,7 +85,7 @@ diagram = exstruct.extract({str(_SHAPE_SAMPLE)!r}, mode="light")
 assert any(s.shapes for s in diagram.sheets.values())
 for s in diagram.sheets.values():
     assert all(shape.provenance == "python_ooxml" for shape in s.shapes)
-forbidden = ["xlwings", "scipy", "pandas", "xlrd", "exstruct.core.backends.com_backend",
+forbidden = ["openpyxl", "xlwings", "scipy", "pandas", "xlrd", "exstruct.core.backends.com_backend",
              "exstruct.core.backends.libreoffice_backend", "exstruct.core.charts",
              "exstruct.core.shapes", "exstruct.render", "pypdfium2"]
 print(json.dumps({{

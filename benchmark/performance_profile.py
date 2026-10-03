@@ -47,13 +47,12 @@ class StageRecorder:
 
         return wrapped
 
-    def install(self, stack: ExitStack) -> None:
+    def install(self, stack: ExitStack, *, direct_ooxml: bool = False) -> None:
         """Patch live call sites after lazy extraction imports have completed."""
-        import openpyxl
-
         from exstruct.core import integrate, pipeline
         from exstruct.core.backends.ooxml_backend import OoxmlRichBackend
         from exstruct.core.backends.openpyxl_backend import OpenpyxlBackend
+        from exstruct.core.ooxml_session import OoxmlExtractionSession
 
         methods = {
             "extract_cells": "cell_extraction",
@@ -63,12 +62,15 @@ class StageRecorder:
             "extract_merged_cells": "merged_cell_extraction",
             "detect_tables": "table_detection",
         }
+        owner = OoxmlExtractionSession if direct_ooxml else OpenpyxlBackend
         for method, stage in methods.items():
+            if direct_ooxml and method == "extract_colors_map":
+                continue
             stack.enter_context(
                 patch.object(
-                    OpenpyxlBackend,
+                    owner,
                     method,
-                    self.timed(stage, getattr(OpenpyxlBackend, method)),
+                    self.timed(stage, getattr(owner, method)),
                 )
             )
         functions = {
@@ -95,15 +97,18 @@ class StageRecorder:
                 )
             )
 
-        # Match function identity to include imported aliases and pandas' reader.
-        original_load = openpyxl.load_workbook
-        wrapped_load = self.timed("workbook_parsing", original_load)
-        for module in list(sys.modules.values()):
-            if module is None:
-                continue
-            for name, value in list(vars(module).items()):
-                if value is original_load:
-                    stack.enter_context(patch.object(module, name, wrapped_load))
+        if not direct_ooxml:
+            import openpyxl
+
+            # Match function identity to include imported compatibility aliases.
+            original_load = openpyxl.load_workbook
+            wrapped_load = self.timed("workbook_parsing", original_load)
+            for module in list(sys.modules.values()):
+                if module is None:
+                    continue
+                for name, value in list(vars(module).items()):
+                    if value is original_load:
+                        stack.enter_context(patch.object(module, name, wrapped_load))
 
         original_zip_init = zipfile.ZipFile.__init__
 

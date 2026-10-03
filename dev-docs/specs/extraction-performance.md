@@ -109,6 +109,14 @@ checks against its own uninstrumented equivalent. Compare profiles with identica
 `profile.all_features` settings. Profile times include wrapper overhead and
 are for attribution, not substitutes for the uninstrumented latency observations.
 
+For profile measurements, StageRecorder.install enables direct OOXML
+instrumentation only for the normal light profile, with direct_ooxml true when
+mode is light and all-features profiling is disabled. This instruments the
+backend selected by the default request; it does not change backend selection.
+For a direct OOXML profile, workbook_parsing reports zero calls because that
+stage counts openpyxl load_workbook calls. OOXML XML parsing time is included in
+the cells stage duration.
+
 ## Fixtures and comparison
 
 `benchmark.performance_fixtures` generates six fixed synthetic categories; see
@@ -141,3 +149,36 @@ light improvements from variable Excel COM observations and retains supplemental
 paired rechecks. `benchmark/issue148-results.md` records the separate accelerator
 comparison and ADR-0012 dependency decision; the candidate sparse BFS remains
 evaluation-only.
+
+## Issue #150 light-backend comparison
+
+benchmark/issue150_light.py compares the preserved openpyxl light pipeline with
+the direct OOXML pipeline in separate worker processes. It records import and
+extraction timings, cold in-process duration, repeated-extraction median, peak
+RSS, workbook and ZIP open counts, imported heavy modules, fallback reason, and
+serialized output hash. The runner stops if the two output hashes differ.
+
+The final Windows result file is
+benchmark/baselines/issue150-2026-10-03-windows.json, recorded on Windows
+10.0.22631 with Python 3.11.13. The seven inputs all produced matching
+serialized-output hashes. OOXML used one ZIP archive, opened zero openpyxl
+workbooks, and loaded none of openpyxl, pandas, SciPy or xlwings. The previous
+pipeline opened two ZIP archives, one openpyxl workbook, and loaded openpyxl and
+SciPy. See the [Issue #150 benchmark report](../../benchmark/issue150-results.md)
+for the run details.
+
+| Input | openpyxl cold / warm median (ms) | OOXML cold / warm median (ms) | openpyxl / OOXML peak RSS (MiB) |
+| --- | ---: | ---: | ---: |
+| small.xlsx | 983.4 / 10.8 | 428.1 / 5.0 | 64.4 / 39.6 |
+| large.xlsx | 1626.2 / 1017.5 | 1060.1 / 607.5 | 109.3 / 71.8 |
+| many-sheet.xlsx | 839.9 / 107.7 | 333.2 / 74.1 | 74.5 / 42.7 |
+| sparse.xlsx | 823.0 / 51.3 | 254.0 / 16.9 | 75.3 / 39.7 |
+| style-heavy.xlsx | 902.1 / 136.0 | 460.5 / 110.5 | 73.6 / 46.3 |
+| table-heavy.xlsx | 823.3 / 86.8 | 313.1 / 56.3 | 75.3 / 44.0 |
+| sample-shape-connector.xlsx | 842.9 / 16.2 | 238.9 / 5.9 | 64.6 / 39.6 |
+
+OOXML had a lower cold in-process duration, warm median and peak RSS on all
+seven inputs in this run. The cold in-process metric includes module imports and
+the first extraction, but excludes worker process startup and teardown measured
+separately. These are observations from one Windows machine and one recorded
+input set, not universal runtime guarantees.

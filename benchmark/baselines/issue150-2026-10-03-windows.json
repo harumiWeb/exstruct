@@ -1,0 +1,362 @@
+{
+  "recorded_at": "2026-10-03T09:18:49.450266+00:00",
+  "python": "3.11.13 (main, Jul 23 2025, 00:29:09) [MSC v.1944 64 bit (AMD64)]",
+  "platform": "Windows-10-10.0.22631-SP0",
+  "source": {
+    "revision": "c2b5dad3dad726347717ef2ccb296bbf873bcb29",
+    "dirty": true
+  },
+  "dependencies": {
+    "exstruct": "0.8.2",
+    "openpyxl": "3.1.5",
+    "numpy": "2.4.6",
+    "scipy": "1.17.1",
+    "defusedxml": "0.7.1",
+    "pydantic": "2.13.5"
+  },
+  "results": [
+    {
+      "input": "tasks\\issue150-fixtures\\small.xlsx",
+      "input_sha256": "e936689027ed6ba151c99ae74fe8d61d0f4e9cf802954008e18c622d2d8f6cee",
+      "openpyxl": {
+        "backend": "openpyxl",
+        "import_ms": 399.11730005405843,
+        "first_extract_ms": 582.6431999448687,
+        "cold_in_process_ms": 983.3663001190871,
+        "repeated_extract_ms": [
+          11.544900014996529,
+          11.858600191771984,
+          10.786499828100204,
+          8.785400073975325,
+          8.868500124663115
+        ],
+        "median_extract_ms": 10.786499828100204,
+        "peak_rss_bytes": 67543040,
+        "workbook_opens": 1,
+        "archive_opens": 2,
+        "loaded": [
+          "openpyxl",
+          "scipy"
+        ],
+        "fallback_reason": null,
+        "output_sha256": "2a148d2d0a3a8410dd5eccb61d008a30f4502c566cbade403be0756dbf209234",
+        "worker_process_ms": 1523.8159999717027
+      },
+      "ooxml": {
+        "backend": "ooxml",
+        "import_ms": 418.06289996020496,
+        "first_extract_ms": 8.06320016272366,
+        "cold_in_process_ms": 428.1338001601398,
+        "repeated_extract_ms": [
+          5.306999897584319,
+          4.777400055900216,
+          4.719699965789914,
+          5.392400082200766,
+          5.040100077167153
+        ],
+        "median_extract_ms": 5.040100077167153,
+        "peak_rss_bytes": 41529344,
+        "workbook_opens": 0,
+        "archive_opens": 1,
+        "loaded": [],
+        "fallback_reason": null,
+        "output_sha256": "2a148d2d0a3a8410dd5eccb61d008a30f4502c566cbade403be0756dbf209234",
+        "worker_process_ms": 783.9408998843282
+      }
+    },
+    {
+      "input": "tasks\\issue150-fixtures\\large.xlsx",
+      "input_sha256": "72ff66fa3abde812e9ae3261530b1dd5b88c4dfd5173715b383d896b990f1b97",
+      "openpyxl": {
+        "backend": "openpyxl",
+        "import_ms": 351.98510019108653,
+        "first_extract_ms": 1272.6747998967767,
+        "cold_in_process_ms": 1626.2495000846684,
+        "repeated_extract_ms": [
+          711.0170000232756,
+          841.0445998888463,
+          1083.7298999540508,
+          1236.7646000348032,
+          1017.5214000046253
+        ],
+        "median_extract_ms": 1017.5214000046253,
+        "peak_rss_bytes": 114622464,
+        "workbook_opens": 1,
+        "archive_opens": 2,
+        "loaded": [
+          "openpyxl",
+          "scipy"
+        ],
+        "fallback_reason": null,
+        "output_sha256": "dd0dcc08e28a1349e8580e2bc20942663d81b02a2236eaa1883326c1a9103b36",
+        "worker_process_ms": 8313.474000198767
+      },
+      "ooxml": {
+        "backend": "ooxml",
+        "import_ms": 415.91380001045763,
+        "first_extract_ms": 642.067400040105,
+        "cold_in_process_ms": 1060.061699943617,
+        "repeated_extract_ms": [
+          794.0476001240313,
+          607.5293999165297,
+          711.9624998886138,
+          547.761800000444,
+          575.2789999824017
+        ],
+        "median_extract_ms": 607.5293999165297,
+        "peak_rss_bytes": 75325440,
+        "workbook_opens": 0,
+        "archive_opens": 1,
+        "loaded": [],
+        "fallback_reason": null,
+        "output_sha256": "dd0dcc08e28a1349e8580e2bc20942663d81b02a2236eaa1883326c1a9103b36",
+        "worker_process_ms": 5320.234399987385
+      }
+    },
+    {
+      "input": "tasks\\issue150-fixtures\\many-sheet.xlsx",
+      "input_sha256": "608cf4728344614879790a083cf641109dfbed26dc9eafc60002fd75ae667ce0",
+      "openpyxl": {
+        "backend": "openpyxl",
+        "import_ms": 328.68080004118383,
+        "first_extract_ms": 510.08669985458255,
+        "cold_in_process_ms": 839.9064000695944,
+        "repeated_extract_ms": [
+          157.03190001659095,
+          107.7014000620693,
+          94.7342999279499,
+          198.85459984652698,
+          91.21260000392795
+        ],
+        "median_extract_ms": 107.7014000620693,
+        "peak_rss_bytes": 78163968,
+        "workbook_opens": 1,
+        "archive_opens": 2,
+        "loaded": [
+          "openpyxl",
+          "scipy"
+        ],
+        "fallback_reason": null,
+        "output_sha256": "25bd3c579cdb9ae0ffdb303ad712855c5634cee89660f75dee49a96934943f8d",
+        "worker_process_ms": 2058.4499000106007
+      },
+      "ooxml": {
+        "backend": "ooxml",
+        "import_ms": 259.4261998310685,
+        "first_extract_ms": 72.99490016885102,
+        "cold_in_process_ms": 333.2481998950243,
+        "repeated_extract_ms": [
+          90.00999992713332,
+          74.40880010835826,
+          74.11119993776083,
+          66.39340007677674,
+          66.29049987532198
+        ],
+        "median_extract_ms": 74.11119993776083,
+        "peak_rss_bytes": 44789760,
+        "workbook_opens": 0,
+        "archive_opens": 1,
+        "loaded": [],
+        "fallback_reason": null,
+        "output_sha256": "25bd3c579cdb9ae0ffdb303ad712855c5634cee89660f75dee49a96934943f8d",
+        "worker_process_ms": 990.9978001378477
+      }
+    },
+    {
+      "input": "tasks\\issue150-fixtures\\sparse.xlsx",
+      "input_sha256": "39e56eda8a409f5a66df2b76b4c319e8582c5bf0440c251971ddf5c7f47c4f8e",
+      "openpyxl": {
+        "backend": "openpyxl",
+        "import_ms": 294.3993997760117,
+        "first_extract_ms": 526.8939000088722,
+        "cold_in_process_ms": 823.0412998236716,
+        "repeated_extract_ms": [
+          46.1283999029547,
+          76.15750003606081,
+          43.77839993685484,
+          51.29020009189844,
+          125.88259996846318
+        ],
+        "median_extract_ms": 51.29020009189844,
+        "peak_rss_bytes": 78983168,
+        "workbook_opens": 1,
+        "archive_opens": 2,
+        "loaded": [
+          "openpyxl",
+          "scipy"
+        ],
+        "fallback_reason": null,
+        "output_sha256": "96f066e97924290a08db2c330ed9e86d2e2271536b7a7b81b16a2f822f02151b",
+        "worker_process_ms": 1541.1743000149727
+      },
+      "ooxml": {
+        "backend": "ooxml",
+        "import_ms": 232.51679982058704,
+        "first_extract_ms": 20.59699990786612,
+        "cold_in_process_ms": 253.99979995563626,
+        "repeated_extract_ms": [
+          21.903099957853556,
+          15.564100118353963,
+          16.921799862757325,
+          18.670600140467286,
+          16.298400005325675
+        ],
+        "median_extract_ms": 16.921799862757325,
+        "peak_rss_bytes": 41627648,
+        "workbook_opens": 0,
+        "archive_opens": 1,
+        "loaded": [],
+        "fallback_reason": null,
+        "output_sha256": "96f066e97924290a08db2c330ed9e86d2e2271536b7a7b81b16a2f822f02151b",
+        "worker_process_ms": 567.4101000186056
+      }
+    },
+    {
+      "input": "tasks\\issue150-fixtures\\style-heavy.xlsx",
+      "input_sha256": "05a77cc146594f2db73cb3aa764ad2625fa798809fce82fbe42900b5cc49529e",
+      "openpyxl": {
+        "backend": "openpyxl",
+        "import_ms": 302.1211000159383,
+        "first_extract_ms": 598.1943001970649,
+        "cold_in_process_ms": 902.0736999809742,
+        "repeated_extract_ms": [
+          136.04529993608594,
+          108.71589998714626,
+          144.85260006040335,
+          114.81840000487864,
+          136.966000078246
+        ],
+        "median_extract_ms": 136.04529993608594,
+        "peak_rss_bytes": 77185024,
+        "workbook_opens": 1,
+        "archive_opens": 2,
+        "loaded": [
+          "openpyxl",
+          "scipy"
+        ],
+        "fallback_reason": null,
+        "output_sha256": "c2e55ebcb8c0f4705068427a831759efd9a3b8eda16593dcbc10689268255373",
+        "worker_process_ms": 1948.6851000692695
+      },
+      "ooxml": {
+        "backend": "ooxml",
+        "import_ms": 329.37669986858964,
+        "first_extract_ms": 129.34739980846643,
+        "cold_in_process_ms": 460.4908998589963,
+        "repeated_extract_ms": [
+          100.11130012571812,
+          142.0326998922974,
+          105.04289995878935,
+          157.3558000382036,
+          110.54809996858239
+        ],
+        "median_extract_ms": 110.54809996858239,
+        "peak_rss_bytes": 48504832,
+        "workbook_opens": 0,
+        "archive_opens": 1,
+        "loaded": [],
+        "fallback_reason": null,
+        "output_sha256": "c2e55ebcb8c0f4705068427a831759efd9a3b8eda16593dcbc10689268255373",
+        "worker_process_ms": 1461.7718998342752
+      }
+    },
+    {
+      "input": "tasks\\issue150-fixtures\\table-heavy.xlsx",
+      "input_sha256": "a319c15ab9b4987527beaa627ca336a679e9091f34427c08710199cfda776e5f",
+      "openpyxl": {
+        "backend": "openpyxl",
+        "import_ms": 284.26939994096756,
+        "first_extract_ms": 537.3462000861764,
+        "cold_in_process_ms": 823.344900039956,
+        "repeated_extract_ms": [
+          86.76470001228154,
+          129.96340007521212,
+          79.1676000226289,
+          75.20329998806119,
+          136.44779985770583
+        ],
+        "median_extract_ms": 86.76470001228154,
+        "peak_rss_bytes": 78946304,
+        "workbook_opens": 1,
+        "archive_opens": 2,
+        "loaded": [
+          "openpyxl",
+          "scipy"
+        ],
+        "fallback_reason": null,
+        "output_sha256": "3d79c241439ca67d26b860db6c9540f10adc7676f3c395768eea611d11cfa4c7",
+        "worker_process_ms": 1827.428000047803
+      },
+      "ooxml": {
+        "backend": "ooxml",
+        "import_ms": 247.5149999372661,
+        "first_extract_ms": 64.0249999705702,
+        "cold_in_process_ms": 313.13710007816553,
+        "repeated_extract_ms": [
+          57.425100123509765,
+          52.48690000735223,
+          70.73040003888309,
+          56.27709999680519,
+          52.51270020380616
+        ],
+        "median_extract_ms": 56.27709999680519,
+        "peak_rss_bytes": 46112768,
+        "workbook_opens": 0,
+        "archive_opens": 1,
+        "loaded": [],
+        "fallback_reason": null,
+        "output_sha256": "3d79c241439ca67d26b860db6c9540f10adc7676f3c395768eea611d11cfa4c7",
+        "worker_process_ms": 973.3466999605298
+      }
+    },
+    {
+      "input": "sample\\flowchart\\sample-shape-connector.xlsx",
+      "input_sha256": "a401d6aac3a5937a2d8aecb54297e309998c5ac9f1265fde809e2cd66a0df813",
+      "openpyxl": {
+        "backend": "openpyxl",
+        "import_ms": 294.66040013357997,
+        "first_extract_ms": 546.8210000544786,
+        "cold_in_process_ms": 842.9002999328077,
+        "repeated_extract_ms": [
+          16.837300034239888,
+          16.19959995150566,
+          14.734199969097972,
+          13.350500026717782,
+          17.58919982239604
+        ],
+        "median_extract_ms": 16.19959995150566,
+        "peak_rss_bytes": 67727360,
+        "workbook_opens": 1,
+        "archive_opens": 2,
+        "loaded": [
+          "openpyxl",
+          "scipy"
+        ],
+        "fallback_reason": null,
+        "output_sha256": "1630d9cc31264fe0ab7291794b97bc47b7dc9c545f1f2b69dfa8f5eb4ac4ea78",
+        "worker_process_ms": 1201.965200016275
+      },
+      "ooxml": {
+        "backend": "ooxml",
+        "import_ms": 229.1276000905782,
+        "first_extract_ms": 8.505499921739101,
+        "cold_in_process_ms": 238.88249997980893,
+        "repeated_extract_ms": [
+          7.120700087398291,
+          6.683700019493699,
+          5.587999941781163,
+          5.924399942159653,
+          5.377799971029162
+        ],
+        "median_extract_ms": 5.924399942159653,
+        "peak_rss_bytes": 41512960,
+        "workbook_opens": 0,
+        "archive_opens": 1,
+        "loaded": [],
+        "fallback_reason": null,
+        "output_sha256": "1630d9cc31264fe0ab7291794b97bc47b7dc9c545f1f2b69dfa8f5eb4ac4ea78",
+        "worker_process_ms": 513.9168000314385
+      }
+    }
+  ]
+}

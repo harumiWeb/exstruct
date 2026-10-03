@@ -10,7 +10,7 @@ from zipfile import BadZipFile
 from defusedxml import ElementTree
 
 from ...models import Chart
-from ..ooxml_drawing import SheetDrawingData, read_sheet_drawings
+from ..ooxml_drawing import SheetDrawingData, read_sheet_drawings as read_sheet_drawings
 from .base import ChartData, RichBackend, ShapeData
 from .ooxml_shapes import _build_shapes_from_ooxml
 
@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _OOXML_SUFFIXES = {".xlsx", ".xlsm"}
+_DEFAULT_READ_SHEET_DRAWINGS = read_sheet_drawings
 
 
 class OoxmlRichBackend(RichBackend):

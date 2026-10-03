@@ -4,9 +4,12 @@ Issue: [#149](https://github.com/harumiWeb/exstruct/issues/149)
 
 ## Scope and selection
 
-`exstruct.core.ooxml_session.OoxmlExtractionSession` is an internal, read-only
-alternative for `.xlsx` / `.xlsm` core extraction. It does not replace the
-openpyxl pipeline or change public models. Default-path migration is separate.
+`exstruct.core.ooxml_session.OoxmlExtractionSession` is the read-only core
+reader for the normal `.xlsx` / `.xlsm` `light` path. It shares one ZIP with
+the OOXML rich backend and does not change public models. The openpyxl pipeline
+remains the complete compatibility path and is selected for unsupported
+constructs, direct-stage failures, `colors_map` opt-in, or active legacy
+pipeline/helper/workbook overrides. See ADR-0013.
 
 ```python
 from pathlib import Path
@@ -41,9 +44,10 @@ with OoxmlExtractionSession(path) as session:
   Existing drawing parsing retains its separate streaming geometry scan.
 - Closing releases the ZIP and caches, including after context-body errors.
   Accessing a closed session raises RuntimeError.
-- No openpyxl workbook/worksheet model is created. Existing value/formula
-  normalization and openpyxl scalar format, date and formula-translation helpers
-  are reused; openpyxl remains a dependency.
+- No openpyxl workbook/worksheet model is created. Pure-Python scalar format,
+  date and formula-translation helpers preserve the existing value contract.
+  The normal supported `light` path does not import openpyxl, pandas, SciPy or
+  xlwings; openpyxl remains installed for compatibility and other paths.
 - Core malformed XML, missing required parts and invalid scalar data raise
   errors. Missing optional relationship parts return an empty mapping. No
   partially parsed worksheet is cached. Rich extraction retains its existing
@@ -73,8 +77,15 @@ with OoxmlExtractionSession(path) as session:
   groups normalized `=`-prefixed formulas at `(row, zero-based column)` coordinates.
   Shared followers translate relative references from the shared anchor.
   Array/dynamic formulas retain explicit anchor text without inventing follower
-  formulas. Unresolved shared followers are omitted; unsupported translation
-  is logged and skipped.
+  formulas. Unresolved shared followers are omitted. Shared translation of
+  whole-row/column ranges, unquoted sheet-qualified references, non-ASCII names,
+  or references crossing worksheet bounds raises `UnsupportedOoxmlError`;
+  the public light pipeline restarts compatibility extraction instead of
+  emitting a partially translated formula map. Quoted sheet names and string
+  literals are preserved by the ordinary A1 translator.
+- Date/duration style classification is cached once per session. Elapsed-time
+  formats are case-insensitive, including `[H]:MM:SS`, and preserve both row
+  display text and raw merged-anchor values.
 - External hyperlink URLs are preserved exactly. Internal `location` links are
   omitted, matching current output. Links on filtered values survive only when
   their row has another emitted value. Range links use zero-based column keys.
@@ -85,6 +96,35 @@ with OoxmlExtractionSession(path) as session:
   and skipped.
 - `extract_explicit_tables()` returns referenced table names, display names,
   ranges and column names, without the border heuristics of `table_candidates`.
+- `detect_tables(name, mode="light")` also applies the existing border-based
+  heuristics to produce `table_candidates` on the direct OOXML path. It passes
+  `cluster_backend="python"` per call so the normal path avoids importing SciPy
+  without reading or changing `EXSTRUCT_BORDER_CLUSTER_BACKEND`.
+- The table worksheet view indexes merged rectangles by row-boundary bands
+  and column-boundary segments. Each cell lookup uses two binary searches;
+  construction never expands all rows or cells covered by a merge. Overlaps
+  retain the first merge in XML order, and anchor values and inherited outer
+  borders keep their existing semantics. Index storage depends on boundary
+  segments (potentially quadratic in merge count for adversarial overlaps),
+  rather than merged-cell area or the table scan extent.
+
+## Pipeline selection and recovery
+
+- The normal `light` pipeline uses one session archive for core worksheet data,
+  formulas, hyperlinks, merged cells, print areas, table candidates, shapes and
+  charts through final model construction.
+- Any uncaught error or unsupported construct in any direct OOXML stage
+  discards all partial OOXML results. The session closes in a `finally` path,
+  then extraction restarts from the beginning through the complete openpyxl
+  compatibility pipeline.
+- The warning and extraction state use
+  `FallbackReason.OOXML_COMPATIBILITY` (`ooxml_compatibility`). Known
+  unsupported options and legacy overrides select compatibility before the
+  ZIP is opened where possible.
+- Existing per-sheet drawing resilience remains: a drawing failure isolated to
+  one sheet may omit that sheet's affected drawing artifacts while preserving
+  core data and healthy-sheet drawings.
+- Other modes and `.xls` selection/behavior remain unchanged.
 
 ## Relationships
 
@@ -120,18 +160,12 @@ parity, Ruff, strict mypy and diff checks passed. These fixes restore extraction
 semantics and improve internal indexing; they introduce no backend-selection,
 public mode or fallback policy change and require no new ADR.
 
-## ADR assessment
+## Decision history
 
-- Verdict: `not-needed`; next action: `no-adr`.
-- Rationale: internal parsing capabilities are added without changing backend
-  selection, priority, mode meanings, public output or fallback policy. A future
-  pipeline migration requires a fresh ADR assessment.
-- Domains: extraction implementation and resource reuse.
-- Existing decisions: ADR-0010 (light OOXML rich baseline), ADR-0002 (rich fallback).
-- Evidence triad: this spec and `dev-docs/specs/excel-extraction.md`;
-  `src/exstruct/core/ooxml_session.py`, `ooxml_package.py`, `ooxml_drawing.py`,
-  `backends/ooxml_backend.py`; `tests/core/test_ooxml_extraction_session.py`,
-  `test_ooxml_package.py`, `test_ooxml_drawing.py` and existing pipeline tests.
+Issue #149 added reusable OOXML parsing primitives without changing backend
+selection; its original no-ADR assessment applied to that capability-only
+scope. Issue #150 changes the default backend and whole-pipeline fallback
+contract. ADR-0013 records that policy and applies to this specification.
 
 ## Validation
 

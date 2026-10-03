@@ -170,6 +170,7 @@ adrs:
     superseded_by: []
     related_specs:
       - dev-docs/specs/excel-extraction.md
+      - dev-docs/specs/ooxml-core-extraction.md
       - dev-docs/specs/extraction-performance.md
       - docs/api.md
   - id: ADR-0012
@@ -187,5 +188,27 @@ adrs:
     related_specs:
       - docs/api.md
       - dev-docs/specs/excel-extraction.md
+      - dev-docs/specs/ooxml-core-extraction.md
       - dev-docs/specs/extraction-performance.md
       - benchmark/issue148-results.md
+  - id: ADR-0013
+    title: Default OOXML Backend for Light Extraction
+    status: proposed
+    path: dev-docs/adr/ADR-0013-default-ooxml-backend-for-light-extraction.md
+    primary_domain: backend
+    domains:
+      - backend
+      - extraction
+      - fallback
+      - compatibility
+      - performance
+    supersedes: []
+    superseded_by: []
+    related_specs:
+      - dev-docs/specs/excel-extraction.md
+      - dev-docs/specs/ooxml-core-extraction.md
+      - dev-docs/specs/extraction-performance.md
+      - docs/api.md
+      - docs/cli.md
+      - README.md
+      - README.ja.md

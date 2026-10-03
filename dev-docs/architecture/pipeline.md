@@ -6,7 +6,7 @@ to convert Excel workbooks into **semantically structured JSON**.
 This design achieves the following.
 
 - Separation of Excel COM-dependent logic from non-dependent logic
-- Future extensibility to direct OpenXML/XML parsing
+- Direct OOXML reading for the normal light path on .xlsx / .xlsm
 - Stable output for RAG/LLM use cases
 
 ---
@@ -17,21 +17,25 @@ This design achieves the following.
 sequenceDiagram
     participant Client
     participant Pipeline
+    participant OoxmlSession
     participant OpenpyxlBackend
     participant RichBackend
     participant Modeling
 
     Client->>Pipeline: extract()
-    Pipeline->>OpenpyxlBackend: pre_extract()
-    OpenpyxlBackend-->>Pipeline: cells / tables / print_areas
-
-    alt Rich backend available
-        Pipeline->>RichBackend: extract_shapes(mode=...)
-        RichBackend-->>Pipeline: shapes
-        Pipeline->>RichBackend: extract_charts(mode=...)
-        RichBackend-->>Pipeline: charts
-    else runtime unavailable
-        Pipeline->>Pipeline: log_fallback()
+    alt supported light .xlsx/.xlsm
+        Pipeline->>OoxmlSession: core + rich extraction (one ZIP)
+        OoxmlSession-->>Pipeline: cells / tables / print_areas / shapes / charts
+        opt unsupported construct or direct-stage failure
+            Pipeline->>Pipeline: discard partial result; close session
+            Pipeline->>OpenpyxlBackend: restart complete compatibility pipeline
+            OpenpyxlBackend-->>Pipeline: complete compatibility result
+        end
+    else other modes, .xls, or compatibility selection
+        Pipeline->>OpenpyxlBackend: selected extraction path
+        OpenpyxlBackend-->>Pipeline: core extraction
+        Pipeline->>RichBackend: selected rich extraction
+        RichBackend-->>Pipeline: rich artifacts
     end
 
     Pipeline->>Modeling: integrate()
@@ -43,11 +47,18 @@ The processing order is as follows.
 
 `RichBackend` in this diagram refers to the conceptual rich-extraction layer; the concrete implementations are `OoxmlRichBackend`, `ComRichBackend`, and `LibreOfficeRichBackend`.
 
-1. **Pipeline** assembles the execution plan
-2. **Openpyxl Backend** performs pre-analysis (cells, tables, print areas)
-3. **Rich Backend** extracts shapes/charts if available. Here, `RichBackend` is the conceptual layer and `light` uses `OoxmlRichBackend`, while COM-backed modes use `ComRichBackend` and optional LibreOffice enrichment uses `LibreOfficeRichBackend`.
-4. **Modeling** integrates the results into WorkbookData / SheetData
-5. Output in the requested format (JSON / YAML / TOON)
+1. **Pipeline** selects the mode and backend.
+2. Supported .xlsx / .xlsm light extraction reads core and rich OOXML data
+   through one OoxmlExtractionSession ZIP.
+3. An unsupported construct or uncaught failure at any direct stage discards
+   the partial result, closes the session, and restarts the full openpyxl
+   compatibility pipeline. colors_map opt-in and active legacy overrides
+   select compatibility directly.
+4. Other modes and .xls retain their existing backend selection. The
+   conceptual rich layer includes OoxmlRichBackend, ComRichBackend, and
+   LibreOfficeRichBackend.
+5. **Modeling** integrates the result into WorkbookData / SheetData; output is
+   serialized in the requested format (JSON / YAML / TOON).
 
 ---
 
@@ -59,18 +70,17 @@ Pipeline is the **orchestrator**.
 - Selects backends
 - Controls fallback paths
 - Manages intermediate artifacts
-- Owns one extraction-scoped openpyxl session across pre-analysis, COM/fallback
-  processing and final model construction. Backends consume that session rather
-  than opening the same workbook for each feature or worksheet.
+- Owns one extraction-scoped OOXML session for normal light .xlsx / .xlsm
+  processing, or one openpyxl session when the compatibility/other path is
+  selected. Resources remain scoped through final model construction.
 
 Pipeline is designed to **never read Excel content directly**.
 
-`OpenpyxlExtractionSession` lazily owns regular workbook variants through an
-`ExitStack`: cached values (`data_only=True`) are shared by cells, hyperlinks,
-print areas, colors, merged cells and table detection; formula text
-(`data_only=False`) is opened only when requested. Path-based standalone helpers
-remain wrappers with their own bounded lifetime. The session is not a global
-cache and must not outlive one extraction.
+OoxmlExtractionSession shares one ZIP between core and rich light extraction.
+When openpyxl compatibility is selected, OpenpyxlExtractionSession owns the
+regular workbook variants: cached values (data_only=True) are shared by
+compatible stages, and formula text (data_only=False) is opened only when
+requested. Neither session is a global cache or outlives one extraction.
 
 ---
 
@@ -81,6 +91,7 @@ Backend defines **how Excel is read**.
 | Backend                | Responsibilities                                  |
 | ---------------------- | ------------------------------------------------- |
 | OpenpyxlBackend        | Cells / tables / print areas / colors map         |
+| OoxmlExtractionSession | Light-mode OOXML core data and shared ZIP lifetime |
 | ComBackend             | COM-only print areas / auto page breaks / maps    |
 | OoxmlRichBackend       | Pure-Python OOXML shapes / connectors / charts    |
 | ComRichBackend         | Shapes / arrows / charts / SmartArt via Excel COM |
@@ -100,11 +111,17 @@ All of these can be added **without major changes to the Pipeline**.
 
 ## Fallback Design
 
-When COM or LibreOffice runtime is unavailable, the following must be respected.
+Fallback behavior depends on the selected path.
 
-- Do not take down the entire process with an exception
-- Reuse openpyxl results as much as possible
-- Record the fallback reason explicitly
+- A direct light OOXML stage failure or unsupported construct discards every
+  partial result, closes the session in finally, and restarts the complete
+  openpyxl compatibility pipeline with the ooxml_compatibility warning.
+- A drawing failure isolated to one sheet retains the existing best-effort
+  behavior and does not discard healthy sheet output.
+- colors_map opt-in and active legacy overrides select compatibility; other
+  modes and .xls retain their existing routing.
+- COM/LibreOffice fallback behavior remains as defined by the mode contract.
+- Record fallback reasons explicitly through FallbackReason.
 
 This is an intentional design that assumes **batch processing, CI, and automation**.
 

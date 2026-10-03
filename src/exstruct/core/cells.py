@@ -16,12 +16,6 @@ import re
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
-from openpyxl.cell.cell import Cell, MergedCell
-from openpyxl.cell.read_only import EmptyCell, ReadOnlyCell
-from openpyxl.styles.colors import Color
-from openpyxl.utils import get_column_letter, range_boundaries
-from openpyxl.worksheet._read_only import ReadOnlyWorksheet
-from openpyxl.worksheet.worksheet import Worksheet
 
 from ..models import CellRow
 from ._lazy import LazyModule
@@ -36,6 +30,11 @@ from .openpyxl_session import OpenpyxlExtractionSession
 from .workbook import openpyxl_workbook
 
 if TYPE_CHECKING:
+    from openpyxl.cell.cell import Cell, MergedCell
+    from openpyxl.cell.read_only import EmptyCell, ReadOnlyCell
+    from openpyxl.styles.colors import Color
+    from openpyxl.worksheet._read_only import ReadOnlyWorksheet
+    from openpyxl.worksheet.worksheet import Worksheet
     import xlwings as xw
 else:
     xw = LazyModule("xlwings")
@@ -63,6 +62,23 @@ _XL_COLOR_NONE = -4142
 _BORDER_CLUSTER_BACKEND_ENV = "EXSTRUCT_BORDER_CLUSTER_BACKEND"
 
 ExtractionMode = Literal["light", "libreoffice", "standard", "verbose"]
+
+
+def get_column_letter(index: int) -> str:
+    """Resolve scalar coordinates without importing compatibility backends."""
+    from .ooxml_scalars import get_column_letter as column_letter
+
+    return column_letter(index)
+
+
+def range_boundaries(ref: str) -> tuple[int, int, int, int]:
+    """Resolve finite table/cell extents without importing openpyxl."""
+    from .ooxml_scalars import range_boundaries as bounds
+
+    c1, r1, c2, r2 = bounds(ref)
+    if c1 is None or r1 is None or c2 is None or r2 is None:
+        raise ValueError(f"Non-finite cell range: {ref}")
+    return c1, r1, c2, r2
 
 
 @dataclass(frozen=True)
@@ -712,6 +728,8 @@ def extract_sheet_cells_openpyxl_ws(
     retained when their row has another emitted value; link-only rows are not
     invented. Worksheet ownership and closing remain with the caller.
     """
+    from openpyxl.worksheet.worksheet import Worksheet
+
     cell_rows: Iterable[
         tuple[int, Iterable[tuple[int, Cell | MergedCell | ReadOnlyCell | EmptyCell]]]
     ]
@@ -1247,7 +1265,10 @@ def _resolve_border_cluster_backend() -> Literal["auto", "python", "numpy"]:
 
 
 def detect_border_clusters(
-    has_border: np.ndarray, min_size: int = 4
+    has_border: np.ndarray,
+    min_size: int = 4,
+    *,
+    backend: Literal["auto", "python", "numpy"] | None = None,
 ) -> list[tuple[int, int, int, int]]:
     """Detect border clusters using the selected backend.
 
@@ -1258,7 +1279,7 @@ def detect_border_clusters(
     Returns:
         List of bounding boxes (r1, c1, r2, c2).
     """
-    backend = _resolve_border_cluster_backend()
+    backend = backend or _resolve_border_cluster_backend()
     if backend == "python":
         return _detect_border_clusters_python(has_border, min_size)
     try:
@@ -1772,7 +1793,10 @@ def _detect_border_rectangles_xlwings(
 
 
 def _detect_border_rectangles(
-    has_border: np.ndarray | Sequence[Sequence[bool]], *, min_size: int
+    has_border: np.ndarray | Sequence[Sequence[bool]],
+    *,
+    min_size: int,
+    cluster_backend: Literal["auto", "python", "numpy"] | None = None,
 ) -> list[tuple[int, int, int, int]]:
     """Detect border rectangles from a boolean grid.
 
@@ -1783,7 +1807,10 @@ def _detect_border_rectangles(
     Returns:
         List of rectangles as (top_row, left_col, bottom_row, right_col).
     """
-    return detect_border_clusters(np.asarray(has_border, dtype=bool), min_size=min_size)
+    grid = np.asarray(has_border, dtype=bool)
+    if cluster_backend is None:
+        return detect_border_clusters(grid, min_size=min_size)
+    return detect_border_clusters(grid, min_size=min_size, backend=cluster_backend)
 
 
 def _merge_rectangles(
@@ -1979,6 +2006,7 @@ def detect_tables_openpyxl_ws(
     *,
     mode: ExtractionMode = "standard",
     scan_limits: TableScanLimits | None = None,
+    cluster_backend: Literal["auto", "python", "numpy"] | None = None,
 ) -> list[str]:
     """Detect tables using an already loaded worksheet."""
     resolved_limits = _resolve_table_scan_limits(mode, scan_limits)
@@ -1990,7 +2018,13 @@ def detect_tables_openpyxl_ws(
             scan_limits=resolved_limits,
         )
     )
-    rects = _detect_border_rectangles(has_border, min_size=4)
+    rects = (
+        _detect_border_rectangles(has_border, min_size=4)
+        if cluster_backend is None
+        else _detect_border_rectangles(
+            has_border, min_size=4, cluster_backend=cluster_backend
+        )
+    )
     merged_rects = _merge_rectangles(rects)
     dedup: set[str] = set(tables)
 

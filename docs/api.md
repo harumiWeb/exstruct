@@ -83,7 +83,13 @@ process_excel(
 
 ## Extraction Mode Guide
 
-- `mode="light"` is the pure-Python baseline. It skips COM entirely and, for `.xlsx/.xlsm`, returns best-effort OOXML shapes, connectors, and charts in addition to cells, table candidates, and print areas.
+- `mode="light"` is the pure-Python baseline. For `.xlsx` / `.xlsm` it reads
+  core data and best-effort shapes, connectors, and charts through one shared
+  OOXML archive. The normal path does not import openpyxl, pandas, SciPy, or
+  xlwings. Unsupported OOXML, `colors_map` opt-in, or an active legacy helper
+  override restarts the complete openpyxl compatibility pipeline and logs the
+  `ooxml_compatibility` warning reason; partial OOXML results are discarded.
+  Per-sheet drawing failures retain the existing best-effort behavior.
 - `mode="libreoffice"` starts from the same OOXML baseline as `light` and then applies optional LibreOffice enrichment when the runtime is available.
 - `mode="standard"` and `mode="verbose"` remain the COM-backed paths when you need native Excel fidelity.
 
@@ -147,13 +153,17 @@ the MCP server, which wraps the same core and adds host policy.
 
 ## Dependencies
 
-- Core cell extraction: openpyxl for `.xlsx` / `.xlsm`, xlrd for `.xls`
-  (installed with the package). Production extraction does not require pandas.
+- Core cell extraction: the normal `light` path reads `.xlsx` / `.xlsm` directly
+  from OOXML. Openpyxl remains installed for compatibility fallback and other
+  paths; xlrd reads `.xls` (installed with the package). Production extraction
+  does not require pandas.
 - Border clustering: NumPy is required; SciPy is optional via `exstruct[fast]`
   (also included in `exstruct[all]`). `EXSTRUCT_BORDER_CLUSTER_BACKEND=auto`
   prefers SciPy when available and falls back to the existing Python BFS on
   import or execution failure. `python` forces BFS; the legacy `numpy` name
-  selects SciPy-backed labeling with the same fallback. No `scipy` alias is added.
+  selects SciPy-backed labeling with the same fallback. Direct light OOXML
+  table detection uses Python BFS regardless of this setting; other modes and the
+  compatibility path retain the configured selection. No `scipy` alias is added.
 - YAML export: `pyyaml` (lazy import; missing module raises `MissingDependencyError`).
 - TOON export: `python-toon` (lazy import; missing module raises `MissingDependencyError`).
 - Auto page-break extraction/export: **Excel + COM** required. `mode="libreoffice"` rejects auto page-break requests with `ConfigError`.
