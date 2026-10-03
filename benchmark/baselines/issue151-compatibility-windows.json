@@ -1,0 +1,163 @@
+{
+  "file_cells": {
+    "Sheet": [
+      {
+        "r": 1,
+        "c": {
+          "0": "label"
+        },
+        "links": null
+      },
+      {
+        "r": 2,
+        "c": {
+          "1": "2024-01-02 03:04:05"
+        },
+        "links": null
+      },
+      {
+        "r": 5,
+        "c": {
+          "4": -2146826281
+        },
+        "links": null
+      },
+      {
+        "r": 6,
+        "c": {
+          "5": "True"
+        },
+        "links": null
+      },
+      {
+        "r": 7,
+        "c": {
+          "6": "external"
+        },
+        "links": {
+          "6": "https://example.test/"
+        }
+      },
+      {
+        "r": 8,
+        "c": {
+          "7": "internal"
+        },
+        "links": null
+      }
+    ]
+  },
+  "com_cells": {
+    "Sheet": [
+      {
+        "r": 1,
+        "c": {
+          "0": "label"
+        },
+        "links": null
+      },
+      {
+        "r": 2,
+        "c": {
+          "1": 45293.12783564815
+        },
+        "links": null
+      },
+      {
+        "r": 3,
+        "c": {
+          "2": 3
+        },
+        "links": null
+      },
+      {
+        "r": 5,
+        "c": {
+          "4": -2146826281
+        },
+        "links": null
+      },
+      {
+        "r": 6,
+        "c": {
+          "5": "True"
+        },
+        "links": null
+      },
+      {
+        "r": 7,
+        "c": {
+          "6": "external"
+        },
+        "links": {
+          "6": "https://example.test/"
+        }
+      },
+      {
+        "r": 8,
+        "c": {
+          "7": "internal"
+        },
+        "links": null
+      }
+    ]
+  },
+  "unsaved_com_cells": {
+    "Sheet": [
+      {
+        "r": 1,
+        "c": {
+          "0": "unsaved"
+        },
+        "links": null
+      },
+      {
+        "r": 2,
+        "c": {
+          "1": 45293.12783564815
+        },
+        "links": null
+      },
+      {
+        "r": 3,
+        "c": {
+          "2": 3
+        },
+        "links": null
+      },
+      {
+        "r": 5,
+        "c": {
+          "4": -2146826281
+        },
+        "links": null
+      },
+      {
+        "r": 6,
+        "c": {
+          "5": "True"
+        },
+        "links": null
+      },
+      {
+        "r": 7,
+        "c": {
+          "6": "external"
+        },
+        "links": {
+          "6": "https://example.test/"
+        }
+      },
+      {
+        "r": 8,
+        "c": {
+          "7": "internal"
+        },
+        "links": null
+      }
+    ]
+  },
+  "current_com_succeeded": true,
+  "candidate_com_succeeded": true,
+  "full_output_equal": false
+}

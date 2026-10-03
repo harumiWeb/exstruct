@@ -48,3 +48,4 @@ ADRs record what was decided, under which constraints, and which trade-offs were
 | `ADR-0011` | Extraction-Scoped Workbook Reuse and Direct Cell Reading | `proposed` | `extraction` |
 | `ADR-0012` | Optional SciPy Border Clustering | `proposed` | `performance` |
 | `ADR-0013` | Default OOXML Backend for Light Extraction | `proposed` | `backend` |
+| `ADR-0014` | Retain File-First COM Extraction | `proposed` | `performance` |

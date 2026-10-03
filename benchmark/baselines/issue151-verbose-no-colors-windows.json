@@ -1,0 +1,484 @@
+{
+  "recorded_at": "2026-10-03T12:41:17.056250+00:00",
+  "platform": "Windows-10-10.0.22631-SP0",
+  "source": {
+    "revision": "d28341897fbed2b1ff70c385f51d550365d49130",
+    "dirty": true
+  },
+  "xlwings": "0.37.4",
+  "dependencies": {
+    "openpyxl": "3.1.5",
+    "numpy": "2.4.6",
+    "pydantic": "2.13.5"
+  },
+  "results": [
+    {
+      "input": "tasks/issue151-fixtures/large.xlsx",
+      "input_sha256": "72ff66fa3abde812e9ae3261530b1dd5b88c4dfd5173715b383d896b990f1b97",
+      "mode": "verbose",
+      "include_colors_map": false,
+      "scenario": "cold",
+      "scenario_setup_ms": 0.0002998858690261841,
+      "excel_version": "16.0",
+      "measurements": [
+        {
+          "repeat": 0,
+          "backend": "current",
+          "total_ms": 4334.244499914348,
+          "com_acquire_ms": 860.0740998517722,
+          "com_cleanup_ms": 1882.5163000728935,
+          "non_acquire_cleanup_ms": 1591.6540999896824,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "dd0dcc08e28a1349e8580e2bc20942663d81b02a2236eaa1883326c1a9103b36"
+        },
+        {
+          "repeat": 0,
+          "backend": "com-first",
+          "total_ms": 4113.330899970606,
+          "com_acquire_ms": 807.49769997783,
+          "com_cleanup_ms": 1444.1076999064535,
+          "non_acquire_cleanup_ms": 1861.7255000863224,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "dd0dcc08e28a1349e8580e2bc20942663d81b02a2236eaa1883326c1a9103b36"
+        },
+        {
+          "repeat": 1,
+          "backend": "com-first",
+          "total_ms": 3989.0495999716222,
+          "com_acquire_ms": 854.1884000878781,
+          "com_cleanup_ms": 1220.7175998482853,
+          "non_acquire_cleanup_ms": 1914.1436000354588,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "dd0dcc08e28a1349e8580e2bc20942663d81b02a2236eaa1883326c1a9103b36"
+        },
+        {
+          "repeat": 1,
+          "backend": "current",
+          "total_ms": 3134.499999927357,
+          "com_acquire_ms": 640.1666000019759,
+          "com_cleanup_ms": 1291.06180020608,
+          "non_acquire_cleanup_ms": 1203.2715997193009,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "dd0dcc08e28a1349e8580e2bc20942663d81b02a2236eaa1883326c1a9103b36"
+        },
+        {
+          "repeat": 2,
+          "backend": "current",
+          "total_ms": 3666.4812001399696,
+          "com_acquire_ms": 774.3443001527339,
+          "com_cleanup_ms": 1291.6693000588566,
+          "non_acquire_cleanup_ms": 1600.467599928379,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "dd0dcc08e28a1349e8580e2bc20942663d81b02a2236eaa1883326c1a9103b36"
+        },
+        {
+          "repeat": 2,
+          "backend": "com-first",
+          "total_ms": 4255.7365000247955,
+          "com_acquire_ms": 662.6291000284255,
+          "com_cleanup_ms": 1683.9715999085456,
+          "non_acquire_cleanup_ms": 1909.1358000878245,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "dd0dcc08e28a1349e8580e2bc20942663d81b02a2236eaa1883326c1a9103b36"
+        }
+      ],
+      "output_compatible": true
+    },
+    {
+      "input": "tasks/issue151-fixtures/large.xlsx",
+      "input_sha256": "72ff66fa3abde812e9ae3261530b1dd5b88c4dfd5173715b383d896b990f1b97",
+      "mode": "verbose",
+      "include_colors_map": false,
+      "scenario": "warm",
+      "scenario_setup_ms": 642.5963998772204,
+      "excel_version": "16.0",
+      "measurements": [
+        {
+          "repeat": 0,
+          "backend": "current",
+          "total_ms": 1920.539899962023,
+          "com_acquire_ms": 205.94740007072687,
+          "com_cleanup_ms": 18.683600006625056,
+          "non_acquire_cleanup_ms": 1695.908899884671,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "dd0dcc08e28a1349e8580e2bc20942663d81b02a2236eaa1883326c1a9103b36"
+        },
+        {
+          "repeat": 0,
+          "backend": "com-first",
+          "total_ms": 2398.0239001102746,
+          "com_acquire_ms": 121.59529980272055,
+          "com_cleanup_ms": 20.633599953725934,
+          "non_acquire_cleanup_ms": 2255.795000353828,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "dd0dcc08e28a1349e8580e2bc20942663d81b02a2236eaa1883326c1a9103b36"
+        },
+        {
+          "repeat": 1,
+          "backend": "com-first",
+          "total_ms": 1733.3339999895543,
+          "com_acquire_ms": 178.67180006578565,
+          "com_cleanup_ms": 11.218700092285872,
+          "non_acquire_cleanup_ms": 1543.4434998314828,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "dd0dcc08e28a1349e8580e2bc20942663d81b02a2236eaa1883326c1a9103b36"
+        },
+        {
+          "repeat": 1,
+          "backend": "current",
+          "total_ms": 1447.7263998705894,
+          "com_acquire_ms": 121.43609998747706,
+          "com_cleanup_ms": 17.589899944141507,
+          "non_acquire_cleanup_ms": 1308.7003999389708,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "dd0dcc08e28a1349e8580e2bc20942663d81b02a2236eaa1883326c1a9103b36"
+        },
+        {
+          "repeat": 2,
+          "backend": "current",
+          "total_ms": 2228.560899849981,
+          "com_acquire_ms": 137.09970004856586,
+          "com_cleanup_ms": 20.785999950021505,
+          "non_acquire_cleanup_ms": 2070.6751998513937,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "dd0dcc08e28a1349e8580e2bc20942663d81b02a2236eaa1883326c1a9103b36"
+        },
+        {
+          "repeat": 2,
+          "backend": "com-first",
+          "total_ms": 1910.1937001105398,
+          "com_acquire_ms": 147.77620020322502,
+          "com_cleanup_ms": 13.316500000655651,
+          "non_acquire_cleanup_ms": 1749.1009999066591,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "dd0dcc08e28a1349e8580e2bc20942663d81b02a2236eaa1883326c1a9103b36"
+        }
+      ],
+      "output_compatible": true
+    },
+    {
+      "input": "tasks/issue151-fixtures/large.xlsx",
+      "input_sha256": "72ff66fa3abde812e9ae3261530b1dd5b88c4dfd5173715b383d896b990f1b97",
+      "mode": "verbose",
+      "include_colors_map": false,
+      "scenario": "already-open",
+      "scenario_setup_ms": 753.6236001178622,
+      "excel_version": "16.0",
+      "measurements": [
+        {
+          "repeat": 0,
+          "backend": "current",
+          "total_ms": 1516.9355999678373,
+          "com_acquire_ms": 12.136299861595035,
+          "com_cleanup_ms": 0.005899928510189056,
+          "non_acquire_cleanup_ms": 1504.793400177732,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "dd0dcc08e28a1349e8580e2bc20942663d81b02a2236eaa1883326c1a9103b36"
+        },
+        {
+          "repeat": 0,
+          "backend": "com-first",
+          "total_ms": 1510.333700105548,
+          "com_acquire_ms": 8.592699887230992,
+          "com_cleanup_ms": 0.002100132405757904,
+          "non_acquire_cleanup_ms": 1501.7389000859112,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "dd0dcc08e28a1349e8580e2bc20942663d81b02a2236eaa1883326c1a9103b36"
+        },
+        {
+          "repeat": 1,
+          "backend": "com-first",
+          "total_ms": 1274.6047999244183,
+          "com_acquire_ms": 9.727000026032329,
+          "com_cleanup_ms": 0.004899920895695686,
+          "non_acquire_cleanup_ms": 1264.8728999774903,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "dd0dcc08e28a1349e8580e2bc20942663d81b02a2236eaa1883326c1a9103b36"
+        },
+        {
+          "repeat": 1,
+          "backend": "current",
+          "total_ms": 1251.680799992755,
+          "com_acquire_ms": 6.099999882280827,
+          "com_cleanup_ms": 0.005500158295035362,
+          "non_acquire_cleanup_ms": 1245.5752999521792,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "dd0dcc08e28a1349e8580e2bc20942663d81b02a2236eaa1883326c1a9103b36"
+        },
+        {
+          "repeat": 2,
+          "backend": "current",
+          "total_ms": 1416.4011999964714,
+          "com_acquire_ms": 12.170299887657166,
+          "com_cleanup_ms": 0.009699957445263863,
+          "non_acquire_cleanup_ms": 1404.221200151369,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "dd0dcc08e28a1349e8580e2bc20942663d81b02a2236eaa1883326c1a9103b36"
+        },
+        {
+          "repeat": 2,
+          "backend": "com-first",
+          "total_ms": 1355.8426999952644,
+          "com_acquire_ms": 7.9073000233620405,
+          "com_cleanup_ms": 0.005200039595365524,
+          "non_acquire_cleanup_ms": 1347.930199932307,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "dd0dcc08e28a1349e8580e2bc20942663d81b02a2236eaa1883326c1a9103b36"
+        }
+      ],
+      "output_compatible": true
+    },
+    {
+      "input": "tasks/issue151-fixtures/many-sheet.xlsx",
+      "input_sha256": "608cf4728344614879790a083cf641109dfbed26dc9eafc60002fd75ae667ce0",
+      "mode": "verbose",
+      "include_colors_map": false,
+      "scenario": "cold",
+      "scenario_setup_ms": 0.00100000761449337,
+      "excel_version": "16.0",
+      "measurements": [
+        {
+          "repeat": 0,
+          "backend": "current",
+          "total_ms": 3315.950300078839,
+          "com_acquire_ms": 959.4270000234246,
+          "com_cleanup_ms": 1396.43710013479,
+          "non_acquire_cleanup_ms": 960.0861999206245,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "25bd3c579cdb9ae0ffdb303ad712855c5634cee89660f75dee49a96934943f8d"
+        },
+        {
+          "repeat": 0,
+          "backend": "com-first",
+          "total_ms": 4084.218699950725,
+          "com_acquire_ms": 770.6812000833452,
+          "com_cleanup_ms": 1616.286600008607,
+          "non_acquire_cleanup_ms": 1697.2508998587728,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "25bd3c579cdb9ae0ffdb303ad712855c5634cee89660f75dee49a96934943f8d"
+        },
+        {
+          "repeat": 1,
+          "backend": "com-first",
+          "total_ms": 4773.875899845734,
+          "com_acquire_ms": 787.5431999564171,
+          "com_cleanup_ms": 1898.5402001999319,
+          "non_acquire_cleanup_ms": 2087.7924996893853,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "25bd3c579cdb9ae0ffdb303ad712855c5634cee89660f75dee49a96934943f8d"
+        },
+        {
+          "repeat": 1,
+          "backend": "current",
+          "total_ms": 3091.7797998990864,
+          "com_acquire_ms": 720.2399999368936,
+          "com_cleanup_ms": 1577.0151000469923,
+          "non_acquire_cleanup_ms": 794.5246999152005,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "25bd3c579cdb9ae0ffdb303ad712855c5634cee89660f75dee49a96934943f8d"
+        },
+        {
+          "repeat": 2,
+          "backend": "current",
+          "total_ms": 2749.444500077516,
+          "com_acquire_ms": 760.3386000264436,
+          "com_cleanup_ms": 1210.7245000079274,
+          "non_acquire_cleanup_ms": 778.3814000431448,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "25bd3c579cdb9ae0ffdb303ad712855c5634cee89660f75dee49a96934943f8d"
+        },
+        {
+          "repeat": 2,
+          "backend": "com-first",
+          "total_ms": 3351.4941001776606,
+          "com_acquire_ms": 636.5547999739647,
+          "com_cleanup_ms": 1410.3423000779003,
+          "non_acquire_cleanup_ms": 1304.5970001257956,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "25bd3c579cdb9ae0ffdb303ad712855c5634cee89660f75dee49a96934943f8d"
+        }
+      ],
+      "output_compatible": true
+    },
+    {
+      "input": "tasks/issue151-fixtures/many-sheet.xlsx",
+      "input_sha256": "608cf4728344614879790a083cf641109dfbed26dc9eafc60002fd75ae667ce0",
+      "mode": "verbose",
+      "include_colors_map": false,
+      "scenario": "warm",
+      "scenario_setup_ms": 577.222399879247,
+      "excel_version": "16.0",
+      "measurements": [
+        {
+          "repeat": 0,
+          "backend": "current",
+          "total_ms": 936.7317999713123,
+          "com_acquire_ms": 179.96630002744496,
+          "com_cleanup_ms": 17.473699990659952,
+          "non_acquire_cleanup_ms": 739.2917999532074,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "25bd3c579cdb9ae0ffdb303ad712855c5634cee89660f75dee49a96934943f8d"
+        },
+        {
+          "repeat": 0,
+          "backend": "com-first",
+          "total_ms": 1653.4102000296116,
+          "com_acquire_ms": 114.48460002429783,
+          "com_cleanup_ms": 17.789199948310852,
+          "non_acquire_cleanup_ms": 1521.136400057003,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "25bd3c579cdb9ae0ffdb303ad712855c5634cee89660f75dee49a96934943f8d"
+        },
+        {
+          "repeat": 1,
+          "backend": "com-first",
+          "total_ms": 1387.7241997979581,
+          "com_acquire_ms": 99.51149998232722,
+          "com_cleanup_ms": 10.621200082823634,
+          "non_acquire_cleanup_ms": 1277.5914997328073,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "25bd3c579cdb9ae0ffdb303ad712855c5634cee89660f75dee49a96934943f8d"
+        },
+        {
+          "repeat": 1,
+          "backend": "current",
+          "total_ms": 967.03220019117,
+          "com_acquire_ms": 70.83619991317391,
+          "com_cleanup_ms": 11.224000016227365,
+          "non_acquire_cleanup_ms": 884.9720002617687,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "25bd3c579cdb9ae0ffdb303ad712855c5634cee89660f75dee49a96934943f8d"
+        },
+        {
+          "repeat": 2,
+          "backend": "current",
+          "total_ms": 893.3381999377161,
+          "com_acquire_ms": 90.80670005641878,
+          "com_cleanup_ms": 17.63460016809404,
+          "non_acquire_cleanup_ms": 784.8968997132033,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "25bd3c579cdb9ae0ffdb303ad712855c5634cee89660f75dee49a96934943f8d"
+        },
+        {
+          "repeat": 2,
+          "backend": "com-first",
+          "total_ms": 1679.9870000686496,
+          "com_acquire_ms": 85.1514998357743,
+          "com_cleanup_ms": 11.846999870613217,
+          "non_acquire_cleanup_ms": 1582.9885003622621,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "25bd3c579cdb9ae0ffdb303ad712855c5634cee89660f75dee49a96934943f8d"
+        }
+      ],
+      "output_compatible": true
+    },
+    {
+      "input": "tasks/issue151-fixtures/many-sheet.xlsx",
+      "input_sha256": "608cf4728344614879790a083cf641109dfbed26dc9eafc60002fd75ae667ce0",
+      "mode": "verbose",
+      "include_colors_map": false,
+      "scenario": "already-open",
+      "scenario_setup_ms": 698.2754000928253,
+      "excel_version": "16.0",
+      "measurements": [
+        {
+          "repeat": 0,
+          "backend": "current",
+          "total_ms": 668.9347999636084,
+          "com_acquire_ms": 9.630799992009997,
+          "com_cleanup_ms": 0.003600027412176132,
+          "non_acquire_cleanup_ms": 659.3003999441862,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "25bd3c579cdb9ae0ffdb303ad712855c5634cee89660f75dee49a96934943f8d"
+        },
+        {
+          "repeat": 0,
+          "backend": "com-first",
+          "total_ms": 1598.7285999581218,
+          "com_acquire_ms": 6.723900092765689,
+          "com_cleanup_ms": 0.00390014611184597,
+          "non_acquire_cleanup_ms": 1592.0007997192442,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "25bd3c579cdb9ae0ffdb303ad712855c5634cee89660f75dee49a96934943f8d"
+        },
+        {
+          "repeat": 1,
+          "backend": "com-first",
+          "total_ms": 1486.9653000496328,
+          "com_acquire_ms": 7.6321999076753855,
+          "com_cleanup_ms": 0.005899928510189056,
+          "non_acquire_cleanup_ms": 1479.3272002134472,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "25bd3c579cdb9ae0ffdb303ad712855c5634cee89660f75dee49a96934943f8d"
+        },
+        {
+          "repeat": 1,
+          "backend": "current",
+          "total_ms": 785.6038000900298,
+          "com_acquire_ms": 7.648099912330508,
+          "com_cleanup_ms": 0.005699926987290382,
+          "non_acquire_cleanup_ms": 777.950000250712,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "25bd3c579cdb9ae0ffdb303ad712855c5634cee89660f75dee49a96934943f8d"
+        },
+        {
+          "repeat": 2,
+          "backend": "current",
+          "total_ms": 737.872299971059,
+          "com_acquire_ms": 8.559299865737557,
+          "com_cleanup_ms": 0.009800074622035027,
+          "non_acquire_cleanup_ms": 729.3032000306994,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "25bd3c579cdb9ae0ffdb303ad712855c5634cee89660f75dee49a96934943f8d"
+        },
+        {
+          "repeat": 2,
+          "backend": "com-first",
+          "total_ms": 1483.2190000452101,
+          "com_acquire_ms": 10.609199991449714,
+          "com_cleanup_ms": 0.00400003045797348,
+          "non_acquire_cleanup_ms": 1472.6058000233024,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "25bd3c579cdb9ae0ffdb303ad712855c5634cee89660f75dee49a96934943f8d"
+        }
+      ],
+      "output_compatible": true
+    }
+  ]
+}

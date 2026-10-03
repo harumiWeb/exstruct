@@ -212,3 +212,19 @@ adrs:
       - docs/cli.md
       - README.md
       - README.ja.md
+  - id: ADR-0014
+    title: Retain File-First COM Extraction
+    status: proposed
+    path: dev-docs/adr/ADR-0014-retain-file-first-com-extraction.md
+    primary_domain: performance
+    domains:
+      - performance
+      - backend
+      - extraction
+      - compatibility
+    supersedes: []
+    superseded_by: []
+    related_specs:
+      - dev-docs/specs/excel-extraction.md
+      - dev-docs/specs/extraction-performance.md
+      - benchmark/issue151-results.md

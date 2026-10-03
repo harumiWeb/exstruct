@@ -1,0 +1,471 @@
+{
+  "recorded_at": "2026-10-03T12:31:09.222244+00:00",
+  "platform": "Windows-10-10.0.22631-SP0",
+  "source": {
+    "revision": "d28341897fbed2b1ff70c385f51d550365d49130",
+    "dirty": true
+  },
+  "xlwings": "0.37.4",
+  "results": [
+    {
+      "input": "tasks/issue151-fixtures/small.xlsx",
+      "input_sha256": "e936689027ed6ba151c99ae74fe8d61d0f4e9cf802954008e18c622d2d8f6cee",
+      "mode": "verbose",
+      "scenario": "cold",
+      "scenario_setup_ms": 0.000500120222568512,
+      "measurements": [
+        {
+          "repeat": 0,
+          "backend": "current",
+          "total_ms": 3347.3489000461996,
+          "com_acquire_ms": 749.5349000673741,
+          "com_cleanup_ms": 1624.484800035134,
+          "non_acquire_cleanup_ms": 973.3291999436915,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "263385a037d108aa06cb28a8fe3371857737ee9621288226ddb6970c99eedb1d"
+        },
+        {
+          "repeat": 0,
+          "backend": "com-first",
+          "total_ms": 3308.18450008519,
+          "com_acquire_ms": 847.197099821642,
+          "com_cleanup_ms": 1599.5218001771718,
+          "non_acquire_cleanup_ms": 861.4656000863761,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "5d148fa079a4e51fbb7da4c680f78d32f8fb6b4959eaefef22898c24240e1896"
+        },
+        {
+          "repeat": 1,
+          "backend": "com-first",
+          "total_ms": 4457.740799989551,
+          "com_acquire_ms": 1087.0542998891324,
+          "com_cleanup_ms": 1796.4512000326067,
+          "non_acquire_cleanup_ms": 1574.2353000678122,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "5d148fa079a4e51fbb7da4c680f78d32f8fb6b4959eaefef22898c24240e1896"
+        },
+        {
+          "repeat": 1,
+          "backend": "current",
+          "total_ms": 3191.978899994865,
+          "com_acquire_ms": 1020.3726999461651,
+          "com_cleanup_ms": 1289.6652000490576,
+          "non_acquire_cleanup_ms": 881.9409999996424,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "263385a037d108aa06cb28a8fe3371857737ee9621288226ddb6970c99eedb1d"
+        },
+        {
+          "repeat": 2,
+          "backend": "current",
+          "total_ms": 2706.000000005588,
+          "com_acquire_ms": 800.418599974364,
+          "com_cleanup_ms": 1196.1946000810713,
+          "non_acquire_cleanup_ms": 709.3867999501526,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "263385a037d108aa06cb28a8fe3371857737ee9621288226ddb6970c99eedb1d"
+        },
+        {
+          "repeat": 2,
+          "backend": "com-first",
+          "total_ms": 2540.9721999894828,
+          "com_acquire_ms": 673.931899946183,
+          "com_cleanup_ms": 1196.446199901402,
+          "non_acquire_cleanup_ms": 670.5941001418978,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "5d148fa079a4e51fbb7da4c680f78d32f8fb6b4959eaefef22898c24240e1896"
+        }
+      ],
+      "output_compatible": false
+    },
+    {
+      "input": "tasks/issue151-fixtures/small.xlsx",
+      "input_sha256": "e936689027ed6ba151c99ae74fe8d61d0f4e9cf802954008e18c622d2d8f6cee",
+      "mode": "verbose",
+      "scenario": "warm",
+      "scenario_setup_ms": 497.9292000643909,
+      "measurements": [
+        {
+          "repeat": 0,
+          "backend": "current",
+          "total_ms": 849.1003999952227,
+          "com_acquire_ms": 154.4955000281334,
+          "com_cleanup_ms": 11.5062000695616,
+          "non_acquire_cleanup_ms": 683.0986998975277,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "263385a037d108aa06cb28a8fe3371857737ee9621288226ddb6970c99eedb1d"
+        },
+        {
+          "repeat": 0,
+          "backend": "com-first",
+          "total_ms": 573.2142999768257,
+          "com_acquire_ms": 68.90409998595715,
+          "com_cleanup_ms": 16.45300001837313,
+          "non_acquire_cleanup_ms": 487.85719997249544,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "5d148fa079a4e51fbb7da4c680f78d32f8fb6b4959eaefef22898c24240e1896"
+        },
+        {
+          "repeat": 1,
+          "backend": "com-first",
+          "total_ms": 557.8694001305848,
+          "com_acquire_ms": 76.71609986573458,
+          "com_cleanup_ms": 12.428499991074204,
+          "non_acquire_cleanup_ms": 468.72480027377605,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "5d148fa079a4e51fbb7da4c680f78d32f8fb6b4959eaefef22898c24240e1896"
+        },
+        {
+          "repeat": 1,
+          "backend": "current",
+          "total_ms": 496.0952000692487,
+          "com_acquire_ms": 68.00309987738729,
+          "com_cleanup_ms": 8.53420002385974,
+          "non_acquire_cleanup_ms": 419.55790016800165,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "263385a037d108aa06cb28a8fe3371857737ee9621288226ddb6970c99eedb1d"
+        },
+        {
+          "repeat": 2,
+          "backend": "current",
+          "total_ms": 744.6359000168741,
+          "com_acquire_ms": 60.46320009045303,
+          "com_cleanup_ms": 13.170800171792507,
+          "non_acquire_cleanup_ms": 671.0018997546285,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "263385a037d108aa06cb28a8fe3371857737ee9621288226ddb6970c99eedb1d"
+        },
+        {
+          "repeat": 2,
+          "backend": "com-first",
+          "total_ms": 793.0935001932085,
+          "com_acquire_ms": 73.77070002257824,
+          "com_cleanup_ms": 12.039799941703677,
+          "non_acquire_cleanup_ms": 707.2830002289265,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "5d148fa079a4e51fbb7da4c680f78d32f8fb6b4959eaefef22898c24240e1896"
+        }
+      ],
+      "output_compatible": false
+    },
+    {
+      "input": "tasks/issue151-fixtures/small.xlsx",
+      "input_sha256": "e936689027ed6ba151c99ae74fe8d61d0f4e9cf802954008e18c622d2d8f6cee",
+      "mode": "verbose",
+      "scenario": "already-open",
+      "scenario_setup_ms": 649.4257999584079,
+      "measurements": [
+        {
+          "repeat": 0,
+          "backend": "current",
+          "total_ms": 690.0422999169677,
+          "com_acquire_ms": 9.28959995508194,
+          "com_cleanup_ms": 0.008800067007541656,
+          "non_acquire_cleanup_ms": 680.7438998948783,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "263385a037d108aa06cb28a8fe3371857737ee9621288226ddb6970c99eedb1d"
+        },
+        {
+          "repeat": 0,
+          "backend": "com-first",
+          "total_ms": 535.1009001024067,
+          "com_acquire_ms": 10.882300091907382,
+          "com_cleanup_ms": 0.005400041118264198,
+          "non_acquire_cleanup_ms": 524.2131999693811,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "5d148fa079a4e51fbb7da4c680f78d32f8fb6b4959eaefef22898c24240e1896"
+        },
+        {
+          "repeat": 1,
+          "backend": "com-first",
+          "total_ms": 617.6240001805127,
+          "com_acquire_ms": 6.41679996624589,
+          "com_cleanup_ms": 0.006500165909528732,
+          "non_acquire_cleanup_ms": 611.2007000483572,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "5d148fa079a4e51fbb7da4c680f78d32f8fb6b4959eaefef22898c24240e1896"
+        },
+        {
+          "repeat": 1,
+          "backend": "current",
+          "total_ms": 513.6461998336017,
+          "com_acquire_ms": 9.427200071513653,
+          "com_cleanup_ms": 0.007400056347250938,
+          "non_acquire_cleanup_ms": 504.2115997057408,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "263385a037d108aa06cb28a8fe3371857737ee9621288226ddb6970c99eedb1d"
+        },
+        {
+          "repeat": 2,
+          "backend": "current",
+          "total_ms": 913.7848000973463,
+          "com_acquire_ms": 8.922899840399623,
+          "com_cleanup_ms": 0.005699926987290382,
+          "non_acquire_cleanup_ms": 904.8562003299594,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "263385a037d108aa06cb28a8fe3371857737ee9621288226ddb6970c99eedb1d"
+        },
+        {
+          "repeat": 2,
+          "backend": "com-first",
+          "total_ms": 902.7606998570263,
+          "com_acquire_ms": 6.8685999140143394,
+          "com_cleanup_ms": 0.004800036549568176,
+          "non_acquire_cleanup_ms": 895.8872999064624,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "5d148fa079a4e51fbb7da4c680f78d32f8fb6b4959eaefef22898c24240e1896"
+        }
+      ],
+      "output_compatible": false
+    },
+    {
+      "input": "tasks/issue151-fixtures/style-heavy.xlsx",
+      "input_sha256": "05a77cc146594f2db73cb3aa764ad2625fa798809fce82fbe42900b5cc49529e",
+      "mode": "verbose",
+      "scenario": "cold",
+      "scenario_setup_ms": 0.0004998873919248581,
+      "measurements": [
+        {
+          "repeat": 0,
+          "backend": "current",
+          "total_ms": 28833.973500179127,
+          "com_acquire_ms": 952.3863000795245,
+          "com_cleanup_ms": 1138.5651999153197,
+          "non_acquire_cleanup_ms": 26743.022000184283,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "99d70f378a0852fb3f4cbf4a15778ea9b74cdf88bc07be4afb128725567046ff"
+        },
+        {
+          "repeat": 0,
+          "backend": "com-first",
+          "total_ms": 25857.470500050113,
+          "com_acquire_ms": 714.201700175181,
+          "com_cleanup_ms": 1524.2839001584798,
+          "non_acquire_cleanup_ms": 23618.98489971645,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "99d70f378a0852fb3f4cbf4a15778ea9b74cdf88bc07be4afb128725567046ff"
+        },
+        {
+          "repeat": 1,
+          "backend": "com-first",
+          "total_ms": 28767.378899967298,
+          "com_acquire_ms": 820.279800100252,
+          "com_cleanup_ms": 1164.949599886313,
+          "non_acquire_cleanup_ms": 26782.149499980733,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "99d70f378a0852fb3f4cbf4a15778ea9b74cdf88bc07be4afb128725567046ff"
+        },
+        {
+          "repeat": 1,
+          "backend": "current",
+          "total_ms": 30012.67970004119,
+          "com_acquire_ms": 745.4370998311788,
+          "com_cleanup_ms": 1381.16590003483,
+          "non_acquire_cleanup_ms": 27886.07670017518,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "99d70f378a0852fb3f4cbf4a15778ea9b74cdf88bc07be4afb128725567046ff"
+        },
+        {
+          "repeat": 2,
+          "backend": "current",
+          "total_ms": 28365.62480009161,
+          "com_acquire_ms": 753.7538001779467,
+          "com_cleanup_ms": 2349.0160999353975,
+          "non_acquire_cleanup_ms": 25262.854899978265,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "99d70f378a0852fb3f4cbf4a15778ea9b74cdf88bc07be4afb128725567046ff"
+        },
+        {
+          "repeat": 2,
+          "backend": "com-first",
+          "total_ms": 27933.208599919453,
+          "com_acquire_ms": 943.1477000471205,
+          "com_cleanup_ms": 1616.383100161329,
+          "non_acquire_cleanup_ms": 25373.677799711004,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "99d70f378a0852fb3f4cbf4a15778ea9b74cdf88bc07be4afb128725567046ff"
+        }
+      ],
+      "output_compatible": true
+    },
+    {
+      "input": "tasks/issue151-fixtures/style-heavy.xlsx",
+      "input_sha256": "05a77cc146594f2db73cb3aa764ad2625fa798809fce82fbe42900b5cc49529e",
+      "mode": "verbose",
+      "scenario": "warm",
+      "scenario_setup_ms": 666.331399930641,
+      "measurements": [
+        {
+          "repeat": 0,
+          "backend": "current",
+          "total_ms": 42965.190700022504,
+          "com_acquire_ms": 186.66030000895262,
+          "com_cleanup_ms": 17.199299996718764,
+          "non_acquire_cleanup_ms": 42761.33110001683,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "99d70f378a0852fb3f4cbf4a15778ea9b74cdf88bc07be4afb128725567046ff"
+        },
+        {
+          "repeat": 0,
+          "backend": "com-first",
+          "total_ms": 25437.8714999184,
+          "com_acquire_ms": 131.55860011465847,
+          "com_cleanup_ms": 12.257300084456801,
+          "non_acquire_cleanup_ms": 25294.055599719286,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "99d70f378a0852fb3f4cbf4a15778ea9b74cdf88bc07be4afb128725567046ff"
+        },
+        {
+          "repeat": 1,
+          "backend": "com-first",
+          "total_ms": 33959.870300022885,
+          "com_acquire_ms": 82.39919994957745,
+          "com_cleanup_ms": 12.3862000182271,
+          "non_acquire_cleanup_ms": 33865.08490005508,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "99d70f378a0852fb3f4cbf4a15778ea9b74cdf88bc07be4afb128725567046ff"
+        },
+        {
+          "repeat": 1,
+          "backend": "current",
+          "total_ms": 22258.647199952975,
+          "com_acquire_ms": 105.42890010401607,
+          "com_cleanup_ms": 12.293200008571148,
+          "non_acquire_cleanup_ms": 22140.925099840388,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "99d70f378a0852fb3f4cbf4a15778ea9b74cdf88bc07be4afb128725567046ff"
+        },
+        {
+          "repeat": 2,
+          "backend": "current",
+          "total_ms": 19256.465499987826,
+          "com_acquire_ms": 72.01760006137192,
+          "com_cleanup_ms": 14.688299968838692,
+          "non_acquire_cleanup_ms": 19169.759599957615,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "99d70f378a0852fb3f4cbf4a15778ea9b74cdf88bc07be4afb128725567046ff"
+        },
+        {
+          "repeat": 2,
+          "backend": "com-first",
+          "total_ms": 26370.8446000237,
+          "com_acquire_ms": 84.07339989207685,
+          "com_cleanup_ms": 13.30180000513792,
+          "non_acquire_cleanup_ms": 26273.469400126487,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "99d70f378a0852fb3f4cbf4a15778ea9b74cdf88bc07be4afb128725567046ff"
+        }
+      ],
+      "output_compatible": true
+    },
+    {
+      "input": "tasks/issue151-fixtures/style-heavy.xlsx",
+      "input_sha256": "05a77cc146594f2db73cb3aa764ad2625fa798809fce82fbe42900b5cc49529e",
+      "mode": "verbose",
+      "scenario": "already-open",
+      "scenario_setup_ms": 2292.3751999624074,
+      "excel_version": "16.0",
+      "measurements": [
+        {
+          "repeat": 0,
+          "backend": "current",
+          "total_ms": 34866.021799854934,
+          "com_acquire_ms": 11.963999830186367,
+          "com_cleanup_ms": 0.009899958968162537,
+          "non_acquire_cleanup_ms": 34854.04790006578,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "99d70f378a0852fb3f4cbf4a15778ea9b74cdf88bc07be4afb128725567046ff"
+        },
+        {
+          "repeat": 0,
+          "backend": "com-first",
+          "total_ms": 30257.441599853337,
+          "com_acquire_ms": 23.0211999733001,
+          "com_cleanup_ms": 0.0036999117583036423,
+          "non_acquire_cleanup_ms": 30234.41669996828,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "99d70f378a0852fb3f4cbf4a15778ea9b74cdf88bc07be4afb128725567046ff"
+        },
+        {
+          "repeat": 1,
+          "backend": "com-first",
+          "total_ms": 22648.990500019863,
+          "com_acquire_ms": 13.776999898254871,
+          "com_cleanup_ms": 0.003800028935074806,
+          "non_acquire_cleanup_ms": 22635.209700092673,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "99d70f378a0852fb3f4cbf4a15778ea9b74cdf88bc07be4afb128725567046ff"
+        },
+        {
+          "repeat": 1,
+          "backend": "current",
+          "total_ms": 33104.38509983942,
+          "com_acquire_ms": 9.00100008584559,
+          "com_cleanup_ms": 0.013400102034211159,
+          "non_acquire_cleanup_ms": 33095.37069965154,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "99d70f378a0852fb3f4cbf4a15778ea9b74cdf88bc07be4afb128725567046ff"
+        },
+        {
+          "repeat": 2,
+          "backend": "current",
+          "total_ms": 29934.653400210664,
+          "com_acquire_ms": 187.04940006136894,
+          "com_cleanup_ms": 0.009499955922365189,
+          "non_acquire_cleanup_ms": 29747.594500193372,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "99d70f378a0852fb3f4cbf4a15778ea9b74cdf88bc07be4afb128725567046ff"
+        },
+        {
+          "repeat": 2,
+          "backend": "com-first",
+          "total_ms": 21140.502099879086,
+          "com_acquire_ms": 11.307199951261282,
+          "com_cleanup_ms": 0.002200016751885414,
+          "non_acquire_cleanup_ms": 21129.192699911073,
+          "com_succeeded": true,
+          "fallback_reason": null,
+          "output_sha256": "99d70f378a0852fb3f4cbf4a15778ea9b74cdf88bc07be4afb128725567046ff"
+        }
+      ],
+      "output_compatible": true
+    }
+  ],
+  "notes": [
+    "Original style-heavy/already-open overlapped a real Excel test; replaced by sequential rerun. Original unfinished large/cold cancelled due to expensive default per-cell color extraction; no timing retained."
+  ]
+}
