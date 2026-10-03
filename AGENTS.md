@@ -84,40 +84,34 @@ However, the AI **may make proposals**.
 
 ---
 
-## 3. Required Work Procedure
+## 3. Task Management
 
-The AI must always follow the steps below before generating code.
+Before generating or modifying code, perform the following steps according to the scale of your work:
 
-1. **Understand requirements**: Read specifications and design materials, and fully understand the requirements
-2. **Consider the design**: Consider function decomposition and model design as needed.
-3. **Define the specification**: Based on the requirements, define function argument and return types in `tasks/feature_spec.md`.
-4. **Assign tasks**: Clearly define each task and determine the implementation order.
-5. **Implement code**: Implement the code while following the standards above.
-6. **Review code**: Self-review generated code and confirm that it meets the quality standards.
-7. **Generate tests**: Generate test code as needed.
-8. **Run tests**: Run the generated test code and confirm that it behaves as expected.
-9. **Static analysis**: Run `uv run task precommit-run` and confirm that there are no mypy / Ruff errors.
-10. **Update documentation**: If there are changes, update the related documentation as well.
+1. Understand the requirements: Review relevant specification documents, ADR documentation, and existing implementations.
+2. Consider the design implications: Assess impact scope, compatibility with current designs, and alternative approaches.
+3. If necessary, create working notes:
+   - For recurrence prevention: `tasks/lessons.md`
+4. Add or update tests as needed.
+5. Implement changes.
+6. Verify functionality.
+7. Run tests.
+8. Conduct self-review.
+9. Update documentation, ADR documents, specifications, and the CHANGELOG as appropriate.
 
----
-
-## 4. Task Management
-
-1. **Plan first**: Write the plan in `tasks/todo.md` as checkable items
-2. **Review the plan**: Review it before starting implementation
-3. **Track progress**: Mark completed items as you go
-4. **Explain changes**: Provide a high-level summary at each step
-5. **Document results**: Add a Review section to `tasks/todo.md`
-6. **Record lessons**: Update `tasks/lessons.md` after receiving corrections
+- Any updates to ADR documents or specifications must be recorded in the respective directories:
+- For ADR documents: `dev-docs/adr/`
+- For specification documents: `dev-docs/specs/`
+- If changes affect public APIs, they may require recording in the following documentation:
+- Specification documents within `dev-docs/specs/`
+- Overview descriptions in the `README.md` file
 
 ---
 
-## 5. Documentation Retention Policy
+## 4. Documentation Retention Policy
 
 ### Separation of Roles
 
-- `tasks/todo.md` may temporarily hold not only session-specific progress tracking, but also verification results, unresolved items, and summaries of decision rationale.
-- `tasks/feature_spec.md` may be used as a pre-implementation working spec draft, but do not treat it as disposable if it contains specifications, constraints, or validation conditions that will be referenced in the future.
 - `tasks/lessons.md` is where recurrence-prevention rules are stored, and should not be used to store design decisions or the specification itself.
 - Permanent internal documentation belongs under `dev-docs/`.
 - Move design decisions and trade-offs to `dev-docs/adr/`, current internal specifications and constraints to `dev-docs/specs/`, and implementation structure and extension guidance to `dev-docs/architecture/`.
@@ -146,37 +140,9 @@ The AI must always follow the steps below before generating code.
 
 ### Required Steps at Completion
 
-- At task completion, review the relevant sections of `tasks/feature_spec.md` and `tasks/todo.md`, and classify each item as either "temporary notes that can be discarded", "content that should remain in a permanent spec", or "content that should remain as an ADR".
-- The AI must not blank out all of `tasks/feature_spec.md` or `tasks/todo.md` based on its own judgment. Cleanup must be limited to the relevant sections of the completed task.
 - If there is content that will be referenced in the future, move it into permanent documentation before deleting anything.
 - Do not discard decision rationale, specifications, or validation conditions before migration is complete.
 - Only sections confirmed to contain no permanent information may be summarized, deleted, or archived.
 - If ADR creation, spec creation, index synchronization, or design review is involved, and a corresponding skill exists, run it first and use its verdict and findings to decide the permanent document destination and what to reflect there.
 - Choose the destination according to the role split defined in `dev-docs/README.md`.
-- Prefer `dev-docs/adr/` for "why", `dev-docs/specs/` for "what is guaranteed", and `dev-docs/architecture/` for "how the structure works".
-- Only when the change affects a public contract should you update the corresponding page under `docs/` in addition to moving the information into internal documentation.
-
-### When to Create an ADR
-
-- If you are unsure whether an ADR is needed, first use `adr-suggester` to determine `required` / `recommended` / `not-needed` and record the rationale.
-- If any of the following apply, the AI must record the decision under `dev-docs/adr/`:
-  - There are trade-offs or a comparison between multiple options.
-  - The same question may recur in the future.
-  - The design intent cannot be understood from the implementation diff alone.
-  - A permanent policy was established through review, CI, Codacy, or incident investigation.
-  - It is highly likely to be referenced by later implementation or review.
-
-### End-of-Session Checklist
-
-- Confirm that conclusions in the Review section of `tasks/todo.md` have been moved, as needed, into `dev-docs/adr/`, `dev-docs/specs/`, `dev-docs/architecture/`, or `docs/`.
-- Confirm that contracts, constraints, and validation conditions in `tasks/feature_spec.md` have been reflected, as needed, in permanent documents under `dev-docs/`.
-- If an ADR was added / updated / superseded, confirm as needed that the results of `adr-linter`, `adr-reviewer`, `adr-reconciler`, and `adr-indexer` do not conflict with the permanent documents.
-- Only after the information has been moved into permanent documentation may the relevant sections be shortened.
-
----
-
-## 6. Core Principles
-
-- **Simplicity first**: Keep every change as simple as possible. Minimize the code affected.
-- **No cutting corners**: Find the root cause. Avoid temporary fixes. Maintain senior engineer standards.
-- **Minimize impact**: Limit changes to only what is necessary. Do not introduce new bugs.
+- Prefer `dev-docs/adr/` for "why", `dev-docs/specs/` for "what is guaranteed", and `dev-docs/architecture/` for "how the structure w
