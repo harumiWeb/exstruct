@@ -169,13 +169,13 @@ for the run details.
 
 | Input | openpyxl cold / warm median (ms) | OOXML cold / warm median (ms) | openpyxl / OOXML peak RSS (MiB) |
 | --- | ---: | ---: | ---: |
-| small.xlsx | 619.9 / 7.6 | 267.9 / 3.9 | 64.4 / 39.4 |
-| large.xlsx | 955.1 / 481.1 | 645.5 / 407.2 | 109.3 / 71.8 |
-| many-sheet.xlsx | 633.2 / 82.6 | 297.6 / 63.4 | 74.5 / 42.6 |
-| sparse.xlsx | 644.9 / 39.3 | 256.9 / 15.9 | 74.5 / 39.5 |
-| style-heavy.xlsx | 715.4 / 117.5 | 318.8 / 82.6 | 73.4 / 46.0 |
-| table-heavy.xlsx | 616.9 / 57.4 | 281.0 / 50.1 | 75.3 / 44.1 |
-| sample-shape-connector.xlsx | 588.7 / 13.0 | 244.9 / 5.5 | 64.5 / 39.6 |
+| small.xlsx | 983.4 / 10.8 | 428.1 / 5.0 | 64.4 / 39.6 |
+| large.xlsx | 1626.2 / 1017.5 | 1060.1 / 607.5 | 109.3 / 71.8 |
+| many-sheet.xlsx | 839.9 / 107.7 | 333.2 / 74.1 | 74.5 / 42.7 |
+| sparse.xlsx | 823.0 / 51.3 | 254.0 / 16.9 | 75.3 / 39.7 |
+| style-heavy.xlsx | 902.1 / 136.0 | 460.5 / 110.5 | 73.6 / 46.3 |
+| table-heavy.xlsx | 823.3 / 86.8 | 313.1 / 56.3 | 75.3 / 44.0 |
+| sample-shape-connector.xlsx | 842.9 / 16.2 | 238.9 / 5.9 | 64.6 / 39.6 |
 
 OOXML had a lower cold in-process duration, warm median and peak RSS on all
 seven inputs in this run. The cold in-process metric includes module imports and
