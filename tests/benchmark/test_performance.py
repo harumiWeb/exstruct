@@ -118,8 +118,10 @@ def test_fresh_worker_measures_light_and_standard_fallback(
         assert stages["table_detection"]["calls"] == 1
         assert stages["model_construction"]["calls"] == 1
         assert stages["formula_extraction"]["calls"] == 0
-        assert result["profile"]["openpyxl_workbook_opens"] >= 3
-        assert result["profile"]["archive_opens"] >= 3
+        assert result["profile"]["openpyxl_workbook_opens"] == 1
+        # OOXML drawings use separate archives; workbook parses and ZIP opens
+        # intentionally measure different resource types.
+        assert result["profile"]["archive_opens"] >= 1
         state = result["profile"]["pipeline_state"]
         assert state["com_succeeded"] is False
         assert state["fallback_reason"] == (
@@ -176,6 +178,7 @@ def test_optional_profile_and_supervisor_report(
     assert len(result["input"]["sha256"]) == 64
     assert result["environment"]["SKIP_COM_TESTS"] == "1"
     assert result["profile"]["all_features"] is True
+    assert result["profile"]["openpyxl_workbook_opens"] == 2
     for stage in ("formula_extraction", "color_extraction", "merged_cell_extraction"):
         assert result["profile"]["stages"][stage]["calls"] == 1
     assert result["startup"]["cold_extraction_process_ms"] > 0

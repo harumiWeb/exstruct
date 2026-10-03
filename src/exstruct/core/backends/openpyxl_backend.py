@@ -2,27 +2,59 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 import logging
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal, cast
 
 from ...models import PrintArea
+from .. import cells
 from ..cells import (
     WorkbookColorsMap,
     WorkbookFormulasMap,
-    detect_tables_openpyxl,
-    extract_sheet_cells,
-    extract_sheet_cells_with_links,
-    extract_sheet_colors_map,
-    extract_sheet_formulas_map,
-    extract_sheet_merged_cells,
+    detect_tables_openpyxl as detect_tables_openpyxl,
+    extract_sheet_cells as extract_sheet_cells,
+    extract_sheet_cells_with_links as extract_sheet_cells_with_links,
+    extract_sheet_colors_map as extract_sheet_colors_map,
+    extract_sheet_formulas_map as extract_sheet_formulas_map,
+    extract_sheet_merged_cells as extract_sheet_merged_cells,
 )
+from ..openpyxl_session import OpenpyxlExtractionSession
 from ..ranges import parse_range_zero_based
 from ..workbook import openpyxl_workbook
 from .base import CellData, MergedCellData, PrintAreaData
 
 logger = logging.getLogger(__name__)
+
+_DEFAULT_OPENPYXL_WORKBOOK = openpyxl_workbook
+_DEFAULT_HELPERS: dict[str, Callable[..., Any]] = {
+    name: globals()[name]
+    for name in (
+        "extract_sheet_cells",
+        "extract_sheet_cells_with_links",
+        "extract_sheet_colors_map",
+        "extract_sheet_formulas_map",
+        "extract_sheet_merged_cells",
+        "detect_tables_openpyxl",
+    )
+}
+
+
+def _helper(name: str) -> Callable[..., Any]:
+    """Resolve live legacy overrides, with backend aliases taking precedence."""
+    if globals()[name] is not _DEFAULT_HELPERS[name]:
+        return cast(Callable[..., Any], globals()[name])
+    return cast(Callable[..., Any], getattr(cells, name))
+
+
+def _use_session(name: str, session: OpenpyxlExtractionSession | None) -> bool:
+    """Honor overrides on both legacy module and backend helper surfaces."""
+    return (
+        session is not None
+        and globals()[name] is _DEFAULT_HELPERS[name]
+        and getattr(cells, name) is _DEFAULT_HELPERS[name]
+    )
 
 
 @dataclass(frozen=True)
@@ -34,6 +66,7 @@ class OpenpyxlBackend:
     """
 
     file_path: Path
+    session: OpenpyxlExtractionSession | None = None
 
     def extract_cells(self, *, include_links: bool) -> CellData:
         """Extract cell rows from the workbook.
@@ -44,11 +77,18 @@ class OpenpyxlBackend:
         Returns:
             Mapping of sheet name to cell rows.
         """
-        return (
-            extract_sheet_cells_with_links(self.file_path)
-            if include_links
-            else extract_sheet_cells(self.file_path)
+        helper = (
+            "extract_sheet_cells_with_links" if include_links else "extract_sheet_cells"
         )
+        if _use_session(helper, self.session):
+            assert self.session is not None
+            return {
+                ws.title: cells.extract_sheet_cells_openpyxl_ws(
+                    ws, include_links=include_links
+                )
+                for ws in self.session.workbook().worksheets
+            }
+        return cast(CellData, _helper(helper)(self.file_path))
 
     def extract_print_areas(self) -> PrintAreaData:
         """Extract print areas per sheet using openpyxl defined names.
@@ -57,6 +97,13 @@ class OpenpyxlBackend:
             Mapping of sheet name to print area list.
         """
         try:
+            if (
+                self.session is not None
+                and openpyxl_workbook is _DEFAULT_OPENPYXL_WORKBOOK
+            ):
+                wb = self.session.workbook()
+                areas = _extract_print_areas_from_defined_names(wb)
+                return areas or _extract_print_areas_from_sheet_props(wb)
             with openpyxl_workbook(
                 self.file_path, data_only=True, read_only=False
             ) as wb:
@@ -80,10 +127,25 @@ class OpenpyxlBackend:
             WorkbookColorsMap or None when extraction fails.
         """
         try:
-            return extract_sheet_colors_map(
-                self.file_path,
-                include_default_background=include_default_background,
-                ignore_colors=ignore_colors,
+            if _use_session("extract_sheet_colors_map", self.session):
+                assert self.session is not None
+                return WorkbookColorsMap(
+                    sheets={
+                        ws.title: cells.extract_sheet_colors_map_ws(
+                            ws,
+                            include_default_background=include_default_background,
+                            ignore_colors=ignore_colors,
+                        )
+                        for ws in self.session.workbook().worksheets
+                    }
+                )
+            return cast(
+                WorkbookColorsMap,
+                _helper("extract_sheet_colors_map")(
+                    self.file_path,
+                    include_default_background=include_default_background,
+                    ignore_colors=ignore_colors,
+                ),
             )
         except Exception as exc:
             logger.warning(
@@ -98,7 +160,15 @@ class OpenpyxlBackend:
             Mapping of sheet name to merged cell ranges.
         """
         try:
-            return extract_sheet_merged_cells(self.file_path)
+            if _use_session("extract_sheet_merged_cells", self.session):
+                assert self.session is not None
+                return {
+                    ws.title: cells.extract_sheet_merged_cells_ws(ws)
+                    for ws in self.session.workbook().worksheets
+                }
+            return cast(
+                MergedCellData, _helper("extract_sheet_merged_cells")(self.file_path)
+            )
         except Exception:
             return {}
 
@@ -110,7 +180,18 @@ class OpenpyxlBackend:
             WorkbookFormulasMap | None: A mapping from sheet name to its formulas, or `None` if extraction fails.
         """
         try:
-            return extract_sheet_formulas_map(self.file_path)
+            if _use_session("extract_sheet_formulas_map", self.session):
+                assert self.session is not None
+                return WorkbookFormulasMap(
+                    sheets={
+                        ws.title: cells.extract_sheet_formulas_map_ws(ws)
+                        for ws in self.session.workbook(data_only=False).worksheets
+                    }
+                )
+            return cast(
+                WorkbookFormulasMap,
+                _helper("extract_sheet_formulas_map")(self.file_path),
+            )
         except Exception as exc:
             logger.warning(
                 "Formula map extraction failed; skipping formulas_map. (%r)", exc
@@ -135,7 +216,17 @@ class OpenpyxlBackend:
             list[str]: Detected table candidate ranges as A1-style range strings; empty list if none are found or detection fails.
         """
         try:
-            return detect_tables_openpyxl(self.file_path, sheet_name, mode=mode)
+            if _use_session("detect_tables_openpyxl", self.session):
+                assert self.session is not None
+                return cells.detect_tables_openpyxl_ws(
+                    self.session.workbook()[sheet_name], mode=mode
+                )
+            return cast(
+                list[str],
+                _helper("detect_tables_openpyxl")(
+                    self.file_path, sheet_name, mode=mode
+                ),
+            )
         except Exception:
             return []
 
