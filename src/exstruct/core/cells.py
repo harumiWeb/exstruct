@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import deque
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from datetime import time
 from decimal import Decimal, InvalidOperation
 import logging
 import math
@@ -16,8 +17,8 @@ from typing import Literal
 import numpy as np
 from openpyxl.styles.colors import Color
 from openpyxl.utils import get_column_letter, range_boundaries
+from openpyxl.worksheet._read_only import ReadOnlyWorksheet
 from openpyxl.worksheet.worksheet import Worksheet
-import pandas as pd
 import xlwings as xw
 
 from ..models import CellRow
@@ -698,66 +699,157 @@ def warn_once(key: str, message: str) -> None:
         _warned_keys.add(key)
 
 
+# Freeze the former reader's default missing-string vocabulary. Match before
+# stripping: padded tokens such as " NA " are ordinary text in the old output.
+_CELL_NA_STRINGS = frozenset(
+    {
+        "",
+        "#N/A",
+        "#N/A N/A",
+        "#NA",
+        "-1.#IND",
+        "-1.#QNAN",
+        "-NaN",
+        "-nan",
+        "1.#IND",
+        "1.#QNAN",
+        "<NA>",
+        "N/A",
+        "NA",
+        "NULL",
+        "NaN",
+        "None",
+        "n/a",
+        "nan",
+        "null",
+    }
+)
+
+
+def _normalize_cell_value(value: object) -> int | float | str | None:
+    """Preserve the former string-reader and numeric-coercion contract."""
+    if value is None:
+        return None
+    text = str(value)
+    if text in _CELL_NA_STRINGS or not text.strip():
+        return None
+    return _coerce_numeric_preserve_format(text)
+
+
+def extract_sheet_cells_openpyxl_ws(
+    ws: Worksheet | ReadOnlyWorksheet, *, include_links: bool
+) -> list[CellRow]:
+    """Extract cached values from an already open data-only worksheet.
+
+    Hyperlinks require a non-read-only worksheet. Links on filtered cells are
+    retained when their row has another emitted value; link-only rows are not
+    invented. Worksheet ownership and closing remain with the caller.
+    """
+    rows: list[CellRow] = []
+    for row_number, row in enumerate(ws.iter_rows(), start=1):
+        values: dict[str, int | float | str] = {}
+        links: dict[str, str] = {}
+        for column, cell in enumerate(row):
+            value = cell.value
+            if cell.data_type == "e":
+                value = None
+            elif cell.data_type == "n" and value is not None:
+                # Excel numeric 1.0 was converted to int before dtype=str.
+                integral = int(value)
+                value = integral if integral == value else float(value)
+            normalized = _normalize_cell_value(value)
+            if normalized is not None:
+                values[str(column)] = normalized
+            if include_links:
+                link = getattr(cell, "hyperlink", None)
+                target = getattr(link, "target", None) if link else None
+                if target:
+                    links[str(column)] = target
+        if values:
+            rows.append(CellRow(r=row_number, c=values, links=links or None))
+    return rows
+
+
+def _xls_cell_value(value: object, cell_type: int, datemode: int) -> object:
+    """Apply the former BIFF reader's scalar conversions before normalization."""
+    import xlrd
+
+    if cell_type == xlrd.XL_CELL_ERROR:
+        return None
+    if cell_type == xlrd.XL_CELL_BOOLEAN:
+        return bool(value)
+    if cell_type == xlrd.XL_CELL_DATE:
+        try:
+            converted = xlrd.xldate.xldate_as_datetime(value, datemode)
+        except OverflowError:
+            return value
+        epoch_day = (1904, 1, 1) if datemode else (1899, 12, 31)
+        if (converted.year, converted.month, converted.day) == epoch_day:
+            return time(
+                converted.hour,
+                converted.minute,
+                converted.second,
+                converted.microsecond,
+            )
+        return converted
+    if (
+        cell_type == xlrd.XL_CELL_NUMBER
+        and isinstance(value, (int, float))
+        and math.isfinite(value)
+    ):
+        integral = int(value)
+        if integral == value:
+            return integral
+    return value
+
+
+def _extract_sheet_cells_xls(file_path: Path) -> dict[str, list[CellRow]]:
+    """Read legacy BIFF cached values; do not add rich XLS artifacts."""
+    import xlrd
+
+    book = xlrd.open_workbook(str(file_path), on_demand=True)
+    try:
+        result: dict[str, list[CellRow]] = {}
+        for sheet in book.sheets():
+            rows: list[CellRow] = []
+            for row_index in range(sheet.nrows):
+                values: dict[str, int | float | str] = {}
+                for column, cell in enumerate(sheet.row(row_index)):
+                    value = _xls_cell_value(cell.value, cell.ctype, book.datemode)
+                    normalized = _normalize_cell_value(value)
+                    if normalized is not None:
+                        values[str(column)] = normalized
+                if values:
+                    rows.append(CellRow(r=row_index + 1, c=values))
+            result[sheet.name] = rows
+        return result
+    finally:
+        book.release_resources()
+
+
 def extract_sheet_cells(file_path: Path) -> dict[str, list[CellRow]]:
-    """Read all sheets via pandas and convert to CellRow list while skipping empty cells."""
-    dfs = pd.read_excel(file_path, header=None, sheet_name=None, dtype=str)
-    result: dict[str, list[CellRow]] = {}
-    for sheet_name, df in dfs.items():
-        df = df.fillna("")
-        rows: list[CellRow] = []
-        for excel_row, row in enumerate(df.itertuples(index=False, name=None), start=1):
-            filtered: dict[str, int | float | str] = {}
-            for j, v in enumerate(row):
-                s = "" if v is None else str(v)
-                if s.strip() == "":
-                    continue
-                filtered[str(j)] = _coerce_numeric_preserve_format(s)
-            if not filtered:
-                continue
-            rows.append(CellRow(r=excel_row, c=filtered))
-        result[sheet_name] = rows
-    return result
+    """Read cached values directly, preserving sheet order and sparse rows."""
+    if file_path.suffix.lower() == ".xls":
+        return _extract_sheet_cells_xls(file_path)
+    with openpyxl_workbook(file_path, data_only=True, read_only=True) as wb:
+        result: dict[str, list[CellRow]] = {}
+        for ws in wb.worksheets:
+            # Like the old reader, ignore potentially incorrect declared bounds.
+            ws.reset_dimensions()
+            result[ws.title] = extract_sheet_cells_openpyxl_ws(ws, include_links=False)
+        return result
 
 
 def extract_sheet_cells_with_links(file_path: Path) -> dict[str, list[CellRow]]:
-    """
-    Extract cells and hyperlinks per sheet.
-
-    Returns:
-        {sheet_name: [CellRow(r=..., c=..., links={"col_index": url, ...}), ...]}
-
-    Notes:
-        - Uses pandas extraction for values (same filtering as extract_sheet_cells).
-        - Collects hyperlinks via openpyxl (requires read_only=False because border maps/hyperlinks need full objects).
-        - Links are mapped by column index string (e.g., "0") to hyperlink.target.
-    """
-    cell_rows = extract_sheet_cells(file_path)
-    links_by_sheet: dict[str, dict[int, dict[str, str]]] = {}
+    """Extract cells and hyperlink targets with a single workbook lifetime."""
+    if file_path.suffix.lower() == ".xls":
+        # XLS hyperlinks were never supported by the openpyxl link reader.
+        return extract_sheet_cells(file_path)
     with openpyxl_workbook(file_path, data_only=True, read_only=False) as wb:
-        for ws in wb.worksheets:
-            sheet_links: dict[int, dict[str, str]] = {}
-            for row in ws.iter_rows():
-                for cell in row:
-                    link = getattr(cell, "hyperlink", None)
-                    target = getattr(link, "target", None) if link else None
-                    if not target:
-                        continue
-                    col_str = str(
-                        cell.col_idx - 1
-                    )  # zero-based to align with extract_sheet_cells
-                    sheet_links.setdefault(cell.row, {})[col_str] = target
-            links_by_sheet[ws.title] = sheet_links
-
-    merged: dict[str, list[CellRow]] = {}
-    for sheet_name, rows in cell_rows.items():
-        sheet_links = links_by_sheet.get(sheet_name, {})
-        merged_rows: list[CellRow] = []
-        for row in rows:
-            links = sheet_links.get(row.r, {})
-            merged_rows.append(CellRow(r=row.r, c=row.c, links=links or None))
-        merged[sheet_name] = merged_rows
-    wb.close()
-    return merged
+        return {
+            ws.title: extract_sheet_cells_openpyxl_ws(ws, include_links=True)
+            for ws in wb.worksheets
+        }
 
 
 def extract_sheet_merged_cells(file_path: Path) -> dict[str, list[MergedCellRange]]:
