@@ -208,6 +208,7 @@ Overall code coverage must be **80% or higher**.
 - [MODE-05b] For `mode="libreoffice"` Python runtime detection, success of the bundled bridge `--probe` is the acceptance condition; incompatible `EXSTRUCT_LIBREOFFICE_PYTHON_PATH` settings are handled early as unavailable/incompatible errors
 - [MODE-05c] The required Linux smoke job in GitHub Actions runs `pytest.mark.libreoffice` smoke without skip on `ubuntu-24.04` + `libreoffice` + `python3-uno`
 - [MODE-05d] The Windows smoke job in GitHub Actions uses `windows-2025` + `libreoffice-fresh`, prioritizes `soffice.com` for `EXSTRUCT_LIBREOFFICE_PATH` (fallback to `soffice.exe` if not present), and runs `pytest.mark.libreoffice` smoke without skip
+- [MODE-05e] Windows smoke runtime installation retries Chocolatey failures at most three times (15/30-second delays, ten-minute step budget); an exhausted retry budget fails with installer diagnostics and never skips smoke verification.
 - [MODE-06] In standard, existing fixtures do not regress and unnecessary shapes do not increase
 - [MODE-07] An invalid mode errors before processing starts
 - [INT-01] On COM open failure, fall back to cells + table_candidates

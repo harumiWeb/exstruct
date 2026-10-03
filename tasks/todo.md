@@ -1,5 +1,73 @@
 # Todo
 
+## 2026-10-03 PR #144 review and CI follow-up
+
+- [x] Inspect all review threads and failed CI logs; validate findings against code/contracts.
+- [x] Identify Windows smoke failure as a LibreOffice download connection error before pytest; rerun that job to distinguish transient failure.
+- [x] Add bounded installation retries and terminal installer diagnostics after the rerun reproduces the same external download failure; preserve mandatory smoke tests.
+- [x] Preserve successful subprocess stderr without including forwarding time in measured child latency.
+- [x] Bound both Git metadata commands by the configured timeout, retaining null fallback.
+- [x] Stage fixture generation and roll back only files created by this call if publication fails; preserve existing files and deterministic hashes.
+- [x] Redact the local interpreter path from the 12 published baseline records without changing measurements.
+- [x] Add focused regression tests, update permanent measurement constraints, and run checks before pushing to the existing PR.
+- [x] Inspect the latest remote CI state and all four review comments; report the next commit's remote checks separately.
+
+### Review
+
+Confirmed review findings: successful child stderr is discarded; Git metadata
+commands are unbounded; generation writes directly to final fixture paths; the
+published baseline includes identifying interpreter paths. No arbitrary command
+injection is confirmed: the Git argument lists are fixed and `shell=False`.
+CI failure evidence: run 37090510517, job 111109650634, Chocolatey LibreOffice
+download failed with `Unable to connect to the remote server`; pytest never ran.
+
+- Rerun attempt 2 reproduced the same download error (job 111111105922).
+  Installation now has three bounded attempts, terminal diagnostics and an
+  unchanged mandatory smoke gate; no external service recovery is claimed.
+- Validation: 82 focused tests passed (18 benchmark tests); precommit Ruff,
+  formatter and mypy passed; benchmark Ruff checked explicitly.
+- Validated workflow YAML and parsed the extracted install script with the
+  PowerShell parser. Stubbed native exit codes verified immediate success,
+  retry success and exhausted retries with expected call counts/delays.
+- Verified baseline redaction changes only 12 interpreter path values. Fixture
+  hashes still match the recorded local generation environment.
+- Permanent constraints migrated to extraction-performance spec, baseline README
+  and test-requirements; the task-specific working draft is summarized after migration.
+
+## 2026-10-03 Issue #143 extraction performance baseline
+
+- [x] Inspect #143, parent #142, extraction contracts, pipeline, and existing benchmark.
+- [x] Review plan: separate uninstrumented latency from instrumented stage attribution; preserve mode defaults and report actual fallback state.
+- [x] Add a standalone runner with fresh-process startup/import/CLI probes, first/repeated extraction, and stage profiling.
+- [x] Add six deterministic synthetic workbook categories and regression tests.
+- [x] Record light/standard baseline JSON and document reproduction and metric limits.
+- [x] Run focused tests, static checks, and review the diff.
+
+### Review
+
+ADR suggester: `not-needed`; this implements the benchmark/reporting scope explicitly
+requested by #143, without changing performance strategy, public contracts, backend
+selection, or CI thresholds. Related ADRs: ADR-0001/0002/0010. Evidence: extraction
+specification, `core.pipeline.run_extraction_pipeline`, existing pipeline/fallback
+tests, and new benchmark tests. Permanent measurement definitions belong in
+`dev-docs/specs/extraction-performance.md`; reproduction belongs in `benchmark/README.md`.
+
+- Implemented runner, fixture generator and temporary profile instrumentation;
+  production extraction source/dependencies/API were not changed.
+- Verified 75 focused tests (11 new benchmark tests included), plus a supervisor
+  regression rerun after the final cold-process script cleanup.
+- `uv run task precommit-run` passed Ruff/format/mypy. Because benchmark lint is
+  normally excluded and new files are untracked, explicitly checked/formatted
+  all new Python files with Ruff as well. `git diff --check` passed.
+- Baseline contains all 12 category/mode pairs and three repeats each; finite
+  samples, input identities and standard profile COM success were verified.
+- Permanent measurement constraints were migrated to the spec; baseline scope,
+  observations and reproduction are in `benchmark/baselines/README.md`.
+- Retention review: the working feature-spec section is summarized to a permanent
+  spec reference; this todo section keeps temporary completion/validation evidence.
+- Local validation is recorded above; remote CI is tracked separately through
+  the implementation PR checks.
+
 ## 2026-09-26 Release v0.8.2 after dependency security updates
 
 ### Planning
