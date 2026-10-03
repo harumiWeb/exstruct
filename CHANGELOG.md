@@ -4,6 +4,26 @@ All notable changes to this project are documented in this file. This changelog 
 
 ## [Unreleased]
 
+### Changed
+
+- Replaced production pandas cell extraction with direct openpyxl worksheet
+  iteration and lazy xlrd reading for legacy `.xls` files, preserving existing
+  cell normalization and serialized output.
+- Shared extraction-scoped openpyxl workbooks across compatible stages and
+  per-sheet table detection, opening the formula variant only when requested.
+- Isolated COM and rendering imports from light extraction while retaining
+  best-effort OOXML shapes/charts and legacy helper override behavior.
+- Moved SciPy to the optional `fast` extra (also included in `all`), retaining
+  accelerated selection when installed and the existing Python fallback otherwise.
+
+### Added
+
+- Added regression coverage for previous-reader parity, workbook resource
+  lifetime and loader counts, subprocess import boundaries, and clustering
+  equivalence with SciPy-free execution.
+- Added a reproducible comparison of SciPy, Python and sparse-set border
+  clustering, with exact output equivalence and recorded Windows timings.
+
 ## [0.8.2] - 2026-09-26
 
 - Updated project dependencies to resolve the reported Dependabot vulnerability alerts.

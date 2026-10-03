@@ -156,3 +156,35 @@ adrs:
       - docs/api.md
       - docs/cli.md
       - docs/mcp.md
+  - id: ADR-0011
+    title: Extraction-Scoped Workbook Reuse and Direct Cell Reading
+    status: proposed
+    path: dev-docs/adr/ADR-0011-extraction-scoped-workbook-reuse-and-direct-cell-reading.md
+    primary_domain: extraction
+    domains:
+      - extraction
+      - performance
+      - backend
+      - compatibility
+    supersedes: []
+    superseded_by: []
+    related_specs:
+      - dev-docs/specs/excel-extraction.md
+      - dev-docs/specs/extraction-performance.md
+      - docs/api.md
+  - id: ADR-0012
+    title: Optional SciPy Border Clustering
+    status: proposed
+    path: dev-docs/adr/ADR-0012-optional-scipy-border-clustering.md
+    primary_domain: performance
+    domains:
+      - performance
+      - extraction
+      - backend
+      - compatibility
+    supersedes: []
+    superseded_by: []
+    related_specs:
+      - docs/api.md
+      - dev-docs/specs/excel-extraction.md
+      - dev-docs/specs/extraction-performance.md

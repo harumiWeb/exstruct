@@ -285,3 +285,19 @@ def test_streaming_reader_ignores_incorrect_declared_dimensions(tmp_path: Path) 
     assert cells.extract_sheet_cells(path) == {
         "Sheet": [CellRow(r=3, c={"2": "first"}), CellRow(r=9, c={"3": "last"})]
     }
+
+
+def test_regular_reader_preserves_sparse_storage_and_coordinates() -> None:
+    workbook = Workbook()
+    sheet = workbook.active
+    assert sheet is not None
+    sheet["C3"] = "first"
+    sheet["AX1000"] = "last"
+    sheet["AX1000"].hyperlink = "https://example.test/last"
+    before = set(sheet._cells)
+    assert cells.extract_sheet_cells_openpyxl_ws(sheet, include_links=True) == [
+        CellRow(r=3, c={"2": "first"}),
+        CellRow(r=1000, c={"49": "last"}, links={"49": "https://example.test/last"}),
+    ]
+    assert set(sheet._cells) == before
+    workbook.close()

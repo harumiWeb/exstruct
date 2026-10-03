@@ -1,11 +1,12 @@
-"""Untimed source-tree runtime smoke in a genuinely SciPy-free environment.
+"""Untimed runtime smoke in a genuinely SciPy-free base installation.
 
-Create a clean venv, export locked base requirements without SciPy/project,
-install them with --no-deps, then invoke this module with that interpreter.
-This evaluates runtime compatibility, not the project's unchanged metadata.
+Install the base wheel in a clean environment and invoke this module with
+--installed to verify packaging as well as runtime behavior. Without that flag,
+the module selects the source checkout for development comparisons.
 """
 
 import importlib.util
+import argparse
 import json
 import os
 from pathlib import Path
@@ -15,14 +16,24 @@ from unittest.mock import patch
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--installed", action="store_true")
+    args = parser.parse_args()
     if importlib.util.find_spec("scipy") is not None:
         raise RuntimeError("This smoke requires an environment without SciPy")
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+    if importlib.util.find_spec("pandas") is not None:
+        raise RuntimeError("This smoke requires an environment without pandas")
+    if not args.installed:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
     import numpy as np
     from openpyxl import Workbook
     from openpyxl.styles import Border, Side
 
     import exstruct
+    if args.installed and Path(exstruct.__file__).resolve().is_relative_to(
+        Path(__file__).resolve().parents[1] / "src"
+    ):
+        raise RuntimeError("Installed smoke unexpectedly imported source checkout")
     from exstruct.core import cells
 
     expected = None
@@ -54,6 +65,8 @@ def main() -> int:
         json.dumps(
             {
                 "scipy_installed": False,
+                "pandas_installed": False,
+                "installed_package": args.installed,
                 "backends": ["python", "auto", "numpy"],
                 "light_output_equal": True,
             }

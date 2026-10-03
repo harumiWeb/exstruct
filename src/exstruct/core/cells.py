@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from collections import deque
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from datetime import time
 from decimal import Decimal, InvalidOperation
+from itertools import groupby
 import logging
 import math
 import os
@@ -15,6 +16,8 @@ import re
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
+from openpyxl.cell.cell import Cell, MergedCell
+from openpyxl.cell.read_only import EmptyCell, ReadOnlyCell
 from openpyxl.styles.colors import Color
 from openpyxl.utils import get_column_letter, range_boundaries
 from openpyxl.worksheet._read_only import ReadOnlyWorksheet
@@ -709,11 +712,28 @@ def extract_sheet_cells_openpyxl_ws(
     retained when their row has another emitted value; link-only rows are not
     invented. Worksheet ownership and closing remain with the caller.
     """
+    cell_rows: Iterable[
+        tuple[int, Iterable[tuple[int, Cell | MergedCell | ReadOnlyCell | EmptyCell]]]
+    ]
+    if isinstance(ws, Worksheet):
+        # iter_rows() materializes every blank in the rectangular extent. Read
+        # the already loaded cell store without inflating a shared sparse sheet.
+        cell_rows = (
+            (row_number, ((coordinate[1] - 1, cell) for coordinate, cell in group))
+            for row_number, group in groupby(
+                sorted(ws._cells.items()), key=lambda entry: entry[0][0]
+            )
+        )
+    else:
+        cell_rows = (
+            (row_number, enumerate(row))
+            for row_number, row in enumerate(ws.iter_rows(), start=1)
+        )
     rows: list[CellRow] = []
-    for row_number, row in enumerate(ws.iter_rows(), start=1):
+    for row_number, row in cell_rows:
         values: dict[str, int | float | str] = {}
         links: dict[str, str] = {}
-        for column, cell in enumerate(row):
+        for column, cell in row:
             value = cell.value
             if cell.data_type == "e":
                 value = None

@@ -929,8 +929,6 @@ dependencies = [
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "openpyxl" },
     { name = "pydantic" },
-    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "xlrd" },
     { name = "xlwings" },
 ]
@@ -943,6 +941,12 @@ all = [
     { name = "pypdfium2" },
     { name = "python-toon" },
     { name = "pyyaml" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+]
+fast = [
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 mcp = [
     { name = "httpx" },
@@ -992,11 +996,12 @@ requires-dist = [
     { name = "python-toon", marker = "extra == 'toon'", specifier = ">=0.1.3" },
     { name = "pyyaml", marker = "extra == 'all'", specifier = ">=6.0.3" },
     { name = "pyyaml", marker = "extra == 'yaml'", specifier = ">=6.0.3" },
-    { name = "scipy", specifier = ">=1.16.3" },
+    { name = "scipy", marker = "extra == 'all'", specifier = ">=1.16.3" },
+    { name = "scipy", marker = "extra == 'fast'", specifier = ">=1.16.3" },
     { name = "xlrd", specifier = ">=2.0.2" },
     { name = "xlwings", specifier = ">=0.33.16" },
 ]
-provides-extras = ["all", "yaml", "toon", "render", "mcp"]
+provides-extras = ["fast", "all", "yaml", "toon", "render", "mcp"]
 
 [package.metadata.requires-dev]
 dev = [

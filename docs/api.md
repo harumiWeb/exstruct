@@ -147,7 +147,13 @@ the MCP server, which wraps the same core and adds host policy.
 
 ## Dependencies
 
-- Core extraction: pandas, openpyxl (installed with the package).
+- Core cell extraction: openpyxl for `.xlsx` / `.xlsm`, xlrd for `.xls`
+  (installed with the package). Production extraction does not require pandas.
+- Border clustering: NumPy is required; SciPy is optional via `exstruct[fast]`
+  (also included in `exstruct[all]`). `EXSTRUCT_BORDER_CLUSTER_BACKEND=auto`
+  prefers SciPy when available and falls back to the existing Python BFS on
+  import or execution failure. `python` forces BFS; the legacy `numpy` name
+  selects SciPy-backed labeling with the same fallback. No `scipy` alias is added.
 - YAML export: `pyyaml` (lazy import; missing module raises `MissingDependencyError`).
 - TOON export: `python-toon` (lazy import; missing module raises `MissingDependencyError`).
 - Auto page-break extraction/export: **Excel + COM** required. `mode="libreoffice"` rejects auto page-break requests with `ConfigError`.
