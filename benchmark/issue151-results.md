@@ -22,7 +22,8 @@ instances open. Do not run the real COM tests concurrently with measurements.
 ```powershell
 rtk uv run python -m benchmark.performance --generate-fixtures tasks/issue151-fixtures
 rtk uv run python -m benchmark.issue151_com_first --input tasks/issue151-fixtures/small.xlsx tasks/issue151-fixtures/style-heavy.xlsx tasks/issue151-fixtures/large.xlsx tasks/issue151-fixtures/many-sheet.xlsx --output benchmark/baselines/issue151-2026-10-03-windows.json --repeats 3
-rtk uv run python -m benchmark.issue151_com_first --input tasks/issue151-fixtures/small.xlsx tasks/issue151-fixtures/style-heavy.xlsx tasks/issue151-fixtures/large.xlsx tasks/issue151-fixtures/many-sheet.xlsx --output benchmark/baselines/issue151-2026-10-03-verbose-windows.json --repeats 3 --modes verbose
+rtk uv run python -m benchmark.issue151_com_first --input tasks/issue151-fixtures/small.xlsx tasks/issue151-fixtures/style-heavy.xlsx --output benchmark/baselines/issue151-2026-10-03-verbose-windows.json --repeats 3 --modes verbose
+rtk uv run python -m benchmark.issue151_com_first --input tasks/issue151-fixtures/large.xlsx tasks/issue151-fixtures/many-sheet.xlsx --output benchmark/baselines/issue151-verbose-no-colors-windows.json --repeats 3 --modes verbose --no-colors
 rtk uv run python -m benchmark.issue151_compatibility --output benchmark/baselines/issue151-compatibility-windows.json
 rtk uv run python -m benchmark.issue151_report
 ```
