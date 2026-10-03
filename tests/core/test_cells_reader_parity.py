@@ -3,11 +3,16 @@
 from datetime import date, datetime, time, timedelta
 import json
 from pathlib import Path
+import re
+import subprocess
+import sys
+from unittest.mock import MagicMock
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from openpyxl import Workbook
 from openpyxl.worksheet.hyperlink import Hyperlink
 import pytest
+import xlrd
 
 from exstruct.core import cells
 from exstruct.models import CellRow
@@ -143,3 +148,140 @@ def test_cells_match_live_pandas_oracle(tmp_path: Path) -> None:
                 rows.append(CellRow(r=row_number, c=values))
         expected[name] = rows
     assert cells.extract_sheet_cells(path) == expected
+
+
+@pytest.mark.parametrize("datemode", [0, 1])
+def test_xls_typed_cached_values_match_old_oracle(
+    monkeypatch: pytest.MonkeyPatch, datemode: int
+) -> None:
+    """BIFF cell types include cached formulas; conversion ignores formula text."""
+    pd = pytest.importorskip("pandas")
+    types = [xlrd.XL_CELL_DATE] * 4 + [
+        xlrd.XL_CELL_BOOLEAN,
+        xlrd.XL_CELL_BOOLEAN,
+        xlrd.XL_CELL_ERROR,
+        xlrd.XL_CELL_NUMBER,
+        xlrd.XL_CELL_NUMBER,
+        xlrd.XL_CELL_NUMBER,
+        xlrd.XL_CELL_TEXT,
+        xlrd.XL_CELL_TEXT,
+        xlrd.XL_CELL_TEXT,
+        xlrd.XL_CELL_NUMBER,
+        xlrd.XL_CELL_NUMBER,
+    ]
+    values = [
+        0.5,
+        1.0,
+        59.0,
+        60.0,
+        1,
+        0,
+        7,
+        2.0,
+        1.25,
+        1e20,
+        "001",
+        "NA",
+        " NA ",
+        float("inf"),
+        float("nan"),
+    ]
+    row_cells = [
+        xlrd.sheet.Cell(typ, value) for typ, value in zip(types, values, strict=True)
+    ]
+    sheet = MagicMock()
+    sheet.name = "Cached"
+    sheet.nrows = 3
+    blank_cells = [xlrd.sheet.Cell(xlrd.XL_CELL_EMPTY, "") for _ in values]
+    sheet.row.side_effect = lambda index: row_cells if index == 2 else blank_cells
+    sheet.row_values.side_effect = lambda index: (
+        values if index == 2 else [""] * len(values)
+    )
+    sheet.row_types.side_effect = lambda index: (
+        types if index == 2 else [xlrd.XL_CELL_EMPTY] * len(values)
+    )
+    book = MagicMock(spec=xlrd.Book)
+    book.datemode = datemode
+    book.sheets.return_value = [sheet]
+    book.sheet_names.return_value = ["Cached"]
+    book.sheet_by_name.return_value = sheet
+    monkeypatch.setattr(xlrd, "open_workbook", lambda *args, **kwargs: book)
+    frame = pd.read_excel(
+        book, engine="xlrd", sheet_name="Cached", header=None, dtype=str
+    ).fillna("")
+    expected: dict[str, int | float | str] = {
+        str(column): cells._coerce_numeric_preserve_format(str(value))
+        for column, value in enumerate(frame.iloc[2])
+        if str(value).strip()
+    }
+    actual = cells.extract_sheet_cells(Path("cached.XLS"))
+    assert actual == {"Cached": [CellRow(r=3, c=expected)]}
+    assert actual["Cached"][0].c["0"] == "12:00:00"
+    assert actual["Cached"][0].c["4"] == "True"
+    assert actual["Cached"][0].c["5"] == "False"
+    assert "6" not in actual["Cached"][0].c
+    assert "11" not in actual["Cached"][0].c
+    assert actual["Cached"][0].c["12"] == " NA "
+    book.release_resources.assert_called()
+
+
+def test_xls_release_on_read_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    book = MagicMock(spec=xlrd.Book)
+    book.sheets.side_effect = RuntimeError("broken sheet")
+    monkeypatch.setattr(xlrd, "open_workbook", lambda *args, **kwargs: book)
+    with pytest.raises(RuntimeError, match="broken sheet"):
+        cells.extract_sheet_cells(Path("broken.xls"))
+    book.release_resources.assert_called_once()
+
+
+def test_xls_date_overflow_keeps_old_serial() -> None:
+    assert cells._xls_cell_value(1e20, xlrd.XL_CELL_DATE, 0) == 1e20
+
+
+def test_ws_helper_matches_path_and_keeps_workbook_open(tmp_path: Path) -> None:
+    path = tmp_path / "helper.xlsx"
+    make_parity_book(path)
+    with cells.openpyxl_workbook(path, data_only=True, read_only=False) as wb:
+        rows = cells.extract_sheet_cells_openpyxl_ws(wb["Values"], include_links=True)
+        assert rows == cells.extract_sheet_cells_with_links(path)["Values"]
+        assert wb["Values"]["A10"].value == 2
+        assert wb["Values"]["C10"].value == "cached"
+        assert not any(row.r == 12 for row in rows)
+        assert next(row for row in rows if row.r == 11).links == {
+            "1": "https://example.test/na"
+        }
+
+
+def test_xlsx_works_without_pandas_and_keeps_xlrd_lazy(tmp_path: Path) -> None:
+    path = tmp_path / "imports.xlsx"
+    make_parity_book(path)
+    code = (
+        "import sys; sys.modules['pandas'] = None; from pathlib import Path; "
+        "from exstruct.core.cells import extract_sheet_cells; "
+        "extract_sheet_cells(Path(sys.argv[1])); "
+        "assert sys.modules['pandas'] is None; assert 'xlrd' not in sys.modules"
+    )
+    subprocess.run([sys.executable, "-c", code, str(path)], check=True)
+
+
+def test_streaming_reader_ignores_incorrect_declared_dimensions(tmp_path: Path) -> None:
+    """The former pandas/openpyxl reader reset bounds before reading rows."""
+    path = tmp_path / "dimensions.xlsx"
+    wb = Workbook()
+    wb.active["C3"] = "first"
+    wb.active["D9"] = "last"
+    wb.save(path)
+    wb.close()
+    with ZipFile(path) as archive:
+        parts = {name: archive.read(name) for name in archive.namelist()}
+    parts["xl/worksheets/sheet1.xml"] = re.sub(
+        rb'<dimension ref="[^"]+"',
+        b'<dimension ref="A1:A1"',
+        parts["xl/worksheets/sheet1.xml"],
+    )
+    with ZipFile(path, "w", ZIP_DEFLATED) as archive:
+        for name, content in parts.items():
+            archive.writestr(name, content)
+    assert cells.extract_sheet_cells(path) == {
+        "Sheet": [CellRow(r=3, c={"2": "first"}), CellRow(r=9, c={"3": "last"})]
+    }
