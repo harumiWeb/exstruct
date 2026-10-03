@@ -13,6 +13,10 @@ from openpyxl.chart import BarChart, Reference
 from openpyxl.styles import Border, Side
 import pytest
 
+_SHAPE_SAMPLE = (
+    Path(__file__).resolve().parents[2] / "sample/flowchart/sample-shape-connector.xlsx"
+)
+
 
 def _probe(code: str) -> dict[str, object]:
     result = subprocess.run(
@@ -71,7 +75,7 @@ assert sheet.table_candidates
 assert sheet.print_areas
 assert sheet.charts and sheet.charts[0].provenance == "python_ooxml"
 # Existing real OOXML shapes/connectors must survive the import split too.
-diagram = exstruct.extract("sample/flowchart/sample-shape-connector.xlsx", mode="light")
+diagram = exstruct.extract({str(_SHAPE_SAMPLE)!r}, mode="light")
 assert any(s.shapes for s in diagram.sheets.values())
 for s in diagram.sheets.values():
     assert all(shape.provenance == "python_ooxml" for shape in s.shapes)

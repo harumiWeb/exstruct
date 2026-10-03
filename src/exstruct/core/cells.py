@@ -2066,6 +2066,7 @@ def detect_tables(
         try:
             if (
                 openpyxl_session is not None
+                and openpyxl_session.file_path.resolve() == excel_path.resolve()
                 and detect_tables_openpyxl is _DEFAULT_DETECT_TABLES_OPENPYXL
             ):
                 return detect_tables_openpyxl_ws(

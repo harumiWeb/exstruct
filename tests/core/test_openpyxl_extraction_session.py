@@ -117,6 +117,58 @@ def test_session_is_lazy_closed_and_rejects_reuse(
         session.__enter__()
 
 
+@pytest.mark.parametrize("same_file", [False, True])
+def test_com_table_detection_reuses_only_matching_session(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, same_file: bool
+) -> None:
+    """Equal sheet names must not select tables from a different workbook."""
+    session_path = tmp_path / "session.xlsx"
+    make_workbook(session_path, 1)
+    target_path = tmp_path / "target.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    assert ws is not None
+    ws.title = "Sheet0"
+    ws.append(["Name", "Count", "Other"])
+    ws.append(["Item", 7, 9])
+    ws.add_table(Table(displayName="Target", ref="A1:C2"))
+    wb.save(target_path)
+    wb.close()
+    monkeypatch.chdir(tmp_path)
+    sheet_path = session_path if same_file else target_path
+    sheet = SimpleNamespace(
+        name="Sheet0", book=SimpleNamespace(fullname=sheet_path.name)
+    )
+    expected = cells.detect_tables_openpyxl(sheet_path, sheet.name, mode="light")
+    with OpenpyxlExtractionSession(session_path) as session:
+        shared = session.workbook()
+        loader = Mock(side_effect=AssertionError("session must already be loaded"))
+        monkeypatch.setattr(session, "workbook", loader)
+        if same_file:
+            loader.side_effect = None
+            loader.return_value = shared
+        assert (
+            cells.detect_tables(sheet, mode="light", openpyxl_session=session)
+            == expected
+        )
+        assert loader.call_count == int(same_file)
+    assert expected == (["A1:B2"] if same_file else ["A1:C2"])
+
+
+def test_com_table_detection_preserves_helper_override_with_session(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "absent.xlsx"
+    sheet = SimpleNamespace(name="Sheet0", book=SimpleNamespace(fullname=str(path)))
+    helper = Mock(return_value=["D1:E2"])
+    monkeypatch.setattr(cells, "detect_tables_openpyxl", helper)
+    with OpenpyxlExtractionSession(path) as session:
+        assert cells.detect_tables(sheet, mode="light", openpyxl_session=session) == [
+            "D1:E2"
+        ]
+    helper.assert_called_once_with(path, "Sheet0", mode="light")
+
+
 def test_close_all_variants_on_pipeline_model_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

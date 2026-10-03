@@ -82,6 +82,9 @@ This document summarizes the current specification for Excel extraction processi
 - Path-based detection delegates to worksheet-based detection. Nested border
   scanning and multi-sheet detection must not reopen the workbook when the
   caller supplies a worksheet from the extraction session.
+- COM table detection reuses a supplied session only when its resolved file
+  path matches the COM workbook path. A different workbook uses standalone
+  path-based detection, even when both workbooks contain the same sheet name.
 - NumPy remains required. SciPy is optional through `exstruct[fast]` or `[all]`.
   `EXSTRUCT_BORDER_CLUSTER_BACKEND=auto` attempts SciPy-backed labeling, while
   `python` forces the existing Python BFS. The legacy `numpy` value also attempts
