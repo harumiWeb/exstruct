@@ -192,3 +192,48 @@ normalized track transparent and reproducible.
   - [https://platform.openai.com/docs/guides/images-vision](https://platform.openai.com/docs/guides/images-vision)
 - Pricing for gpt-4o used in cost estimation:
   - https://platform.openai.com/docs/models/compare?model=gpt-4o
+
+## Extraction performance (Issue #143)
+
+This runner is independent of the correctness/LLM benchmark above. Run from the
+**repository root**; the root locked environment is sufficient and no OpenAI key
+or optional benchmark workspace dependencies are needed.
+
+```powershell
+rtk uv sync --locked
+rtk uv run python -m benchmark.performance --generate-fixtures tasks/performance-inputs
+rtk uv run python -m benchmark.performance --mode light --input tasks/performance-inputs/large.xlsx --output tasks/light-large.json
+rtk uv run python -m benchmark.performance --mode standard --input tasks/performance-inputs/large.xlsx --output tasks/standard-large.json
+rtk uv run python -m benchmark.performance --mode light --input tasks/performance-inputs/small.xlsx --profile-all-features --output tasks/optional-stages.json
+```
+
+Omit `--output` for JSON on stdout; diagnostic extraction output goes to stderr.
+`--repeats` defaults to 3 (after the first extraction), and `--timeout` defaults
+to 300 seconds per subprocess. Use a new fixture directory when regenerating.
+
+| Fixture | Sheets | Rows × columns per sheet | Workload |
+| --- | ---: | ---: | --- |
+| small | 1 | 20 × 8 | Formula, merged cells and OOXML chart |
+| large | 1 | 2,000 × 30 | Dense numeric cells |
+| many-sheet | 24 | 30 × 10 | Repeated workbook/sheet parsing |
+| sparse | 1 | 1,000 × 50 | Headers plus 50 widely spaced populated cells |
+| style-heavy | 1 | 300 × 20 | Fills, fonts, number formats and borders |
+| table-heavy | 1 | 600 × 12 | 20 explicit Excel tables |
+
+To measure all categories, run the command for each workbook and mode. For an
+Excel-free fallback comparison, explicitly set `$env:SKIP_COM_TESTS = '1'` before
+running `standard` and record that distinction; clear the override for actual COM
+measurements. The runner itself never enables it.
+
+The report separates Python startup, bare import, CLI help, fresh-process cold
+extraction, same-process repeats, per-stage profile, serialization and peak RSS.
+Profile timings are inclusive and may overlap; they must not be summed.
+Stages disabled by mode defaults have zero calls. `--profile-all-features`
+measures normally disabled stages only in the separate profile run.
+
+Compare input SHA256, source revision, dependency versions and COM/fallback state
+along with raw timing samples. Fresh Python processes may still benefit from OS
+caches. Peak RSS excludes Excel. Initial six-category/two-mode results are in
+[the Windows baseline](baselines/2026-10-03-windows.json); the measurement contract
+and limits are in [the internal specification](../dev-docs/specs/extraction-performance.md).
+Do not use these observations as strict wall-clock CI thresholds.

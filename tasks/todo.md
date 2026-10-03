@@ -1,5 +1,39 @@
 # Todo
 
+## 2026-10-03 Issue #143 extraction performance baseline
+
+- [x] Inspect #143, parent #142, extraction contracts, pipeline, and existing benchmark.
+- [x] Review plan: separate uninstrumented latency from instrumented stage attribution; preserve mode defaults and report actual fallback state.
+- [x] Add a standalone runner with fresh-process startup/import/CLI probes, first/repeated extraction, and stage profiling.
+- [x] Add six deterministic synthetic workbook categories and regression tests.
+- [x] Record light/standard baseline JSON and document reproduction and metric limits.
+- [x] Run focused tests, static checks, and review the diff.
+
+### Review
+
+ADR suggester: `not-needed`; this implements the benchmark/reporting scope explicitly
+requested by #143, without changing performance strategy, public contracts, backend
+selection, or CI thresholds. Related ADRs: ADR-0001/0002/0010. Evidence: extraction
+specification, `core.pipeline.run_extraction_pipeline`, existing pipeline/fallback
+tests, and new benchmark tests. Permanent measurement definitions belong in
+`dev-docs/specs/extraction-performance.md`; reproduction belongs in `benchmark/README.md`.
+
+- Implemented runner, fixture generator and temporary profile instrumentation;
+  production extraction source/dependencies/API were not changed.
+- Verified 75 focused tests (11 new benchmark tests included), plus a supervisor
+  regression rerun after the final cold-process script cleanup.
+- `uv run task precommit-run` passed Ruff/format/mypy. Because benchmark lint is
+  normally excluded and new files are untracked, explicitly checked/formatted
+  all new Python files with Ruff as well. `git diff --check` passed.
+- Baseline contains all 12 category/mode pairs and three repeats each; finite
+  samples, input identities and standard profile COM success were verified.
+- Permanent measurement constraints were migrated to the spec; baseline scope,
+  observations and reproduction are in `benchmark/baselines/README.md`.
+- Retention review: the working feature-spec section is summarized to a permanent
+  spec reference; this todo section keeps temporary completion/validation evidence.
+- Local validation is recorded above; remote CI is tracked separately through
+  the implementation PR checks.
+
 ## 2026-09-26 Release v0.8.2 after dependency security updates
 
 ### Planning

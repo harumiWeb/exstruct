@@ -603,3 +603,10 @@
   - tests:
     - `tests/core/test_libreoffice_backend.py`
     - `tests/core/test_libreoffice_smoke.py`
+# Issue #143 specification migration (2026-10-03)
+
+Completed benchmark signatures, measurement boundaries, JSON schema, optional
+profile flags and verification constraints are documented in
+`dev-docs/specs/extraction-performance.md`. Fixture reproduction and baseline
+observations are in `benchmark/README.md` and `benchmark/baselines/README.md`.
+Only this task's working draft was summarized after migration.
