@@ -45,3 +45,5 @@ ADRs record what was decided, under which constraints, and which trade-offs were
 | `ADR-0008` | Extraction CLI Runtime Capability Validation | `accepted` | `cli` |
 | `ADR-0009` | Single CLI Skill for Agent Workflows | `proposed` | `agents` |
 | `ADR-0010` | Light Mode as the Pure-Python Rich OOXML Baseline | `accepted` | `extraction` |
+| `ADR-0011` | Extraction-Scoped Workbook Reuse and Direct Cell Reading | `proposed` | `extraction` |
+| `ADR-0012` | Optional SciPy Border Clustering | `proposed` | `performance` |

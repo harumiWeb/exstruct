@@ -4,11 +4,23 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 import warnings
 
-from openpyxl import load_workbook
-import xlwings as xw
+from ._lazy import LazyModule
+
+if TYPE_CHECKING:
+    import xlwings as xw
+else:
+    xw = LazyModule("xlwings")
+
+
+def load_workbook(*args: Any, **kwargs: Any) -> Any:  # noqa: ANN401 - preserve loader signature
+    """Resolve the live openpyxl loader, preserving the legacy override surface."""
+    from openpyxl import load_workbook as loader
+
+    return loader(*args, **kwargs)
+
 
 logger = logging.getLogger(__name__)
 

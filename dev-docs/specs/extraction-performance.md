@@ -134,3 +134,10 @@ test measurement contracts without strict shared-runner wall-clock thresholds.
 The committed baseline's `environment.executable` is replaced with `<local-python>`
 to omit the identifying local path; local runner output still records its actual
 interpreter path. Timing samples and other reproducibility metadata are retained.
+
+The integrated #145-#148 comparison and exact output hashes are recorded in
+`benchmark/issues145-148-results.md` and its linked raw baselines. It separates
+light improvements from variable Excel COM observations and retains supplemental
+paired rechecks. `benchmark/issue148-results.md` records the separate accelerator
+comparison and ADR-0012 dependency decision; the candidate sparse BFS remains
+evaluation-only.

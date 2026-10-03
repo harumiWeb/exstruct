@@ -59,8 +59,18 @@ Pipeline is the **orchestrator**.
 - Selects backends
 - Controls fallback paths
 - Manages intermediate artifacts
+- Owns one extraction-scoped openpyxl session across pre-analysis, COM/fallback
+  processing and final model construction. Backends consume that session rather
+  than opening the same workbook for each feature or worksheet.
 
 Pipeline is designed to **never read Excel content directly**.
+
+`OpenpyxlExtractionSession` lazily owns regular workbook variants through an
+`ExitStack`: cached values (`data_only=True`) are shared by cells, hyperlinks,
+print areas, colors, merged cells and table detection; formula text
+(`data_only=False`) is opened only when requested. Path-based standalone helpers
+remain wrappers with their own bounded lifetime. The session is not a global
+cache and must not outlive one extraction.
 
 ---
 

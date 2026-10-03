@@ -8,6 +8,8 @@ This document is a human-readable map for navigating ADRs by domain.
 - `ADR-0002` Rich Backend Fallback Policy (`accepted`)
 - `ADR-0008` Extraction CLI Runtime Capability Validation (`accepted`)
 - `ADR-0010` Light Mode as the Pure-Python Rich OOXML Baseline (`accepted`)
+- `ADR-0011` Extraction-Scoped Workbook Reuse and Direct Cell Reading (`proposed`)
+- `ADR-0012` Optional SciPy Border Clustering (`proposed`)
 
 ## mode
 
@@ -19,6 +21,8 @@ This document is a human-readable map for navigating ADRs by domain.
 - `ADR-0002` Rich Backend Fallback Policy (`accepted`)
 - `ADR-0004` Patch Backend Selection Policy (`accepted`)
 - `ADR-0010` Light Mode as the Pure-Python Rich OOXML Baseline (`accepted`)
+- `ADR-0011` Extraction-Scoped Workbook Reuse and Direct Cell Reading (`proposed`)
+- `ADR-0012` Optional SciPy Border Clustering (`proposed`)
 
 ## fallback
 
@@ -39,6 +43,13 @@ This document is a human-readable map for navigating ADRs by domain.
 - `ADR-0007` Editing CLI as Public Operational Interface (`accepted`)
 - `ADR-0008` Extraction CLI Runtime Capability Validation (`accepted`)
 - `ADR-0010` Light Mode as the Pure-Python Rich OOXML Baseline (`accepted`)
+- `ADR-0011` Extraction-Scoped Workbook Reuse and Direct Cell Reading (`proposed`)
+- `ADR-0012` Optional SciPy Border Clustering (`proposed`)
+
+## performance
+
+- `ADR-0011` Extraction-Scoped Workbook Reuse and Direct Cell Reading (`proposed`)
+- `ADR-0012` Optional SciPy Border Clustering (`proposed`)
 
 ## mcp
 

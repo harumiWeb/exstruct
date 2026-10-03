@@ -12,6 +12,24 @@ This document summarizes the current specification for Excel extraction processi
 6. When COM succeeds, colors_map is overwritten with COM results
 7. When the rich backend fails, cells+table_candidates are preserved, and pre-com artifacts (print_areas / formulas_map / colors_map / merged_cells) are also retained according to their flags
 
+## Workbook Resource Lifetime
+
+- One extraction invocation owns an `OpenpyxlExtractionSession`. Compatible
+  OOXML stages share one regular `data_only=True`, `read_only=False` workbook,
+  including hyperlink and per-sheet table detection, until final modeling ends.
+- An openpyxl formula map opens a second regular `data_only=False` workbook
+  lazily. Disabled formula extraction and COM-only `.xls` formula extraction
+  must not open that variant.
+- Without helper overrides, an OOXML extraction loads one openpyxl workbook, or
+  two when openpyxl formula extraction is enabled, independent of sheet count.
+  OOXML drawing ZIP reads are separate and are not included in that loader count.
+- Standalone path-based helper calls own and close their own workbooks. An
+  extraction does not cache workbooks across invocations or share them with
+  another concurrent extraction.
+- Success, fallback and exceptions release all successfully opened variants.
+  Existing helper overrides remain observable and may intentionally replace
+  the optimized session path.
+
 ## Coordinate System
 
 - Rows are 1-based
@@ -24,16 +42,54 @@ This document summarizes the current specification for Excel extraction processi
 - standard: Existing behavior (text-bearing shapes, charts if needed)
 - verbose: All shapes + sizes, charts with sizes
 
+## Import Boundaries
+
+- Bare package/engine imports and CLI help keep their existing lazy contracts.
+  Real `.xlsx/.xlsm` light extraction loads neither xlwings nor concrete COM
+  backends, COM shape/chart modules, ExStruct rendering or PDFium.
+- Shared cell/map/merged-range types do not import concrete extraction backends.
+  Compatibility exports and override call sites resolve the live implementation
+  only when requested or executed.
+- Openpyxl and NumPy remain available when extraction needs them. Openpyxl may
+  import optional Pillow itself when installed; light extraction must also work
+  without Pillow. This transitive import does not activate ExStruct rendering.
+- BIFF xlrd is imported only for `.xls` cell reading. SciPy labeling is imported
+  only when accelerated clustering is attempted; explicit Python clustering
+  does not import SciPy.
+
 ## Cell Extraction
 
-- Load with pandas `read_excel(header=None, dtype=str)`
+- Read `.xlsx` / `.xlsm` cached cell values directly with openpyxl and `.xls`
+  cached values directly with xlrd; no production pandas reader is used.
 - Ignore blank cells
 - Normalize row data into `CellRow`
+- Preserve existing numeric coercion (including zero-prefixed numeric strings), boolean/date/time text,
+  row gaps, sheet ordering and the former reader's default missing-string tokens.
+  Excel error cells are omitted as before. Missing tokens are matched before
+  trimming, so padded tokens remain ordinary text.
+- Hyperlinks use their external `target` and zero-based numeric-string column
+  keys. Links on filtered cells are retained when their row contains another
+  emitted value; a row containing only filtered values is not created for links.
+- Formula text extraction remains separate from cell extraction. Cell values
+  use stored formula results and do not calculate formulas.
+- `.xls` direct reading adds no OOXML rich artifacts or COM-independent formula,
+  hyperlink, color, merged-cell or table extraction guarantees.
 
 ## Table Extraction
 
 - Merge openpyxl table definitions + border clusters
 - Preserve table_candidates even when COM is unavailable
+- Path-based detection delegates to worksheet-based detection. Nested border
+  scanning and multi-sheet detection must not reopen the workbook when the
+  caller supplies a worksheet from the extraction session.
+- COM table detection reuses a supplied session only when its resolved file
+  path matches the COM workbook path. A different workbook uses standalone
+  path-based detection, even when both workbooks contain the same sheet name.
+- NumPy remains required. SciPy is optional through `exstruct[fast]` or `[all]`.
+  `EXSTRUCT_BORDER_CLUSTER_BACKEND=auto` attempts SciPy-backed labeling, while
+  `python` forces the existing Python BFS. The legacy `numpy` value also attempts
+  SciPy; import or execution failure falls back to Python. Unknown values retain
+  the existing `auto` behavior. Sparse-set BFS remains an evaluation candidate.
 
 ## Shapes / Arrows / SmartArt Extraction
 

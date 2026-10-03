@@ -11,7 +11,7 @@ from defusedxml import ElementTree
 from ...models import Chart
 from ..ooxml_drawing import SheetDrawingData, read_sheet_drawings
 from .base import ChartData, RichBackend, ShapeData
-from .libreoffice_backend import _build_shapes_from_ooxml
+from .ooxml_shapes import _build_shapes_from_ooxml
 
 logger = logging.getLogger(__name__)
 

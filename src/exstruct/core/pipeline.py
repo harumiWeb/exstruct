@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from inspect import unwrap
 import logging
 import os
 from pathlib import Path
+import sys
 import time
-from typing import Literal
-
-import xlwings as xw
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 from ..errors import FallbackReason
 from ..models import (
@@ -22,9 +22,8 @@ from ..models import (
     SmartArt,
     WorkbookData,
 )
+from ._lazy import LazyModule
 from .backends.base import RichBackend
-from .backends.com_backend import ComBackend, ComRichBackend
-from .backends.libreoffice_backend import LibreOfficeRichBackend
 from .backends.ooxml_backend import OoxmlRichBackend
 from .backends.openpyxl_backend import OpenpyxlBackend
 from .cells import (
@@ -34,12 +33,67 @@ from .cells import (
     detect_tables,
     warn_once,
 )
-from .charts import get_charts
 from .libreoffice import LibreOfficeUnavailableError
 from .logging_utils import log_fallback
 from .modeling import SheetRawData, WorkbookRawData, build_workbook_data
-from .shapes import get_shapes_with_position
+from .openpyxl_session import OpenpyxlExtractionSession
 from .workbook import xlwings_workbook
+
+if TYPE_CHECKING:
+    import xlwings as xw
+
+    from .backends.com_backend import (
+        ComBackend as ComBackend,
+        ComRichBackend as ComRichBackend,
+    )
+    from .backends.libreoffice_backend import (
+        LibreOfficeRichBackend as LibreOfficeRichBackend,
+    )
+else:
+    xw = LazyModule("xlwings")
+
+
+def __getattr__(name: str) -> Any:  # noqa: ANN401 - heterogeneous compatibility exports
+    """Resolve backend compatibility exports only when explicitly requested."""
+    from . import backends
+
+    if name in {"ComBackend", "ComRichBackend", "LibreOfficeRichBackend"}:
+        return getattr(backends, name)
+    raise AttributeError(name)
+
+
+@overload
+def _backend_type(name: Literal["ComBackend"]) -> type[ComBackend]: ...
+
+
+@overload
+def _backend_type(name: Literal["ComRichBackend"]) -> type[ComRichBackend]: ...
+
+
+@overload
+def _backend_type(
+    name: Literal["LibreOfficeRichBackend"],
+) -> type[LibreOfficeRichBackend]: ...
+
+
+def _backend_type(name: str) -> Any:  # noqa: ANN401 - heterogeneous compatibility exports
+    """Honor explicitly overridden legacy aliases before lazy resolution."""
+    return getattr(sys.modules[__name__], name)
+
+
+def get_shapes_with_position(workbook: xw.Book, mode: str = "standard") -> ShapeData:
+    """Forward to the live COM shape implementation, preserving overrides."""
+    from . import shapes
+
+    return shapes.get_shapes_with_position(workbook, mode=mode)
+
+
+def get_charts(sheet: xw.Sheet, mode: ExtractionMode = "standard") -> list[Chart]:
+    """Forward to the live COM chart implementation, preserving overrides."""
+    from . import charts
+
+    return charts.get_charts(sheet, mode=mode)
+
 
 ExtractionMode = Literal["light", "libreoffice", "standard", "verbose"]
 CellData = dict[str, list[CellRow]]
@@ -107,10 +161,13 @@ class ExtractionArtifacts:
     shape_data: ShapeData = field(default_factory=dict)
     chart_data: ChartData = field(default_factory=dict)
     merged_cell_data: MergedCellData = field(default_factory=dict)
+    openpyxl_session: OpenpyxlExtractionSession | None = field(
+        default=None, repr=False, compare=False
+    )
 
 
 ExtractionStep = Callable[[ExtractionInputs, ExtractionArtifacts], None]
-ComExtractionStep = Callable[[ExtractionInputs, ExtractionArtifacts, xw.Book], None]
+ComExtractionStep = Callable[[ExtractionInputs, ExtractionArtifacts, "xw.Book"], None]
 
 
 @dataclass(frozen=True)
@@ -577,7 +634,7 @@ def step_extract_cells(
         inputs: Pipeline inputs.
         artifacts: Artifact container to update.
     """
-    backend = OpenpyxlBackend(inputs.file_path)
+    backend = OpenpyxlBackend(inputs.file_path, session=artifacts.openpyxl_session)
     artifacts.cell_data = backend.extract_cells(include_links=inputs.include_cell_links)
 
 
@@ -591,7 +648,7 @@ def step_extract_print_areas_openpyxl(
         inputs (ExtractionInputs): Pipeline inputs containing the file path and extraction options.
         artifacts (ExtractionArtifacts): Mutable artifact container; `artifacts.print_area_data` will be set to the extracted print area mapping.
     """
-    backend = OpenpyxlBackend(inputs.file_path)
+    backend = OpenpyxlBackend(inputs.file_path, session=artifacts.openpyxl_session)
     artifacts.print_area_data = backend.extract_print_areas()
 
 
@@ -607,7 +664,7 @@ def step_extract_formulas_map_openpyxl(
         inputs (ExtractionInputs): Resolved pipeline inputs (provides file_path).
         artifacts (ExtractionArtifacts): Mutable container to receive the extracted formulas map.
     """
-    backend = OpenpyxlBackend(inputs.file_path)
+    backend = OpenpyxlBackend(inputs.file_path, session=artifacts.openpyxl_session)
     try:
         artifacts.formulas_map_data = backend.extract_formulas_map()
     except Exception as exc:
@@ -626,7 +683,7 @@ def step_extract_colors_map_openpyxl(
     Sets artifacts.colors_map_data to the colors map extracted from inputs.file_path,
     respecting inputs.include_default_background and inputs.ignore_colors.
     """
-    backend = OpenpyxlBackend(inputs.file_path)
+    backend = OpenpyxlBackend(inputs.file_path, session=artifacts.openpyxl_session)
     artifacts.colors_map_data = backend.extract_colors_map(
         include_default_background=inputs.include_default_background,
         ignore_colors=inputs.ignore_colors,
@@ -642,7 +699,7 @@ def step_extract_merged_cells_openpyxl(
         inputs: Pipeline inputs.
         artifacts: Artifact container to update.
     """
-    backend = OpenpyxlBackend(inputs.file_path)
+    backend = OpenpyxlBackend(inputs.file_path, session=artifacts.openpyxl_session)
     artifacts.merged_cell_data = backend.extract_merged_cells()
 
 
@@ -685,9 +742,12 @@ def step_extract_print_areas_com(
         artifacts: Artifact container to update.
         workbook: xlwings workbook instance.
     """
+
+    backend_type = _backend_type("ComBackend")
+
     if artifacts.print_area_data:
         return
-    artifacts.print_area_data = ComBackend(workbook).extract_print_areas()
+    artifacts.print_area_data = backend_type(workbook).extract_print_areas()
 
 
 def step_extract_auto_page_breaks_com(
@@ -701,7 +761,10 @@ def step_extract_auto_page_breaks_com(
         artifacts (ExtractionArtifacts): Mutable artifact container; updated with extracted data.
         workbook (xw.Book): xlwings COM workbook used to read auto page break settings.
     """
-    artifacts.auto_page_break_data = ComBackend(workbook).extract_auto_page_breaks()
+
+    backend_type = _backend_type("ComBackend")
+
+    artifacts.auto_page_break_data = backend_type(workbook).extract_auto_page_breaks()
 
 
 def step_extract_formulas_map_com(
@@ -716,8 +779,11 @@ def step_extract_formulas_map_com(
     Parameters:
         workbook (xlwings.Book): COM workbook to extract formulas from.
     """
+
+    backend_type = _backend_type("ComBackend")
+
     try:
-        artifacts.formulas_map_data = ComBackend(workbook).extract_formulas_map()
+        artifacts.formulas_map_data = backend_type(workbook).extract_formulas_map()
     except Exception as exc:
         logger.warning(
             "Failed to extract formulas_map via COM. (%r)",
@@ -735,7 +801,10 @@ def step_extract_colors_map_com(
         artifacts: Artifact container to update.
         workbook: xlwings workbook instance.
     """
-    com_result = ComBackend(workbook).extract_colors_map(
+
+    backend_type = _backend_type("ComBackend")
+
+    com_result = backend_type(workbook).extract_colors_map(
         include_default_background=inputs.include_default_background,
         ignore_colors=inputs.ignore_colors,
     )
@@ -744,7 +813,7 @@ def step_extract_colors_map_com(
         return
     if artifacts.colors_map_data is None:
         artifacts.colors_map_data = OpenpyxlBackend(
-            inputs.file_path
+            inputs.file_path, session=artifacts.openpyxl_session
         ).extract_colors_map(
             include_default_background=inputs.include_default_background,
             ignore_colors=inputs.ignore_colors,
@@ -899,6 +968,9 @@ def _safe_col_index(col_key: str) -> int | None:
         return None
 
 
+_DEFAULT_DETECT_TABLES = detect_tables
+
+
 def collect_sheet_raw_data(
     *,
     cell_data: CellData,
@@ -912,6 +984,7 @@ def collect_sheet_raw_data(
     auto_page_break_data: PrintAreaData | None = None,
     formulas_map_data: WorkbookFormulasMap | None = None,
     colors_map_data: WorkbookColorsMap | None = None,
+    openpyxl_session: OpenpyxlExtractionSession | None = None,
 ) -> dict[str, SheetRawData]:
     """
     Collect per-sheet raw extraction data and assemble SheetRawData for each sheet.
@@ -947,7 +1020,12 @@ def collect_sheet_raw_data(
             rows=filtered_rows,
             shapes=shape_data.get(sheet_name, []),
             charts=chart_data.get(sheet_name, []),
-            table_candidates=detect_tables(sheet, mode=mode),
+            table_candidates=(
+                detect_tables(sheet, mode=mode, openpyxl_session=openpyxl_session)
+                if openpyxl_session is not None
+                and unwrap(detect_tables) is _DEFAULT_DETECT_TABLES
+                else detect_tables(sheet, mode=mode)
+            ),
             print_areas=print_area_data.get(sheet_name, []) if print_area_data else [],
             auto_print_areas=auto_page_break_data.get(sheet_name, [])
             if auto_page_break_data
@@ -966,13 +1044,14 @@ def resolve_rich_backend(
     workbook: xw.Book | None = None,
 ) -> RichBackend:
     """Resolve the rich extraction backend for the requested mode."""
+
     if inputs.mode == "light":
         return OoxmlRichBackend(inputs.file_path)
     if inputs.mode == "libreoffice":
-        return LibreOfficeRichBackend(inputs.file_path)
+        return _backend_type("LibreOfficeRichBackend")(inputs.file_path)
     if workbook is None:
         raise ValueError("COM workbook is required for COM-backed rich extraction.")
-    return ComRichBackend(workbook)
+    return _backend_type("ComRichBackend")(workbook)
 
 
 def _run_light_pipeline(
@@ -1088,6 +1167,20 @@ def _run_libreoffice_pipeline(
 
 
 def run_extraction_pipeline(inputs: ExtractionInputs) -> PipelineResult:
+    """Own workbook resources across presteps, COM/fallback and model building."""
+    session = OpenpyxlExtractionSession(inputs.file_path)
+    try:
+        with session:
+            return _run_extraction_pipeline(inputs, session)
+    finally:
+        # Context managers do not invoke __exit__ when __enter__ raises.
+        session.close()
+
+
+def _run_extraction_pipeline(
+    inputs: ExtractionInputs,
+    session: OpenpyxlExtractionSession,
+) -> PipelineResult:
     """
     Execute the configured extraction pipeline and produce the extraction result.
 
@@ -1098,7 +1191,9 @@ def run_extraction_pipeline(inputs: ExtractionInputs) -> PipelineResult:
         PipelineResult: Contains the constructed workbook data, collected artifacts, and pipeline execution state (including COM attempt/success and any fallback reason).
     """
     plan = build_pipeline_plan(inputs)
-    artifacts = run_pipeline(plan.pre_com_steps, inputs, ExtractionArtifacts())
+    artifacts = run_pipeline(
+        plan.pre_com_steps, inputs, ExtractionArtifacts(openpyxl_session=session)
+    )
     state = PipelineState()
 
     def _fallback(
@@ -1178,6 +1273,7 @@ def run_extraction_pipeline(inputs: ExtractionInputs) -> PipelineResult:
                     else None,
                     formulas_map_data=artifacts.formulas_map_data,
                     colors_map_data=artifacts.colors_map_data,
+                    openpyxl_session=session,
                 )
                 raw_workbook = WorkbookRawData(
                     book_name=inputs.file_path.name, sheets=raw_sheets
@@ -1219,7 +1315,7 @@ def build_cells_tables_workbook(
         WorkbookData: A workbook composed from the available per-sheet cell rows, detected table candidates, merged-cell information, and any resolved formulas and colors maps. When `include_rich_artifacts` is false, shapes and charts are empty. Formulas and colors maps are extracted from artifacts or from the Openpyxl backend when requested and not already present.
     """
     logger.info("Building fallback workbook: %s", reason)
-    backend = OpenpyxlBackend(inputs.file_path)
+    backend = OpenpyxlBackend(inputs.file_path, session=artifacts.openpyxl_session)
     colors_map_data = artifacts.colors_map_data
     if inputs.include_colors_map and colors_map_data is None:
         colors_map_data = backend.extract_colors_map(

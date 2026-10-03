@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Literal, Protocol
 
 from ...models import Arrow, CellRow, Chart, PrintArea, Shape, SmartArt
-from ..cells import MergedCellRange, WorkbookColorsMap, WorkbookFormulasMap
+from ..cell_types import MergedCellRange, WorkbookColorsMap, WorkbookFormulasMap
 
 CellData = dict[str, list[CellRow]]
 PrintAreaData = dict[str, list[PrintArea]]

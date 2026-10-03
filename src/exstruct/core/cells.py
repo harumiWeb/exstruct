@@ -3,25 +3,42 @@
 from __future__ import annotations
 
 from collections import deque
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
+from datetime import time
 from decimal import Decimal, InvalidOperation
+from itertools import groupby
 import logging
 import math
 import os
 from pathlib import Path
 import re
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
+from openpyxl.cell.cell import Cell, MergedCell
+from openpyxl.cell.read_only import EmptyCell, ReadOnlyCell
 from openpyxl.styles.colors import Color
 from openpyxl.utils import get_column_letter, range_boundaries
+from openpyxl.worksheet._read_only import ReadOnlyWorksheet
 from openpyxl.worksheet.worksheet import Worksheet
-import pandas as pd
-import xlwings as xw
 
 from ..models import CellRow
+from ._lazy import LazyModule
+from .cell_types import (
+    MergedCellRange as MergedCellRange,
+    SheetColorsMap as SheetColorsMap,
+    SheetFormulasMap as SheetFormulasMap,
+    WorkbookColorsMap as WorkbookColorsMap,
+    WorkbookFormulasMap as WorkbookFormulasMap,
+)
+from .openpyxl_session import OpenpyxlExtractionSession
 from .workbook import openpyxl_workbook
+
+if TYPE_CHECKING:
+    import xlwings as xw
+else:
+    xw = LazyModule("xlwings")
 
 logger = logging.getLogger(__name__)
 _warned_keys: set[str] = set()
@@ -46,72 +63,6 @@ _XL_COLOR_NONE = -4142
 _BORDER_CLUSTER_BACKEND_ENV = "EXSTRUCT_BORDER_CLUSTER_BACKEND"
 
 ExtractionMode = Literal["light", "libreoffice", "standard", "verbose"]
-
-
-# Use dataclasses for lightweight models
-@dataclass(frozen=True)
-class SheetColorsMap:
-    """Background color map for a single worksheet."""
-
-    sheet_name: str
-    colors_map: dict[str, list[tuple[int, int]]]
-
-
-@dataclass(frozen=True)
-class WorkbookColorsMap:
-    """Background color maps for all worksheets in a workbook."""
-
-    sheets: dict[str, SheetColorsMap]
-
-    def get_sheet(self, sheet_name: str) -> SheetColorsMap | None:
-        """
-        Retrieve the SheetColorsMap for a worksheet by name.
-
-        Parameters:
-            sheet_name (str): Name of the worksheet to retrieve.
-
-        Returns:
-            SheetColorsMap | None: The sheet's color map if present, `None` otherwise.
-        """
-        return self.sheets.get(sheet_name)
-
-
-@dataclass(frozen=True)
-class SheetFormulasMap:
-    """Formula map for a single worksheet."""
-
-    sheet_name: str
-    formulas_map: dict[str, list[tuple[int, int]]]
-
-
-@dataclass(frozen=True)
-class WorkbookFormulasMap:
-    """Formula maps for all worksheets in a workbook."""
-
-    sheets: dict[str, SheetFormulasMap]
-
-    def get_sheet(self, sheet_name: str) -> SheetFormulasMap | None:
-        """
-        Retrieve the formulas map for a worksheet.
-
-        Parameters:
-            sheet_name (str): Name of the worksheet to look up.
-
-        Returns:
-            SheetFormulasMap | None: The sheet's formulas map if present, `None` if the worksheet is not found.
-        """
-        return self.sheets.get(sheet_name)
-
-
-@dataclass(frozen=True)
-class MergedCellRange:
-    """Merged cell range with normalized value."""
-
-    r1: int
-    c1: int
-    r2: int
-    c2: int
-    v: str
 
 
 @dataclass(frozen=True)
@@ -182,8 +133,10 @@ def extract_sheet_colors_map(
     sheets: dict[str, SheetColorsMap] = {}
     with openpyxl_workbook(file_path, data_only=True, read_only=False) as wb:
         for ws in wb.worksheets:
-            sheet_map = _extract_sheet_colors(
-                ws, include_default_background, ignore_colors
+            sheet_map = extract_sheet_colors_map_ws(
+                ws,
+                include_default_background=include_default_background,
+                ignore_colors=ignore_colors,
             )
             sheets[ws.title] = sheet_map
     return WorkbookColorsMap(sheets=sheets)
@@ -202,9 +155,24 @@ def extract_sheet_formulas_map(file_path: Path) -> WorkbookFormulasMap:
     sheets: dict[str, SheetFormulasMap] = {}
     with openpyxl_workbook(file_path, data_only=False, read_only=False) as wb:
         for ws in wb.worksheets:
-            sheet_map = _extract_sheet_formulas(ws)
+            sheet_map = extract_sheet_formulas_map_ws(ws)
             sheets[ws.title] = sheet_map
     return WorkbookFormulasMap(sheets=sheets)
+
+
+def extract_sheet_colors_map_ws(
+    ws: Worksheet,
+    *,
+    include_default_background: bool,
+    ignore_colors: set[str] | None,
+) -> SheetColorsMap:
+    """Extract colors without reopening the worksheet's workbook."""
+    return _extract_sheet_colors(ws, include_default_background, ignore_colors)
+
+
+def extract_sheet_formulas_map_ws(ws: Worksheet) -> SheetFormulasMap:
+    """Extract formulas from a formula-enabled worksheet."""
+    return _extract_sheet_formulas(ws)
 
 
 def extract_sheet_formulas_map_com(workbook: xw.Book) -> WorkbookFormulasMap:
@@ -698,66 +666,174 @@ def warn_once(key: str, message: str) -> None:
         _warned_keys.add(key)
 
 
+# Freeze the former reader's default missing-string vocabulary. Match before
+# stripping: padded tokens such as " NA " are ordinary text in the old output.
+_CELL_NA_STRINGS = frozenset(
+    {
+        "",
+        "#N/A",
+        "#N/A N/A",
+        "#NA",
+        "-1.#IND",
+        "-1.#QNAN",
+        "-NaN",
+        "-nan",
+        "1.#IND",
+        "1.#QNAN",
+        "<NA>",
+        "N/A",
+        "NA",
+        "NULL",
+        "NaN",
+        "None",
+        "n/a",
+        "nan",
+        "null",
+    }
+)
+
+
+def _normalize_cell_value(value: object) -> int | float | str | None:
+    """Preserve the former string-reader and numeric-coercion contract."""
+    if value is None:
+        return None
+    text = str(value)
+    if text in _CELL_NA_STRINGS or not text.strip():
+        return None
+    return _coerce_numeric_preserve_format(text)
+
+
+def extract_sheet_cells_openpyxl_ws(
+    ws: Worksheet | ReadOnlyWorksheet, *, include_links: bool
+) -> list[CellRow]:
+    """Extract cached values from an already open data-only worksheet.
+
+    Hyperlinks require a non-read-only worksheet. Links on filtered cells are
+    retained when their row has another emitted value; link-only rows are not
+    invented. Worksheet ownership and closing remain with the caller.
+    """
+    cell_rows: Iterable[
+        tuple[int, Iterable[tuple[int, Cell | MergedCell | ReadOnlyCell | EmptyCell]]]
+    ]
+    if isinstance(ws, Worksheet):
+        # iter_rows() materializes every blank in the rectangular extent. Read
+        # the already loaded cell store without inflating a shared sparse sheet.
+        cell_rows = (
+            (row_number, ((coordinate[1] - 1, cell) for coordinate, cell in group))
+            for row_number, group in groupby(
+                sorted(ws._cells.items()), key=lambda entry: entry[0][0]
+            )
+        )
+    else:
+        cell_rows = (
+            (row_number, enumerate(row))
+            for row_number, row in enumerate(ws.iter_rows(), start=1)
+        )
+    rows: list[CellRow] = []
+    for row_number, row in cell_rows:
+        values: dict[str, int | float | str] = {}
+        links: dict[str, str] = {}
+        for column, cell in row:
+            value = cell.value
+            if cell.data_type == "e":
+                value = None
+            elif cell.data_type == "n" and value is not None:
+                # Excel numeric 1.0 was converted to int before dtype=str.
+                integral = int(value)
+                value = integral if integral == value else float(value)
+            normalized = _normalize_cell_value(value)
+            if normalized is not None:
+                values[str(column)] = normalized
+            if include_links:
+                link = getattr(cell, "hyperlink", None)
+                target = getattr(link, "target", None) if link else None
+                if target:
+                    links[str(column)] = target
+        if values:
+            rows.append(CellRow(r=row_number, c=values, links=links or None))
+    return rows
+
+
+def _xls_cell_value(value: object, cell_type: int, datemode: int) -> object:
+    """Apply the former BIFF reader's scalar conversions before normalization."""
+    import xlrd
+
+    if cell_type == xlrd.XL_CELL_ERROR:
+        return None
+    if cell_type == xlrd.XL_CELL_BOOLEAN:
+        return bool(value)
+    if cell_type == xlrd.XL_CELL_DATE:
+        try:
+            converted = xlrd.xldate.xldate_as_datetime(value, datemode)
+        except OverflowError:
+            return value
+        epoch_day = (1904, 1, 1) if datemode else (1899, 12, 31)
+        if (converted.year, converted.month, converted.day) == epoch_day:
+            return time(
+                converted.hour,
+                converted.minute,
+                converted.second,
+                converted.microsecond,
+            )
+        return converted
+    if (
+        cell_type == xlrd.XL_CELL_NUMBER
+        and isinstance(value, (int, float))
+        and math.isfinite(value)
+    ):
+        integral = int(value)
+        if integral == value:
+            return integral
+    return value
+
+
+def _extract_sheet_cells_xls(file_path: Path) -> dict[str, list[CellRow]]:
+    """Read legacy BIFF cached values; do not add rich XLS artifacts."""
+    import xlrd
+
+    book = xlrd.open_workbook(str(file_path), on_demand=True)
+    try:
+        result: dict[str, list[CellRow]] = {}
+        for sheet in book.sheets():
+            rows: list[CellRow] = []
+            for row_index in range(sheet.nrows):
+                values: dict[str, int | float | str] = {}
+                for column, cell in enumerate(sheet.row(row_index)):
+                    value = _xls_cell_value(cell.value, cell.ctype, book.datemode)
+                    normalized = _normalize_cell_value(value)
+                    if normalized is not None:
+                        values[str(column)] = normalized
+                if values:
+                    rows.append(CellRow(r=row_index + 1, c=values))
+            result[sheet.name] = rows
+        return result
+    finally:
+        book.release_resources()
+
+
 def extract_sheet_cells(file_path: Path) -> dict[str, list[CellRow]]:
-    """Read all sheets via pandas and convert to CellRow list while skipping empty cells."""
-    dfs = pd.read_excel(file_path, header=None, sheet_name=None, dtype=str)
-    result: dict[str, list[CellRow]] = {}
-    for sheet_name, df in dfs.items():
-        df = df.fillna("")
-        rows: list[CellRow] = []
-        for excel_row, row in enumerate(df.itertuples(index=False, name=None), start=1):
-            filtered: dict[str, int | float | str] = {}
-            for j, v in enumerate(row):
-                s = "" if v is None else str(v)
-                if s.strip() == "":
-                    continue
-                filtered[str(j)] = _coerce_numeric_preserve_format(s)
-            if not filtered:
-                continue
-            rows.append(CellRow(r=excel_row, c=filtered))
-        result[sheet_name] = rows
-    return result
+    """Read cached values directly, preserving sheet order and sparse rows."""
+    if file_path.suffix.lower() == ".xls":
+        return _extract_sheet_cells_xls(file_path)
+    with openpyxl_workbook(file_path, data_only=True, read_only=True) as wb:
+        result: dict[str, list[CellRow]] = {}
+        for ws in wb.worksheets:
+            # Like the old reader, ignore potentially incorrect declared bounds.
+            ws.reset_dimensions()
+            result[ws.title] = extract_sheet_cells_openpyxl_ws(ws, include_links=False)
+        return result
 
 
 def extract_sheet_cells_with_links(file_path: Path) -> dict[str, list[CellRow]]:
-    """
-    Extract cells and hyperlinks per sheet.
-
-    Returns:
-        {sheet_name: [CellRow(r=..., c=..., links={"col_index": url, ...}), ...]}
-
-    Notes:
-        - Uses pandas extraction for values (same filtering as extract_sheet_cells).
-        - Collects hyperlinks via openpyxl (requires read_only=False because border maps/hyperlinks need full objects).
-        - Links are mapped by column index string (e.g., "0") to hyperlink.target.
-    """
-    cell_rows = extract_sheet_cells(file_path)
-    links_by_sheet: dict[str, dict[int, dict[str, str]]] = {}
+    """Extract cells and hyperlink targets with a single workbook lifetime."""
+    if file_path.suffix.lower() == ".xls":
+        # XLS hyperlinks were never supported by the openpyxl link reader.
+        return extract_sheet_cells(file_path)
     with openpyxl_workbook(file_path, data_only=True, read_only=False) as wb:
-        for ws in wb.worksheets:
-            sheet_links: dict[int, dict[str, str]] = {}
-            for row in ws.iter_rows():
-                for cell in row:
-                    link = getattr(cell, "hyperlink", None)
-                    target = getattr(link, "target", None) if link else None
-                    if not target:
-                        continue
-                    col_str = str(
-                        cell.col_idx - 1
-                    )  # zero-based to align with extract_sheet_cells
-                    sheet_links.setdefault(cell.row, {})[col_str] = target
-            links_by_sheet[ws.title] = sheet_links
-
-    merged: dict[str, list[CellRow]] = {}
-    for sheet_name, rows in cell_rows.items():
-        sheet_links = links_by_sheet.get(sheet_name, {})
-        merged_rows: list[CellRow] = []
-        for row in rows:
-            links = sheet_links.get(row.r, {})
-            merged_rows.append(CellRow(r=row.r, c=row.c, links=links or None))
-        merged[sheet_name] = merged_rows
-    wb.close()
-    return merged
+        return {
+            ws.title: extract_sheet_cells_openpyxl_ws(ws, include_links=True)
+            for ws in wb.worksheets
+        }
 
 
 def extract_sheet_merged_cells(file_path: Path) -> dict[str, list[MergedCellRange]]:
@@ -769,32 +845,33 @@ def extract_sheet_merged_cells(file_path: Path) -> dict[str, list[MergedCellRang
     Returns:
         Mapping of sheet name to merged cell ranges.
     """
-    merged_by_sheet: dict[str, list[MergedCellRange]] = {}
     with openpyxl_workbook(file_path, data_only=True, read_only=False) as wb:
-        for ws in wb.worksheets:
-            merged_ranges = getattr(ws, "merged_cells", None)
-            if merged_ranges is None:
-                merged_by_sheet[ws.title] = []
-                continue
-            results: list[MergedCellRange] = []
-            for merged_range in getattr(merged_ranges, "ranges", []):
-                bounds = range_boundaries(str(merged_range))
-                min_col, min_row, max_col, max_row = bounds
-                cell_value = ws.cell(row=min_row, column=min_col).value
-                value_str = "" if cell_value is None else str(cell_value)
-                if value_str == "":
-                    value_str = " "
-                results.append(
-                    MergedCellRange(
-                        r1=min_row,
-                        c1=min_col - 1,
-                        r2=max_row,
-                        c2=max_col - 1,
-                        v=value_str,
-                    )
-                )
-            merged_by_sheet[ws.title] = results
-    return merged_by_sheet
+        return {ws.title: extract_sheet_merged_cells_ws(ws) for ws in wb.worksheets}
+
+
+def extract_sheet_merged_cells_ws(ws: Worksheet) -> list[MergedCellRange]:
+    """Extract merged ranges from an already owned worksheet."""
+    merged_ranges = getattr(ws, "merged_cells", None)
+    if merged_ranges is None:
+        return []
+    results: list[MergedCellRange] = []
+    for merged_range in getattr(merged_ranges, "ranges", []):
+        bounds = range_boundaries(str(merged_range))
+        min_col, min_row, max_col, max_row = bounds
+        cell_value = ws.cell(row=min_row, column=min_col).value
+        value_str = "" if cell_value is None else str(cell_value)
+        if value_str == "":
+            value_str = " "
+        results.append(
+            MergedCellRange(
+                r1=min_row,
+                c1=min_col - 1,
+                r2=max_row,
+                c2=max_col - 1,
+                v=value_str,
+            )
+        )
+    return results
 
 
 def shrink_to_content(  # noqa: C901
@@ -957,19 +1034,19 @@ def load_border_maps_xlsx(  # noqa: C901
     with openpyxl_workbook(xlsx_path, data_only=True, read_only=False) as wb:
         if sheet_name not in wb.sheetnames:
             raise KeyError(f"Sheet '{sheet_name}' not found in {xlsx_path}")
+        return load_border_maps_openpyxl_ws(wb[sheet_name], scan_limits=scan_limits)
 
-        ws = wb[sheet_name]
-        try:
-            min_col, min_row, max_col, max_row = range_boundaries(
-                ws.calculate_dimension()
-            )
-        except Exception:
-            min_col, min_row, max_col, max_row = (
-                1,
-                1,
-                ws.max_column or 1,
-                ws.max_row or 1,
-            )
+
+def load_border_maps_openpyxl_ws(  # noqa: C901
+    ws: Worksheet,
+    *,
+    scan_limits: TableScanLimits | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, int, int]:
+    """Load border maps without reopening the worksheet's workbook."""
+    try:
+        min_col, min_row, max_col, max_row = range_boundaries(ws.calculate_dimension())
+    except Exception:
+        min_col, min_row, max_col, max_row = (1, 1, ws.max_column or 1, ws.max_row or 1)
 
     resolved_limits = scan_limits or _DEFAULT_TABLE_SCAN_LIMITS
     scan_max_row = min(max_row, resolved_limits.max_rows)
@@ -1117,6 +1194,47 @@ def _detect_border_clusters_python(
                         xs.append(nx)
             if len(ys) >= min_size:
                 rects.append((min(ys), min(xs), max(ys), max(xs)))
+    return rects
+
+
+def _detect_border_clusters_sparse(
+    has_border: np.ndarray, min_size: int
+) -> list[tuple[int, int, int, int]]:
+    """Evaluate set-based BFS without changing backend selection.
+
+    Seeds follow NumPy's row-major nonzero order, matching the existing BFS
+    and SciPy component order. Only occupied coordinates enter the set;
+    the input grid is still scanned by nonzero. Bounding boxes accumulate
+    incrementally instead of retaining every visited row and column.
+    """
+    rows, columns = np.nonzero(has_border)
+    seeds = list(zip(rows.tolist(), columns.tolist(), strict=True))
+    remaining = set(seeds)
+    rects: list[tuple[int, int, int, int]] = []
+    for seed in seeds:
+        if seed not in remaining:
+            continue
+        remaining.remove(seed)
+        queue = deque([seed])
+        min_row = max_row = seed[0]
+        min_col = max_col = seed[1]
+        size = 0
+        while queue:
+            row, col = queue.popleft()
+            size += 1
+            min_row, max_row = min(min_row, row), max(max_row, row)
+            min_col, max_col = min(min_col, col), max(max_col, col)
+            for neighbor in (
+                (row + 1, col),
+                (row - 1, col),
+                (row, col + 1),
+                (row, col - 1),
+            ):
+                if neighbor in remaining:
+                    remaining.remove(neighbor)
+                    queue.append(neighbor)
+        if size >= min_size:
+            rects.append((min_row, min_col, max_row, max_col))
     return rects
 
 
@@ -1850,51 +1968,69 @@ def detect_tables_openpyxl(
     scan_limits: TableScanLimits | None = None,
 ) -> list[str]:
     """Detect table-like ranges via openpyxl tables and border clusters."""
-    resolved_limits = _resolve_table_scan_limits(mode, scan_limits)
     with openpyxl_workbook(xlsx_path, data_only=True, read_only=False) as wb:
-        ws = wb[sheet_name]
-        tables = _extract_openpyxl_table_refs(ws)
-
-        has_border, top_edge, bottom_edge, left_edge, right_edge, max_row, max_col = (
-            load_border_maps_xlsx(
-                xlsx_path,
-                sheet_name,
-                scan_limits=resolved_limits,
-            )
+        return detect_tables_openpyxl_ws(
+            wb[sheet_name], mode=mode, scan_limits=scan_limits
         )
-        rects = _detect_border_rectangles(has_border, min_size=4)
-        merged_rects = _merge_rectangles(rects)
-        dedup: set[str] = set(tables)
-
-        for top_row, left_col, bottom_row, right_col in merged_rects:
-            top_row, left_col, bottom_row, right_col = shrink_to_content_openpyxl(
-                ws,
-                top_row,
-                left_col,
-                bottom_row,
-                right_col,
-                require_inside_border=False,
-                top_edge=top_edge,
-                bottom_edge=bottom_edge,
-                left_edge=left_edge,
-                right_edge=right_edge,
-                min_nonempty_ratio=0.0,
-            )
-            vals_block = _get_values_block(ws, top_row, left_col, bottom_row, right_col)
-            candidates = _collect_table_candidates_from_values(
-                _normalize_matrix(vals_block),
-                base_top=top_row,
-                base_left=left_col,
-                col_name=get_column_letter,
-            )
-            for addr in candidates:
-                if addr not in dedup:
-                    dedup.add(addr)
-                    tables.append(addr)
-        return tables
 
 
-def detect_tables(sheet: xw.Sheet, *, mode: ExtractionMode = "standard") -> list[str]:
+def detect_tables_openpyxl_ws(
+    ws: Worksheet,
+    *,
+    mode: ExtractionMode = "standard",
+    scan_limits: TableScanLimits | None = None,
+) -> list[str]:
+    """Detect tables using an already loaded worksheet."""
+    resolved_limits = _resolve_table_scan_limits(mode, scan_limits)
+    tables = _extract_openpyxl_table_refs(ws)
+
+    has_border, top_edge, bottom_edge, left_edge, right_edge, max_row, max_col = (
+        load_border_maps_openpyxl_ws(
+            ws,
+            scan_limits=resolved_limits,
+        )
+    )
+    rects = _detect_border_rectangles(has_border, min_size=4)
+    merged_rects = _merge_rectangles(rects)
+    dedup: set[str] = set(tables)
+
+    for top_row, left_col, bottom_row, right_col in merged_rects:
+        top_row, left_col, bottom_row, right_col = shrink_to_content_openpyxl(
+            ws,
+            top_row,
+            left_col,
+            bottom_row,
+            right_col,
+            require_inside_border=False,
+            top_edge=top_edge,
+            bottom_edge=bottom_edge,
+            left_edge=left_edge,
+            right_edge=right_edge,
+            min_nonempty_ratio=0.0,
+        )
+        vals_block = _get_values_block(ws, top_row, left_col, bottom_row, right_col)
+        candidates = _collect_table_candidates_from_values(
+            _normalize_matrix(vals_block),
+            base_top=top_row,
+            base_left=left_col,
+            col_name=get_column_letter,
+        )
+        for addr in candidates:
+            if addr not in dedup:
+                dedup.add(addr)
+                tables.append(addr)
+    return tables
+
+
+_DEFAULT_DETECT_TABLES_OPENPYXL = detect_tables_openpyxl
+
+
+def detect_tables(
+    sheet: xw.Sheet,
+    *,
+    mode: ExtractionMode = "standard",
+    openpyxl_session: OpenpyxlExtractionSession | None = None,
+) -> list[str]:
     """Detect table-like ranges with COM and optional openpyxl fallback.
 
     Args:
@@ -1928,6 +2064,14 @@ def detect_tables(sheet: xw.Sheet, *, mode: ExtractionMode = "standard") -> list
             return detect_tables_xlwings(sheet)
 
         try:
+            if (
+                openpyxl_session is not None
+                and openpyxl_session.file_path.resolve() == excel_path.resolve()
+                and detect_tables_openpyxl is _DEFAULT_DETECT_TABLES_OPENPYXL
+            ):
+                return detect_tables_openpyxl_ws(
+                    openpyxl_session.workbook()[sheet.name], mode=mode
+                )
             return detect_tables_openpyxl(excel_path, sheet.name, mode=mode)
         except Exception as e:
             warn_once(

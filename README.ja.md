@@ -60,9 +60,10 @@ pip install exstruct
 オプション依存:
 
 - YAML: `pip install pyyaml`
+- 罫線クラスタリングの高速化: `pip install exstruct[fast]`（SciPy）。未導入時は既存の Python 実装へフォールバックします。NumPy は引き続き必須依存です。
 - TOON: `pip install python-toon`
 - レンダリング（PDF/PNG）: Excel + `pip install pypdfium2 pillow`（`mode=libreoffice` では非対応）
-- まとめて導入: `pip install exstruct[yaml,toon,render]`
+- まとめて導入: `pip install exstruct[yaml,toon,render,fast]`
 
 プラットフォーム注意:
 

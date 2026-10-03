@@ -9,6 +9,21 @@ on:
     branches: [main, master]
 
 jobs:
+  base-install:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install base package without acceleration or development extras
+        run: python -m pip install .
+      - name: Verify installed extraction without pandas or SciPy
+        run: python -m benchmark.issue148_scipy_free --installed
+
   test:
     runs-on: ${{ matrix.os }}
     env:
@@ -26,8 +41,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e .[yaml,mcp]
-          pip install pytest pytest-cov pytest-mock
+          pip install -e .[yaml,mcp,fast]
+          pip install pytest pytest-cov pytest-mock pandas
       - name: Run tests (non-COM suite)
         if: runner.os != 'Windows'
         run: |
