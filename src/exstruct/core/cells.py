@@ -1177,6 +1177,47 @@ def _detect_border_clusters_python(
     return rects
 
 
+def _detect_border_clusters_sparse(
+    has_border: np.ndarray, min_size: int
+) -> list[tuple[int, int, int, int]]:
+    """Evaluate set-based BFS without changing backend selection.
+
+    Seeds follow NumPy's row-major nonzero order, matching the existing BFS
+    and SciPy component order. Only occupied coordinates enter the set;
+    the input grid is still scanned by nonzero. Bounding boxes accumulate
+    incrementally instead of retaining every visited row and column.
+    """
+    rows, columns = np.nonzero(has_border)
+    seeds = list(zip(rows.tolist(), columns.tolist(), strict=True))
+    remaining = set(seeds)
+    rects: list[tuple[int, int, int, int]] = []
+    for seed in seeds:
+        if seed not in remaining:
+            continue
+        remaining.remove(seed)
+        queue = deque([seed])
+        min_row = max_row = seed[0]
+        min_col = max_col = seed[1]
+        size = 0
+        while queue:
+            row, col = queue.popleft()
+            size += 1
+            min_row, max_row = min(min_row, row), max(max_row, row)
+            min_col, max_col = min(min_col, col), max(max_col, col)
+            for neighbor in (
+                (row + 1, col),
+                (row - 1, col),
+                (row, col + 1),
+                (row, col - 1),
+            ):
+                if neighbor in remaining:
+                    remaining.remove(neighbor)
+                    queue.append(neighbor)
+        if size >= min_size:
+            rects.append((min_row, min_col, max_row, max_col))
+    return rects
+
+
 def _resolve_border_cluster_backend() -> Literal["auto", "python", "numpy"]:
     """Resolve the border clustering backend from environment."""
     value = os.getenv(_BORDER_CLUSTER_BACKEND_ENV, "").strip().lower()

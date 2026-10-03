@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "timestamp_utc": "2026-10-03T05:40:38.779016+00:00",
+  "source_revision": "5bcb0e47984104414956c9232bfca75b5076ddec",
+  "source_dirty": true,
+  "python": "3.11.13 (main, Jul 23 2025, 00:29:09) [MSC v.1944 64 bit (AMD64)]",
+  "platform": "Windows-10-10.0.22631-SP0",
+  "dependencies": {
+    "numpy": "2.4.6",
+    "scipy": "1.17.1",
+    "pandas": "3.0.6",
+    "openpyxl": "3.1.5"
+  },
+  "environment": {},
+  "mode": "light",
+  "warm_repeats": 0,
+  "check_only": true,
+  "cases": {
+    "sparse-small": {
+      "shape": [
+        40,
+        20
+      ],
+      "occupied": 44,
+      "grid_bytes": 800,
+      "grid_sha256": "0cd619ad2bd7fdf774c43d425d46517f184fc920f564310d1bdbf54db4b72e19",
+      "fixture_sha256": "bd45bc2a80e9d05e01ce2d92b9ed4d0044334bbb43bc0d4908e16727044ee0c8",
+      "min_size": 4,
+      "cluster": {
+        "scipy": {},
+        "python": {},
+        "candidate_sparse": {}
+      },
+      "light_extraction_serialization": {
+        "scipy": {},
+        "python": {},
+        "candidate_sparse": {}
+      },
+      "components": 2,
+      "output_sha256": "445a94b9270a585d90837a5300c1b69b991dd2dfacc39c4372ca602b3c0dfc64",
+      "output_bytes": 949,
+      "bbox_order_equal": true,
+      "serialized_output_equal": true
+    },
+    "sparse-large": {
+      "shape": [
+        2000,
+        200
+      ],
+      "occupied": 74,
+      "grid_bytes": 400000,
+      "grid_sha256": "89f650b3baefdf79bcd1f302e11b3c220e3bf418b721e25524e2abb2a4efb41f",
+      "fixture_sha256": "2a0c9f8b89ec25861017a8b6b81fb65f401972b9fa92a523b2b015325a02098e",
+      "min_size": 4,
+      "cluster": {
+        "scipy": {},
+        "python": {},
+        "candidate_sparse": {}
+      },
+      "light_extraction_serialization": {
+        "scipy": {},
+        "python": {},
+        "candidate_sparse": {}
+      },
+      "components": 2,
+      "output_sha256": "395c4470fa9b7fc1d1b718da9bed660289418ffbeafe03410cdf3424bb7b3957",
+      "output_bytes": 1649,
+      "bbox_order_equal": true,
+      "serialized_output_equal": true
+    },
+    "dense-style-heavy": {
+      "shape": [
+        300,
+        80
+      ],
+      "occupied": 24000,
+      "grid_bytes": 24000,
+      "grid_sha256": "9bf7697f1260d5f1781eb4878282d81007950425b289f00ffbea23d2b83c0ee8",
+      "fixture_sha256": "c6980bfa1f606bc3caad0c8c0e1204f57382e903fcacf479595c747c29b25072",
+      "min_size": 4,
+      "cluster": {
+        "scipy": {},
+        "python": {},
+        "candidate_sparse": {}
+      },
+      "light_extraction_serialization": {
+        "scipy": {},
+        "python": {},
+        "candidate_sparse": {}
+      },
+      "components": 1,
+      "output_sha256": "4027f972fe8832c95d84355c866b8235401a4453286019fa04a7a4880fdac503",
+      "output_bytes": 398897,
+      "bbox_order_equal": true,
+      "serialized_output_equal": true
+    },
+    "many-disconnected": {
+      "shape": [
+        300,
+        100
+      ],
+      "occupied": 4000,
+      "grid_bytes": 30000,
+      "grid_sha256": "4daa7f0eafcaa14efcdd9b8b9465d5011bbdc0925e5c6da6cf69d36087d5100f",
+      "fixture_sha256": "a73151afb9ae566ec8908d46473693a1edf6b0449a445072df21b2a021a6bac3",
+      "min_size": 4,
+      "cluster": {
+        "scipy": {},
+        "python": {},
+        "candidate_sparse": {}
+      },
+      "light_extraction_serialization": {
+        "scipy": {},
+        "python": {},
+        "candidate_sparse": {}
+      },
+      "components": 1000,
+      "output_sha256": "ea1cff42a0a4b84b8166f36bd8e88c3db4fd0329431f56c5c32820da916e7a1a",
+      "output_bytes": 81361,
+      "bbox_order_equal": true,
+      "serialized_output_equal": true
+    }
+  }
+}
