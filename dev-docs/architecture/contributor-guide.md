@@ -146,6 +146,35 @@ Only Modeling should integrate results from multiple backends into a single **se
 
 ---
 
+## LibreOffice Session Contract
+
+`LibreOfficeRichBackend` accepts a `session_factory` that returns a
+context-managed rich-extraction session (default: `LibreOfficeSession.from_env`).
+Custom integrations may supply either of two structural session contracts, and
+the backend must keep supporting both:
+
+- **Legacy path-only sessions**: expose `extract_chart_geometries(file_path)`
+  and `extract_draw_page_shapes(file_path)`, each taking a workbook path.
+- **Lifecycle-aware sessions**: additionally expose `load_workbook(file_path)`
+  and `close_workbook(workbook)`; their extraction methods accept a path or a
+  typed `LibreOfficeWorkbookHandle`.
+
+Lifecycle support is detected structurally via `load_workbook` /
+`close_workbook`. The path-only path is a supported extension contract for
+custom `session_factory` integrations and must not be removed as dead code.
+
+For lifecycle-aware sessions, `LibreOfficeSession.load_workbook()` returns a
+frozen typed handle bound to the resolved workbook path and its owning session,
+and `close_workbook()` validates that the handle belongs to the session,
+rejects rehydrated handles whose `file_path` no longer matches the registered
+workbook id, stays idempotent across repeated close calls, and clears
+session-local bridge cache entries for that workbook.
+
+These session contracts do not change the public CLI, MCP, extraction-mode,
+fallback, or serialization contracts.
+
+---
+
 ## Fallback Rules
 
 - COM or LibreOffice runtime being unavailable is **the normal case**

@@ -145,4 +145,4 @@ Before generating or modifying code, perform the following steps according to th
 - Only sections confirmed to contain no permanent information may be summarized, deleted, or archived.
 - If ADR creation, spec creation, index synchronization, or design review is involved, and a corresponding skill exists, run it first and use its verdict and findings to decide the permanent document destination and what to reflect there.
 - Choose the destination according to the role split defined in `dev-docs/README.md`.
-- Prefer `dev-docs/adr/` for "why", `dev-docs/specs/` for "what is guaranteed", and `dev-docs/architecture/` for "how the structure w
+- Prefer `dev-docs/adr/` for "why", `dev-docs/specs/` for "what is guaranteed", and `dev-docs/architecture/` for "how the structure works".
