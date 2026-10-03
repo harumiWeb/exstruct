@@ -18,6 +18,10 @@ All notable changes to this project are documented in this file. This changelog 
 
 ### Added
 
+- Added an internal streaming OOXML core extraction session for cells, shared
+  strings, formulas, hyperlinks, merged cells, defined names, print areas and
+  explicit tables, with shared ZIP access for optional shapes and charts.
+
 - Added regression coverage for previous-reader parity, workbook resource
   lifetime and loader counts, subprocess import boundaries, and clustering
   equivalence with SciPy-free execution.
@@ -25,6 +29,10 @@ All notable changes to this project are documented in this file. This changelog 
   clustering, with exact output equivalence and recorded Windows timings.
 
 ### Fixed
+
+- Preserved accepted plain/rich string segment order and retained drawings when
+  an OOXML session resolves a non-default workbook part; avoided repeated full
+  merge/link scans when constructing sparse cell rows.
 
 - Preserved live pipeline backend overrides through lazy backend resolution.
 - Avoided materializing blank cells when reading a shared sparse worksheet.

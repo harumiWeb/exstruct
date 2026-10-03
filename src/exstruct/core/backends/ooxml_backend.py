@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 from zipfile import BadZipFile
 
 from defusedxml import ElementTree
@@ -13,6 +14,9 @@ from ..ooxml_drawing import SheetDrawingData, read_sheet_drawings
 from .base import ChartData, RichBackend, ShapeData
 from .ooxml_shapes import _build_shapes_from_ooxml
 
+if TYPE_CHECKING:
+    from ..ooxml_session import OoxmlExtractionSession
+
 logger = logging.getLogger(__name__)
 
 _OOXML_SUFFIXES = {".xlsx", ".xlsm"}
@@ -21,10 +25,15 @@ _OOXML_SUFFIXES = {".xlsx", ".xlsm"}
 class OoxmlRichBackend(RichBackend):
     """Best-effort rich extraction backed only by OOXML workbook parts."""
 
-    def __init__(self, file_path: Path) -> None:
+    def __init__(
+        self, file_path: Path, *, session: OoxmlExtractionSession | None = None
+    ) -> None:
         """Store the workbook path for lazy OOXML parsing."""
 
         self.file_path = file_path
+        if session is not None and session.file_path.resolve() != file_path.resolve():
+            raise ValueError("OOXML session belongs to a different workbook")
+        self.session = session
         self._drawings: dict[str, SheetDrawingData] | None = None
 
     def extract_shapes(self, *, mode: str) -> ShapeData:
@@ -77,7 +86,11 @@ class OoxmlRichBackend(RichBackend):
             self._drawings = {}
             return self._drawings
         try:
-            self._drawings = read_sheet_drawings(self.file_path)
+            self._drawings = (
+                self.session.read_drawings()
+                if self.session is not None
+                else read_sheet_drawings(self.file_path)
+            )
         except (
             BadZipFile,
             ElementTree.ParseError,

@@ -4,13 +4,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import logging
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Literal
 from zipfile import BadZipFile, ZipFile
 
 from defusedxml import ElementTree
 
 from ..models import ChartSeries
+from . import ooxml_package
+from .ooxml_package import OoxmlRelationship, relationship_part_path
 
 _NS = {
     "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
@@ -80,14 +82,6 @@ class DrawingConnectorRef:
     drawing_id: int
     start_drawing_id: int | None
     end_drawing_id: int | None
-
-
-@dataclass(frozen=True)
-class OoxmlRelationship:
-    """Relationship metadata extracted from an OOXML ``.rels`` part."""
-
-    target: str
-    relationship_type: str
 
 
 @dataclass(frozen=True)
@@ -185,41 +179,70 @@ class SheetDrawingMetrics:
 
 def read_sheet_drawings(file_path: Path) -> dict[str, SheetDrawingData]:
     """Read worksheet drawing metadata directly from OOXML parts."""
-    result: dict[str, SheetDrawingData] = {}
     with ZipFile(file_path) as archive:
-        for sheet_name, sheet_xml_path in _iter_sheet_xml_paths(archive):
-            try:
-                drawing_path = _resolve_sheet_drawing_path(archive, sheet_xml_path)
-                if drawing_path is None:
-                    continue
-                result[sheet_name] = _parse_sheet_drawing(
-                    archive,
-                    drawing_path,
-                    _read_sheet_metrics(archive, sheet_xml_path),
-                )
-            except (
-                BadZipFile,
-                ElementTree.ParseError,
-                FileNotFoundError,
-                KeyError,
-                OSError,
-                ValueError,
-            ) as exc:
-                logger.warning(
-                    "Skipping OOXML drawing metadata for sheet %s in %s. (%r)",
-                    sheet_name,
-                    file_path,
-                    exc,
-                )
+        return _read_sheet_drawings_from_archive(archive, file_path)
+
+
+def read_sheet_drawings_from_archive(
+    archive: ZipFile,
+    *,
+    workbook_path: str = "xl/workbook.xml",
+) -> dict[str, SheetDrawingData]:
+    """Read worksheet drawing metadata from an already-open OOXML archive."""
+
+    source = getattr(archive, "filename", None) or "<open archive>"
+    return _read_sheet_drawings_from_archive(
+        archive,
+        source,
+        workbook_path=workbook_path,
+    )
+
+
+def _read_sheet_drawings_from_archive(
+    archive: ZipFile,
+    source: object,
+    *,
+    workbook_path: str = "xl/workbook.xml",
+) -> dict[str, SheetDrawingData]:
+    """Read drawing metadata while preserving per-sheet parse fallbacks."""
+
+    result: dict[str, SheetDrawingData] = {}
+    for sheet_name, sheet_xml_path in _iter_sheet_xml_paths(archive, workbook_path):
+        try:
+            drawing_path = _resolve_sheet_drawing_path(archive, sheet_xml_path)
+            if drawing_path is None:
+                continue
+            result[sheet_name] = _parse_sheet_drawing(
+                archive,
+                drawing_path,
+                _read_sheet_metrics(archive, sheet_xml_path),
+            )
+        except (
+            BadZipFile,
+            ElementTree.ParseError,
+            FileNotFoundError,
+            KeyError,
+            OSError,
+            ValueError,
+        ) as exc:
+            logger.warning(
+                "Skipping OOXML drawing metadata for sheet %s in %s. (%r)",
+                sheet_name,
+                source,
+                exc,
+            )
     return result
 
 
-def _iter_sheet_xml_paths(archive: ZipFile) -> list[tuple[str, str]]:
+def _iter_sheet_xml_paths(
+    archive: ZipFile,
+    workbook_path: str = "xl/workbook.xml",
+) -> list[tuple[str, str]]:
     """Return workbook sheet names paired with their OOXML worksheet paths."""
 
-    workbook_xml = archive.read("xl/workbook.xml")
+    workbook_xml = archive.read(workbook_path)
     workbook_root = ElementTree.fromstring(workbook_xml)
-    rel_map = _read_relationships(archive, "xl/_rels/workbook.xml.rels")
+    rel_map = _read_relationships(archive, relationship_part_path(workbook_path))
     paths: list[tuple[str, str]] = []
     for sheet in workbook_root.findall("spreadsheetml:sheets/spreadsheetml:sheet", _NS):
         name = sheet.attrib.get("name")
@@ -227,7 +250,10 @@ def _iter_sheet_xml_paths(archive: ZipFile) -> list[tuple[str, str]]:
         if not name or not rel_id or rel_id not in rel_map:
             continue
         relationship = rel_map[rel_id]
-        if relationship.relationship_type != _WORKSHEET_REL_TYPE:
+        if (
+            relationship.external
+            or relationship.relationship_type != _WORKSHEET_REL_TYPE
+        ):
             continue
         paths.append((name, relationship.target))
     return paths
@@ -236,12 +262,12 @@ def _iter_sheet_xml_paths(archive: ZipFile) -> list[tuple[str, str]]:
 def _resolve_sheet_drawing_path(archive: ZipFile, sheet_xml_path: str) -> str | None:
     """Resolve the drawing part referenced by a worksheet, if any."""
 
-    rels_path = _rels_path(sheet_xml_path)
+    rels_path = relationship_part_path(sheet_xml_path)
     if rels_path not in archive.namelist():
         return None
     rel_map = _read_relationships(archive, rels_path)
     for relationship in rel_map.values():
-        if relationship.relationship_type != _DRAWING_REL_TYPE:
+        if relationship.external or relationship.relationship_type != _DRAWING_REL_TYPE:
             continue
         return relationship.target
     return None
@@ -256,7 +282,7 @@ def _parse_sheet_drawing(
 
     root = ElementTree.fromstring(archive.read(drawing_path))
     rel_map = {}
-    drawing_rels_path = _rels_path(drawing_path)
+    drawing_rels_path = relationship_part_path(drawing_path)
     if drawing_rels_path in archive.namelist():
         rel_map = _read_relationships(archive, drawing_rels_path)
 
@@ -420,7 +446,11 @@ def _parse_chart_node(
     if rel_id is None:
         return None
     relationship = rel_map.get(rel_id.attrib.get(f"{{{_NS['r']}}}id", ""))
-    if relationship is None or relationship.relationship_type != _CHART_REL_TYPE:
+    if (
+        relationship is None
+        or relationship.external
+        or relationship.relationship_type != _CHART_REL_TYPE
+    ):
         return None
     target = relationship.target
     if target not in archive.namelist():
@@ -863,62 +893,36 @@ def _column_width_to_points(width: float) -> float:
 def _read_relationships(
     archive: ZipFile, rels_path: str
 ) -> dict[str, OoxmlRelationship]:
-    """Read a relationships part into a relationship-id keyed metadata map."""
+    """Compatibility wrapper accepting the relationships part path."""
 
-    root = ElementTree.fromstring(archive.read(rels_path))
-    base_path = _base_dir(_source_path_from_rels(rels_path))
-    rel_map: dict[str, OoxmlRelationship] = {}
-    for rel in root.findall("rel:Relationship", _NS):
-        rel_id = rel.attrib.get("Id")
-        target = rel.attrib.get("Target")
-        relationship_type = rel.attrib.get("Type")
-        if not rel_id or not target or not relationship_type:
-            continue
-        rel_map[rel_id] = OoxmlRelationship(
-            target=_normalize_zip_path(base_path, target),
-            relationship_type=relationship_type,
-        )
-    return rel_map
+    return ooxml_package.read_relationships(
+        archive,
+        ooxml_package._source_path_from_rels(rels_path),
+    )
 
 
 def _source_path_from_rels(rels_path: str) -> str:
     """Recover the source part path that owns a relationships part."""
 
-    rels = PurePosixPath(rels_path)
-    if rels.parent.name != "_rels":
-        return rels_path
-    stem = rels.name.removesuffix(".rels")
-    return str(rels.parent.parent / stem)
+    return ooxml_package._source_path_from_rels(rels_path)
 
 
 def _rels_path(source_path: str) -> str:
     """Return the relationships part path for a source part."""
 
-    path = PurePosixPath(source_path)
-    return str(path.parent / "_rels" / f"{path.name}.rels")
+    return relationship_part_path(source_path)
 
 
 def _base_dir(path: str) -> str:
     """Return the POSIX parent directory for a zip path."""
 
-    return str(PurePosixPath(path).parent)
+    return ooxml_package._base_dir(path)
 
 
 def _normalize_zip_path(base_dir: str, target: str) -> str:
     """Normalize a relative OOXML zip target against a base directory."""
 
-    base = PurePosixPath(base_dir)
-    normalized = base.joinpath(PurePosixPath(target)).as_posix()
-    parts: list[str] = []
-    for part in normalized.split("/"):
-        if part in {"", "."}:
-            continue
-        if part == "..":
-            if parts:
-                parts.pop()
-            continue
-        parts.append(part)
-    return "/".join(parts)
+    return ooxml_package.normalize_part_path(base_dir, target)
 
 
 def _extract_text(node: ElementTree.Element | None) -> str:

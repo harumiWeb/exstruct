@@ -30,6 +30,14 @@ This document summarizes the current specification for Excel extraction processi
   Existing helper overrides remain observable and may intentionally replace
   the optimized session path.
 
+## Internal OOXML core alternative
+
+Issue #149 adds a streaming `OoxmlExtractionSession` for core worksheet data
+and optional rich extraction through one ZIP. It is available for parity and
+future migration work; the pipeline above continues to use openpyxl.
+See [Core OOXML extraction session](ooxml-core-extraction.md) for supported
+values, formulas, relationships, tables, lifecycle and limitations.
+
 ## Coordinate System
 
 - Rows are 1-based

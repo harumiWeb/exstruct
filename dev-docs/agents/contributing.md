@@ -10,7 +10,7 @@ This file contains **special guidelines** for AI coding agents such as ChatGPT, 
 4. The `models` layer must remain completely side-effect-free.
 5. Do not mix I/O processing with core logic.
 6. Keep exception handling fail-safe.
-7. Update the roadmap whenever you add a new feature.
+7. Update the [developer roadmap](../roadmap.md) whenever you add a new feature.
 
 ## Reference priority
 
