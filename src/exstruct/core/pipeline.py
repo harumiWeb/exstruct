@@ -1443,23 +1443,25 @@ def build_cells_tables_workbook(
     return build_workbook_data(raw)
 
 
-_OOXML_LEGACY_SURFACES = {
-    name: globals()[name]
-    for name in (
-        "OpenpyxlExtractionSession",
-        "OpenpyxlBackend",
-        "OoxmlRichBackend",
-        "build_pre_com_pipeline",
-        "build_pipeline_plan",
-        "run_pipeline",
-        "resolve_rich_backend",
-        "step_extract_cells",
-        "step_extract_print_areas_openpyxl",
-        "step_extract_formulas_map_openpyxl",
-        "step_extract_colors_map_openpyxl",
-        "step_extract_merged_cells_openpyxl",
-    )
-}
+def _ooxml_legacy_surfaces() -> dict[str, object]:
+    """Read the fixed compatibility surfaces while preserving runtime overrides."""
+    return {
+        "OpenpyxlExtractionSession": OpenpyxlExtractionSession,
+        "OpenpyxlBackend": OpenpyxlBackend,
+        "OoxmlRichBackend": OoxmlRichBackend,
+        "build_pre_com_pipeline": build_pre_com_pipeline,
+        "build_pipeline_plan": build_pipeline_plan,
+        "run_pipeline": run_pipeline,
+        "resolve_rich_backend": resolve_rich_backend,
+        "step_extract_cells": step_extract_cells,
+        "step_extract_print_areas_openpyxl": step_extract_print_areas_openpyxl,
+        "step_extract_formulas_map_openpyxl": step_extract_formulas_map_openpyxl,
+        "step_extract_colors_map_openpyxl": step_extract_colors_map_openpyxl,
+        "step_extract_merged_cells_openpyxl": step_extract_merged_cells_openpyxl,
+    }
+
+
+_OOXML_LEGACY_SURFACES = _ooxml_legacy_surfaces()
 _OPENPYXL_BACKEND_METHODS = {
     name: getattr(OpenpyxlBackend, name)
     for name in (
@@ -1490,8 +1492,9 @@ def _ooxml_compatibility_reason(inputs: ExtractionInputs) -> str | None:
         for module, name, default in _LEGACY_WORKBOOK_CALLS
     ):
         return "legacy workbook override requires the compatibility backend"
+    current_surfaces = _ooxml_legacy_surfaces()
     if any(
-        globals()[name] is not default
+        current_surfaces[name] is not default
         for name, default in _OOXML_LEGACY_SURFACES.items()
     ):
         return "legacy pipeline override requires the compatibility backend"

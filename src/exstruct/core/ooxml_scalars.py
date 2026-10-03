@@ -190,11 +190,11 @@ def from_iso8601(value: str) -> datetime | date | time | duration:
         second = int(parts["second"]) if parts["second"] else 0
         fraction = parts["microsecond"]
         microsecond = int(float(fraction) * 1_000_000) if fraction else 0
-        if parts["date"] and parts["time"]:
-            assert year is not None and month is not None and day is not None
-            return datetime(year, month, day, hour, minute, second, microsecond)
         if parts["date"]:
-            assert year is not None and month is not None and day is not None
+            if year is None or month is None or day is None:
+                raise ValueError("Invalid ISO date components")
+            if parts["time"]:
+                return datetime(year, month, day, hour, minute, second, microsecond)
             return date(year, month, day)
         return time(hour, minute, second, microsecond)
     duration_match = _ISO_DURATION_RE.fullmatch(value)

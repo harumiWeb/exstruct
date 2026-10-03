@@ -343,14 +343,16 @@ class _OoxmlWorksheetView:
     def max_row(self) -> int:
         """Return the bottom row of the represented worksheet extent."""
         _, _, _, max_row = range_boundaries(self._dimension)
-        assert max_row is not None
+        if max_row is None:
+            raise ValueError("Worksheet dimension must have finite rows")
         return max_row
 
     @property
     def max_column(self) -> int:
         """Return the right column of the represented worksheet extent."""
         _, _, max_column, _ = range_boundaries(self._dimension)
-        assert max_column is not None
+        if max_column is None:
+            raise ValueError("Worksheet dimension must have finite columns")
         return max_column
 
     def calculate_dimension(self) -> str:
