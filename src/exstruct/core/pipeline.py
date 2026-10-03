@@ -9,9 +9,7 @@ import logging
 import os
 from pathlib import Path
 import time
-from typing import Literal
-
-import xlwings as xw
+from typing import TYPE_CHECKING, Any, Literal
 
 from ..errors import FallbackReason
 from ..models import (
@@ -23,9 +21,8 @@ from ..models import (
     SmartArt,
     WorkbookData,
 )
+from ._lazy import LazyModule
 from .backends.base import RichBackend
-from .backends.com_backend import ComBackend, ComRichBackend
-from .backends.libreoffice_backend import LibreOfficeRichBackend
 from .backends.ooxml_backend import OoxmlRichBackend
 from .backends.openpyxl_backend import OpenpyxlBackend
 from .cells import (
@@ -35,13 +32,48 @@ from .cells import (
     detect_tables,
     warn_once,
 )
-from .charts import get_charts
 from .libreoffice import LibreOfficeUnavailableError
 from .logging_utils import log_fallback
 from .modeling import SheetRawData, WorkbookRawData, build_workbook_data
 from .openpyxl_session import OpenpyxlExtractionSession
-from .shapes import get_shapes_with_position
 from .workbook import xlwings_workbook
+
+if TYPE_CHECKING:
+    import xlwings as xw
+
+    from .backends.com_backend import (
+        ComBackend as ComBackend,
+        ComRichBackend as ComRichBackend,
+    )
+    from .backends.libreoffice_backend import (
+        LibreOfficeRichBackend as LibreOfficeRichBackend,
+    )
+else:
+    xw = LazyModule("xlwings")
+
+
+def __getattr__(name: str) -> Any:  # noqa: ANN401 - heterogeneous compatibility exports
+    """Resolve backend compatibility exports only when explicitly requested."""
+    from . import backends
+
+    if name in {"ComBackend", "ComRichBackend", "LibreOfficeRichBackend"}:
+        return getattr(backends, name)
+    raise AttributeError(name)
+
+
+def get_shapes_with_position(workbook: xw.Book, mode: str = "standard") -> ShapeData:
+    """Forward to the live COM shape implementation, preserving overrides."""
+    from . import shapes
+
+    return shapes.get_shapes_with_position(workbook, mode=mode)
+
+
+def get_charts(sheet: xw.Sheet, mode: ExtractionMode = "standard") -> list[Chart]:
+    """Forward to the live COM chart implementation, preserving overrides."""
+    from . import charts
+
+    return charts.get_charts(sheet, mode=mode)
+
 
 ExtractionMode = Literal["light", "libreoffice", "standard", "verbose"]
 CellData = dict[str, list[CellRow]]
@@ -115,7 +147,7 @@ class ExtractionArtifacts:
 
 
 ExtractionStep = Callable[[ExtractionInputs, ExtractionArtifacts], None]
-ComExtractionStep = Callable[[ExtractionInputs, ExtractionArtifacts, xw.Book], None]
+ComExtractionStep = Callable[[ExtractionInputs, ExtractionArtifacts, "xw.Book"], None]
 
 
 @dataclass(frozen=True)
@@ -690,6 +722,9 @@ def step_extract_print_areas_com(
         artifacts: Artifact container to update.
         workbook: xlwings workbook instance.
     """
+
+    from .backends.com_backend import ComBackend
+
     if artifacts.print_area_data:
         return
     artifacts.print_area_data = ComBackend(workbook).extract_print_areas()
@@ -706,6 +741,9 @@ def step_extract_auto_page_breaks_com(
         artifacts (ExtractionArtifacts): Mutable artifact container; updated with extracted data.
         workbook (xw.Book): xlwings COM workbook used to read auto page break settings.
     """
+
+    from .backends.com_backend import ComBackend
+
     artifacts.auto_page_break_data = ComBackend(workbook).extract_auto_page_breaks()
 
 
@@ -721,6 +759,9 @@ def step_extract_formulas_map_com(
     Parameters:
         workbook (xlwings.Book): COM workbook to extract formulas from.
     """
+
+    from .backends.com_backend import ComBackend
+
     try:
         artifacts.formulas_map_data = ComBackend(workbook).extract_formulas_map()
     except Exception as exc:
@@ -740,6 +781,9 @@ def step_extract_colors_map_com(
         artifacts: Artifact container to update.
         workbook: xlwings workbook instance.
     """
+
+    from .backends.com_backend import ComBackend
+
     com_result = ComBackend(workbook).extract_colors_map(
         include_default_background=inputs.include_default_background,
         ignore_colors=inputs.ignore_colors,
@@ -980,12 +1024,17 @@ def resolve_rich_backend(
     workbook: xw.Book | None = None,
 ) -> RichBackend:
     """Resolve the rich extraction backend for the requested mode."""
+
     if inputs.mode == "light":
         return OoxmlRichBackend(inputs.file_path)
     if inputs.mode == "libreoffice":
+        from .backends.libreoffice_backend import LibreOfficeRichBackend
+
         return LibreOfficeRichBackend(inputs.file_path)
     if workbook is None:
         raise ValueError("COM workbook is required for COM-backed rich extraction.")
+    from .backends.com_backend import ComRichBackend
+
     return ComRichBackend(workbook)
 
 

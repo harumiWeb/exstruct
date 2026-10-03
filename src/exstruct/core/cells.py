@@ -12,18 +12,30 @@ import math
 import os
 from pathlib import Path
 import re
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 from openpyxl.styles.colors import Color
 from openpyxl.utils import get_column_letter, range_boundaries
 from openpyxl.worksheet._read_only import ReadOnlyWorksheet
 from openpyxl.worksheet.worksheet import Worksheet
-import xlwings as xw
 
 from ..models import CellRow
+from ._lazy import LazyModule
+from .cell_types import (
+    MergedCellRange as MergedCellRange,
+    SheetColorsMap as SheetColorsMap,
+    SheetFormulasMap as SheetFormulasMap,
+    WorkbookColorsMap as WorkbookColorsMap,
+    WorkbookFormulasMap as WorkbookFormulasMap,
+)
 from .openpyxl_session import OpenpyxlExtractionSession
 from .workbook import openpyxl_workbook
+
+if TYPE_CHECKING:
+    import xlwings as xw
+else:
+    xw = LazyModule("xlwings")
 
 logger = logging.getLogger(__name__)
 _warned_keys: set[str] = set()
@@ -48,72 +60,6 @@ _XL_COLOR_NONE = -4142
 _BORDER_CLUSTER_BACKEND_ENV = "EXSTRUCT_BORDER_CLUSTER_BACKEND"
 
 ExtractionMode = Literal["light", "libreoffice", "standard", "verbose"]
-
-
-# Use dataclasses for lightweight models
-@dataclass(frozen=True)
-class SheetColorsMap:
-    """Background color map for a single worksheet."""
-
-    sheet_name: str
-    colors_map: dict[str, list[tuple[int, int]]]
-
-
-@dataclass(frozen=True)
-class WorkbookColorsMap:
-    """Background color maps for all worksheets in a workbook."""
-
-    sheets: dict[str, SheetColorsMap]
-
-    def get_sheet(self, sheet_name: str) -> SheetColorsMap | None:
-        """
-        Retrieve the SheetColorsMap for a worksheet by name.
-
-        Parameters:
-            sheet_name (str): Name of the worksheet to retrieve.
-
-        Returns:
-            SheetColorsMap | None: The sheet's color map if present, `None` otherwise.
-        """
-        return self.sheets.get(sheet_name)
-
-
-@dataclass(frozen=True)
-class SheetFormulasMap:
-    """Formula map for a single worksheet."""
-
-    sheet_name: str
-    formulas_map: dict[str, list[tuple[int, int]]]
-
-
-@dataclass(frozen=True)
-class WorkbookFormulasMap:
-    """Formula maps for all worksheets in a workbook."""
-
-    sheets: dict[str, SheetFormulasMap]
-
-    def get_sheet(self, sheet_name: str) -> SheetFormulasMap | None:
-        """
-        Retrieve the formulas map for a worksheet.
-
-        Parameters:
-            sheet_name (str): Name of the worksheet to look up.
-
-        Returns:
-            SheetFormulasMap | None: The sheet's formulas map if present, `None` if the worksheet is not found.
-        """
-        return self.sheets.get(sheet_name)
-
-
-@dataclass(frozen=True)
-class MergedCellRange:
-    """Merged cell range with normalized value."""
-
-    r1: int
-    c1: int
-    r2: int
-    c2: int
-    v: str
 
 
 @dataclass(frozen=True)
