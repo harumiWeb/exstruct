@@ -1,0 +1,562 @@
+{
+  "schema_version": 1,
+  "reason": "Initial standard-mode small/sparse observations regressed while initial integrated pass improved. Repeat both sources in one serial slot; retain both datasets rather than replacing unfavorable observations.",
+  "results": [
+    {
+      "comparison": "before",
+      "schema_version": 1,
+      "recorded_at": "2026-10-03T06:09:44.740726+00:00",
+      "source": {
+        "revision": "5bcb0e47984104414956c9232bfca75b5076ddec",
+        "dirty": false
+      },
+      "environment": {
+        "python": "3.11.13 (main, Jul 23 2025, 00:29:09) [MSC v.1944 64 bit (AMD64)]",
+        "executable": "<local-python>",
+        "platform": "Windows-10-10.0.22631-SP0",
+        "dependencies": {
+          "exstruct": "0.8.2",
+          "openpyxl": "3.1.5",
+          "pandas": "3.0.6",
+          "numpy": "2.4.6",
+          "scipy": "1.17.1",
+          "xlwings": "0.37.4",
+          "pydantic": "2.13.5"
+        },
+        "SKIP_COM_TESTS": null,
+        "EXSTRUCT_BORDER_CLUSTER_BACKEND": null
+      },
+      "input": {
+        "name": "small.xlsx",
+        "sha256": "e936689027ed6ba151c99ae74fe8d61d0f4e9cf802954008e18c622d2d8f6cee",
+        "size_bytes": 7221
+      },
+      "mode": "standard",
+      "startup": {
+        "python_process_ms": 47.087799990549684,
+        "package_import_process_ms": 96.15039988420904,
+        "cli_help_process_ms": 100.53570009768009,
+        "cold_extraction_process_ms": 4645.027499878779,
+        "cold_extraction_in_process_ms": 3763.1107000634074,
+        "measurement_worker_process_ms": 16940.328900003806
+      },
+      "import_ms": 6.2193002086132765,
+      "modules_after_import": [],
+      "modules_after_extraction": [
+        "pandas",
+        "numpy",
+        "scipy",
+        "xlwings",
+        "openpyxl",
+        "PIL"
+      ],
+      "first": {
+        "extract_ms": 3152.787300059572,
+        "serialize_ms": 2.8085000813007355,
+        "total_ms": 3155.5958001408726
+      },
+      "repeated": [
+        {
+          "extract_ms": 1884.360000025481,
+          "serialize_ms": 0.6321999244391918,
+          "total_ms": 1884.9921999499202
+        },
+        {
+          "extract_ms": 1803.438700037077,
+          "serialize_ms": 0.6315000355243683,
+          "total_ms": 1804.0702000726014
+        },
+        {
+          "extract_ms": 1825.2989000175148,
+          "serialize_ms": 0.5033998750150204,
+          "total_ms": 1825.8022998925298
+        },
+        {
+          "extract_ms": 2120.2287001069635,
+          "serialize_ms": 0.694700051099062,
+          "total_ms": 2120.9234001580626
+        },
+        {
+          "extract_ms": 2449.3233000393957,
+          "serialize_ms": 0.5830000154674053,
+          "total_ms": 2449.906300054863
+        }
+      ],
+      "repeated_median": {
+        "extract_ms": 1884.360000025481,
+        "serialize_ms": 0.6315000355243683,
+        "total_ms": 1884.9921999499202
+      },
+      "peak_rss_bytes": 128589824,
+      "output_bytes": 2422,
+      "profile": {
+        "all_features": false,
+        "extract_ms": 2690.2729000430554,
+        "serialize_ms": 0.6183998193591833,
+        "total_ms": 2690.8912998624146,
+        "stages": {
+          "cell_extraction": {
+            "ms": 7.631100015714765,
+            "calls": 1
+          },
+          "print_area_extraction": {
+            "ms": 5.247800145298243,
+            "calls": 2
+          },
+          "formula_extraction": {
+            "ms": 0.0,
+            "calls": 0
+          },
+          "color_extraction": {
+            "ms": 0.0,
+            "calls": 0
+          },
+          "merged_cell_extraction": {
+            "ms": 4.968900000676513,
+            "calls": 1
+          },
+          "table_detection": {
+            "ms": 13.281800085678697,
+            "calls": 1
+          },
+          "rich_extraction": {
+            "ms": 52.36550001427531,
+            "calls": 2
+          },
+          "model_construction": {
+            "ms": 0.06909994408488274,
+            "calls": 1
+          },
+          "workbook_parsing": {
+            "ms": 23.94119999371469,
+            "calls": 5
+          }
+        },
+        "openpyxl_workbook_opens": 5,
+        "archive_opens": 6,
+        "pipeline_state": {
+          "com_attempted": true,
+          "com_succeeded": true,
+          "fallback_reason": null
+        }
+      }
+    },
+    {
+      "comparison": "after",
+      "schema_version": 1,
+      "recorded_at": "2026-10-03T06:10:04.423894+00:00",
+      "source": {
+        "revision": "10f53cf13e30fcec88b33f3dbc4f2c41118690a5",
+        "dirty": true
+      },
+      "environment": {
+        "python": "3.11.13 (main, Jul 23 2025, 00:29:09) [MSC v.1944 64 bit (AMD64)]",
+        "executable": "<local-python>",
+        "platform": "Windows-10-10.0.22631-SP0",
+        "dependencies": {
+          "exstruct": "0.8.2",
+          "openpyxl": "3.1.5",
+          "pandas": "3.0.6",
+          "numpy": "2.4.6",
+          "scipy": "1.17.1",
+          "xlwings": "0.37.4",
+          "pydantic": "2.13.5"
+        },
+        "SKIP_COM_TESTS": null,
+        "EXSTRUCT_BORDER_CLUSTER_BACKEND": null
+      },
+      "input": {
+        "name": "small.xlsx",
+        "sha256": "e936689027ed6ba151c99ae74fe8d61d0f4e9cf802954008e18c622d2d8f6cee",
+        "size_bytes": 7221
+      },
+      "mode": "standard",
+      "startup": {
+        "python_process_ms": 44.50630000792444,
+        "package_import_process_ms": 92.57240011356771,
+        "cli_help_process_ms": 126.30530004389584,
+        "cold_extraction_process_ms": 3802.241099998355,
+        "cold_extraction_in_process_ms": 2978.772500064224,
+        "measurement_worker_process_ms": 15323.599900119007
+      },
+      "import_ms": 6.799299968406558,
+      "modules_after_import": [],
+      "modules_after_extraction": [
+        "pandas",
+        "numpy",
+        "scipy",
+        "xlwings",
+        "openpyxl",
+        "PIL"
+      ],
+      "first": {
+        "extract_ms": 3184.673500014469,
+        "serialize_ms": 2.872099867090583,
+        "total_ms": 3187.5455998815596
+      },
+      "repeated": [
+        {
+          "extract_ms": 2060.647599864751,
+          "serialize_ms": 0.45359996147453785,
+          "total_ms": 2061.1011998262256
+        },
+        {
+          "extract_ms": 1778.2715000212193,
+          "serialize_ms": 0.6323999259620905,
+          "total_ms": 1778.9038999471813
+        },
+        {
+          "extract_ms": 1893.8827000092715,
+          "serialize_ms": 0.6173998117446899,
+          "total_ms": 1894.5000998210162
+        },
+        {
+          "extract_ms": 1850.7412001490593,
+          "serialize_ms": 0.5727000534534454,
+          "total_ms": 1851.3139002025127
+        },
+        {
+          "extract_ms": 1928.5403001122177,
+          "serialize_ms": 0.4547999706119299,
+          "total_ms": 1928.9951000828296
+        }
+      ],
+      "repeated_median": {
+        "extract_ms": 1893.8827000092715,
+        "serialize_ms": 0.5727000534534454,
+        "total_ms": 1894.5000998210162
+      },
+      "peak_rss_bytes": 126844928,
+      "output_bytes": 2422,
+      "profile": {
+        "all_features": false,
+        "extract_ms": 1787.805600091815,
+        "serialize_ms": 0.6766000296920538,
+        "total_ms": 1788.482200121507,
+        "stages": {
+          "cell_extraction": {
+            "ms": 4.365700064226985,
+            "calls": 1
+          },
+          "print_area_extraction": {
+            "ms": 0.04910002462565899,
+            "calls": 2
+          },
+          "formula_extraction": {
+            "ms": 0.0,
+            "calls": 0
+          },
+          "color_extraction": {
+            "ms": 0.0,
+            "calls": 0
+          },
+          "merged_cell_extraction": {
+            "ms": 0.012400094419717789,
+            "calls": 1
+          },
+          "table_detection": {
+            "ms": 2.662800019606948,
+            "calls": 1
+          },
+          "rich_extraction": {
+            "ms": 39.007899817079306,
+            "calls": 2
+          },
+          "model_construction": {
+            "ms": 0.07039983756840229,
+            "calls": 1
+          },
+          "workbook_parsing": {
+            "ms": 4.116100026294589,
+            "calls": 1
+          }
+        },
+        "openpyxl_workbook_opens": 1,
+        "archive_opens": 1,
+        "pipeline_state": {
+          "com_attempted": true,
+          "com_succeeded": true,
+          "fallback_reason": null
+        }
+      }
+    },
+    {
+      "comparison": "before",
+      "schema_version": 1,
+      "recorded_at": "2026-10-03T06:10:25.576246+00:00",
+      "source": {
+        "revision": "5bcb0e47984104414956c9232bfca75b5076ddec",
+        "dirty": false
+      },
+      "environment": {
+        "python": "3.11.13 (main, Jul 23 2025, 00:29:09) [MSC v.1944 64 bit (AMD64)]",
+        "executable": "<local-python>",
+        "platform": "Windows-10-10.0.22631-SP0",
+        "dependencies": {
+          "exstruct": "0.8.2",
+          "openpyxl": "3.1.5",
+          "pandas": "3.0.6",
+          "numpy": "2.4.6",
+          "scipy": "1.17.1",
+          "xlwings": "0.37.4",
+          "pydantic": "2.13.5"
+        },
+        "SKIP_COM_TESTS": null,
+        "EXSTRUCT_BORDER_CLUSTER_BACKEND": null
+      },
+      "input": {
+        "name": "sparse.xlsx",
+        "sha256": "39e56eda8a409f5a66df2b76b4c319e8582c5bf0440c251971ddf5c7f47c4f8e",
+        "size_bytes": 5417
+      },
+      "mode": "standard",
+      "startup": {
+        "python_process_ms": 36.9329999666661,
+        "package_import_process_ms": 85.47840011306107,
+        "cli_help_process_ms": 102.73239994421601,
+        "cold_extraction_process_ms": 4365.64249987714,
+        "cold_extraction_in_process_ms": 3443.148500053212,
+        "measurement_worker_process_ms": 16278.160999994725
+      },
+      "import_ms": 5.09929982945323,
+      "modules_after_import": [],
+      "modules_after_extraction": [
+        "pandas",
+        "numpy",
+        "scipy",
+        "xlwings",
+        "openpyxl",
+        "PIL"
+      ],
+      "first": {
+        "extract_ms": 2867.8792000282556,
+        "serialize_ms": 3.203399945050478,
+        "total_ms": 2871.082599973306
+      },
+      "repeated": [
+        {
+          "extract_ms": 1796.610799850896,
+          "serialize_ms": 0.3690000157803297,
+          "total_ms": 1796.9797998666763
+        },
+        {
+          "extract_ms": 2120.6265001092106,
+          "serialize_ms": 0.421800184994936,
+          "total_ms": 2121.0483002942055
+        },
+        {
+          "extract_ms": 1962.1656001545489,
+          "serialize_ms": 0.4438001196831465,
+          "total_ms": 1962.609400274232
+        },
+        {
+          "extract_ms": 2140.074700117111,
+          "serialize_ms": 0.32139988616108894,
+          "total_ms": 2140.3961000032723
+        },
+        {
+          "extract_ms": 2182.3250001762062,
+          "serialize_ms": 0.42010005563497543,
+          "total_ms": 2182.745100231841
+        }
+      ],
+      "repeated_median": {
+        "extract_ms": 2120.6265001092106,
+        "serialize_ms": 0.42010005563497543,
+        "total_ms": 2121.0483002942055
+      },
+      "peak_rss_bytes": 139956224,
+      "output_bytes": 1846,
+      "profile": {
+        "all_features": false,
+        "extract_ms": 2305.021299980581,
+        "serialize_ms": 0.32130000181496143,
+        "total_ms": 2305.3425999823958,
+        "stages": {
+          "cell_extraction": {
+            "ms": 22.496999939903617,
+            "calls": 1
+          },
+          "print_area_extraction": {
+            "ms": 4.313600016757846,
+            "calls": 2
+          },
+          "formula_extraction": {
+            "ms": 0.0,
+            "calls": 0
+          },
+          "color_extraction": {
+            "ms": 0.0,
+            "calls": 0
+          },
+          "merged_cell_extraction": {
+            "ms": 3.5459999926388264,
+            "calls": 1
+          },
+          "table_detection": {
+            "ms": 152.60799997486174,
+            "calls": 1
+          },
+          "rich_extraction": {
+            "ms": 25.457600131630898,
+            "calls": 2
+          },
+          "model_construction": {
+            "ms": 0.060499878600239754,
+            "calls": 1
+          },
+          "workbook_parsing": {
+            "ms": 17.94409961439669,
+            "calls": 5
+          }
+        },
+        "openpyxl_workbook_opens": 5,
+        "archive_opens": 6,
+        "pipeline_state": {
+          "com_attempted": true,
+          "com_succeeded": true,
+          "fallback_reason": null
+        }
+      }
+    },
+    {
+      "comparison": "after",
+      "schema_version": 1,
+      "recorded_at": "2026-10-03T06:10:50.026370+00:00",
+      "source": {
+        "revision": "10f53cf13e30fcec88b33f3dbc4f2c41118690a5",
+        "dirty": true
+      },
+      "environment": {
+        "python": "3.11.13 (main, Jul 23 2025, 00:29:09) [MSC v.1944 64 bit (AMD64)]",
+        "executable": "<local-python>",
+        "platform": "Windows-10-10.0.22631-SP0",
+        "dependencies": {
+          "exstruct": "0.8.2",
+          "openpyxl": "3.1.5",
+          "pandas": "3.0.6",
+          "numpy": "2.4.6",
+          "scipy": "1.17.1",
+          "xlwings": "0.37.4",
+          "pydantic": "2.13.5"
+        },
+        "SKIP_COM_TESTS": null,
+        "EXSTRUCT_BORDER_CLUSTER_BACKEND": null
+      },
+      "input": {
+        "name": "sparse.xlsx",
+        "sha256": "39e56eda8a409f5a66df2b76b4c319e8582c5bf0440c251971ddf5c7f47c4f8e",
+        "size_bytes": 5417
+      },
+      "mode": "standard",
+      "startup": {
+        "python_process_ms": 57.15379980392754,
+        "package_import_process_ms": 109.80409989133477,
+        "cli_help_process_ms": 114.56699995324016,
+        "cold_extraction_process_ms": 4116.35209992528,
+        "cold_extraction_in_process_ms": 3244.369300082326,
+        "measurement_worker_process_ms": 19748.15639993176
+      },
+      "import_ms": 7.442299975082278,
+      "modules_after_import": [],
+      "modules_after_extraction": [
+        "pandas",
+        "numpy",
+        "scipy",
+        "xlwings",
+        "openpyxl",
+        "PIL"
+      ],
+      "first": {
+        "extract_ms": 3575.400800211355,
+        "serialize_ms": 4.273200174793601,
+        "total_ms": 3579.6740003861487
+      },
+      "repeated": [
+        {
+          "extract_ms": 4373.783599818125,
+          "serialize_ms": 0.4091998562216759,
+          "total_ms": 4374.192799674347
+        },
+        {
+          "extract_ms": 2051.175800152123,
+          "serialize_ms": 0.3551999107003212,
+          "total_ms": 2051.5310000628233
+        },
+        {
+          "extract_ms": 2165.97339999862,
+          "serialize_ms": 0.38049998693168163,
+          "total_ms": 2166.353899985552
+        },
+        {
+          "extract_ms": 2206.7909000907093,
+          "serialize_ms": 0.39590010419487953,
+          "total_ms": 2207.186800194904
+        },
+        {
+          "extract_ms": 2358.3802999928594,
+          "serialize_ms": 0.38359989412128925,
+          "total_ms": 2358.7638998869807
+        }
+      ],
+      "repeated_median": {
+        "extract_ms": 2206.7909000907093,
+        "serialize_ms": 0.38359989412128925,
+        "total_ms": 2207.186800194904
+      },
+      "peak_rss_bytes": 136998912,
+      "output_bytes": 1846,
+      "profile": {
+        "all_features": false,
+        "extract_ms": 2021.5338999405503,
+        "serialize_ms": 0.37480005994439125,
+        "total_ms": 2021.9087000004947,
+        "stages": {
+          "cell_extraction": {
+            "ms": 4.4340998865664005,
+            "calls": 1
+          },
+          "print_area_extraction": {
+            "ms": 0.07889978587627411,
+            "calls": 2
+          },
+          "formula_extraction": {
+            "ms": 0.0,
+            "calls": 0
+          },
+          "color_extraction": {
+            "ms": 0.0,
+            "calls": 0
+          },
+          "merged_cell_extraction": {
+            "ms": 0.006100162863731384,
+            "calls": 1
+          },
+          "table_detection": {
+            "ms": 124.6800001244992,
+            "calls": 1
+          },
+          "rich_extraction": {
+            "ms": 34.88779999315739,
+            "calls": 2
+          },
+          "model_construction": {
+            "ms": 0.06260001100599766,
+            "calls": 1
+          },
+          "workbook_parsing": {
+            "ms": 4.199799848720431,
+            "calls": 1
+          }
+        },
+        "openpyxl_workbook_opens": 1,
+        "archive_opens": 1,
+        "pipeline_state": {
+          "com_attempted": true,
+          "com_succeeded": true,
+          "fallback_reason": null
+        }
+      }
+    }
+  ]
+}

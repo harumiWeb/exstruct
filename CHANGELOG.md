@@ -24,6 +24,11 @@ All notable changes to this project are documented in this file. This changelog 
 - Added a reproducible comparison of SciPy, Python and sparse-set border
   clustering, with exact output equivalence and recorded Windows timings.
 
+### Fixed
+
+- Preserved live pipeline backend overrides through lazy backend resolution.
+- Avoided materializing blank cells when reading a shared sparse worksheet.
+
 ## [0.8.2] - 2026-09-26
 
 - Updated project dependencies to resolve the reported Dependabot vulnerability alerts.
