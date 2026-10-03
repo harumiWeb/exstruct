@@ -8,8 +8,9 @@ from inspect import unwrap
 import logging
 import os
 from pathlib import Path
+import sys
 import time
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 from ..errors import FallbackReason
 from ..models import (
@@ -61,11 +62,23 @@ def __getattr__(name: str) -> Any:  # noqa: ANN401 - heterogeneous compatibility
     raise AttributeError(name)
 
 
+@overload
+def _backend_type(name: Literal["ComBackend"]) -> type[ComBackend]: ...
+
+
+@overload
+def _backend_type(name: Literal["ComRichBackend"]) -> type[ComRichBackend]: ...
+
+
+@overload
+def _backend_type(
+    name: Literal["LibreOfficeRichBackend"],
+) -> type[LibreOfficeRichBackend]: ...
+
+
 def _backend_type(name: str) -> Any:  # noqa: ANN401 - heterogeneous compatibility exports
     """Honor explicitly overridden legacy aliases before lazy resolution."""
-    if name in globals():
-        return globals()[name]
-    return __getattr__(name)
+    return getattr(sys.modules[__name__], name)
 
 
 def get_shapes_with_position(workbook: xw.Book, mode: str = "standard") -> ShapeData:
@@ -1035,14 +1048,10 @@ def resolve_rich_backend(
     if inputs.mode == "light":
         return OoxmlRichBackend(inputs.file_path)
     if inputs.mode == "libreoffice":
-        backend_type = _backend_type("LibreOfficeRichBackend")
-
-        return cast(RichBackend, backend_type(inputs.file_path))
+        return _backend_type("LibreOfficeRichBackend")(inputs.file_path)
     if workbook is None:
         raise ValueError("COM workbook is required for COM-backed rich extraction.")
-    backend_type = _backend_type("ComRichBackend")
-
-    return cast(RichBackend, backend_type(workbook))
+    return _backend_type("ComRichBackend")(workbook)
 
 
 def _run_light_pipeline(

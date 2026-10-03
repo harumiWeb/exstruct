@@ -17,9 +17,9 @@ from ..libreoffice import (
 )
 from ..ooxml_drawing import OoxmlConnectorInfo, OoxmlShapeInfo, read_sheet_drawings
 from .base import ChartData, RichBackend, ShapeData
-from .ooxml_shapes import (
+from .ooxml_shapes import (  # noqa: F401 - legacy compatibility re-exports
     _build_shapes_from_ooxml as _build_shapes_from_ooxml,
-    _classify_connector_resolution as _classify_connector_resolution,
+    _classify_connector_resolution as _classify_connector_resolution,  # noqa: F401 - legacy re-export
     _connector_endpoints as _connector_endpoints,
     _direction_from_shape_boxes as _direction_from_shape_boxes,
     _distance_to_box as _distance_to_box,

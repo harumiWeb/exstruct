@@ -66,7 +66,7 @@ dimensions, preserving the previous reader's behavior for malformed bounds.
 ## Verification
 
 - Final non-COM/non-render suite after the backend-alias review fix: 1017 passed,
-  1 LibreOffice smoke skipped, 11 deselected; coverage 83.09%, exceeding 80%.
+  1 LibreOffice smoke skipped, 11 deselected; coverage 83.04%, exceeding 80%.
 - Actual Excel COM tests: eight passed on this Windows host. Pywin32 emitted
   RPC diagnostics during that run; successful process exit and test results
   are distinct from those diagnostics.
@@ -84,6 +84,9 @@ dimensions, preserving the previous reader's behavior for malformed bounds.
 Timing datasets target `10f53cf`; subsequent `4952ed9` restores legacy backend
 alias overrides and formats the installed smoke. Its full non-COM regression
 run passed; the complete performance suite was not rerun for that narrow fix.
+The subsequent Codacy follow-up uses static backend imports, explicit module
+attribute resolution and normal session guards while retaining the same lazy
+and override contracts. The final non-COM suite also passed after that refactor.
 
 SciPy comparison and the user-selected optional-dependency decision are in
 `issue148-results.md` and ADR-0012. Sparse BFS remains evaluation-only. These
