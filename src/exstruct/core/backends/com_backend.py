@@ -8,19 +8,45 @@ from typing import Any, Literal, cast
 
 import xlwings as xw
 
-from ...models import PrintArea
+from ...models import CellRow, PrintArea
 from ..cells import (
     WorkbookColorsMap,
     WorkbookFormulasMap,
+    _normalize_cell_value,
     extract_sheet_colors_map_com,
     extract_sheet_formulas_map_com,
 )
 from ..charts import get_charts
 from ..ranges import parse_range_zero_based
 from ..shapes import get_shapes_with_position
-from .base import ChartData, MergedCellData, PrintAreaData, RichBackend, ShapeData
+from .base import (
+    CellData,
+    ChartData,
+    MergedCellData,
+    PrintAreaData,
+    RichBackend,
+    ShapeData,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def _sheet_cell_links(sheet: Any) -> dict[int, dict[str, str]]:  # noqa: ANN401
+    """Read external cell links; skip shapes by type and propagate COM failures."""
+    links: dict[int, dict[str, str]] = {}
+    for link in sheet.api.Hyperlinks:
+        target = link.Address
+        if not target:
+            continue
+        if link.Type != 0:  # msoHyperlinkRange; shape links have no cell anchor.
+            continue
+        anchor = link.Range
+        for row in range(int(anchor.Row), int(anchor.Row + anchor.Rows.Count)):
+            for col in range(
+                int(anchor.Column), int(anchor.Column + anchor.Columns.Count)
+            ):
+                links.setdefault(row, {})[str(col - 1)] = str(target)
+    return links
 
 
 @dataclass(frozen=True)
@@ -32,6 +58,55 @@ class ComBackend:
     """
 
     workbook: xw.Book
+
+    def extract_cells(self, *, include_links: bool = False) -> CellData:
+        """Prototype bulk Value2 reader; intentionally unused by public extraction.
+
+        Read values in bounded row batches without per-cell COM access. Value2
+        exposes live values and date serials, so cached/date compatibility must
+        be evaluated before this reader can replace the file-based reader.
+        """
+        result: CellData = {}
+        for sheet in self.workbook.sheets:
+            used = sheet.api.UsedRange
+            first_row, first_col = int(used.Row), int(used.Column)
+            height, width = int(used.Rows.Count), int(used.Columns.Count)
+            batch_rows = max(1, 100_000 // width)
+            links = _sheet_cell_links(sheet) if include_links else {}
+            rows: list[CellRow] = []
+            for offset in range(0, height, batch_rows):
+                count = min(batch_rows, height - offset)
+                block = sheet.range(
+                    (first_row + offset, first_col),
+                    (first_row + offset + count - 1, first_col + width - 1),
+                ).api
+                raw = block.Value2
+                matrix = ((raw,),) if count == width == 1 else raw
+                # Excel error variants share integers with legitimate cell values.
+                # Evaluate ISERROR in bulk rather than interpreting integer codes.
+                error_mask = sheet.api.Evaluate(f"ISERROR({block.Address})")
+                errors = ((error_mask,),) if count == width == 1 else error_mask
+                for index, values in enumerate(matrix):
+                    row_number = first_row + offset + index
+                    cells: dict[str, int | float | str] = {}
+                    for column, value in enumerate(values):
+                        if errors[index][column]:
+                            continue
+                        if isinstance(value, float) and value.is_integer():
+                            value = int(value)
+                        normalized = _normalize_cell_value(value)
+                        if normalized is not None:
+                            cells[str(first_col + column - 1)] = normalized
+                    if cells:
+                        rows.append(
+                            CellRow(
+                                r=row_number,
+                                c=cells,
+                                links=links.get(row_number) or None,
+                            )
+                        )
+            result[sheet.name] = rows
+        return result
 
     def extract_print_areas(self) -> PrintAreaData:
         """Extract print areas per sheet via xlwings/COM.

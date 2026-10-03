@@ -25,6 +25,13 @@ This document summarizes the current specification for Excel extraction processi
 
 ## Workbook Resource Lifetime
 
+- `standard` / `verbose` retain file-first extraction after the Issue #151
+  experiment (ADR-0014). The bulk COM cell reader is a benchmark prototype;
+  public extraction reads saved cell values through the file backend.
+- A new Excel app is owned before opening the workbook, so opening failures
+  still run app cleanup. Existing workbooks/apps are borrowed and never closed
+  or terminated by extraction.
+
 - A supported `light` OOXML extraction owns one `OoxmlExtractionSession` and
   one ZIP archive shared by core workbook parsing, drawing/chart extraction,
   table candidates and final model construction. The session closes in a

@@ -88,18 +88,24 @@ def xlwings_workbook(file_path: Path, *, visible: bool = False) -> Iterator[xw.B
         return
 
     app = xw.App(add_book=False, visible=visible)
-    wb = app.books.open(str(file_path))
+    wb: Any | None = None
     try:
+        wb = app.books.open(str(file_path))
         yield wb
     finally:
-        try:
-            wb.close()
-        except Exception as exc:
-            logger.debug("Failed to close Excel workbook. (%r)", exc)
+        if wb is not None:
+            try:
+                wb.close()
+            except Exception as exc:
+                logger.debug("Failed to close Excel workbook. (%r)", exc)
         try:
             app.quit()
         except Exception as exc:
             logger.debug("Failed to quit Excel application. (%r)", exc)
+            try:
+                app.kill()
+            except Exception as kill_exc:
+                logger.debug("Failed to kill Excel application. (%r)", kill_exc)
 
 
 def _find_open_workbook(file_path: Path) -> xw.Book | None:

@@ -4,6 +4,11 @@ All notable changes to this project are documented in this file. This changelog 
 
 ## [Unreleased]
 
+### Fixed
+
+- Ensure newly created Excel instances are cleaned up when opening a workbook
+  fails; retain caller ownership of already-open workbooks and Excel apps.
+
 ### Changed
 
 - Switched `.xlsx` / `.xlsm` `light` extraction to the direct OOXML core and

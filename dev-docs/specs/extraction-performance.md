@@ -1,5 +1,25 @@
 # Extraction performance measurements
 
+## Issue #151 COM-first evaluation
+
+`benchmark/issue151_com_first.py` compares public file-first extraction with an
+internal COM-first candidate using bulk `Value2` and batched error masks.
+Tables and merged/formula metadata retain the shared openpyxl backend.
+Cold creates and quits Excel per extraction; warm opens/closes the workbook
+inside a benchmark-owned running app; already-open borrows the open workbook.
+Warm deliberately injects app reuse into both runners; the public helper itself
+creates a new app when the target workbook is not already open.
+Three repeats alternate runner order. --no-colors explicitly disables the
+existing per-cell color stage for the separately reported large/many-sheet
+verbose isolation run; it is not the verbose default. Record total, COM acquisition and cleanup
+separately; the residual includes file parsing, extraction and model construction.
+Report failed COM runs separately, never as faster successful extractions.
+The runner checks that Excel app IDs return to their initial empty set.
+`benchmark/issue151_compatibility.py` probes date serials, formula recalculation,
+unsaved values, errors and hyperlinks. Results and the retention decision are in
+`benchmark/issue151-results.md` and ADR-0014. These scripts are sequential
+experiments and do not select the public production backend.
+
 Issue [#143](https://github.com/harumiWeb/exstruct/issues/143), part of #142,
 establishes the baseline before production extraction optimizations. The
 repository-local `benchmark.performance` module is separate from `bench`'s

@@ -117,3 +117,10 @@
 
 - When a mode contract changes in `extract(...)`, re-check one-shot export surfaces (`process_excel`, CLI, engine side-output paths) so output filtering defaults do not silently drift from the accepted public behavior.
 - For workbook-wide parsers that aggregate sheet artifacts, keep exception boundaries at the smallest safe unit; a single malformed sheet-level part should not clear healthy sheet results unless the workbook container itself is unreadable.
+
+
+## 2026-10-03 COM benchmark isolation
+
+- Run real Excel tests and COM benchmarks sequentially. Concurrent Excel owners can contaminate process-lifecycle and timing evidence; discard and rerun overlapping scenarios.
+- Exclude COM failure/fallback samples from successful extraction medians even when their serialized output happens to match.
+- Pytest COM session setup creates and quits an Excel availability-probe app before tests. Never start pytest (including COM availability checks) while any timed Excel run is active.
