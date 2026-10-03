@@ -18,6 +18,10 @@ All notable changes to this project are documented in this file. This changelog 
 
 ### Added
 
+- Added an internal streaming OOXML core extraction session for cells, shared
+  strings, formulas, hyperlinks, merged cells, defined names, print areas and
+  explicit tables, with shared ZIP access for optional shapes and charts.
+
 - Added regression coverage for previous-reader parity, workbook resource
   lifetime and loader counts, subprocess import boundaries, and clustering
   equivalence with SciPy-free execution.
