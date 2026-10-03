@@ -30,10 +30,26 @@ class _Anchor:
 
 
 class _Hyperlink:
-    def __init__(self, address: str, anchor: _Anchor, subaddress: str = "") -> None:
+    def __init__(
+        self,
+        address: str,
+        anchor: _Anchor,
+        subaddress: str = "",
+        *,
+        link_type: int = 0,
+        range_error: Exception | None = None,
+    ) -> None:
         self.Address = address
-        self.Range = anchor
+        self.Type = link_type
+        self._anchor = anchor
+        self._range_error = range_error
         self.SubAddress = subaddress
+
+    @property
+    def Range(self) -> _Anchor:
+        if self._range_error is not None:
+            raise self._range_error
+        return self._anchor
 
 
 class _FakeRange:
@@ -244,3 +260,38 @@ def test_com_extract_cells_batches_large_rectangles() -> None:
     ]
     assert sheet.last_range.first_row == 50_001
     assert sheet.last_range.last_row == 50_001
+
+
+def test_com_extract_cells_skips_shape_links_without_reading_range() -> None:
+    sheet = _FakeSheet(
+        [["value"]],
+        hyperlinks=[
+            _Hyperlink(
+                "https://shape.test/",
+                _Anchor(1, 1),
+                link_type=1,
+                range_error=AssertionError("Shape links have no Range"),
+            ),
+            _Hyperlink("https://cell.test/", _Anchor(1, 1)),
+        ],
+    )
+
+    assert ComBackend(_FakeWorkbook(sheet)).extract_cells(include_links=True)[
+        "Data"
+    ] == [CellRow(r=1, c={"0": "value"}, links={"0": "https://cell.test/"})]
+
+
+def test_com_extract_cells_propagates_cell_link_range_failure() -> None:
+    sheet = _FakeSheet(
+        [["value"]],
+        hyperlinks=[
+            _Hyperlink(
+                "https://cell.test/",
+                _Anchor(1, 1),
+                range_error=RuntimeError("Cell link Range failed"),
+            )
+        ],
+    )
+
+    with pytest.raises(RuntimeError, match="Cell link Range failed"):
+        ComBackend(_FakeWorkbook(sheet)).extract_cells(include_links=True)

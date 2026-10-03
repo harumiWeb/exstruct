@@ -32,16 +32,15 @@ logger = logging.getLogger(__name__)
 
 
 def _sheet_cell_links(sheet: Any) -> dict[int, dict[str, str]]:  # noqa: ANN401
-    """Read external cell hyperlink targets without per-cell COM calls."""
+    """Read external cell links; skip shapes by type and propagate COM failures."""
     links: dict[int, dict[str, str]] = {}
     for link in sheet.api.Hyperlinks:
         target = link.Address
         if not target:
             continue
-        try:
-            anchor = link.Range
-        except Exception:
-            continue  # Shape hyperlink, rather than a cell hyperlink.
+        if link.Type != 0:  # msoHyperlinkRange; shape links have no cell anchor.
+            continue
+        anchor = link.Range
         for row in range(int(anchor.Row), int(anchor.Row + anchor.Rows.Count)):
             for col in range(
                 int(anchor.Column), int(anchor.Column + anchor.Columns.Count)

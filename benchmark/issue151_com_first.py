@@ -45,6 +45,8 @@ def com_first(inputs: pipeline.ExtractionInputs) -> pipeline.PipelineResult:
                 )
                 if inputs.include_merged_cells:
                     artifacts.merged_cell_data = file_backend.extract_merged_cells()
+                if inputs.include_print_areas:
+                    artifacts.print_area_data = file_backend.extract_print_areas()
                 if inputs.include_formulas_map and not inputs.use_com_for_formulas:
                     artifacts.formulas_map_data = file_backend.extract_formulas_map()
                 pipeline.run_com_pipeline(

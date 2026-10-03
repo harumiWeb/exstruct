@@ -34,6 +34,9 @@ are recorded for reproduction. Default include flags are preserved for standard 
 The candidate keeps the shared openpyxl table/merged/formula stages and existing
 rich COM stages; it replaces cell reading with bounded `Value2` batches and
 bulk `ISERROR` masks. It does not use per-cell COM value access.
+The review correction seeds saved print areas before rich COM extraction, matching
+the public pipeline's preference for file metadata. The retained timings predate
+this correction and have not been remeasured; raw baseline JSON remains unchanged.
 
 Cold starts/quits a new app for each extraction. Warm deliberately opens/closes
 the workbook in a controlled, running app for both runners. Already-open reuses
@@ -66,7 +69,7 @@ claims about Excel performance. Python imports are not separately cold-started.
 | many-sheet | already-open | 1010.3 | 1303.7 | True | 0 |
 
 One large/cold candidate run encountered COM RPC failure and returned the clean
-file fallback. Its ~773 ms total is not evidence of faster successful extraction.
+file fallback. Its ~2,397.7 ms total is not evidence of faster successful extraction.
 Excluding that failure removes the apparent cold/large advantage.
 
 ## Verbose default results
@@ -134,11 +137,15 @@ that defect is fixed independently of the experiment.
 - Non-COM suite with `mcp` and `fast` extras: 1,093 passed, 2 skipped,
   12 deselected before the additional batch-boundary and real-COM tests.
 - Focused unit tests after batch, cleanup and review fixes: 24 passed.
+- PR review regressions and related backend/workbook unit tests: 74 passed.
 - Ruff and strict mypy (89 source files) pass.
 - Real Excel compatibility test: 1 passed with both pipelines succeeding.
   Pytest emitted Windows RPC exception diagnostics (`0x800706be`) even on
   the sequential rerun; exit code was 0 and no Excel app remained. This is
   output-compatibility evidence, not a clean runtime-stability result.
+- The PR review rerun of the real Excel test also passed, including external
+  hyperlink type lookup, and left no Excel app. RPC diagnostics included both
+  `0x800706be` and `0x800706ba`; the same runtime-stability limitation applies.
 - Raw baseline JSON and the compatibility probe are retained under
   `benchmark/baselines/`; timing tables can be regenerated with the report runner.
 
