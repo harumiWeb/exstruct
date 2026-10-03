@@ -188,3 +188,4 @@ adrs:
       - docs/api.md
       - dev-docs/specs/excel-extraction.md
       - dev-docs/specs/extraction-performance.md
+      - benchmark/issue148-results.md

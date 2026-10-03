@@ -9,7 +9,7 @@ import logging
 import os
 from pathlib import Path
 import time
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from ..errors import FallbackReason
 from ..models import (
@@ -59,6 +59,13 @@ def __getattr__(name: str) -> Any:  # noqa: ANN401 - heterogeneous compatibility
     if name in {"ComBackend", "ComRichBackend", "LibreOfficeRichBackend"}:
         return getattr(backends, name)
     raise AttributeError(name)
+
+
+def _backend_type(name: str) -> Any:  # noqa: ANN401 - heterogeneous compatibility exports
+    """Honor explicitly overridden legacy aliases before lazy resolution."""
+    if name in globals():
+        return globals()[name]
+    return __getattr__(name)
 
 
 def get_shapes_with_position(workbook: xw.Book, mode: str = "standard") -> ShapeData:
@@ -723,11 +730,11 @@ def step_extract_print_areas_com(
         workbook: xlwings workbook instance.
     """
 
-    from .backends.com_backend import ComBackend
+    backend_type = _backend_type("ComBackend")
 
     if artifacts.print_area_data:
         return
-    artifacts.print_area_data = ComBackend(workbook).extract_print_areas()
+    artifacts.print_area_data = backend_type(workbook).extract_print_areas()
 
 
 def step_extract_auto_page_breaks_com(
@@ -742,9 +749,9 @@ def step_extract_auto_page_breaks_com(
         workbook (xw.Book): xlwings COM workbook used to read auto page break settings.
     """
 
-    from .backends.com_backend import ComBackend
+    backend_type = _backend_type("ComBackend")
 
-    artifacts.auto_page_break_data = ComBackend(workbook).extract_auto_page_breaks()
+    artifacts.auto_page_break_data = backend_type(workbook).extract_auto_page_breaks()
 
 
 def step_extract_formulas_map_com(
@@ -760,10 +767,10 @@ def step_extract_formulas_map_com(
         workbook (xlwings.Book): COM workbook to extract formulas from.
     """
 
-    from .backends.com_backend import ComBackend
+    backend_type = _backend_type("ComBackend")
 
     try:
-        artifacts.formulas_map_data = ComBackend(workbook).extract_formulas_map()
+        artifacts.formulas_map_data = backend_type(workbook).extract_formulas_map()
     except Exception as exc:
         logger.warning(
             "Failed to extract formulas_map via COM. (%r)",
@@ -782,9 +789,9 @@ def step_extract_colors_map_com(
         workbook: xlwings workbook instance.
     """
 
-    from .backends.com_backend import ComBackend
+    backend_type = _backend_type("ComBackend")
 
-    com_result = ComBackend(workbook).extract_colors_map(
+    com_result = backend_type(workbook).extract_colors_map(
         include_default_background=inputs.include_default_background,
         ignore_colors=inputs.ignore_colors,
     )
@@ -1028,14 +1035,14 @@ def resolve_rich_backend(
     if inputs.mode == "light":
         return OoxmlRichBackend(inputs.file_path)
     if inputs.mode == "libreoffice":
-        from .backends.libreoffice_backend import LibreOfficeRichBackend
+        backend_type = _backend_type("LibreOfficeRichBackend")
 
-        return LibreOfficeRichBackend(inputs.file_path)
+        return cast(RichBackend, backend_type(inputs.file_path))
     if workbook is None:
         raise ValueError("COM workbook is required for COM-backed rich extraction.")
-    from .backends.com_backend import ComRichBackend
+    backend_type = _backend_type("ComRichBackend")
 
-    return ComRichBackend(workbook)
+    return cast(RichBackend, backend_type(workbook))
 
 
 def _run_light_pipeline(

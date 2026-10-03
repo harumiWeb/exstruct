@@ -164,3 +164,51 @@ with workbook.openpyxl_workbook("ignored.xlsx", data_only=True, read_only=False)
 print(json.dumps({"live_overrides": True}))
 """)
     assert payload == {"live_overrides": True}
+
+
+def test_pipeline_backend_alias_overrides_avoid_concrete_imports() -> None:
+    payload = _probe("""
+import json
+import sys
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock
+from exstruct.core import pipeline
+inputs = SimpleNamespace(mode='standard', file_path=Path('unused.xlsx'),
+                         include_default_background=False, ignore_colors=None)
+workbook = object()
+com_rich = Mock(return_value='COM_OVERRIDE')
+pipeline.ComRichBackend = com_rich
+assert pipeline.resolve_rich_backend(inputs=inputs, workbook=workbook) == 'COM_OVERRIDE'
+com_rich.assert_called_once_with(workbook)
+inputs.mode = 'libreoffice'
+lo_rich = Mock(return_value='LO_OVERRIDE')
+pipeline.LibreOfficeRichBackend = lo_rich
+assert pipeline.resolve_rich_backend(inputs=inputs) == 'LO_OVERRIDE'
+lo_rich.assert_called_once_with(inputs.file_path)
+backend = SimpleNamespace(extract_print_areas=Mock(return_value={'p': []}),
+                          extract_auto_page_breaks=Mock(return_value={'a': []}),
+                          extract_formulas_map=Mock(return_value={'f': {}}),
+                          extract_colors_map=Mock(return_value={'c': {}}))
+factory = Mock(return_value=backend)
+pipeline.ComBackend = factory
+artifacts = pipeline.ExtractionArtifacts()
+pipeline.step_extract_print_areas_com(inputs, artifacts, workbook)
+pipeline.step_extract_auto_page_breaks_com(inputs, artifacts, workbook)
+pipeline.step_extract_formulas_map_com(inputs, artifacts, workbook)
+pipeline.step_extract_colors_map_com(inputs, artifacts, workbook)
+assert artifacts.print_area_data == {'p': []}
+assert artifacts.auto_page_break_data == {'a': []}
+assert artifacts.formulas_map_data == {'f': {}}
+assert artifacts.colors_map_data == {'c': {}}
+assert factory.call_count == 4
+for call in factory.call_args_list:
+    assert call.args == (workbook,)
+backend.extract_colors_map.assert_called_once_with(include_default_background=False,
+                                                  ignore_colors=None)
+for name in ('xlwings', 'exstruct.core.backends.com_backend',
+             'exstruct.core.backends.libreoffice_backend'):
+    assert name not in sys.modules
+print(json.dumps({'overrides': True}))
+""")
+    assert payload == {"overrides": True}

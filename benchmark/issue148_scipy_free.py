@@ -30,6 +30,7 @@ def main() -> int:
     from openpyxl.styles import Border, Side
 
     import exstruct
+
     if args.installed and Path(exstruct.__file__).resolve().is_relative_to(
         Path(__file__).resolve().parents[1] / "src"
     ):
