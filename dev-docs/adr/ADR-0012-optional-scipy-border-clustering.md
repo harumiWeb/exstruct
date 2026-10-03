@@ -25,6 +25,11 @@ existing Python fallback on 2026-10-03.
   `auto` attempts SciPy, `python` uses the existing BFS, and the legacy `numpy`
   name attempts SciPy-backed labeling. Import or accelerated execution failure
   still falls back to Python. Do not add a new alias or change defaults.
+- The normal direct OOXML `light` table-heuristic path is a narrow exception:
+  it passes `cluster_backend="python"` per call so that path does not import
+  SciPy. This does not read or mutate `EXSTRUCT_BORDER_CLUSTER_BACKEND`.
+  Other modes and the openpyxl compatibility path retain the environment-based
+  selection above.
 - Keep sparse-set BFS as an internal evaluation candidate. Do not promote it to
   production selection based on these results.
 
@@ -53,11 +58,14 @@ existing Python fallback on 2026-10-03.
 - Code: `src/exstruct/core/cells.py`, `pyproject.toml`, `uv.lock`,
   `benchmark/issue148_clustering.py`, and `benchmark/issue148_scipy_free.py`.
 - Related specs: `docs/api.md`, `dev-docs/specs/excel-extraction.md`,
+  `dev-docs/specs/ooxml-core-extraction.md`,
   `dev-docs/specs/extraction-performance.md`, and `benchmark/issue148-results.md`.
 - Measurements: `benchmark/baselines/issue148-2026-10-03-windows.json` records
   raw timings, input hashes, output hashes, dependency versions and source state.
 - Related decisions: ADR-0010 retains the light OOXML baseline; ADR-0011 treats
-  direct cell reading and extraction-scoped resources separately.
+  direct cell reading and extraction-scoped resources separately; ADR-0013
+  selects the default direct backend for light OOXML extraction and records its
+  per-call Python clustering exception.
 
 ## Supersedes
 

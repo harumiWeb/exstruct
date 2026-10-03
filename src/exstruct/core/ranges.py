@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from openpyxl.utils import range_boundaries
+from .ooxml_scalars import range_boundaries
 
 
 @dataclass(frozen=True)
@@ -34,11 +34,26 @@ def parse_range_zero_based(range_str: str) -> RangeBounds | None:
     cleaned = range_str.strip()
     if not cleaned:
         return None
-    if "!" in cleaned:
-        cleaned = cleaned.split("!", 1)[1]
+    quoted = False
+    index = 0
+    sheet_separator = -1
+    while index < len(cleaned):
+        char = cleaned[index]
+        if char == "'":
+            if quoted and index + 1 < len(cleaned) and cleaned[index + 1] == "'":
+                index += 2
+                continue
+            quoted = not quoted
+        elif char == "!" and not quoted:
+            sheet_separator = index
+        index += 1
+    if sheet_separator >= 0:
+        cleaned = cleaned[sheet_separator + 1 :]
     try:
         min_col, min_row, max_col, max_row = range_boundaries(cleaned)
     except Exception:
+        return None
+    if min_col is None or min_row is None or max_col is None or max_row is None:
         return None
     return RangeBounds(
         r1=min_row - 1,

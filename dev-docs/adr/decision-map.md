@@ -10,6 +10,7 @@ This document is a human-readable map for navigating ADRs by domain.
 - `ADR-0010` Light Mode as the Pure-Python Rich OOXML Baseline (`accepted`)
 - `ADR-0011` Extraction-Scoped Workbook Reuse and Direct Cell Reading (`proposed`)
 - `ADR-0012` Optional SciPy Border Clustering (`proposed`)
+- `ADR-0013` Default OOXML Backend for Light Extraction (`proposed`)
 
 ## mode
 
@@ -23,10 +24,12 @@ This document is a human-readable map for navigating ADRs by domain.
 - `ADR-0010` Light Mode as the Pure-Python Rich OOXML Baseline (`accepted`)
 - `ADR-0011` Extraction-Scoped Workbook Reuse and Direct Cell Reading (`proposed`)
 - `ADR-0012` Optional SciPy Border Clustering (`proposed`)
+- `ADR-0013` Default OOXML Backend for Light Extraction (`proposed`)
 
 ## fallback
 
 - `ADR-0002` Rich Backend Fallback Policy (`accepted`)
+- `ADR-0013` Default OOXML Backend for Light Extraction (`proposed`)
 
 ## schema
 
@@ -45,11 +48,13 @@ This document is a human-readable map for navigating ADRs by domain.
 - `ADR-0010` Light Mode as the Pure-Python Rich OOXML Baseline (`accepted`)
 - `ADR-0011` Extraction-Scoped Workbook Reuse and Direct Cell Reading (`proposed`)
 - `ADR-0012` Optional SciPy Border Clustering (`proposed`)
+- `ADR-0013` Default OOXML Backend for Light Extraction (`proposed`)
 
 ## performance
 
 - `ADR-0011` Extraction-Scoped Workbook Reuse and Direct Cell Reading (`proposed`)
 - `ADR-0012` Optional SciPy Border Clustering (`proposed`)
+- `ADR-0013` Default OOXML Backend for Light Extraction (`proposed`)
 
 ## mcp
 

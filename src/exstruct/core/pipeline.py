@@ -22,6 +22,7 @@ from ..models import (
     SmartArt,
     WorkbookData,
 )
+from . import cells as cell_helpers, workbook as workbook_helpers
 from ._lazy import LazyModule
 from .backends.base import RichBackend
 from .backends.ooxml_backend import OoxmlRichBackend
@@ -36,6 +37,7 @@ from .cells import (
 from .libreoffice import LibreOfficeUnavailableError
 from .logging_utils import log_fallback
 from .modeling import SheetRawData, WorkbookRawData, build_workbook_data
+from .ooxml_session import OoxmlExtractionSession
 from .openpyxl_session import OpenpyxlExtractionSession
 from .workbook import xlwings_workbook
 
@@ -1167,7 +1169,77 @@ def _run_libreoffice_pipeline(
 
 
 def run_extraction_pipeline(inputs: ExtractionInputs) -> PipelineResult:
-    """Own workbook resources across presteps, COM/fallback and model building."""
+    """Prefer one direct OOXML session for light; restart compatibility on failure."""
+    if inputs.mode != "light" or inputs.file_path.suffix.lower() not in {
+        ".xlsx",
+        ".xlsm",
+    }:
+        return _run_openpyxl_pipeline(inputs)
+    reason = _ooxml_compatibility_reason(inputs)
+    if reason is None:
+        session = OoxmlExtractionSession(inputs.file_path)
+        try:
+            with session:
+                return _run_ooxml_pipeline(inputs, session)
+        except Exception as exc:
+            reason = f"Direct OOXML extraction failed: {exc!r}"
+        finally:
+            session.close()
+    log_fallback(
+        logger,
+        FallbackReason.OOXML_COMPATIBILITY,
+        f"{reason}; restarting complete light extraction with openpyxl compatibility backend.",
+    )
+    result = _run_openpyxl_pipeline(inputs)
+    if result.state.fallback_reason is None:
+        result.state.fallback_reason = FallbackReason.OOXML_COMPATIBILITY
+    return result
+
+
+def _run_ooxml_pipeline(
+    inputs: ExtractionInputs, session: OoxmlExtractionSession
+) -> PipelineResult:
+    """Build a complete light result inside the archive's ownership scope."""
+    artifacts = ExtractionArtifacts(
+        cell_data=session.extract_cells(include_links=inputs.include_cell_links),
+        print_area_data=session.extract_print_areas()
+        if inputs.include_print_areas
+        else {},
+        formulas_map_data=session.extract_formulas_map()
+        if inputs.include_formulas_map
+        else None,
+        merged_cell_data=session.extract_merged_cells()
+        if inputs.include_merged_cells
+        else {},
+    )
+    backend = OoxmlRichBackend(inputs.file_path, session=session)
+    artifacts.shape_data = backend.extract_shapes(mode="light")
+    artifacts.chart_data = backend.extract_charts(mode="light")
+    sheets: dict[str, SheetRawData] = {}
+    for name, rows in artifacts.cell_data.items():
+        merged = artifacts.merged_cell_data.get(name, [])
+        sheets[name] = SheetRawData(
+            rows=rows
+            if inputs.include_merged_values_in_rows
+            else _filter_rows_excluding_merged_values(rows, merged),
+            shapes=artifacts.shape_data.get(name, []),
+            charts=artifacts.chart_data.get(name, []),
+            table_candidates=session.detect_tables(name, mode="light"),
+            print_areas=artifacts.print_area_data.get(name, []),
+            auto_print_areas=[],
+            formulas_map=_resolve_sheet_formulas_map(artifacts.formulas_map_data, name),
+            colors_map={},
+            merged_cells=merged,
+        )
+    workbook = build_workbook_data(
+        WorkbookRawData(book_name=inputs.file_path.name, sheets=sheets)
+    )
+    logger.info("Direct OOXML light extraction completed for %s", inputs.file_path)
+    return PipelineResult(workbook=workbook, artifacts=artifacts, state=PipelineState())
+
+
+def _run_openpyxl_pipeline(inputs: ExtractionInputs) -> PipelineResult:
+    """Own compatibility workbook resources through final model construction."""
     session = OpenpyxlExtractionSession(inputs.file_path)
     try:
         with session:
@@ -1369,3 +1441,83 @@ def build_cells_tables_workbook(
         )
     raw = WorkbookRawData(book_name=inputs.file_path.name, sheets=sheets)
     return build_workbook_data(raw)
+
+
+_OOXML_LEGACY_SURFACES = {
+    name: globals()[name]
+    for name in (
+        "OpenpyxlExtractionSession",
+        "OpenpyxlBackend",
+        "OoxmlRichBackend",
+        "build_pre_com_pipeline",
+        "build_pipeline_plan",
+        "run_pipeline",
+        "resolve_rich_backend",
+        "step_extract_cells",
+        "step_extract_print_areas_openpyxl",
+        "step_extract_formulas_map_openpyxl",
+        "step_extract_colors_map_openpyxl",
+        "step_extract_merged_cells_openpyxl",
+    )
+}
+_OPENPYXL_BACKEND_METHODS = {
+    name: getattr(OpenpyxlBackend, name)
+    for name in (
+        "extract_cells",
+        "extract_print_areas",
+        "extract_formulas_map",
+        "extract_colors_map",
+        "extract_merged_cells",
+        "detect_tables",
+    )
+}
+_LEGACY_WORKBOOK_CALLS = [
+    (module, name, getattr(module, name))
+    for module, name in (
+        (cell_helpers, "openpyxl_workbook"),
+        (workbook_helpers, "openpyxl_workbook"),
+        (workbook_helpers, "load_workbook"),
+    )
+]
+
+
+def _ooxml_compatibility_reason(inputs: ExtractionInputs) -> str | None:
+    """Retain opt-in color and legacy override behavior through compatibility."""
+    if inputs.include_colors_map:
+        return "colors_map is not supported by the direct OOXML backend"
+    if any(
+        unwrap(getattr(module, name)) is not unwrap(default)
+        for module, name, default in _LEGACY_WORKBOOK_CALLS
+    ):
+        return "legacy workbook override requires the compatibility backend"
+    if any(
+        globals()[name] is not default
+        for name, default in _OOXML_LEGACY_SURFACES.items()
+    ):
+        return "legacy pipeline override requires the compatibility backend"
+    if any(
+        getattr(OpenpyxlBackend, name) is not default
+        for name, default in _OPENPYXL_BACKEND_METHODS.items()
+    ):
+        return "legacy backend method override requires the compatibility backend"
+    from . import cells
+    from .backends import ooxml_backend, openpyxl_backend
+
+    if (
+        ooxml_backend.read_sheet_drawings
+        is not ooxml_backend._DEFAULT_READ_SHEET_DRAWINGS
+    ):
+        return "legacy drawing reader override requires the compatibility backend"
+
+    if any(
+        getattr(openpyxl_backend, name) is not default
+        or getattr(cells, name) is not default
+        for name, default in openpyxl_backend._DEFAULT_HELPERS.items()
+    ):
+        return "legacy extraction helper override requires the compatibility backend"
+    if (
+        openpyxl_backend.openpyxl_workbook
+        is not openpyxl_backend._DEFAULT_OPENPYXL_WORKBOOK
+    ):
+        return "legacy workbook override requires the compatibility backend"
+    return None

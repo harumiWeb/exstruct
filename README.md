@@ -44,16 +44,16 @@ LLM/RAG pipelines and local automation.
 
 - **Excel -> structured JSON**: outputs cells, shapes, charts, SmartArt, table candidates, merged-cell ranges, print areas, and auto page-break areas by sheet or by area.
 - **Output modes**:
-  - `light`: cells + table candidates + print areas + shapes/charts (best-effort via direct OOXML parsing)
+  - `light`: cells + table candidates + print areas + best-effort shapes/charts via direct OOXML for `.xlsx` / `.xlsm`
   - `libreoffice`: best-effort non-COM mode for `.xlsx/.xlsm`. When the LibreOffice runtime is available, it adds merged cells, shapes, connectors, and charts
   - `standard`: Excel COM mode with texted shapes + arrows, charts, SmartArt, and merged-cell ranges
   - `verbose`: outputs all shapes with width/height and also emits cell hyperlinks
-- **Formula extraction**: emits `formulas_map` (formula string -> cell coordinates) via openpyxl/COM. It is enabled by default in `verbose` and can be controlled with `include_formulas_map`.
+- **Formula extraction**: emits `formulas_map` (formula string -> cell coordinates) via OOXML or the selected openpyxl/COM path. It is enabled by default in `verbose` and can be controlled with `include_formulas_map`.
 - **Formats**: JSON (compact by default, `--pretty` for formatting), YAML, and TOON (optional dependencies).
 - **Workbook editing interfaces**: use the editing CLI for primary ExStruct edit flows, keep MCP for host-owned safety controls, and use `exstruct.edit` only when you need the same patch contract from Python.
 - **Table detection tuning**: heuristics can be adjusted dynamically through the API.
 - **Hyperlink extraction**: in `verbose` mode, or with `include_cell_links=True`, cell links are emitted in `links`.
-- **Safe fallback**: if Excel COM or the LibreOffice runtime is unavailable, the process does not crash and falls back to direct OOXML parsing.
+- **Safe fallback**: `light` uses direct OOXML for `.xlsx` / `.xlsm` without Excel COM or LibreOffice. Unsupported OOXML or `colors_map` requests restart the complete openpyxl compatibility pipeline with an `ooxml_compatibility` warning; partial results are discarded. A drawing failure isolated to one sheet remains best-effort.
 
 ## Installation
 
@@ -63,7 +63,7 @@ pip install exstruct
 
 Optional extras:
 
-- Border-clustering acceleration: `pip install exstruct[fast]` (SciPy). Base extraction uses the existing Python fallback when SciPy is unavailable; NumPy remains a core dependency.
+- Border-clustering acceleration: `pip install exstruct[fast]` (SciPy). Normal direct light extraction uses Python clustering. SciPy acceleration and `EXSTRUCT_BORDER_CLUSTER_BACKEND` selection apply to other modes and compatibility extraction; NumPy remains a core dependency.
 - YAML: `pip install pyyaml`
 - TOON: `pip install python-toon`
 - Rendering (PDF/PNG): Excel + `pip install pypdfium2 pillow` (`mode=libreoffice` is not supported)
@@ -280,14 +280,14 @@ Higher values reduce false positives. Lower values reduce missed detections.
 
 ## Output Modes
 
-- **light**: cells + table candidates + best-effort OOXML shapes/connectors/charts for `.xlsx` / `.xlsm` (no COM required).
+- **light**: direct OOXML cells + table candidates + print areas and best-effort shapes/connectors/charts for `.xlsx` / `.xlsm`. The normal path does not import openpyxl, pandas, SciPy, or xlwings.
 - **standard**: texted shapes + arrows, charts (when COM is available), and table candidates. Cell hyperlinks are emitted only when `include_cell_links=True`.
 - **verbose**: all shapes, charts, `table_candidates`, hyperlinks, and `colors_map`.
 
 ## Error Handling / Fallback
 
 - If Excel COM is unavailable, extraction falls back to cells + table candidates automatically; `.xlsx` / `.xlsm` still preserve best-effort OOXML shapes/charts when available.
-- If a rich-extraction step fails, ExStruct still returns cells + table candidates and keeps any already recovered best-effort artifacts where safe.
+- A per-sheet drawing failure omits that sheet's affected drawing artifacts while preserving healthy sheets. An unsupported OOXML construct or failure in any other direct pipeline stage discards all partial OOXML data, restarts the complete openpyxl compatibility pipeline, and logs `ooxml_compatibility`.
 - The CLI writes errors to stdout/stderr and exits with a non-zero status on failure.
 
 ## Optional Rendering

@@ -34,12 +34,12 @@ LLM/RAG 向けに検出ヒューリスティックや出力モードを調整で
 - **Excel → 構造化 JSON**
   - セル、図形、チャート、SmartArt、テーブル候補、セル結合範囲、印刷範囲/自動改ページ範囲をシート単位・範囲単位で出力。
 - **出力モード**
-  - `light`: セル＋テーブル候補＋印刷範囲+図形・グラフ（OOXML直接解析によるbest-effort）
+  - `light`: `.xlsx` / `.xlsm` のセル・テーブル候補・印刷範囲・図形/グラフをOOXML直接解析で抽出（rich artifactはbest-effort）
   - `libreoffice`: `.xlsx/.xlsm` 向けの best-effort 非 COM モード。LibreOffice runtime があれば結合セル・図形・コネクタ・チャートを追加
   - `standard`: Excel COM でテキスト付き図形＋矢印、チャート、SmartArt、セル結合範囲
   - `verbose`: 全図形を幅高さ付きで出力、セルのハイパーリンクも出力。
 - **数式取得**
-  - `formulas_map`（数式文字列 → セル座標）を openpyxl/COM で取得。`verbose` 既定、`include_formulas_map` で制御。
+  - `formulas_map`（数式文字列 → セル座標）を OOXML または選択された openpyxl/COM 経路で取得。`verbose` 既定、`include_formulas_map` で制御。
 - **フォーマット**
   - JSON（デフォルトはコンパクト、`--pretty` で整形）、YAML、TOON（任意依存）。
 - **ワークブック編集インターフェース**
@@ -49,7 +49,7 @@ LLM/RAG 向けに検出ヒューリスティックや出力モードを調整で
 - **ハイパーリンク抽出**
   - `verbose` モード（または `include_cell_links=True` 指定）でセルのリンクを `links` に出力。
 - **安全なフォールバック**
-  - Excel COM または LibreOffice runtime が不在でもプロセスは落ちず、OOXML直接解析に切り替えます。
+  - `.xlsx` / `.xlsm` の `light` はOOXMLを直接解析します。未対応OOXMLまたは `colors_map` 指定時はpartial結果を破棄し、openpyxl互換パイプライン全体を最初から実行して `ooxml_compatibility` warningを記録します。1シートのdrawing失敗は従来どおりそのシートだけbest-effortで処理します。
 
 ## インストール
 
@@ -60,7 +60,7 @@ pip install exstruct
 オプション依存:
 
 - YAML: `pip install pyyaml`
-- 罫線クラスタリングの高速化: `pip install exstruct[fast]`（SciPy）。未導入時は既存の Python 実装へフォールバックします。NumPy は引き続き必須依存です。
+- 罫線クラスタリングの高速化: `pip install exstruct[fast]`（SciPy）。通常の直接OOXML light抽出ではPythonの罫線検出を使います。SciPyによる高速化と `EXSTRUCT_BORDER_CLUSTER_BACKEND` の選択は、他モードと互換抽出経路で利用できます。NumPy は引き続き必須依存です。
 - TOON: `pip install python-toon`
 - レンダリング（PDF/PNG）: Excel + `pip install pypdfium2 pillow`（`mode=libreoffice` では非対応）
 - まとめて導入: `pip install exstruct[yaml,toon,render,fast]`
@@ -276,14 +276,14 @@ set_table_detection_params(
 
 ## 出力モード
 
-- **light**: セル＋テーブル候補＋`.xlsx` / `.xlsm` の best-effort OOXML 図形/コネクタ/チャート（COM 不要）。
+- **light**: `.xlsx` / `.xlsm` のセル・テーブル候補・印刷範囲・図形/コネクタ/チャートを直接OOXMLで抽出します。通常経路はopenpyxl、pandas、SciPy、xlwingsをimportしません。
 - **standard**: テキスト付き図形＋矢印、チャート（COM ありで取得）、テーブル候補。セルのハイパーリンクは `include_cell_links=True` を指定したときのみ出力。
 - **verbose**: すべての図形、チャート、`table_candidates`、ハイパーリンク、`colors_map`。
 
 ## エラーハンドリング / フォールバック
 
 - Excel COM 不在時はセル＋テーブル候補に自動フォールバックし、`.xlsx` / `.xlsm` では利用可能な OOXML 図形/チャートも best-effort で保持します。
-- rich extraction の一部が失敗しても、ExStruct はセル＋テーブル候補を返しつつ、安全に保持できる既存の best-effort artifact は残します。
+- 1シートのdrawing失敗はそのシートの対象artifactだけを省き、健全なシートは維持します。未対応OOXMLまたは他のdirect pipeline stageの失敗時はpartial結果を破棄し、openpyxl互換pipeline全体を最初から実行して `ooxml_compatibility` を記録します。
 - CLI はエラーを stdout/stderr に出し、失敗時は非ゼロ終了コード。
 
 ## 任意レンダリング

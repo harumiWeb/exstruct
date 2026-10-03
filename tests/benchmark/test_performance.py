@@ -118,9 +118,11 @@ def test_fresh_worker_measures_light_and_standard_fallback(
         assert stages["table_detection"]["calls"] == 1
         assert stages["model_construction"]["calls"] == 1
         assert stages["formula_extraction"]["calls"] == 0
-        assert result["profile"]["openpyxl_workbook_opens"] == 1
-        # OOXML drawings use separate archives; workbook parses and ZIP opens
-        # intentionally measure different resource types.
+        assert result["profile"]["openpyxl_workbook_opens"] == (
+            0 if mode == "light" else 1
+        )
+        # Direct light shares one ZIP; other paths also count standalone
+        # drawing reads. Workbook loaders and ZIP constructors are distinct.
         assert result["profile"]["archive_opens"] >= 1
         state = result["profile"]["pipeline_state"]
         assert state["com_succeeded"] is False

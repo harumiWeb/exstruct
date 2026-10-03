@@ -111,7 +111,7 @@ empty workbook.
 | ---- | ----------- |
 | `-o, --output PATH` | Output path. Omit to write to stdout. |
 | `-f, --format {json,yaml,yml,toon}` | Serialization format (default: `json`). |
-| `-m, --mode {light,libreoffice,standard,verbose}` | Extraction detail level.<br>- light: pure-Python baseline; returns cells + table candidates + print areas, and on `.xlsx/.xlsm` adds best-effort OOXML shapes, connectors, and charts.<br>- libreoffice: optional non-COM enrichment mode for `.xlsx/.xlsm`; starts from the same OOXML baseline as `light` and uses LibreOffice runtime to refine merged cells, shapes, connectors, and charts when available.<br>- standard: shapes with text/arrows + charts + print areas via Excel COM.<br>- verbose: all shapes/charts with size + hyperlinks/maps via Excel COM. |
+| `-m, --mode {light,libreoffice,standard,verbose}` | Extraction detail level.<br>- light: for `.xlsx` / `.xlsm`, reads core data and best-effort shapes/connectors/charts through one OOXML archive; other input behavior is unchanged.<br>- libreoffice: optional non-COM enrichment mode for `.xlsx/.xlsm`; starts from the same OOXML baseline as `light` and uses LibreOffice runtime to refine merged cells, shapes, connectors, and charts when available.<br>- standard: shapes with text/arrows + charts + print areas via Excel COM.<br>- verbose: all shapes/charts with size + hyperlinks/maps via Excel COM. |
 | `--alpha-col` | Output column keys as Excel-style names (`A`, `B`, ..., `AA`) instead of 0-based numeric keys (`"0"`, `"1"`, ...). Default: disabled (legacy numeric keys). |
 | `--pretty` | Pretty-print JSON (indent=2). |
 | `--image` | Render per-sheet PNGs (requires Excel + COM + `pypdfium2`; not supported in `--mode libreoffice`). |
@@ -157,6 +157,8 @@ exstruct sample.xlsx --pdf --image --dpi 144 -o out.json
   safety policy. For direct Python workbook editing, `openpyxl` / `xlwings`
   are usually the better fit.
 - On non-COM environments, prefer `--mode light` as the pure-Python baseline for `.xlsx/.xlsm`; use `--mode libreoffice` only when you want optional LibreOffice-based enrichment on top of that baseline.
+- The normal supported light path does not import openpyxl, pandas, SciPy, or xlwings. Unsupported OOXML or `colors_map` requests discard partial direct results, restart the complete openpyxl compatibility pipeline, and log the `ooxml_compatibility` warning reason. A drawing failure isolated to one sheet remains best-effort.
+- Direct light OOXML table heuristics select Python BFS per call without changing `EXSTRUCT_BORDER_CLUSTER_BACKEND`; other modes and compatibility extraction retain the configured clustering selection.
 - `--mode libreoffice` is best-effort, not a strict subset of COM output. It does not render PDFs/PNGs and does not compute auto page-break areas in v1.
 - `--auto-page-breaks-dir` is always shown in help output and is validated at execution time.
 - `--mode libreoffice` combined with `--pdf`, `--image`, or `--auto-page-breaks-dir` fails early with a configuration error instead of silently ignoring the option.
