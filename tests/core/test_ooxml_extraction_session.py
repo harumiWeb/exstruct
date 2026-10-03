@@ -19,7 +19,8 @@ import pytest
 from exstruct.core import ooxml_session
 from exstruct.core.backends.ooxml_backend import OoxmlRichBackend
 from exstruct.core.backends.openpyxl_backend import OpenpyxlBackend
-from exstruct.core.ooxml_session import OoxmlExtractionSession
+from exstruct.core.ooxml_session import OoxmlExtractionSession, _SheetData
+from exstruct.models import CellRow
 
 MAIN = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -27,6 +28,7 @@ PKG = "http://schemas.openxmlformats.org/package/2006/relationships"
 
 
 def make_book(path: Path) -> None:
+    """Build a sparse multi-feature archive for current-backend comparisons."""
     wb = Workbook()
     ws = wb.active
     assert ws is not None
@@ -74,6 +76,7 @@ def make_book(path: Path) -> None:
 
 
 def replace_parts(path: Path, parts: dict[str, bytes]) -> None:
+    """Replace specified ZIP parts while retaining all other fixture members."""
     with ZipFile(path) as archive:
         payload = {name: archive.read(name) for name in archive.namelist()}
     payload.update(parts)
@@ -85,6 +88,7 @@ def replace_parts(path: Path, parts: dict[str, bytes]) -> None:
 @pytest.mark.parametrize("suffix", [".xlsx", ".xlsm"])
 @pytest.mark.parametrize("include_links", [False, True])
 def test_core_parity(tmp_path: Path, suffix: str, include_links: bool) -> None:
+    """Match core artifacts and metadata for both supported archive suffixes."""
     path = tmp_path / f"book{suffix}"
     make_book(path)
     expected = OpenpyxlBackend(path)
@@ -116,6 +120,7 @@ def test_core_parity(tmp_path: Path, suffix: str, include_links: bool) -> None:
 def test_shared_strings_cached_formulas_and_shared_formula_parity(
     tmp_path: Path,
 ) -> None:
+    """Match rich strings and cached/shared/array formulas against openpyxl."""
     path = tmp_path / "book.xlsx"
     make_book(path)
     with ZipFile(path) as archive:
@@ -167,6 +172,7 @@ def test_shared_strings_cached_formulas_and_shared_formula_parity(
 def test_archive_and_worksheet_reads_reused_and_rich_parity(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Reuse one ZIP and sheet parse while retaining standalone rich output."""
     path = tmp_path / "book.xlsx"
     make_book(path)
     standalone = OoxmlRichBackend(path)
@@ -209,6 +215,7 @@ def test_archive_and_worksheet_reads_reused_and_rich_parity(
 
 
 def test_exception_closes_and_reuse_rejected(tmp_path: Path) -> None:
+    """Release failed extractions and reject subsequent session access."""
     path = tmp_path / "book.xlsx"
     make_book(path)
     replace_parts(path, {"xl/worksheets/sheet1.xml": b"<broken>"})
@@ -229,6 +236,7 @@ def test_exception_closes_and_reuse_rejected(tmp_path: Path) -> None:
 
 
 def test_defused_stream_rejects_entities(tmp_path: Path) -> None:
+    """Reject entity-bearing XML before it can produce worksheet values."""
     path = tmp_path / "book.xlsx"
     make_book(path)
     replace_parts(
@@ -244,6 +252,7 @@ def test_defused_stream_rejects_entities(tmp_path: Path) -> None:
 def test_worksheet_stream_never_uses_archive_read(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Stream sparse sheets without constructing an openpyxl workbook."""
     path = tmp_path / "book.xlsx"
     make_book(path)
     with OoxmlExtractionSession(path) as session:
@@ -263,6 +272,7 @@ def test_worksheet_stream_never_uses_archive_read(
 
 
 def test_sessions_observe_updates_and_reject_biff(tmp_path: Path) -> None:
+    """Avoid cross-session caching and reject unsupported BIFF input."""
     path = tmp_path / "book.xlsx"
     make_book(path)
     with OoxmlExtractionSession(path) as first:
@@ -282,6 +292,7 @@ def test_sessions_observe_updates_and_reject_biff(tmp_path: Path) -> None:
 
 
 def test_implicit_coordinates_and_out_of_range_date_parity(tmp_path: Path) -> None:
+    """Match inferred coordinates and error-like date overflow handling."""
     path = tmp_path / "implicit.xlsx"
     make_book(path)
     with ZipFile(path) as archive:
@@ -313,6 +324,7 @@ def test_implicit_coordinates_and_out_of_range_date_parity(tmp_path: Path) -> No
 
 
 def test_mac_epoch_and_iso_date_parity(tmp_path: Path) -> None:
+    """Honor the workbook's 1904 epoch for date and time cells."""
     path = tmp_path / "epoch.xlsx"
     wb = Workbook()
     wb.epoch = MAC_EPOCH
@@ -331,6 +343,7 @@ def test_mac_epoch_and_iso_date_parity(tmp_path: Path) -> None:
 def test_foreign_rich_session_rejected_and_unresolved_formula_skipped(
     tmp_path: Path,
 ) -> None:
+    """Skip unresolved shared text and reject a foreign workbook session."""
     path = tmp_path / "formulas.xlsx"
     make_book(path)
     replace_parts(
@@ -346,3 +359,73 @@ def test_foreign_rich_session_rejected_and_unresolved_formula_skipped(
         assert session.extract_cells()["O'Brien, data"][0].c == {"0": 1}
         with pytest.raises(ValueError, match="different workbook"):
             OoxmlRichBackend(tmp_path / "foreign.xlsx", session=session)
+
+
+@pytest.mark.parametrize("kind", ["s", "inlineStr"])
+def test_plain_and_rich_segments_keep_document_order(tmp_path: Path, kind: str) -> None:
+    """Retain accepted XML segment order while omitting phonetic annotations."""
+    path = tmp_path / "strings.xlsx"
+    text = '<r><t>first </t></r><t>middle </t><rPh sb="0" eb="1"><t>ignored</t></rPh><r><t>last</t></r>'
+    cell = "<v>0</v>" if kind == "s" else f"<is>{text}</is>"
+    with ZipFile(path, "w") as archive:
+        archive.writestr(
+            "xl/workbook.xml",
+            f'<workbook xmlns="{MAIN}" xmlns:r="{REL}"><sheets><sheet name="Sheet" sheetId="1" r:id="sheet"/></sheets></workbook>',
+        )
+        archive.writestr(
+            "xl/_rels/workbook.xml.rels",
+            f'<Relationships xmlns="{PKG}"><Relationship Id="sheet" Type="{REL}/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="strings" Type="{REL}/sharedStrings" Target="sharedStrings.xml"/></Relationships>',
+        )
+        archive.writestr(
+            "xl/sharedStrings.xml", f'<sst xmlns="{MAIN}"><si>{text}</si></sst>'
+        )
+        archive.writestr(
+            "xl/worksheets/sheet1.xml",
+            f'<worksheet xmlns="{MAIN}"><sheetData><row r="1"><c r="A1" t="{kind}">{cell}</c></row></sheetData></worksheet>',
+        )
+    with OoxmlExtractionSession(path) as session:
+        assert session.extract_cells() == {
+            "Sheet": [CellRow(r=1, c={"0": "first middle last"})]
+        }
+
+
+def test_sparse_merged_coverage_and_range_link_semantics(tmp_path: Path) -> None:
+    """Avoid expanding a sheet-wide merge and retain link override/filter rules."""
+    data = _SheetData(
+        values={
+            (1, 1): "first",
+            (1, 2): "covered",
+            (1, 5): "outside",
+            (2, 1): "covered",
+            (3, 3): "third",
+            (3, 4): "covered",
+            (4, 1): "fourth",
+            (500000, 16384): "covered",
+            (1000000, 1): "covered",
+        },
+        merged=["A1:B2", "C3:D3", "A4:XFD1048576"],
+        links=[
+            ("B1:F3", "https://example.com/range"),
+            ("E1", "https://example.com/override"),
+            ("A2", "https://example.com/hidden"),
+        ],
+    )
+    session = OoxmlExtractionSession(tmp_path / "unused.xlsx")
+    plain = session._cell_rows(data, include_links=False)
+    linked = session._cell_rows(data, include_links=True)
+    assert [(r.r, r.c) for r in plain] == [
+        (1, {"0": "first", "4": "outside"}),
+        (3, {"2": "third"}),
+        (4, {"0": "fourth"}),
+    ]
+    assert [(r.r, r.c) for r in linked] == [(r.r, r.c) for r in plain]
+    assert linked[0].links == {
+        "1": "https://example.com/range",
+        "2": "https://example.com/range",
+        "3": "https://example.com/range",
+        "4": "https://example.com/override",
+        "5": "https://example.com/range",
+    }
+    assert linked[1].links == {str(c): "https://example.com/range" for c in range(1, 6)}
+    assert linked[2].links is None
+    assert session._cell_rows(data, include_links=True) == linked

@@ -31,6 +31,8 @@ with OoxmlExtractionSession(path) as session:
   extraction. Independent sessions have independent caches.
 - Worksheet XML and shared strings use `defusedxml.ElementTree.iterparse`.
   Completed cell/row and shared-string elements are removed from their parents.
+- Accepted plain/rich text segments retain XML document order; phonetic
+  annotations do not contribute cell text.
 - Sparse values, formulas, merges, hyperlinks and table references are cached
   only after complete worksheet parsing. Subsequent core methods do not reparse
   worksheets. Memory scales with extracted data and the shared-string dictionary;
@@ -57,6 +59,10 @@ with OoxmlExtractionSession(path) as session:
 - `extract_cells()` returns `CellRow`: rows 1-based, columns 0-based numeric-string
   keys, existing missing-token filtering and numeric-string normalization. Sparse
   gaps do not cause rectangular blank cell materialization.
+- Merged follower membership is indexed once per parsed sheet over stored
+  coordinates. Row/column bisect limits checks to each merge extent without
+  expanding empty rectangles. Hyperlinks use bisect over emitted row keys,
+  preserving last-link-wins behavior without scanning unrelated rows.
 - Shared strings (`s`), plain/rich inline strings (`inlineStr`), formula string
   caches (`str`), numeric (`n`), boolean (`b`) and ISO date (`d`) values are decoded.
   Formatting/phonetic annotations are omitted. Excel errors (`e`) are omitted,
@@ -88,6 +94,31 @@ directory; absolute targets resolve from the ZIP root. External targets are
 preserved and never fetched or read as ZIP parts. These primitives serve
 hyperlinks, tables, worksheets, drawings and charts. Legacy drawing helpers
 remain available as wrappers.
+When drawing extraction shares a core session, workbook enumeration uses the
+same resolved officeDocument part as core extraction, including a relocated
+workbook. Standalone path-based drawing reads retain their conventional default.
+
+## Review follow-up validation
+
+PR #154 adds regressions for accepted interleaved text segments in shared and
+inline strings, a relocated `custom/book.xml` read before any cell extraction,
+and sheet-wide sparse merged ranges with overlapping hyperlink overrides.
+The relocated fixture includes both a chart and a shape and verifies one ZIP
+open per session. Merge coverage indexes only stored coordinates and is reused
+across linked/unlinked row extraction.
+
+A local Windows synthetic comparison of the original `807e206` row builder
+and the revised builder used 40,000 stored cells (20,000 rows, two columns),
+200 single-row merges and 200 links. Exact output equality was asserted:
+original 0.684129 s, revised first call 0.124096 s, revised cached call 0.099105 s.
+These are row-construction timings from one run, not workbook extraction or
+memory measurements.
+
+Follow-up validation: 27 focused tests passed; 1,040 full tests passed with
+12 external-runtime tests deselected and 83.57% coverage. Existing eight-workbook
+parity, Ruff, strict mypy and diff checks passed. These fixes restore extraction
+semantics and improve internal indexing; they introduce no backend-selection,
+public mode or fallback policy change and require no new ADR.
 
 ## ADR assessment
 

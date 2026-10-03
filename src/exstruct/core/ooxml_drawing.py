@@ -183,21 +183,31 @@ def read_sheet_drawings(file_path: Path) -> dict[str, SheetDrawingData]:
         return _read_sheet_drawings_from_archive(archive, file_path)
 
 
-def read_sheet_drawings_from_archive(archive: ZipFile) -> dict[str, SheetDrawingData]:
+def read_sheet_drawings_from_archive(
+    archive: ZipFile,
+    *,
+    workbook_path: str = "xl/workbook.xml",
+) -> dict[str, SheetDrawingData]:
     """Read worksheet drawing metadata from an already-open OOXML archive."""
 
     source = getattr(archive, "filename", None) or "<open archive>"
-    return _read_sheet_drawings_from_archive(archive, source)
+    return _read_sheet_drawings_from_archive(
+        archive,
+        source,
+        workbook_path=workbook_path,
+    )
 
 
 def _read_sheet_drawings_from_archive(
     archive: ZipFile,
     source: object,
+    *,
+    workbook_path: str = "xl/workbook.xml",
 ) -> dict[str, SheetDrawingData]:
     """Read drawing metadata while preserving per-sheet parse fallbacks."""
 
     result: dict[str, SheetDrawingData] = {}
-    for sheet_name, sheet_xml_path in _iter_sheet_xml_paths(archive):
+    for sheet_name, sheet_xml_path in _iter_sheet_xml_paths(archive, workbook_path):
         try:
             drawing_path = _resolve_sheet_drawing_path(archive, sheet_xml_path)
             if drawing_path is None:
@@ -224,12 +234,15 @@ def _read_sheet_drawings_from_archive(
     return result
 
 
-def _iter_sheet_xml_paths(archive: ZipFile) -> list[tuple[str, str]]:
+def _iter_sheet_xml_paths(
+    archive: ZipFile,
+    workbook_path: str = "xl/workbook.xml",
+) -> list[tuple[str, str]]:
     """Return workbook sheet names paired with their OOXML worksheet paths."""
 
-    workbook_xml = archive.read("xl/workbook.xml")
+    workbook_xml = archive.read(workbook_path)
     workbook_root = ElementTree.fromstring(workbook_xml)
-    rel_map = _read_relationships(archive, relationship_part_path("xl/workbook.xml"))
+    rel_map = _read_relationships(archive, relationship_part_path(workbook_path))
     paths: list[tuple[str, str]] = []
     for sheet in workbook_root.findall("spreadsheetml:sheets/spreadsheetml:sheet", _NS):
         name = sheet.attrib.get("name")

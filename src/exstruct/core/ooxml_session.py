@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from bisect import bisect_left, bisect_right
 from dataclasses import dataclass, field
 import logging
 from pathlib import Path
@@ -60,6 +61,8 @@ class OoxmlTable:
 
 @dataclass(frozen=True)
 class _Formula:
+    """Stored formula text and optional shared-formula anchor identity."""
+
     coordinate: str
     text: str | None
     kind: str
@@ -68,18 +71,52 @@ class _Formula:
 
 @dataclass
 class _SheetData:
+    """Sparse worksheet artifacts cached only after successful XML parsing."""
+
     values: dict[tuple[int, int], object] = field(default_factory=dict)
     formulas: list[_Formula] = field(default_factory=list)
     merged: list[str] = field(default_factory=list)
     links: list[tuple[str, str]] = field(default_factory=list)
     table_ids: list[str] = field(default_factory=list)
+    covered_followers: set[tuple[int, int]] | None = None
 
 
 def _string_text(node: ElementTree.Element) -> str:
     """Join plain/rich text runs without phonetic annotations."""
-    return "".join(t.text or "" for t in node.findall("s:t", _NS)) + "".join(
-        t.text or "" for t in node.findall("s:r/s:t", _NS)
-    )
+    parts: list[str] = []
+    for child in node:
+        if child.tag == f"{{{_MAIN}}}t":
+            parts.append(child.text or "")
+        elif child.tag == f"{{{_MAIN}}}r":
+            parts.extend(text.text or "" for text in child.findall("s:t", _NS))
+    return "".join(parts)
+
+
+def _covered_followers(data: _SheetData) -> set[tuple[int, int]]:
+    """Index stored merge followers once without expanding empty coordinates."""
+    if data.covered_followers is not None:
+        return data.covered_followers
+    if not data.merged:
+        data.covered_followers = set()
+        return data.covered_followers
+    columns_by_row: dict[int, list[int]] = {}
+    for row, col in sorted(data.values):
+        columns_by_row.setdefault(row, []).append(col)
+    row_keys = list(columns_by_row)
+    covered: set[tuple[int, int]] = set()
+    for ref in data.merged:
+        c1, r1, c2, r2 = _bounds(ref)
+        start = bisect_left(row_keys, r1)
+        stop = bisect_right(row_keys, r2)
+        for row in row_keys[start:stop]:
+            columns = columns_by_row[row]
+            left = bisect_left(columns, c1)
+            right = bisect_right(columns, c2)
+            covered.update(
+                (row, col) for col in columns[left:right] if (row, col) != (r1, c1)
+            )
+    data.covered_followers = covered
+    return covered
 
 
 def _bounds(ref: str) -> tuple[int, int, int, int]:
@@ -102,6 +139,7 @@ class OoxmlExtractionSession:
     """
 
     def __init__(self, file_path: Path) -> None:
+        """Initialize lazy archive ownership and extraction-local caches."""
         self.file_path = file_path
         self._archive: ZipFile | None = None
         self._closed = False
@@ -114,10 +152,12 @@ class OoxmlExtractionSession:
         self._drawings: dict[str, SheetDrawingData] | None = None
 
     def __enter__(self) -> OoxmlExtractionSession:
+        """Enter without opening a ZIP until a feature needs its parts."""
         self._ensure_open()
         return self
 
     def _ensure_open(self) -> None:
+        """Reject access after the session has released its resources."""
         if self._closed:
             raise RuntimeError("OOXML extraction session is closed")
 
@@ -140,6 +180,7 @@ class OoxmlExtractionSession:
         return self._relationships[source_path]
 
     def _workbook(self) -> ElementTree.Element:
+        """Resolve the package officeDocument relationship and cache its XML."""
         self._ensure_open()
         if self._workbook_root is None:
             for rel in self.relationships("").values():
@@ -188,6 +229,7 @@ class OoxmlExtractionSession:
         ]
 
     def _related_part(self, kind: str) -> str | None:
+        """Find a workbook-owned internal relationship of the requested kind."""
         self._workbook()
         return next(
             (
@@ -199,6 +241,7 @@ class OoxmlExtractionSession:
         )
 
     def _shared_strings(self) -> list[str]:
+        """Stream the shared-string dictionary once without retaining XML."""
         if self._strings is None:
             strings: list[str] = []
             part = self._related_part("sharedStrings")
@@ -217,6 +260,7 @@ class OoxmlExtractionSession:
         return self._strings
 
     def _number_formats(self) -> list[str]:
+        """Cache scalar number formats from built-in and custom style records."""
         if self._formats is None:
             formats: list[str] = []
             part = self._related_part("styles")
@@ -235,6 +279,7 @@ class OoxmlExtractionSession:
         return self._formats
 
     def _cell_value(self, node: ElementTree.Element) -> object:
+        """Decode the stored scalar cache and honor date/time number formats."""
         kind = node.get("t", "n")
         text = node.findtext("s:v", namespaces=_NS)
         if kind == "inlineStr":
@@ -274,6 +319,7 @@ class OoxmlExtractionSession:
         return int(value) if int(value) == value else value
 
     def _read_sheet(self, sheet: OoxmlSheet) -> _SheetData:
+        """Stream worksheet artifacts, publishing the cache only after success."""
         self._ensure_open()
         if sheet.name in self._sheet_cache:
             return self._sheet_cache[sheet.name]
@@ -315,6 +361,7 @@ class OoxmlExtractionSession:
         data: _SheetData,
         rels: dict[str, OoxmlRelationship],
     ) -> None:
+        """Collect a completed worksheet element before its XML is released."""
         if tag == "c":
             coordinate = node.attrib["r"]
             data.values[coordinate_to_tuple(coordinate)] = self._cell_value(node)
@@ -342,6 +389,7 @@ class OoxmlExtractionSession:
             data.table_ids.append(node.attrib[f"{{{_REL}}}id"])
 
     def _worksheets(self) -> list[OoxmlSheet]:
+        """Filter workbook-order metadata to worksheet relationships."""
         return [sheet for sheet in self.sheets() if sheet.kind == "worksheet"]
 
     def extract_cells(self, *, include_links: bool = False) -> dict[str, list[CellRow]]:
@@ -354,26 +402,26 @@ class OoxmlExtractionSession:
         }
 
     def _cell_rows(self, data: _SheetData, *, include_links: bool) -> list[CellRow]:
+        """Normalize sparse values and restrict links to emitted rows in range."""
         rows: dict[int, dict[str, int | float | str]] = {}
-        merged = [_bounds(ref) for ref in data.merged]
+        covered = _covered_followers(data)
         for (row, col), raw in sorted(data.values.items()):
-            if any(
-                c1 <= col <= c2 and r1 <= row <= r2 and (row, col) != (r1, c1)
-                for c1, r1, c2, r2 in merged
-            ):
+            if (row, col) in covered:
                 continue
             value = _normalize_cell_value(raw)
             if value is not None:
                 rows.setdefault(row, {})[str(col - 1)] = value
         links: dict[int, dict[str, str]] = {}
         if include_links:
+            row_keys = list(rows)
             for ref, target in data.links:
                 c1, r1, c2, r2 = _bounds(ref)
-                for row in rows:
-                    if r1 <= row <= r2:
-                        links.setdefault(row, {}).update(
-                            {str(col - 1): target for col in range(c1, c2 + 1)}
-                        )
+                start = bisect_left(row_keys, r1)
+                stop = bisect_right(row_keys, r2)
+                for row in row_keys[start:stop]:
+                    links.setdefault(row, {}).update(
+                        {str(col - 1): target for col in range(c1, c2 + 1)}
+                    )
         return [
             CellRow(r=row, c=values, links=links.get(row))
             for row, values in rows.items()
@@ -389,6 +437,7 @@ class OoxmlExtractionSession:
         )
 
     def _formulas_map(self, name: str, data: _SheetData) -> SheetFormulasMap:
+        """Group normalized formula text, translating known shared anchors."""
         shared = {
             f.shared_id: f for f in data.formulas if f.kind == "shared" and f.text
         }
@@ -504,7 +553,10 @@ class OoxmlExtractionSession:
 
         self._ensure_open()
         if self._drawings is None:
-            self._drawings = read_sheet_drawings_from_archive(self.archive())
+            self._workbook()
+            self._drawings = read_sheet_drawings_from_archive(
+                self.archive(), workbook_path=self._workbook_path
+            )
         return self._drawings
 
     def close(self) -> None:
@@ -522,4 +574,5 @@ class OoxmlExtractionSession:
         self._drawings = None
 
     def __exit__(self, *exc_info: object) -> None:
+        """Release owned resources on normal exit and on extraction errors."""
         self.close()

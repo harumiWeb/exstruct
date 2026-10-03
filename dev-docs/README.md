@@ -9,6 +9,9 @@
 
 ## Reading order
 
+Implementation milestones and explicitly deferred extraction work are recorded
+in the [extraction roadmap](roadmap.md).
+
 When you change the codebase, read these materials in the following order:
 
 1. Check the public contract in `docs/`.

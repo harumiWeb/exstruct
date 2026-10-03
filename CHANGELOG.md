@@ -30,6 +30,10 @@ All notable changes to this project are documented in this file. This changelog 
 
 ### Fixed
 
+- Preserved accepted plain/rich string segment order and retained drawings when
+  an OOXML session resolves a non-default workbook part; avoided repeated full
+  merge/link scans when constructing sparse cell rows.
+
 - Preserved live pipeline backend overrides through lazy backend resolution.
 - Avoided materializing blank cells when reading a shared sparse worksheet.
 
