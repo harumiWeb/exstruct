@@ -47,11 +47,17 @@ The probe also records the workbook's COM `Saved` flag immediately before and
 after its calculation call.
 
 The wrapper count measures calls through
-`cells._get_display_format_color` for both implementations. The JSON also
-retains the existing ContextVar counter when available. Hybrid DEBUG records
-are captured verbatim with structured extras and parsed metric fields, including
-`used_cells`, `conditional_candidates`, `display_format_calls`, and any logged
-fallback duration fields.
+`cells._get_display_format_color` for both implementations. Legacy measurements
+also retain the existing ContextVar counter when available. Historical hybrid
+records contain a false zero in `cells_context_display_format_calls`: the
+hybrid extractor resets that per-sheet counter, so the final value is not an
+aggregate. Do not use that field in existing raw JSON; the historical data is
+left unchanged. `wrapper_display_format_calls` and captured hybrid DEBUG
+`display_format_calls` remain the authoritative counts and are unchanged. New
+hybrid records omit `cells_context_display_format_calls`. Hybrid DEBUG records
+are captured verbatim with structured extras and parsed metric fields,
+including `used_cells`, `conditional_candidates`, `display_format_calls`, and
+any logged fallback duration fields.
 
 The valid final CF fixtures write solid-fill `fgColor` and `bgColor` as the
 same color, use OOXML-standard `FormulaRule` expressions without a leading `=`,

@@ -31,8 +31,13 @@ When a caller supplies a session, reuse it only after confirming the path
 match. A path-based standalone call owns a temporary session and closes it
 after extraction. A session mismatch, unreadable/missing file, unsupported
 format, unreadable saved state, or session load failure selects the legacy
-full scan. The hybrid path makes no claim that saved formatting represents
-unsaved live changes.
+full scan. After preparing each sheet for `DisplayFormat`, check the saved
+state again before using the saved snapshot for that sheet. Sheet activation
+or calculation can run VBA events that change live fills. If `Saved` is false
+or unreadable after preparation, latch the legacy full scan for the current
+sheet and all remaining sheets; do not resume hybrid extraction even if a
+later check reports `Saved` as true. The hybrid path makes no claim that saved
+formatting represents unsaved live changes.
 
 ## Saved worksheet analysis
 
@@ -61,8 +66,10 @@ conditional-format constructs and then return a partially optimized map.
 
 For a worksheet that passes validation:
 
-1. Read the saved worksheet fills and restrict all results to the live COM
-   `UsedRange`.
+1. Classify saved static fills by traversing only cells already stored in the
+   openpyxl worksheet, and restrict results to the live COM `UsedRange`. When
+   default backgrounds are requested, emit defaults for absent coordinates in
+   that range without creating openpyxl cells for them.
 2. Resolve ordinary no-fill cells and solid direct-RGB fills without tint from
    saved data, using the existing color normalization and filtering rules.
 3. Add cells with other saved static color forms to the COM candidate set.
@@ -77,6 +84,11 @@ For a worksheet that passes validation:
 
 The live COM used range defines the output boundary. Candidate ranges and
 saved static cells outside it must not add coordinates to the result.
+
+Excluding requested defaults, static-fill traversal is proportional to the
+cells already stored in the openpyxl worksheet. The conditional-format
+candidate union and requested default-background output can still scale with
+the live `UsedRange`. No area or candidate-count budget is currently enforced.
 
 ## Excel evaluation and output semantics
 
@@ -100,6 +112,10 @@ COM preparation required by the current rendered-color path remains in place.
 
 - Workbook-level eligibility, file, session, XML-container, or load failures
   use the legacy full scan for the workbook.
+- If the post-preparation `Saved` check is false or unreadable, latch the
+  workbook to legacy scanning from the current sheet onward. Sheet activation
+  and calculation may run VBA events that invalidate the saved snapshot; a
+  later `Saved` value does not re-enable hybrid extraction for later sheets.
 - An unsupported or ambiguous construct isolated to one worksheet uses the
   legacy full scan for that worksheet while eligible worksheets may still use
   the hybrid path.
@@ -150,12 +166,14 @@ theme/indexed/tinted/pattern/automatic/gradient fill classification, XML
 fallbacks (`extLst`, unknown rule, foreign namespace, `pivotTableParts`),
 custom `Normal` fill, ambiguous row/column/table/merge cases, transient
 candidate-read retry, unsaved/session-mismatch/non-`.xlsx` eligibility,
-sheet isolation, shared pipeline/session reuse, and standalone session
+post-preparation `Saved` invalidation (false or unreadable) for the current and
+remaining sheets, sparse traversal without materializing missing openpyxl
+cells, sheet isolation, shared pipeline/session reuse, and standalone session
 ownership, including missing/corrupt saved-file fallback. Automatic and
 gradient fills are synthetic unit cases, not live-Excel fixtures.
 
 The repeat benchmark and its current measurements are tracked in
-[benchmark/issue159-results.md](../../../benchmark/issue159-results.md). Keep
+[benchmark/issue159-results.md](../../benchmark/issue159-results.md). Keep
 Excel wall-clock results separate from correctness and deterministic
 call-count checks.
 
@@ -174,7 +192,7 @@ conditional colors were visible. In its mixed `A1:B1` probe,
 cell reads returned `255` and `12611584`; the range property does not provide a
 per-cell color matrix.
 
-See the [final benchmark JSON](../../../benchmark/baselines/issue159-colors-final-windows.json),
-[CF probe JSON](../../../benchmark/baselines/issue159-colors-cf-probe-windows.json),
-and [benchmark results](../../../benchmark/issue159-results.md) for details.
+See the [final benchmark JSON](../../benchmark/baselines/issue159-colors-final-windows.json),
+[CF probe JSON](../../benchmark/baselines/issue159-colors-cf-probe-windows.json),
+and [benchmark results](../../benchmark/issue159-results.md) for details.
 Wall-clock timings vary by environment and are not a universal guarantee.

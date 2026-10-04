@@ -806,12 +806,13 @@ def step_extract_colors_map_com(
 
     backend_type = _backend_type("ComBackend")
 
-    backend = backend_type(workbook)
     # Preserve the minimal constructor surface of legacy backend overrides.
     native_module = sys.modules.get("exstruct.core.backends.com_backend")
     native_type = getattr(native_module, "ComBackend", None)
     if backend_type is native_type and artifacts.openpyxl_session is not None:
         backend = backend_type(workbook, session=artifacts.openpyxl_session)
+    else:
+        backend = backend_type(workbook)
     com_result = backend.extract_colors_map(
         include_default_background=inputs.include_default_background,
         ignore_colors=inputs.ignore_colors,

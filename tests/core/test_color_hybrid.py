@@ -692,8 +692,22 @@ def test_pipeline_com_color_step_reuses_shared_session_until_owner_closes(
         include_merged_values_in_rows=False,
     )
     artifacts = pipeline.ExtractionArtifacts(openpyxl_session=session)
+    backend_type = pipeline._backend_type("ComBackend")
+    original_init = backend_type.__init__
+    backend_sessions: list[OpenpyxlExtractionSession | None] = []
+
+    def tracked_init(
+        backend: object,
+        workbook: object,
+        session: OpenpyxlExtractionSession | None = None,
+    ) -> None:
+        backend_sessions.append(session)
+        original_init(backend, workbook, session=session)
+
+    monkeypatch.setattr(backend_type, "__init__", tracked_init)
     with session:
         pipeline.step_extract_colors_map_com(inputs, artifacts, fake)
+        assert backend_sessions == [session]
         assert workbook_calls == [True, True]
         assert loaded_workbook is real_workbook()
         assert artifacts.colors_map_data is not None
@@ -848,3 +862,96 @@ def test_unreadable_saved_file_uses_live_legacy_colors(
     actual = color_hybrid.extract_colors(fake, False, None, None)
     assert actual.sheets["Sheet"].colors_map == {"112233": [(1, 0)]}
     assert fake.sheets[0].display_calls == [(1, 1)]
+
+
+@pytest.mark.parametrize("include_default", [False, True])
+def test_sparse_static_colors_do_not_materialize_missing_cells(
+    include_default: bool,
+) -> None:
+    """Default backgrounds must not enlarge the shared worksheet cell cache."""
+    workbook = Workbook()
+    ws = workbook.active
+    ws["B2"].fill = PatternFill("solid", fgColor="FF123456")
+    ws["C3"] = "unfilled"
+    ws["D4"].fill = PatternFill("solid", fgColor=Color(theme=1))
+    ws["E5"].fill = PatternFill("solid", fgColor="FFFFFFFF")
+    ws["F6"].fill = PatternFill("solid", fgColor="FFABCDEF")
+    stored = dict(ws._cells)
+    candidates = {(1, 1)}
+    try:
+        actual = color_hybrid._static_colors(
+            ws, (1, 1, 5, 5), candidates, include_default
+        )
+        assert ws._cells == stored
+        assert candidates == {(1, 1), (4, 4)}
+        assert actual[2, 2] == "123456"
+        assert (6, 6) not in actual
+        assert (1, 1) not in actual
+        assert (4, 4) not in actual
+        if include_default:
+            assert len(actual) == 23
+            assert actual[1, 2] == actual[3, 3] == actual[5, 5] == "FFFFFF"
+        else:
+            assert actual == {(2, 2): "123456"}
+    finally:
+        workbook.close()
+
+
+def test_large_sparse_static_range_only_retains_colored_saved_cells() -> None:
+    """A near-full-width UsedRange must not allocate its absent coordinates."""
+    workbook = Workbook()
+    ws = workbook.active
+    ws["A1"] = "start"
+    ws["XFD100000"].fill = PatternFill("solid", fgColor="FF123456")
+    try:
+        actual = color_hybrid._static_colors(ws, (1, 1, 100000, 16384), set(), False)
+        assert actual == {(100000, 16384): "123456"}
+        assert len(ws._cells) == 2
+    finally:
+        workbook.close()
+
+
+@pytest.mark.parametrize("saved_state", [False, "unreadable"])
+def test_sheet_preparation_invalidates_current_and_remaining_saved_fills(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    saved_state: bool | str,
+) -> None:
+    """Sheet event changes force live colors even if a later sheet appears saved."""
+    path = tmp_path / "events.xlsm"
+
+    def configure(workbook: Workbook) -> None:
+        workbook.active.title = "Before"
+        for name in ("Changed", "After"):
+            workbook.create_sheet(name)
+        for ws in workbook.worksheets:
+            ws["A1"].fill = PatternFill("solid", fgColor="FF0000FF")
+
+    _save_workbook(path, configure)
+    fake = _fake_workbook(path)
+    original_prepare = cells._prepare_sheet_for_display_format
+
+    class UnreadableSaved:
+        @property
+        def Saved(self) -> bool:  # noqa: N802 - Excel COM property
+            raise RuntimeError("Saved unavailable")
+
+    def prepare(sheet: _FakeSheet) -> None:
+        original_prepare(sheet)
+        if sheet.name == "Changed":
+            sheet.rendered_colors[1, 1] = _excel_color("FF0000")
+            fake.sheets[2].rendered_colors[1, 1] = _excel_color("00FF00")
+            fake.api = (
+                SimpleNamespace(Saved=False)
+                if saved_state is False
+                else UnreadableSaved()
+            )
+        elif sheet.name == "After":
+            fake.api = SimpleNamespace(Saved=True)
+
+    monkeypatch.setattr(cells, "_prepare_sheet_for_display_format", prepare)
+    actual = color_hybrid.extract_colors(fake, False, None, None)
+    assert actual.sheets["Before"].colors_map == {"0000FF": [(1, 0)]}
+    assert actual.sheets["Changed"].colors_map == {"FF0000": [(1, 0)]}
+    assert actual.sheets["After"].colors_map == {"00FF00": [(1, 0)]}
+    assert [sheet.display_calls for sheet in fake.sheets] == [[], [(1, 1)], [(1, 1)]]

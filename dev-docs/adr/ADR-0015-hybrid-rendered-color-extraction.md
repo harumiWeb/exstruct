@@ -23,10 +23,18 @@ remain in place.
 - Adopt a hybrid strategy for COM-backed `colors_map` extraction when the
   workbook is `.xlsx` / `.xlsm`, the saved file exists, the COM workbook path
   matches the extraction session path, and `workbook.api.Saved` is true.
+- Recheck `workbook.api.Saved` after preparing each sheet for rendered-color
+  reads. Sheet activation or calculation can run VBA events that change live
+  fills after the saved snapshot was opened. If `Saved` is false or cannot be
+  read, latch the legacy full scan for that sheet and every remaining sheet;
+  do not resume hybrid extraction later in the workbook.
 - Read ordinary static fills from the saved worksheet representation. Use
   saved worksheet XML to identify conditional-format ranges, clip those ranges
-  to the live COM `UsedRange`, and deduplicate candidate cells. Also send static
-  cells with unsupported saved color representations to COM as candidates.
+  to the live COM `UsedRange`, and deduplicate candidate cells. Also send
+  static cells with unsupported saved color representations to COM as candidates.
+- Traverse only stored openpyxl cells when classifying saved static fills.
+  When default backgrounds are requested, emit entries for absent coordinates
+  within `UsedRange` without creating openpyxl cells for them.
 - Continue to ask Excel for the final color of each candidate cell through
   `DisplayFormat`. Excel remains responsible for all conditional-format rule
   evaluation, including formula semantics, priority, overlap, and
@@ -87,8 +95,10 @@ remain in place.
   parity, candidate clipping/deduplication, conditional-color override,
   unsupported XML/style fallbacks (including `pivotTableParts` and custom
   `Normal` fill), strict candidate-read retry, unsaved/session-mismatch/
-  non-`.xlsx` eligibility, missing/corrupt saved files, sheet isolation, shared
-  pipeline/session behavior, and session ownership. Automatic and gradient
+  non-`.xlsx` eligibility, post-preparation `Saved` invalidation (false or
+  unreadable) for the current and remaining sheets, sparse traversal without
+  materializing missing openpyxl cells, missing/corrupt saved files, sheet
+  isolation, shared pipeline/session behavior, and session ownership. Automatic and gradient
   fills are synthetic unit cases, not live-Excel fixtures.
 - Code: `src/exstruct/core/color_hybrid.py` implements saved-fill and candidate
   analysis; `src/exstruct/core/cells.py` retains the COM color entrypoint and
@@ -107,13 +117,13 @@ remain in place.
   passed across four configurations and three repeats per fixture. Conditional
   color validation passed. `DisplayFormat` calls fell from 6,000 to 0 for
   static fills and from 6,000 to 30 for sparse CF. See the [final benchmark
-  JSON](../../../benchmark/baselines/issue159-colors-final-windows.json).
+  JSON](../../benchmark/baselines/issue159-colors-final-windows.json).
   The separate 10-row sparse, dense, and overlapping-formula probe also passed
   all configurations and verified visible CF colors; its mixed `A1:B1` range
   returned `0` while per-cell reads returned `255` and `12611584`, confirming
   the range property is not a per-cell color matrix. See the [CF probe
-  JSON](../../../benchmark/baselines/issue159-colors-cf-probe-windows.json).
-  Measurement details are in [benchmark results](../../../benchmark/issue159-results.md).
+  JSON](../../benchmark/baselines/issue159-colors-cf-probe-windows.json).
+  Measurement details are in [benchmark results](../../benchmark/issue159-results.md).
   Wall-clock results are environment-specific and do not imply a universal
   timing guarantee.
 - Classification: `recommended`; record a performance-strategy change while

@@ -106,13 +106,8 @@ def _candidate_cells(ranges: list[Bounds], bounds: Bounds) -> set[tuple[int, int
     }
 
 
-def _static_colors(
-    ws: Worksheet,
-    bounds: Bounds,
-    candidates: set[tuple[int, int]],
-    include_default: bool,
-) -> dict[tuple[int, int], str | None]:
-    """Only trust fills whose RGB interpretation is identical to Excel's."""
+def _validate_saved_styles(ws: Worksheet) -> None:
+    """Reject sheet-wide styles that cannot be resolved from stored cell fills."""
     if ws.merged_cells.ranges or ws.tables:
         raise ValueError("merged cells or table styles require rendered scan")
     if any(d.has_style for d in ws.row_dimensions.values()) or any(
@@ -123,25 +118,43 @@ def _static_colors(
     for style in ws.parent._named_styles:
         if style.builtinId == 0 and style.fill.patternType not in (None, "none"):
             raise ValueError("custom Normal fill requires rendered scan")
+
+
+def _static_colors(
+    ws: Worksheet,
+    bounds: Bounds,
+    candidates: set[tuple[int, int]],
+    include_default: bool,
+) -> dict[tuple[int, int], str | None]:
+    """Only trust fills whose RGB interpretation is identical to Excel's."""
+    _validate_saved_styles(ws)
     r1, c1, r2, c2 = bounds
-    result = {}
-    for row in ws.iter_rows(min_row=r1, max_row=r2, min_col=c1, max_col=c2):
-        for cell in row:
-            coord = (cell.row, cell.column)
-            if coord in candidates:
-                continue
-            fill = cell.fill
-            pattern = getattr(fill, "patternType", "unsupported")
-            if pattern in (None, "none"):
-                result[coord] = "FFFFFF" if include_default else None
-            elif (
-                pattern == "solid"
-                and fill.fgColor.type == "rgb"
-                and not fill.fgColor.tint
-            ):
-                result[coord] = cells._resolve_cell_background(cell, include_default)
-            else:
-                candidates.add(coord)
+    result: dict[tuple[int, int], str | None] = {}
+    # iter_rows creates and retains missing cells across the entire rectangle.
+    # Match the sparse traversal used by the file-backed cell extractor.
+    for coord, cell in ws._cells.items():
+        row, col = coord
+        if not (r1 <= row <= r2 and c1 <= col <= c2) or coord in candidates:
+            continue
+        fill = cell.fill
+        pattern = getattr(fill, "patternType", "unsupported")
+        if pattern in (None, "none"):
+            color = "FFFFFF" if include_default else None
+        elif (
+            pattern == "solid" and fill.fgColor.type == "rgb" and not fill.fgColor.tint
+        ):
+            color = cells._resolve_cell_background(cell, include_default)
+        else:
+            candidates.add(coord)
+            continue
+        if color is not None:
+            result[coord] = color
+    if include_default:
+        for row in range(r1, r2 + 1):
+            for col in range(c1, c2 + 1):
+                coord = (row, col)
+                if coord not in ws._cells and coord not in candidates:
+                    result[coord] = "FFFFFF"
     return result
 
 
@@ -276,6 +289,17 @@ def extract_colors(
         sheets = {}
         for sheet in workbook.sheets:
             cells._prepare_sheet_for_display_format(sheet)
+            if archive is not None:
+                try:
+                    if not workbook.api.Saved:
+                        raise ValueError(
+                            "workbook has unsaved changes after sheet preparation"
+                        )
+                except Exception as exc:
+                    # Activation/calculation can run VBA handlers that alter
+                    # live fills. Once invalidated, never trust this snapshot again.
+                    reason = str(exc)
+                    archive = None
             sheets[sheet.name] = _extract_sheet(
                 sheet,
                 session,

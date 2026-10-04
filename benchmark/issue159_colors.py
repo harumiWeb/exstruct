@@ -423,7 +423,11 @@ def _measure(
             except Exception as exc:  # Retain failures beside successful timings.
                 error = f"{type(exc).__name__}: {exc}"
             elapsed_ms = (perf_counter() - started) * 1000
-    context_calls = context_counter.get() if context_counter is not None else None
+    context_calls = (
+        context_counter.get()
+        if context_counter is not None and strategy != "hybrid"
+        else None
+    )
     if context_token is not None:
         context_counter.reset(context_token)
 
@@ -435,10 +439,11 @@ def _measure(
         "ignore_colors": sorted(ignore_colors) if ignore_colors else None,
         "elapsed_ms": elapsed_ms,
         "wrapper_display_format_calls": calls["calls"],
-        "cells_context_display_format_calls": context_calls,
         "hybrid_debug_records": collector.records if collector is not None else [],
         "error": error,
     }
+    if strategy != "hybrid":
+        record["cells_context_display_format_calls"] = context_calls
     if color_map is not None:
         record["map_sha256"] = _map_fingerprint(color_map)
         record["map_summary"] = _map_summary(color_map)
