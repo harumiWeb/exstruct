@@ -228,3 +228,20 @@ adrs:
       - dev-docs/specs/excel-extraction.md
       - dev-docs/specs/extraction-performance.md
       - benchmark/issue151-results.md
+  - id: ADR-0015
+    title: Hybrid Rendered Color Extraction
+    status: proposed
+    path: dev-docs/adr/ADR-0015-hybrid-rendered-color-extraction.md
+    primary_domain: performance
+    domains:
+      - performance
+      - backend
+      - extraction
+      - compatibility
+      - fallback
+    supersedes: []
+    superseded_by: []
+    related_specs:
+      - dev-docs/specs/excel-extraction.md
+      - dev-docs/specs/hybrid-color-extraction.md
+      - dev-docs/specs/extraction-performance.md

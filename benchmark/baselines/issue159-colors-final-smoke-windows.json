@@ -1,0 +1,2229 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-04T00:53:49.650865+00:00",
+  "platform": "Windows-10-10.0.22631-SP0",
+  "python": "3.11.13 (main, Jul 23 2025, 00:29:09) [MSC v.1944 64 bit (AMD64)]",
+  "xlwings": "0.37.4",
+  "excel_version": "16.0",
+  "configuration": {
+    "rows": 30,
+    "columns": 20,
+    "cases": [
+      "static",
+      "sparse_cf",
+      "dense_cf",
+      "overlapping_formula"
+    ],
+    "repeats": 1,
+    "execution": "sequential; one owned Excel application; one workbook open at a time",
+    "include_default_background_values": [
+      false,
+      true
+    ],
+    "ignore_color_cases": [
+      null,
+      [
+        "FF0000"
+      ]
+    ]
+  },
+  "fixtures": [
+    {
+      "name": "static",
+      "description": "rows x 20 values with deterministic direct fills",
+      "path": "C:\\Users\\HARUMI\\orca\\workspaces\\exstruct\\waspfish\\benchmark\\baselines\\issue159-colors-final-smoke-windows-fixtures\\static.xlsx",
+      "sha256": "261020811952fd6a463d802f1b907608e61c81399317f07decec285b99945203",
+      "rows": 30,
+      "columns": 20,
+      "sheets": 1,
+      "conditional_formatting": [],
+      "expected_conditional_colors_min_cells": null
+    },
+    {
+      "name": "sparse_cf",
+      "description": "conditional formatting with sparse matches",
+      "path": "C:\\Users\\HARUMI\\orca\\workspaces\\exstruct\\waspfish\\benchmark\\baselines\\issue159-colors-final-smoke-windows-fixtures\\sparse_cf.xlsx",
+      "sha256": "058767f52160f83a6a120569e7c2f299ec83861b55ce9c3c90efc2a5a7434c55",
+      "rows": 30,
+      "columns": 20,
+      "sheets": 1,
+      "conditional_formatting": [
+        "one formula rule limited to D2:D30; every other row matches"
+      ],
+      "expected_conditional_colors_min_cells": {
+        "FF0000": 1
+      }
+    },
+    {
+      "name": "dense_cf",
+      "description": "conditional formatting with dense alternating matches",
+      "path": "C:\\Users\\HARUMI\\orca\\workspaces\\exstruct\\waspfish\\benchmark\\baselines\\issue159-colors-final-smoke-windows-fixtures\\dense_cf.xlsx",
+      "sha256": "74cef73be138c7f45ded261877b00877c9d47032d8166736a82d40685787f343",
+      "rows": 30,
+      "columns": 20,
+      "sheets": 1,
+      "conditional_formatting": [
+        "one formula rule across the grid; alternating cells match"
+      ],
+      "expected_conditional_colors_min_cells": {
+        "0070C0": 1
+      }
+    },
+    {
+      "name": "overlapping_formula",
+      "description": "overlapping CF rules, formulas, and mixed-range probe",
+      "path": "C:\\Users\\HARUMI\\orca\\workspaces\\exstruct\\waspfish\\benchmark\\baselines\\issue159-colors-final-smoke-windows-fixtures\\overlapping_formula.xlsx",
+      "sha256": "1a49a078ec5d29c5a905a18281367259c1c14c128fd5d3a40041d052a6399247",
+      "rows": 30,
+      "columns": 20,
+      "sheets": 1,
+      "conditional_formatting": [
+        "three overlapping formula rules across the grid",
+        "two stop-if-true rules on A1:B1 for the mixed-range probe"
+      ],
+      "expected_conditional_colors_min_cells": {
+        "FF0000": 2,
+        "0070C0": 2
+      }
+    }
+  ],
+  "mixed_range_probe": {
+    "sheet": "Data",
+    "range": "A1:B1",
+    "workbook_saved_flag_before_calculate": true,
+    "workbook_saved_flag_after_calculate": false,
+    "range_value": {
+      "value": 0,
+      "repr": "0.0",
+      "type": "float"
+    },
+    "per_cell_values": [
+      {
+        "address": "A1",
+        "value": 255,
+        "repr": "255.0",
+        "type": "float"
+      },
+      {
+        "address": "B1",
+        "value": 12611584,
+        "repr": "12611584.0",
+        "type": "float"
+      }
+    ],
+    "per_cell_colors_differ": true,
+    "range_matches_each_cell": false
+  },
+  "measurements": [
+    {
+      "fixture": "static",
+      "repeat": 1,
+      "strategy": "reference",
+      "include_default_background": false,
+      "ignore_colors": null,
+      "elapsed_ms": 1284.909199923277,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 600,
+      "hybrid_debug_records": [],
+      "error": null,
+      "map_sha256": "74dffe3b51df3f5fff78dfcbf98fc4348312b2aca31db30a18dada154ff8253d",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 2,
+        "mapped_cells": 33
+      },
+      "conditional_render_validation": null,
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "static",
+      "repeat": 1,
+      "strategy": "hybrid",
+      "include_default_background": false,
+      "ignore_colors": null,
+      "elapsed_ms": 22.31089980341494,
+      "wrapper_display_format_calls": 0,
+      "cells_context_display_format_calls": 0,
+      "hybrid_debug_records": [
+        {
+          "logger": "exstruct.core.color_hybrid",
+          "level": "DEBUG",
+          "message": "Color extraction sheet=Data used_cells=600 conditional_candidates=0 rendered_candidates=0 display_format_calls=0 fallback=False static_duration_ms=8.941 com_duration_ms=0.018 duration_ms=12.597",
+          "metric_fields": {
+            "used_cells": "600",
+            "conditional_candidates": "0",
+            "display_format_calls": "0"
+          },
+          "extra": {}
+        }
+      ],
+      "error": null,
+      "map_sha256": "74dffe3b51df3f5fff78dfcbf98fc4348312b2aca31db30a18dada154ff8253d",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 2,
+        "mapped_cells": 33
+      },
+      "conditional_render_validation": null,
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "static",
+      "repeat": 1,
+      "strategy": "reference",
+      "include_default_background": false,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "elapsed_ms": 1073.130700038746,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 600,
+      "hybrid_debug_records": [],
+      "error": null,
+      "map_sha256": "d8ea6397c7a8c8e01d7cc8ceaef51631ea0860dad148507467ef3459d6e25ccc",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 1,
+        "mapped_cells": 7
+      },
+      "conditional_render_validation": null,
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "static",
+      "repeat": 1,
+      "strategy": "hybrid",
+      "include_default_background": false,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "elapsed_ms": 19.337200094014406,
+      "wrapper_display_format_calls": 0,
+      "cells_context_display_format_calls": 0,
+      "hybrid_debug_records": [
+        {
+          "logger": "exstruct.core.color_hybrid",
+          "level": "DEBUG",
+          "message": "Color extraction sheet=Data used_cells=600 conditional_candidates=0 rendered_candidates=0 display_format_calls=0 fallback=False static_duration_ms=7.770 com_duration_ms=0.006 duration_ms=11.500",
+          "metric_fields": {
+            "used_cells": "600",
+            "conditional_candidates": "0",
+            "display_format_calls": "0"
+          },
+          "extra": {}
+        }
+      ],
+      "error": null,
+      "map_sha256": "d8ea6397c7a8c8e01d7cc8ceaef51631ea0860dad148507467ef3459d6e25ccc",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 1,
+        "mapped_cells": 7
+      },
+      "conditional_render_validation": null,
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "static",
+      "repeat": 1,
+      "strategy": "reference",
+      "include_default_background": true,
+      "ignore_colors": null,
+      "elapsed_ms": 1290.4598999302834,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 600,
+      "hybrid_debug_records": [],
+      "error": null,
+      "map_sha256": "9b311d4f0bf063b3de44f4baa02edef33c6f5eee4579939ba24e946e7c0a821f",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 3,
+        "mapped_cells": 600
+      },
+      "conditional_render_validation": null,
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "static",
+      "repeat": 1,
+      "strategy": "hybrid",
+      "include_default_background": true,
+      "ignore_colors": null,
+      "elapsed_ms": 18.726699985563755,
+      "wrapper_display_format_calls": 0,
+      "cells_context_display_format_calls": 0,
+      "hybrid_debug_records": [
+        {
+          "logger": "exstruct.core.color_hybrid",
+          "level": "DEBUG",
+          "message": "Color extraction sheet=Data used_cells=600 conditional_candidates=0 rendered_candidates=0 display_format_calls=0 fallback=False static_duration_ms=7.531 com_duration_ms=0.006 duration_ms=11.511",
+          "metric_fields": {
+            "used_cells": "600",
+            "conditional_candidates": "0",
+            "display_format_calls": "0"
+          },
+          "extra": {}
+        }
+      ],
+      "error": null,
+      "map_sha256": "9b311d4f0bf063b3de44f4baa02edef33c6f5eee4579939ba24e946e7c0a821f",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 3,
+        "mapped_cells": 600
+      },
+      "conditional_render_validation": null,
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "static",
+      "repeat": 1,
+      "strategy": "reference",
+      "include_default_background": true,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "elapsed_ms": 1348.883100086823,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 600,
+      "hybrid_debug_records": [],
+      "error": null,
+      "map_sha256": "4dbf9f61fad0cea0249add0b64c4434e7d8f0928a9391691517457e3a05d4ff7",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 2,
+        "mapped_cells": 574
+      },
+      "conditional_render_validation": null,
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "static",
+      "repeat": 1,
+      "strategy": "hybrid",
+      "include_default_background": true,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "elapsed_ms": 26.709500001743436,
+      "wrapper_display_format_calls": 0,
+      "cells_context_display_format_calls": 0,
+      "hybrid_debug_records": [
+        {
+          "logger": "exstruct.core.color_hybrid",
+          "level": "DEBUG",
+          "message": "Color extraction sheet=Data used_cells=600 conditional_candidates=0 rendered_candidates=0 display_format_calls=0 fallback=False static_duration_ms=9.144 com_duration_ms=0.008 duration_ms=15.893",
+          "metric_fields": {
+            "used_cells": "600",
+            "conditional_candidates": "0",
+            "display_format_calls": "0"
+          },
+          "extra": {}
+        }
+      ],
+      "error": null,
+      "map_sha256": "4dbf9f61fad0cea0249add0b64c4434e7d8f0928a9391691517457e3a05d4ff7",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 2,
+        "mapped_cells": 574
+      },
+      "conditional_render_validation": null,
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "sparse_cf",
+      "repeat": 1,
+      "strategy": "reference",
+      "include_default_background": false,
+      "ignore_colors": null,
+      "elapsed_ms": 1438.3194998372346,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 600,
+      "hybrid_debug_records": [],
+      "error": null,
+      "map_sha256": "f96b1a6e800226ad604be38bb06d34b5e89abb58e386bcb7c84128b55c759dd8",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 0,
+        "mapped_cells": 0
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "FF0000": 1
+        },
+        "ignored_expected_colors": [],
+        "checked_expected_colors": {
+          "FF0000": 1
+        },
+        "actual_cells_by_color": {
+          "FF0000": 0
+        },
+        "missing_minimums": {
+          "FF0000": {
+            "minimum": 1,
+            "actual": 0
+          }
+        },
+        "status": "failed"
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "sparse_cf",
+      "repeat": 1,
+      "strategy": "hybrid",
+      "include_default_background": false,
+      "ignore_colors": null,
+      "elapsed_ms": 69.5809000171721,
+      "wrapper_display_format_calls": 29,
+      "cells_context_display_format_calls": 0,
+      "hybrid_debug_records": [
+        {
+          "logger": "exstruct.core.color_hybrid",
+          "level": "DEBUG",
+          "message": "Color extraction sheet=Data used_cells=600 conditional_candidates=29 rendered_candidates=29 display_format_calls=29 fallback=False static_duration_ms=8.975 com_duration_ms=50.000 duration_ms=62.215",
+          "metric_fields": {
+            "used_cells": "600",
+            "conditional_candidates": "29",
+            "display_format_calls": "29"
+          },
+          "extra": {}
+        }
+      ],
+      "error": null,
+      "map_sha256": "f96b1a6e800226ad604be38bb06d34b5e89abb58e386bcb7c84128b55c759dd8",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 0,
+        "mapped_cells": 0
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "FF0000": 1
+        },
+        "ignored_expected_colors": [],
+        "checked_expected_colors": {
+          "FF0000": 1
+        },
+        "actual_cells_by_color": {
+          "FF0000": 0
+        },
+        "missing_minimums": {
+          "FF0000": {
+            "minimum": 1,
+            "actual": 0
+          }
+        },
+        "status": "failed"
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "sparse_cf",
+      "repeat": 1,
+      "strategy": "reference",
+      "include_default_background": false,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "elapsed_ms": 1326.652699848637,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 600,
+      "hybrid_debug_records": [],
+      "error": null,
+      "map_sha256": "f96b1a6e800226ad604be38bb06d34b5e89abb58e386bcb7c84128b55c759dd8",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 0,
+        "mapped_cells": 0
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "FF0000": 1
+        },
+        "ignored_expected_colors": [
+          "FF0000"
+        ],
+        "checked_expected_colors": {},
+        "status": "skipped_all_expected_colors_ignored",
+        "actual_cells_by_color": {}
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "sparse_cf",
+      "repeat": 1,
+      "strategy": "hybrid",
+      "include_default_background": false,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "elapsed_ms": 69.70580015331507,
+      "wrapper_display_format_calls": 29,
+      "cells_context_display_format_calls": 0,
+      "hybrid_debug_records": [
+        {
+          "logger": "exstruct.core.color_hybrid",
+          "level": "DEBUG",
+          "message": "Color extraction sheet=Data used_cells=600 conditional_candidates=29 rendered_candidates=29 display_format_calls=29 fallback=False static_duration_ms=7.498 com_duration_ms=50.403 duration_ms=61.983",
+          "metric_fields": {
+            "used_cells": "600",
+            "conditional_candidates": "29",
+            "display_format_calls": "29"
+          },
+          "extra": {}
+        }
+      ],
+      "error": null,
+      "map_sha256": "f96b1a6e800226ad604be38bb06d34b5e89abb58e386bcb7c84128b55c759dd8",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 0,
+        "mapped_cells": 0
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "FF0000": 1
+        },
+        "ignored_expected_colors": [
+          "FF0000"
+        ],
+        "checked_expected_colors": {},
+        "status": "skipped_all_expected_colors_ignored",
+        "actual_cells_by_color": {}
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "sparse_cf",
+      "repeat": 1,
+      "strategy": "reference",
+      "include_default_background": true,
+      "ignore_colors": null,
+      "elapsed_ms": 1287.4936999287456,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 600,
+      "hybrid_debug_records": [],
+      "error": null,
+      "map_sha256": "127551e83a9758c290973c67913badad18a76a28a81e662717878e04e708783e",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 1,
+        "mapped_cells": 600
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "FF0000": 1
+        },
+        "ignored_expected_colors": [],
+        "checked_expected_colors": {
+          "FF0000": 1
+        },
+        "actual_cells_by_color": {
+          "FF0000": 0
+        },
+        "missing_minimums": {
+          "FF0000": {
+            "minimum": 1,
+            "actual": 0
+          }
+        },
+        "status": "failed"
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "sparse_cf",
+      "repeat": 1,
+      "strategy": "hybrid",
+      "include_default_background": true,
+      "ignore_colors": null,
+      "elapsed_ms": 65.16680005006492,
+      "wrapper_display_format_calls": 29,
+      "cells_context_display_format_calls": 0,
+      "hybrid_debug_records": [
+        {
+          "logger": "exstruct.core.color_hybrid",
+          "level": "DEBUG",
+          "message": "Color extraction sheet=Data used_cells=600 conditional_candidates=29 rendered_candidates=29 display_format_calls=29 fallback=False static_duration_ms=7.275 com_duration_ms=47.091 duration_ms=57.841",
+          "metric_fields": {
+            "used_cells": "600",
+            "conditional_candidates": "29",
+            "display_format_calls": "29"
+          },
+          "extra": {}
+        }
+      ],
+      "error": null,
+      "map_sha256": "127551e83a9758c290973c67913badad18a76a28a81e662717878e04e708783e",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 1,
+        "mapped_cells": 600
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "FF0000": 1
+        },
+        "ignored_expected_colors": [],
+        "checked_expected_colors": {
+          "FF0000": 1
+        },
+        "actual_cells_by_color": {
+          "FF0000": 0
+        },
+        "missing_minimums": {
+          "FF0000": {
+            "minimum": 1,
+            "actual": 0
+          }
+        },
+        "status": "failed"
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "sparse_cf",
+      "repeat": 1,
+      "strategy": "reference",
+      "include_default_background": true,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "elapsed_ms": 1871.4595998171717,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 600,
+      "hybrid_debug_records": [],
+      "error": null,
+      "map_sha256": "127551e83a9758c290973c67913badad18a76a28a81e662717878e04e708783e",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 1,
+        "mapped_cells": 600
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "FF0000": 1
+        },
+        "ignored_expected_colors": [
+          "FF0000"
+        ],
+        "checked_expected_colors": {},
+        "status": "skipped_all_expected_colors_ignored",
+        "actual_cells_by_color": {}
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "sparse_cf",
+      "repeat": 1,
+      "strategy": "hybrid",
+      "include_default_background": true,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "elapsed_ms": 88.11360015533864,
+      "wrapper_display_format_calls": 29,
+      "cells_context_display_format_calls": 0,
+      "hybrid_debug_records": [
+        {
+          "logger": "exstruct.core.color_hybrid",
+          "level": "DEBUG",
+          "message": "Color extraction sheet=Data used_cells=600 conditional_candidates=29 rendered_candidates=29 display_format_calls=29 fallback=False static_duration_ms=7.237 com_duration_ms=65.542 duration_ms=79.425",
+          "metric_fields": {
+            "used_cells": "600",
+            "conditional_candidates": "29",
+            "display_format_calls": "29"
+          },
+          "extra": {}
+        }
+      ],
+      "error": null,
+      "map_sha256": "127551e83a9758c290973c67913badad18a76a28a81e662717878e04e708783e",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 1,
+        "mapped_cells": 600
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "FF0000": 1
+        },
+        "ignored_expected_colors": [
+          "FF0000"
+        ],
+        "checked_expected_colors": {},
+        "status": "skipped_all_expected_colors_ignored",
+        "actual_cells_by_color": {}
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "dense_cf",
+      "repeat": 1,
+      "strategy": "reference",
+      "include_default_background": false,
+      "ignore_colors": null,
+      "elapsed_ms": 1827.473800163716,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 600,
+      "hybrid_debug_records": [],
+      "error": null,
+      "map_sha256": "f96b1a6e800226ad604be38bb06d34b5e89abb58e386bcb7c84128b55c759dd8",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 0,
+        "mapped_cells": 0
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "0070C0": 1
+        },
+        "ignored_expected_colors": [],
+        "checked_expected_colors": {
+          "0070C0": 1
+        },
+        "actual_cells_by_color": {
+          "0070C0": 0
+        },
+        "missing_minimums": {
+          "0070C0": {
+            "minimum": 1,
+            "actual": 0
+          }
+        },
+        "status": "failed"
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "dense_cf",
+      "repeat": 1,
+      "strategy": "hybrid",
+      "include_default_background": false,
+      "ignore_colors": null,
+      "elapsed_ms": 1358.5032001137733,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 0,
+      "hybrid_debug_records": [
+        {
+          "logger": "exstruct.core.color_hybrid",
+          "level": "DEBUG",
+          "message": "Color extraction sheet=Data used_cells=600 conditional_candidates=600 rendered_candidates=600 display_format_calls=600 fallback=False static_duration_ms=7.234 com_duration_ms=1340.564 duration_ms=1350.808",
+          "metric_fields": {
+            "used_cells": "600",
+            "conditional_candidates": "600",
+            "display_format_calls": "600"
+          },
+          "extra": {}
+        }
+      ],
+      "error": null,
+      "map_sha256": "f96b1a6e800226ad604be38bb06d34b5e89abb58e386bcb7c84128b55c759dd8",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 0,
+        "mapped_cells": 0
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "0070C0": 1
+        },
+        "ignored_expected_colors": [],
+        "checked_expected_colors": {
+          "0070C0": 1
+        },
+        "actual_cells_by_color": {
+          "0070C0": 0
+        },
+        "missing_minimums": {
+          "0070C0": {
+            "minimum": 1,
+            "actual": 0
+          }
+        },
+        "status": "failed"
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "dense_cf",
+      "repeat": 1,
+      "strategy": "reference",
+      "include_default_background": false,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "elapsed_ms": 2264.9328999686986,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 600,
+      "hybrid_debug_records": [],
+      "error": null,
+      "map_sha256": "f96b1a6e800226ad604be38bb06d34b5e89abb58e386bcb7c84128b55c759dd8",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 0,
+        "mapped_cells": 0
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "0070C0": 1
+        },
+        "ignored_expected_colors": [],
+        "checked_expected_colors": {
+          "0070C0": 1
+        },
+        "actual_cells_by_color": {
+          "0070C0": 0
+        },
+        "missing_minimums": {
+          "0070C0": {
+            "minimum": 1,
+            "actual": 0
+          }
+        },
+        "status": "failed"
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "dense_cf",
+      "repeat": 1,
+      "strategy": "hybrid",
+      "include_default_background": false,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "elapsed_ms": 3162.7462999895215,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 0,
+      "hybrid_debug_records": [
+        {
+          "logger": "exstruct.core.color_hybrid",
+          "level": "DEBUG",
+          "message": "Color extraction sheet=Data used_cells=600 conditional_candidates=600 rendered_candidates=600 display_format_calls=600 fallback=False static_duration_ms=9.016 com_duration_ms=3130.858 duration_ms=3146.012",
+          "metric_fields": {
+            "used_cells": "600",
+            "conditional_candidates": "600",
+            "display_format_calls": "600"
+          },
+          "extra": {}
+        }
+      ],
+      "error": null,
+      "map_sha256": "f96b1a6e800226ad604be38bb06d34b5e89abb58e386bcb7c84128b55c759dd8",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 0,
+        "mapped_cells": 0
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "0070C0": 1
+        },
+        "ignored_expected_colors": [],
+        "checked_expected_colors": {
+          "0070C0": 1
+        },
+        "actual_cells_by_color": {
+          "0070C0": 0
+        },
+        "missing_minimums": {
+          "0070C0": {
+            "minimum": 1,
+            "actual": 0
+          }
+        },
+        "status": "failed"
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "dense_cf",
+      "repeat": 1,
+      "strategy": "reference",
+      "include_default_background": true,
+      "ignore_colors": null,
+      "elapsed_ms": 2589.855199912563,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 600,
+      "hybrid_debug_records": [],
+      "error": null,
+      "map_sha256": "127551e83a9758c290973c67913badad18a76a28a81e662717878e04e708783e",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 1,
+        "mapped_cells": 600
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "0070C0": 1
+        },
+        "ignored_expected_colors": [],
+        "checked_expected_colors": {
+          "0070C0": 1
+        },
+        "actual_cells_by_color": {
+          "0070C0": 0
+        },
+        "missing_minimums": {
+          "0070C0": {
+            "minimum": 1,
+            "actual": 0
+          }
+        },
+        "status": "failed"
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "dense_cf",
+      "repeat": 1,
+      "strategy": "hybrid",
+      "include_default_background": true,
+      "ignore_colors": null,
+      "elapsed_ms": 1241.4532999973744,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 0,
+      "hybrid_debug_records": [
+        {
+          "logger": "exstruct.core.color_hybrid",
+          "level": "DEBUG",
+          "message": "Color extraction sheet=Data used_cells=600 conditional_candidates=600 rendered_candidates=600 display_format_calls=600 fallback=False static_duration_ms=6.688 com_duration_ms=1223.062 duration_ms=1234.224",
+          "metric_fields": {
+            "used_cells": "600",
+            "conditional_candidates": "600",
+            "display_format_calls": "600"
+          },
+          "extra": {}
+        }
+      ],
+      "error": null,
+      "map_sha256": "127551e83a9758c290973c67913badad18a76a28a81e662717878e04e708783e",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 1,
+        "mapped_cells": 600
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "0070C0": 1
+        },
+        "ignored_expected_colors": [],
+        "checked_expected_colors": {
+          "0070C0": 1
+        },
+        "actual_cells_by_color": {
+          "0070C0": 0
+        },
+        "missing_minimums": {
+          "0070C0": {
+            "minimum": 1,
+            "actual": 0
+          }
+        },
+        "status": "failed"
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "dense_cf",
+      "repeat": 1,
+      "strategy": "reference",
+      "include_default_background": true,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "elapsed_ms": 1219.7495999280363,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 600,
+      "hybrid_debug_records": [],
+      "error": null,
+      "map_sha256": "127551e83a9758c290973c67913badad18a76a28a81e662717878e04e708783e",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 1,
+        "mapped_cells": 600
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "0070C0": 1
+        },
+        "ignored_expected_colors": [],
+        "checked_expected_colors": {
+          "0070C0": 1
+        },
+        "actual_cells_by_color": {
+          "0070C0": 0
+        },
+        "missing_minimums": {
+          "0070C0": {
+            "minimum": 1,
+            "actual": 0
+          }
+        },
+        "status": "failed"
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "dense_cf",
+      "repeat": 1,
+      "strategy": "hybrid",
+      "include_default_background": true,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "elapsed_ms": 1441.270099952817,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 0,
+      "hybrid_debug_records": [
+        {
+          "logger": "exstruct.core.color_hybrid",
+          "level": "DEBUG",
+          "message": "Color extraction sheet=Data used_cells=600 conditional_candidates=600 rendered_candidates=600 display_format_calls=600 fallback=False static_duration_ms=8.166 com_duration_ms=1401.564 duration_ms=1415.502",
+          "metric_fields": {
+            "used_cells": "600",
+            "conditional_candidates": "600",
+            "display_format_calls": "600"
+          },
+          "extra": {}
+        }
+      ],
+      "error": null,
+      "map_sha256": "127551e83a9758c290973c67913badad18a76a28a81e662717878e04e708783e",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 1,
+        "mapped_cells": 600
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "0070C0": 1
+        },
+        "ignored_expected_colors": [],
+        "checked_expected_colors": {
+          "0070C0": 1
+        },
+        "actual_cells_by_color": {
+          "0070C0": 0
+        },
+        "missing_minimums": {
+          "0070C0": {
+            "minimum": 1,
+            "actual": 0
+          }
+        },
+        "status": "failed"
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "overlapping_formula",
+      "repeat": 1,
+      "strategy": "reference",
+      "include_default_background": false,
+      "ignore_colors": null,
+      "elapsed_ms": 1211.2863000947982,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 600,
+      "hybrid_debug_records": [],
+      "error": null,
+      "map_sha256": "0541cb4127cd9a4a44b7574b1984728be7b64950ce2c92b3cdb7f815a4bedb6e",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 2,
+        "mapped_cells": 2
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "FF0000": 2,
+          "0070C0": 2
+        },
+        "ignored_expected_colors": [],
+        "checked_expected_colors": {
+          "FF0000": 2,
+          "0070C0": 2
+        },
+        "actual_cells_by_color": {
+          "FF0000": 1,
+          "0070C0": 1
+        },
+        "missing_minimums": {
+          "FF0000": {
+            "minimum": 2,
+            "actual": 1
+          },
+          "0070C0": {
+            "minimum": 2,
+            "actual": 1
+          }
+        },
+        "status": "failed"
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "overlapping_formula",
+      "repeat": 1,
+      "strategy": "hybrid",
+      "include_default_background": false,
+      "ignore_colors": null,
+      "elapsed_ms": 1218.3375998865813,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 0,
+      "hybrid_debug_records": [
+        {
+          "logger": "exstruct.core.color_hybrid",
+          "level": "DEBUG",
+          "message": "Color extraction legacy fallback sheet=Data reason=workbook has unsaved changes",
+          "metric_fields": {},
+          "extra": {}
+        },
+        {
+          "logger": "exstruct.core.color_hybrid",
+          "level": "DEBUG",
+          "message": "Color extraction sheet=Data used_cells=600 conditional_candidates=0 rendered_candidates=0 display_format_calls=600 fallback=True static_duration_ms=0.004 com_duration_ms=1207.847 duration_ms=1210.964",
+          "metric_fields": {
+            "used_cells": "600",
+            "conditional_candidates": "0",
+            "display_format_calls": "600"
+          },
+          "extra": {}
+        }
+      ],
+      "error": null,
+      "map_sha256": "0541cb4127cd9a4a44b7574b1984728be7b64950ce2c92b3cdb7f815a4bedb6e",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 2,
+        "mapped_cells": 2
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "FF0000": 2,
+          "0070C0": 2
+        },
+        "ignored_expected_colors": [],
+        "checked_expected_colors": {
+          "FF0000": 2,
+          "0070C0": 2
+        },
+        "actual_cells_by_color": {
+          "FF0000": 1,
+          "0070C0": 1
+        },
+        "missing_minimums": {
+          "FF0000": {
+            "minimum": 2,
+            "actual": 1
+          },
+          "0070C0": {
+            "minimum": 2,
+            "actual": 1
+          }
+        },
+        "status": "failed"
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "overlapping_formula",
+      "repeat": 1,
+      "strategy": "reference",
+      "include_default_background": false,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "elapsed_ms": 1164.665900170803,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 600,
+      "hybrid_debug_records": [],
+      "error": null,
+      "map_sha256": "36969d75f0dedc5c5a04d4fbd5ab4433824448c7fcf233705173130421c104cd",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 1,
+        "mapped_cells": 1
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "FF0000": 2,
+          "0070C0": 2
+        },
+        "ignored_expected_colors": [
+          "FF0000"
+        ],
+        "checked_expected_colors": {
+          "0070C0": 2
+        },
+        "actual_cells_by_color": {
+          "0070C0": 1
+        },
+        "missing_minimums": {
+          "0070C0": {
+            "minimum": 2,
+            "actual": 1
+          }
+        },
+        "status": "failed"
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "overlapping_formula",
+      "repeat": 1,
+      "strategy": "hybrid",
+      "include_default_background": false,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "elapsed_ms": 1186.2331999000162,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 0,
+      "hybrid_debug_records": [
+        {
+          "logger": "exstruct.core.color_hybrid",
+          "level": "DEBUG",
+          "message": "Color extraction legacy fallback sheet=Data reason=workbook has unsaved changes",
+          "metric_fields": {},
+          "extra": {}
+        },
+        {
+          "logger": "exstruct.core.color_hybrid",
+          "level": "DEBUG",
+          "message": "Color extraction sheet=Data used_cells=600 conditional_candidates=0 rendered_candidates=0 display_format_calls=600 fallback=True static_duration_ms=0.003 com_duration_ms=1174.277 duration_ms=1177.988",
+          "metric_fields": {
+            "used_cells": "600",
+            "conditional_candidates": "0",
+            "display_format_calls": "600"
+          },
+          "extra": {}
+        }
+      ],
+      "error": null,
+      "map_sha256": "36969d75f0dedc5c5a04d4fbd5ab4433824448c7fcf233705173130421c104cd",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 1,
+        "mapped_cells": 1
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "FF0000": 2,
+          "0070C0": 2
+        },
+        "ignored_expected_colors": [
+          "FF0000"
+        ],
+        "checked_expected_colors": {
+          "0070C0": 2
+        },
+        "actual_cells_by_color": {
+          "0070C0": 1
+        },
+        "missing_minimums": {
+          "0070C0": {
+            "minimum": 2,
+            "actual": 1
+          }
+        },
+        "status": "failed"
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "overlapping_formula",
+      "repeat": 1,
+      "strategy": "reference",
+      "include_default_background": true,
+      "ignore_colors": null,
+      "elapsed_ms": 1639.61479999125,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 600,
+      "hybrid_debug_records": [],
+      "error": null,
+      "map_sha256": "151b3a5e168747d1468415ce7c56f8a129f205e77b65e2e8a65f5460d569c7d7",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 3,
+        "mapped_cells": 600
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "FF0000": 2,
+          "0070C0": 2
+        },
+        "ignored_expected_colors": [],
+        "checked_expected_colors": {
+          "FF0000": 2,
+          "0070C0": 2
+        },
+        "actual_cells_by_color": {
+          "FF0000": 1,
+          "0070C0": 1
+        },
+        "missing_minimums": {
+          "FF0000": {
+            "minimum": 2,
+            "actual": 1
+          },
+          "0070C0": {
+            "minimum": 2,
+            "actual": 1
+          }
+        },
+        "status": "failed"
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "overlapping_formula",
+      "repeat": 1,
+      "strategy": "hybrid",
+      "include_default_background": true,
+      "ignore_colors": null,
+      "elapsed_ms": 1273.8779000937939,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 0,
+      "hybrid_debug_records": [
+        {
+          "logger": "exstruct.core.color_hybrid",
+          "level": "DEBUG",
+          "message": "Color extraction legacy fallback sheet=Data reason=workbook has unsaved changes",
+          "metric_fields": {},
+          "extra": {}
+        },
+        {
+          "logger": "exstruct.core.color_hybrid",
+          "level": "DEBUG",
+          "message": "Color extraction sheet=Data used_cells=600 conditional_candidates=0 rendered_candidates=0 display_format_calls=600 fallback=True static_duration_ms=0.003 com_duration_ms=1262.654 duration_ms=1266.462",
+          "metric_fields": {
+            "used_cells": "600",
+            "conditional_candidates": "0",
+            "display_format_calls": "600"
+          },
+          "extra": {}
+        }
+      ],
+      "error": null,
+      "map_sha256": "151b3a5e168747d1468415ce7c56f8a129f205e77b65e2e8a65f5460d569c7d7",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 3,
+        "mapped_cells": 600
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "FF0000": 2,
+          "0070C0": 2
+        },
+        "ignored_expected_colors": [],
+        "checked_expected_colors": {
+          "FF0000": 2,
+          "0070C0": 2
+        },
+        "actual_cells_by_color": {
+          "FF0000": 1,
+          "0070C0": 1
+        },
+        "missing_minimums": {
+          "FF0000": {
+            "minimum": 2,
+            "actual": 1
+          },
+          "0070C0": {
+            "minimum": 2,
+            "actual": 1
+          }
+        },
+        "status": "failed"
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "overlapping_formula",
+      "repeat": 1,
+      "strategy": "reference",
+      "include_default_background": true,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "elapsed_ms": 1317.1645998954773,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 600,
+      "hybrid_debug_records": [],
+      "error": null,
+      "map_sha256": "44fa909984f4a645a78a5e0048d968eef3e012f940e349b580e5d11d3ce77b0d",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 2,
+        "mapped_cells": 599
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "FF0000": 2,
+          "0070C0": 2
+        },
+        "ignored_expected_colors": [
+          "FF0000"
+        ],
+        "checked_expected_colors": {
+          "0070C0": 2
+        },
+        "actual_cells_by_color": {
+          "0070C0": 1
+        },
+        "missing_minimums": {
+          "0070C0": {
+            "minimum": 2,
+            "actual": 1
+          }
+        },
+        "status": "failed"
+      },
+      "exact_workbook_colors_map_equal": true
+    },
+    {
+      "fixture": "overlapping_formula",
+      "repeat": 1,
+      "strategy": "hybrid",
+      "include_default_background": true,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "elapsed_ms": 1271.5755000244826,
+      "wrapper_display_format_calls": 600,
+      "cells_context_display_format_calls": 0,
+      "hybrid_debug_records": [
+        {
+          "logger": "exstruct.core.color_hybrid",
+          "level": "DEBUG",
+          "message": "Color extraction legacy fallback sheet=Data reason=workbook has unsaved changes",
+          "metric_fields": {},
+          "extra": {}
+        },
+        {
+          "logger": "exstruct.core.color_hybrid",
+          "level": "DEBUG",
+          "message": "Color extraction sheet=Data used_cells=600 conditional_candidates=0 rendered_candidates=0 display_format_calls=600 fallback=True static_duration_ms=0.003 com_duration_ms=1250.916 duration_ms=1254.786",
+          "metric_fields": {
+            "used_cells": "600",
+            "conditional_candidates": "0",
+            "display_format_calls": "600"
+          },
+          "extra": {}
+        }
+      ],
+      "error": null,
+      "map_sha256": "44fa909984f4a645a78a5e0048d968eef3e012f940e349b580e5d11d3ce77b0d",
+      "map_summary": {
+        "sheets": 1,
+        "color_keys": 2,
+        "mapped_cells": 599
+      },
+      "conditional_render_validation": {
+        "expected_min_cells_by_color": {
+          "FF0000": 2,
+          "0070C0": 2
+        },
+        "ignored_expected_colors": [
+          "FF0000"
+        ],
+        "checked_expected_colors": {
+          "0070C0": 2
+        },
+        "actual_cells_by_color": {
+          "0070C0": 1
+        },
+        "missing_minimums": {
+          "0070C0": {
+            "minimum": 2,
+            "actual": 1
+          }
+        },
+        "status": "failed"
+      },
+      "exact_workbook_colors_map_equal": true
+    }
+  ],
+  "comparisons": [
+    {
+      "fixture": "static",
+      "include_default_background": false,
+      "ignore_colors": null,
+      "repeats": [
+        {
+          "repeat": 1,
+          "order": [
+            "reference",
+            "hybrid"
+          ],
+          "exact_workbook_colors_map_equal": true,
+          "errors": {},
+          "conditional_render_validation": {
+            "reference": null,
+            "hybrid": null
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "static",
+      "include_default_background": false,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "repeats": [
+        {
+          "repeat": 1,
+          "order": [
+            "reference",
+            "hybrid"
+          ],
+          "exact_workbook_colors_map_equal": true,
+          "errors": {},
+          "conditional_render_validation": {
+            "reference": null,
+            "hybrid": null
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "static",
+      "include_default_background": true,
+      "ignore_colors": null,
+      "repeats": [
+        {
+          "repeat": 1,
+          "order": [
+            "reference",
+            "hybrid"
+          ],
+          "exact_workbook_colors_map_equal": true,
+          "errors": {},
+          "conditional_render_validation": {
+            "reference": null,
+            "hybrid": null
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "static",
+      "include_default_background": true,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "repeats": [
+        {
+          "repeat": 1,
+          "order": [
+            "reference",
+            "hybrid"
+          ],
+          "exact_workbook_colors_map_equal": true,
+          "errors": {},
+          "conditional_render_validation": {
+            "reference": null,
+            "hybrid": null
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "sparse_cf",
+      "include_default_background": false,
+      "ignore_colors": null,
+      "repeats": [
+        {
+          "repeat": 1,
+          "order": [
+            "reference",
+            "hybrid"
+          ],
+          "exact_workbook_colors_map_equal": true,
+          "errors": {},
+          "conditional_render_validation": {
+            "reference": {
+              "expected_min_cells_by_color": {
+                "FF0000": 1
+              },
+              "ignored_expected_colors": [],
+              "checked_expected_colors": {
+                "FF0000": 1
+              },
+              "actual_cells_by_color": {
+                "FF0000": 0
+              },
+              "missing_minimums": {
+                "FF0000": {
+                  "minimum": 1,
+                  "actual": 0
+                }
+              },
+              "status": "failed"
+            },
+            "hybrid": {
+              "expected_min_cells_by_color": {
+                "FF0000": 1
+              },
+              "ignored_expected_colors": [],
+              "checked_expected_colors": {
+                "FF0000": 1
+              },
+              "actual_cells_by_color": {
+                "FF0000": 0
+              },
+              "missing_minimums": {
+                "FF0000": {
+                  "minimum": 1,
+                  "actual": 0
+                }
+              },
+              "status": "failed"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "sparse_cf",
+      "include_default_background": false,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "repeats": [
+        {
+          "repeat": 1,
+          "order": [
+            "reference",
+            "hybrid"
+          ],
+          "exact_workbook_colors_map_equal": true,
+          "errors": {},
+          "conditional_render_validation": {
+            "reference": {
+              "expected_min_cells_by_color": {
+                "FF0000": 1
+              },
+              "ignored_expected_colors": [
+                "FF0000"
+              ],
+              "checked_expected_colors": {},
+              "status": "skipped_all_expected_colors_ignored",
+              "actual_cells_by_color": {}
+            },
+            "hybrid": {
+              "expected_min_cells_by_color": {
+                "FF0000": 1
+              },
+              "ignored_expected_colors": [
+                "FF0000"
+              ],
+              "checked_expected_colors": {},
+              "status": "skipped_all_expected_colors_ignored",
+              "actual_cells_by_color": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "sparse_cf",
+      "include_default_background": true,
+      "ignore_colors": null,
+      "repeats": [
+        {
+          "repeat": 1,
+          "order": [
+            "reference",
+            "hybrid"
+          ],
+          "exact_workbook_colors_map_equal": true,
+          "errors": {},
+          "conditional_render_validation": {
+            "reference": {
+              "expected_min_cells_by_color": {
+                "FF0000": 1
+              },
+              "ignored_expected_colors": [],
+              "checked_expected_colors": {
+                "FF0000": 1
+              },
+              "actual_cells_by_color": {
+                "FF0000": 0
+              },
+              "missing_minimums": {
+                "FF0000": {
+                  "minimum": 1,
+                  "actual": 0
+                }
+              },
+              "status": "failed"
+            },
+            "hybrid": {
+              "expected_min_cells_by_color": {
+                "FF0000": 1
+              },
+              "ignored_expected_colors": [],
+              "checked_expected_colors": {
+                "FF0000": 1
+              },
+              "actual_cells_by_color": {
+                "FF0000": 0
+              },
+              "missing_minimums": {
+                "FF0000": {
+                  "minimum": 1,
+                  "actual": 0
+                }
+              },
+              "status": "failed"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "sparse_cf",
+      "include_default_background": true,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "repeats": [
+        {
+          "repeat": 1,
+          "order": [
+            "reference",
+            "hybrid"
+          ],
+          "exact_workbook_colors_map_equal": true,
+          "errors": {},
+          "conditional_render_validation": {
+            "reference": {
+              "expected_min_cells_by_color": {
+                "FF0000": 1
+              },
+              "ignored_expected_colors": [
+                "FF0000"
+              ],
+              "checked_expected_colors": {},
+              "status": "skipped_all_expected_colors_ignored",
+              "actual_cells_by_color": {}
+            },
+            "hybrid": {
+              "expected_min_cells_by_color": {
+                "FF0000": 1
+              },
+              "ignored_expected_colors": [
+                "FF0000"
+              ],
+              "checked_expected_colors": {},
+              "status": "skipped_all_expected_colors_ignored",
+              "actual_cells_by_color": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "dense_cf",
+      "include_default_background": false,
+      "ignore_colors": null,
+      "repeats": [
+        {
+          "repeat": 1,
+          "order": [
+            "reference",
+            "hybrid"
+          ],
+          "exact_workbook_colors_map_equal": true,
+          "errors": {},
+          "conditional_render_validation": {
+            "reference": {
+              "expected_min_cells_by_color": {
+                "0070C0": 1
+              },
+              "ignored_expected_colors": [],
+              "checked_expected_colors": {
+                "0070C0": 1
+              },
+              "actual_cells_by_color": {
+                "0070C0": 0
+              },
+              "missing_minimums": {
+                "0070C0": {
+                  "minimum": 1,
+                  "actual": 0
+                }
+              },
+              "status": "failed"
+            },
+            "hybrid": {
+              "expected_min_cells_by_color": {
+                "0070C0": 1
+              },
+              "ignored_expected_colors": [],
+              "checked_expected_colors": {
+                "0070C0": 1
+              },
+              "actual_cells_by_color": {
+                "0070C0": 0
+              },
+              "missing_minimums": {
+                "0070C0": {
+                  "minimum": 1,
+                  "actual": 0
+                }
+              },
+              "status": "failed"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "dense_cf",
+      "include_default_background": false,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "repeats": [
+        {
+          "repeat": 1,
+          "order": [
+            "reference",
+            "hybrid"
+          ],
+          "exact_workbook_colors_map_equal": true,
+          "errors": {},
+          "conditional_render_validation": {
+            "reference": {
+              "expected_min_cells_by_color": {
+                "0070C0": 1
+              },
+              "ignored_expected_colors": [],
+              "checked_expected_colors": {
+                "0070C0": 1
+              },
+              "actual_cells_by_color": {
+                "0070C0": 0
+              },
+              "missing_minimums": {
+                "0070C0": {
+                  "minimum": 1,
+                  "actual": 0
+                }
+              },
+              "status": "failed"
+            },
+            "hybrid": {
+              "expected_min_cells_by_color": {
+                "0070C0": 1
+              },
+              "ignored_expected_colors": [],
+              "checked_expected_colors": {
+                "0070C0": 1
+              },
+              "actual_cells_by_color": {
+                "0070C0": 0
+              },
+              "missing_minimums": {
+                "0070C0": {
+                  "minimum": 1,
+                  "actual": 0
+                }
+              },
+              "status": "failed"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "dense_cf",
+      "include_default_background": true,
+      "ignore_colors": null,
+      "repeats": [
+        {
+          "repeat": 1,
+          "order": [
+            "reference",
+            "hybrid"
+          ],
+          "exact_workbook_colors_map_equal": true,
+          "errors": {},
+          "conditional_render_validation": {
+            "reference": {
+              "expected_min_cells_by_color": {
+                "0070C0": 1
+              },
+              "ignored_expected_colors": [],
+              "checked_expected_colors": {
+                "0070C0": 1
+              },
+              "actual_cells_by_color": {
+                "0070C0": 0
+              },
+              "missing_minimums": {
+                "0070C0": {
+                  "minimum": 1,
+                  "actual": 0
+                }
+              },
+              "status": "failed"
+            },
+            "hybrid": {
+              "expected_min_cells_by_color": {
+                "0070C0": 1
+              },
+              "ignored_expected_colors": [],
+              "checked_expected_colors": {
+                "0070C0": 1
+              },
+              "actual_cells_by_color": {
+                "0070C0": 0
+              },
+              "missing_minimums": {
+                "0070C0": {
+                  "minimum": 1,
+                  "actual": 0
+                }
+              },
+              "status": "failed"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "dense_cf",
+      "include_default_background": true,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "repeats": [
+        {
+          "repeat": 1,
+          "order": [
+            "reference",
+            "hybrid"
+          ],
+          "exact_workbook_colors_map_equal": true,
+          "errors": {},
+          "conditional_render_validation": {
+            "reference": {
+              "expected_min_cells_by_color": {
+                "0070C0": 1
+              },
+              "ignored_expected_colors": [],
+              "checked_expected_colors": {
+                "0070C0": 1
+              },
+              "actual_cells_by_color": {
+                "0070C0": 0
+              },
+              "missing_minimums": {
+                "0070C0": {
+                  "minimum": 1,
+                  "actual": 0
+                }
+              },
+              "status": "failed"
+            },
+            "hybrid": {
+              "expected_min_cells_by_color": {
+                "0070C0": 1
+              },
+              "ignored_expected_colors": [],
+              "checked_expected_colors": {
+                "0070C0": 1
+              },
+              "actual_cells_by_color": {
+                "0070C0": 0
+              },
+              "missing_minimums": {
+                "0070C0": {
+                  "minimum": 1,
+                  "actual": 0
+                }
+              },
+              "status": "failed"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "overlapping_formula",
+      "include_default_background": false,
+      "ignore_colors": null,
+      "repeats": [
+        {
+          "repeat": 1,
+          "order": [
+            "reference",
+            "hybrid"
+          ],
+          "exact_workbook_colors_map_equal": true,
+          "errors": {},
+          "conditional_render_validation": {
+            "reference": {
+              "expected_min_cells_by_color": {
+                "FF0000": 2,
+                "0070C0": 2
+              },
+              "ignored_expected_colors": [],
+              "checked_expected_colors": {
+                "FF0000": 2,
+                "0070C0": 2
+              },
+              "actual_cells_by_color": {
+                "FF0000": 1,
+                "0070C0": 1
+              },
+              "missing_minimums": {
+                "FF0000": {
+                  "minimum": 2,
+                  "actual": 1
+                },
+                "0070C0": {
+                  "minimum": 2,
+                  "actual": 1
+                }
+              },
+              "status": "failed"
+            },
+            "hybrid": {
+              "expected_min_cells_by_color": {
+                "FF0000": 2,
+                "0070C0": 2
+              },
+              "ignored_expected_colors": [],
+              "checked_expected_colors": {
+                "FF0000": 2,
+                "0070C0": 2
+              },
+              "actual_cells_by_color": {
+                "FF0000": 1,
+                "0070C0": 1
+              },
+              "missing_minimums": {
+                "FF0000": {
+                  "minimum": 2,
+                  "actual": 1
+                },
+                "0070C0": {
+                  "minimum": 2,
+                  "actual": 1
+                }
+              },
+              "status": "failed"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "overlapping_formula",
+      "include_default_background": false,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "repeats": [
+        {
+          "repeat": 1,
+          "order": [
+            "reference",
+            "hybrid"
+          ],
+          "exact_workbook_colors_map_equal": true,
+          "errors": {},
+          "conditional_render_validation": {
+            "reference": {
+              "expected_min_cells_by_color": {
+                "FF0000": 2,
+                "0070C0": 2
+              },
+              "ignored_expected_colors": [
+                "FF0000"
+              ],
+              "checked_expected_colors": {
+                "0070C0": 2
+              },
+              "actual_cells_by_color": {
+                "0070C0": 1
+              },
+              "missing_minimums": {
+                "0070C0": {
+                  "minimum": 2,
+                  "actual": 1
+                }
+              },
+              "status": "failed"
+            },
+            "hybrid": {
+              "expected_min_cells_by_color": {
+                "FF0000": 2,
+                "0070C0": 2
+              },
+              "ignored_expected_colors": [
+                "FF0000"
+              ],
+              "checked_expected_colors": {
+                "0070C0": 2
+              },
+              "actual_cells_by_color": {
+                "0070C0": 1
+              },
+              "missing_minimums": {
+                "0070C0": {
+                  "minimum": 2,
+                  "actual": 1
+                }
+              },
+              "status": "failed"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "overlapping_formula",
+      "include_default_background": true,
+      "ignore_colors": null,
+      "repeats": [
+        {
+          "repeat": 1,
+          "order": [
+            "reference",
+            "hybrid"
+          ],
+          "exact_workbook_colors_map_equal": true,
+          "errors": {},
+          "conditional_render_validation": {
+            "reference": {
+              "expected_min_cells_by_color": {
+                "FF0000": 2,
+                "0070C0": 2
+              },
+              "ignored_expected_colors": [],
+              "checked_expected_colors": {
+                "FF0000": 2,
+                "0070C0": 2
+              },
+              "actual_cells_by_color": {
+                "FF0000": 1,
+                "0070C0": 1
+              },
+              "missing_minimums": {
+                "FF0000": {
+                  "minimum": 2,
+                  "actual": 1
+                },
+                "0070C0": {
+                  "minimum": 2,
+                  "actual": 1
+                }
+              },
+              "status": "failed"
+            },
+            "hybrid": {
+              "expected_min_cells_by_color": {
+                "FF0000": 2,
+                "0070C0": 2
+              },
+              "ignored_expected_colors": [],
+              "checked_expected_colors": {
+                "FF0000": 2,
+                "0070C0": 2
+              },
+              "actual_cells_by_color": {
+                "FF0000": 1,
+                "0070C0": 1
+              },
+              "missing_minimums": {
+                "FF0000": {
+                  "minimum": 2,
+                  "actual": 1
+                },
+                "0070C0": {
+                  "minimum": 2,
+                  "actual": 1
+                }
+              },
+              "status": "failed"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "overlapping_formula",
+      "include_default_background": true,
+      "ignore_colors": [
+        "FF0000"
+      ],
+      "repeats": [
+        {
+          "repeat": 1,
+          "order": [
+            "reference",
+            "hybrid"
+          ],
+          "exact_workbook_colors_map_equal": true,
+          "errors": {},
+          "conditional_render_validation": {
+            "reference": {
+              "expected_min_cells_by_color": {
+                "FF0000": 2,
+                "0070C0": 2
+              },
+              "ignored_expected_colors": [
+                "FF0000"
+              ],
+              "checked_expected_colors": {
+                "0070C0": 2
+              },
+              "actual_cells_by_color": {
+                "0070C0": 1
+              },
+              "missing_minimums": {
+                "0070C0": {
+                  "minimum": 2,
+                  "actual": 1
+                }
+              },
+              "status": "failed"
+            },
+            "hybrid": {
+              "expected_min_cells_by_color": {
+                "FF0000": 2,
+                "0070C0": 2
+              },
+              "ignored_expected_colors": [
+                "FF0000"
+              ],
+              "checked_expected_colors": {
+                "0070C0": 2
+              },
+              "actual_cells_by_color": {
+                "0070C0": 1
+              },
+              "missing_minimums": {
+                "0070C0": {
+                  "minimum": 2,
+                  "actual": 1
+                }
+              },
+              "status": "failed"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

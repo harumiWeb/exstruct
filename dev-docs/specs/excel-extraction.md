@@ -172,9 +172,16 @@ Mode notes:
 
 ## Colors Map
 
-- Prefer COM to include conditional formatting colors
-- Overwrite with COM results when COM succeeds
-- Use openpyxl results only when COM fails
+- COM-backed `colors_map` extraction retains Excel-rendered conditional-format
+  colors and overwrites compatibility results when COM succeeds. Existing
+  normalization, coordinates, default-background, and ignored-color behavior
+  remain unchanged.
+- For eligible saved `.xlsx` / `.xlsm` workbooks, use the hybrid saved-fill and
+  conditional-format candidate strategy in
+  [Hybrid rendered color extraction](hybrid-color-extraction.md). Excel
+  evaluates final rendered colors for every candidate; unsupported or
+  ambiguous worksheet constructs use the legacy full COM scan.
+- Use openpyxl results only when the existing COM fallback applies.
 - An explicit `colors_map` request on the direct light OOXML path selects the
   complete openpyxl compatibility pipeline.
 

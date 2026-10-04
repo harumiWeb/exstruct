@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import deque
 from collections.abc import Callable, Iterable, Sequence
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import time
 from decimal import Decimal, InvalidOperation
@@ -59,6 +60,10 @@ _DETECTION_CONFIG = {
 }
 _DEFAULT_BACKGROUND_HEX = "FFFFFF"
 _XL_COLOR_NONE = -4142
+_display_format_calls: ContextVar[int] = ContextVar("display_format_calls", default=0)
+_strict_display_format: ContextVar[bool] = ContextVar(
+    "strict_display_format", default=False
+)
 _BORDER_CLUSTER_BACKEND_ENV = "EXSTRUCT_BORDER_CLUSTER_BACKEND"
 
 ExtractionMode = Literal["light", "libreoffice", "standard", "verbose"]
@@ -235,6 +240,7 @@ def extract_sheet_colors_map_com(
     *,
     include_default_background: bool,
     ignore_colors: set[str] | None,
+    session: OpenpyxlExtractionSession | None = None,
 ) -> WorkbookColorsMap:
     """
     Extract per-sheet background color maps using the workbook's COM/display-format interfaces.
@@ -247,15 +253,9 @@ def extract_sheet_colors_map_com(
     Returns:
         WorkbookColorsMap: Mapping of sheet names to SheetColorsMap containing detected background color positions for each worksheet.
     """
-    _prepare_workbook_for_display_format(workbook)
-    sheets: dict[str, SheetColorsMap] = {}
-    for sheet in workbook.sheets:
-        _prepare_sheet_for_display_format(sheet)
-        sheet_map = _extract_sheet_colors_com(
-            sheet, include_default_background, ignore_colors
-        )
-        sheets[sheet.name] = sheet_map
-    return WorkbookColorsMap(sheets=sheets)
+    from .color_hybrid import extract_colors
+
+    return extract_colors(workbook, include_default_background, ignore_colors, session)
 
 
 def _extract_sheet_colors(
@@ -552,10 +552,13 @@ def _get_display_format_color(sheet: xw.Sheet, row: int, col: int) -> int | None
     """
     try:
         cell = sheet.api.Cells(row, col)
+        _display_format_calls.set(_display_format_calls.get() + 1)
         display_format = cell.DisplayFormat
         interior = display_format.Interior
         return int(interior.Color)
     except Exception:
+        if _strict_display_format.get():
+            raise
         return None
 
 
