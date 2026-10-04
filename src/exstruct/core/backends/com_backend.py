@@ -17,6 +17,7 @@ from ..cells import (
     extract_sheet_formulas_map_com,
 )
 from ..charts import get_charts
+from ..openpyxl_session import OpenpyxlExtractionSession
 from ..ranges import parse_range_zero_based
 from ..shapes import get_shapes_with_position
 from .base import (
@@ -58,6 +59,7 @@ class ComBackend:
     """
 
     workbook: xw.Book
+    session: OpenpyxlExtractionSession | None = None
 
     def extract_cells(self, *, include_links: bool = False) -> CellData:
         """Prototype bulk Value2 reader; intentionally unused by public extraction.
@@ -151,6 +153,13 @@ class ComBackend:
             WorkbookColorsMap | None: A mapping of workbook color definitions when extraction succeeds, or `None` if COM extraction fails.
         """
         try:
+            if self.session is not None:
+                return extract_sheet_colors_map_com(
+                    self.workbook,
+                    include_default_background=include_default_background,
+                    ignore_colors=ignore_colors,
+                    session=self.session,
+                )
             return extract_sheet_colors_map_com(
                 self.workbook,
                 include_default_background=include_default_background,

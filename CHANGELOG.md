@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. This changelog 
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-04
+
 ### Fixed
 
 - Ensure newly created Excel instances are cleaned up when opening a workbook
@@ -11,6 +13,10 @@ All notable changes to this project are documented in this file. This changelog 
 
 ### Changed
 
+- Hybridized rendered color extraction for saved `.xlsx` / `.xlsm` workbooks:
+  ordinary RGB fills use saved styles, while conditional formatting and
+  ambiguous fills retain Excel DisplayFormat evaluation. Unsupported sheets
+  and unsaved workbooks retain the complete COM scan.
 - Switched `.xlsx` / `.xlsm` `light` extraction to the direct OOXML core and
   rich pipeline using one shared ZIP. Unsupported OOXML and `colors_map` opt-in
   restart the complete openpyxl compatibility pipeline with an
