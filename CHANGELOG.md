@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. This changelog 
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-16
+
 ### Security
 
 - Require Pillow 13.0.0 or newer for rendering and update the locked certifi,
