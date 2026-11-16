@@ -69,6 +69,8 @@ LLM/RAG pipelines and local automation.
 
 ## Installation
 
+Requires Python 3.11.5 or newer.
+
 ```bash
 pip install exstruct
 ```

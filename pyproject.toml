@@ -8,7 +8,7 @@ keywords = ["excel", "structure", "data", "exstruct"]
 authors = [
     { name = "harumiWeb"}
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.11.5"
 dependencies = [
     "defusedxml>=0.7.1",
     "numpy>=2.3.5",

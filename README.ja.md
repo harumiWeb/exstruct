@@ -65,6 +65,8 @@ LLM/RAG 向けに検出ヒューリスティックや出力モードを調整で
 
 ## インストール
 
+Python 3.11.5 以上が必要です。
+
 ```bash
 pip install exstruct
 ```
