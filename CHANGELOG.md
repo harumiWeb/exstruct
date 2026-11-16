@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file. This changelog 
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-16
+
+### Security
+
+- Require Pillow 13.0.0 or newer for rendering and update the locked certifi,
+  filelock, and virtualenv dependencies to patched releases.
+- Raise the minimum Python version to 3.11.5 for ExStruct and its benchmark
+  workspace, and update soupsieve to a patched release.
+
 ## [0.9.0] - 2026-10-04
 
 ### Fixed

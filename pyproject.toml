@@ -1,6 +1,6 @@
 [project]
 name = "exstruct"
-version = "0.9.0"
+version = "0.9.1"
 description = "Excel to structured JSON (tables, shapes, charts) for LLM/RAG pipelines"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -8,7 +8,7 @@ keywords = ["excel", "structure", "data", "exstruct"]
 authors = [
     { name = "harumiWeb"}
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.11.5"
 dependencies = [
     "defusedxml>=0.7.1",
     "numpy>=2.3.5",
@@ -44,13 +44,13 @@ all = [
     "pyyaml>=6.0.3",
     "python-toon>=0.1.3",
     "pypdfium2>=5.1.0",
-    "Pillow>=12.0.0",
+    "Pillow>=13.0.0",
     "mcp>=1.25.0,<2.0.0",
     "httpx>=0.27,<1.0",
 ]
 yaml = ["pyyaml>=6.0.3"]
 toon = ["python-toon>=0.1.3"]
-render = ["pypdfium2>=5.1.0", "Pillow>=12.0.0"]
+render = ["pypdfium2>=5.1.0", "Pillow>=13.0.0"]
 mcp = [
     "mcp>=1.25.0,<2.0.0",
     "httpx>=0.27,<1.0",

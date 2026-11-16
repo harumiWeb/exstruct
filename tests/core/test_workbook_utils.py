@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import cast
 
 import pytest
+import xlwings as xw
 
 from exstruct.core import workbook
 
@@ -53,8 +54,9 @@ def test_xlwings_workbook_leaves_existing_workbook_and_app_open(
     def _boom(*_args: object, **_kwargs: object) -> None:
         raise AssertionError("xlwings App should not be created when existing")
 
-    monkeypatch.setattr(workbook.xw, "apps", [app])
-    monkeypatch.setattr(workbook.xw, "App", _boom)
+    # Patch the real module so pytest restores its attributes, not proxy state.
+    monkeypatch.setattr(xw, "apps", [app])
+    monkeypatch.setattr(xw, "App", _boom)
 
     with workbook.xlwings_workbook(tmp_path / "book.xlsx") as wb:
         assert wb is dummy
@@ -83,7 +85,7 @@ def test_xlwings_workbook_quits_app_when_open_fails(
 
     app = _DummyApp()
     monkeypatch.setattr(workbook, "_find_open_workbook", lambda _path: None)
-    monkeypatch.setattr(workbook.xw, "App", lambda **_kwargs: app)
+    monkeypatch.setattr(xw, "App", lambda **_kwargs: app)
 
     with pytest.raises(RuntimeError, match="open failed"):
         with workbook.xlwings_workbook(tmp_path / "book.xlsx"):
@@ -120,7 +122,7 @@ def test_xlwings_workbook_closes_owned_book_after_extraction_failure(
     book = _DummyBook()
     app = _DummyApp(book)
     monkeypatch.setattr(workbook, "_find_open_workbook", lambda _path: None)
-    monkeypatch.setattr(workbook.xw, "App", lambda **_kwargs: app)
+    monkeypatch.setattr(xw, "App", lambda **_kwargs: app)
 
     with pytest.raises(RuntimeError, match="extraction failed"):
         with workbook.xlwings_workbook(tmp_path / "book.xlsx"):
@@ -157,7 +159,7 @@ def test_xlwings_workbook_kills_owned_app_when_quit_fails(
 
     app = _DummyApp()
     monkeypatch.setattr(workbook, "_find_open_workbook", lambda _path: None)
-    monkeypatch.setattr(workbook.xw, "App", lambda **_kwargs: app)
+    monkeypatch.setattr(xw, "App", lambda **_kwargs: app)
 
     with workbook.xlwings_workbook(tmp_path / "book.xlsx"):
         pass
@@ -177,7 +179,7 @@ def test_find_open_workbook_handles_fullname_error(
     class _DummyApp:
         books = [_BadBook()]
 
-    monkeypatch.setattr(workbook.xw, "apps", [_DummyApp()])
+    monkeypatch.setattr(xw, "apps", [_DummyApp()])
     assert workbook._find_open_workbook(Path("book.xlsx")) is None
 
 
@@ -203,7 +205,7 @@ def test_find_open_workbook_handles_resolve_error(
         books = [_DummyBook()]
 
     monkeypatch.setattr(workbook, "Path", _DummyPath)
-    monkeypatch.setattr(workbook.xw, "apps", [_DummyApp()])
+    monkeypatch.setattr(xw, "apps", [_DummyApp()])
 
     file_path = _DummyPath("good")
     assert workbook._find_open_workbook(cast(Path, file_path)) is None
@@ -216,5 +218,5 @@ def test_find_open_workbook_returns_none_on_iter_error(
         def __iter__(self) -> Iterator[object]:
             raise RuntimeError("apps failure")
 
-    monkeypatch.setattr(workbook.xw, "apps", _BadApps())
+    monkeypatch.setattr(xw, "apps", _BadApps())
     assert workbook._find_open_workbook(Path("book.xlsx")) is None

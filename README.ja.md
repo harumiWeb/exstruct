@@ -65,6 +65,8 @@ LLM/RAG 向けに検出ヒューリスティックや出力モードを調整で
 
 ## インストール
 
+Python 3.11.5 以上が必要です。
+
 ```bash
 pip install exstruct
 ```
@@ -74,7 +76,7 @@ pip install exstruct
 - YAML: `pip install pyyaml`
 - 罫線クラスタリングの高速化: `pip install exstruct[fast]`（SciPy）。通常の直接OOXML light抽出ではPythonの罫線検出を使います。SciPyによる高速化と `EXSTRUCT_BORDER_CLUSTER_BACKEND` の選択は、他モードと互換抽出経路で利用できます。NumPy は引き続き必須依存です。
 - TOON: `pip install python-toon`
-- レンダリング（PDF/PNG）: Excel + `pip install pypdfium2 pillow`（`mode=libreoffice` では非対応）
+- レンダリング（PDF/PNG）: Excel + `pip install exstruct[render]`（`mode=libreoffice` では非対応）
 - まとめて導入: `pip install exstruct[yaml,toon,render,fast]`
 
 プラットフォーム注意:
