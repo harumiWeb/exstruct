@@ -80,7 +80,7 @@ Optional extras:
 - Border-clustering acceleration: `pip install exstruct[fast]` (SciPy). Normal direct light extraction uses Python clustering. SciPy acceleration and `EXSTRUCT_BORDER_CLUSTER_BACKEND` selection apply to other modes and compatibility extraction; NumPy remains a core dependency.
 - YAML: `pip install pyyaml`
 - TOON: `pip install python-toon`
-- Rendering (PDF/PNG): Excel + `pip install pypdfium2 pillow` (`mode=libreoffice` is not supported)
+- Rendering (PDF/PNG): Excel + `pip install exstruct[render]` (`mode=libreoffice` is not supported)
 - Install these extras at once: `pip install exstruct[yaml,toon,render,fast]`
 
 Platform note:
