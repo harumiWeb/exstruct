@@ -4,6 +4,11 @@ All notable changes to this project are documented in this file. This changelog 
 
 ## [Unreleased]
 
+### Security
+
+- Require Pillow 13.0.0 or newer for rendering and update the locked certifi,
+  filelock, and virtualenv dependencies to patched releases.
+
 ## [0.9.0] - 2026-10-04
 
 ### Fixed
