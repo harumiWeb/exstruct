@@ -81,7 +81,7 @@ def _require_pdfium() -> ModuleType:
         import pypdfium2 as pdfium
     except ImportError as e:
         raise MissingDependencyError(
-            "Image rendering requires pypdfium2. Install it via `pip install 'exstruct[render]'` or add the 'render' extra."
+            "Image rendering requires pypdfium2. Install it via `pip install \"exstruct[render]\"` or add the 'render' extra."
         ) from e
     return cast(ModuleType, pdfium)
 

@@ -211,7 +211,7 @@ def _import_mcp() -> ModuleType:
         return importlib.import_module("mcp")
     except ModuleNotFoundError as exc:
         raise RuntimeError(
-            "MCP SDK is not installed. Install with `pip install exstruct[mcp]`."
+            'MCP SDK is not installed. Install with `pip install "exstruct[mcp]"`.'
         ) from exc
 
 

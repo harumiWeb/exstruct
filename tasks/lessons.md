@@ -124,3 +124,6 @@
 - Run real Excel tests and COM benchmarks sequentially. Concurrent Excel owners can contaminate process-lifecycle and timing evidence; discard and rerun overlapping scenarios.
 - Exclude COM failure/fallback samples from successful extraction medians even when their serialized output happens to match.
 - Pytest COM session setup creates and quits an Excel availability-probe app before tests. Never start pytest (including COM availability checks) while any timed Excel run is active.
+## 2026-11-17 pip extras quoting lessons
+
+- Use double quotes around extras requirements in pip install examples so they work in Command Prompt, PowerShell, bash, and zsh. Check both READMEs, combined extras, other docs, and runtime dependency guidance together.
