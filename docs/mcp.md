@@ -45,7 +45,7 @@ Benefits:
 ### Option 2: Traditional pip install
 
 ```bash
-pip install exstruct[mcp]
+pip install "exstruct[mcp]"
 ```
 
 ### Option 3: Development version from Git
